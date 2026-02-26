@@ -2,8 +2,13 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 contextBridge.exposeInMainWorld('agentDeck', {
   pty: {
-    spawn: (sessionId: string, cols: number, rows: number) =>
-      ipcRenderer.invoke('pty:spawn', sessionId, cols, rows),
+    spawn: (
+      sessionId: string,
+      cols: number,
+      rows: number,
+      startupCommands?: string[],
+      env?: Record<string, string>,
+    ) => ipcRenderer.invoke('pty:spawn', sessionId, cols, rows, startupCommands, env),
     write: (sessionId: string, data: string) => ipcRenderer.invoke('pty:write', sessionId, data),
     resize: (sessionId: string, cols: number, rows: number) =>
       ipcRenderer.invoke('pty:resize', sessionId, cols, rows),

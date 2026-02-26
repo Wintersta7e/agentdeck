@@ -19,6 +19,7 @@ export function App(): React.JSX.Element {
   const removeSession = useAppStore((s) => s.removeSession)
   const getSessionForProject = useAppStore((s) => s.getSessionForProject)
 
+  const projects = useAppStore((s) => s.projects)
   const { updateProject } = useProjects()
 
   const handleOpenProject = useCallback(
@@ -55,18 +56,29 @@ export function App(): React.JSX.Element {
           {currentView === 'home' && <HomeScreen onOpenProject={handleOpenProject} />}
           {currentView === 'wizard' && <NewProjectWizard onCreateProject={handleOpenProject} />}
           {currentView === 'settings' && <ProjectSettings />}
-          {Object.keys(sessions).map((sid) => (
-            <div
-              key={sid}
-              style={{
-                flex: 1,
-                display: currentView === 'session' && sid === activeSessionId ? 'flex' : 'none',
-                overflow: 'hidden',
-              }}
-            >
-              <TerminalPane sessionId={sid} />
-            </div>
-          ))}
+          {Object.entries(sessions).map(([sid, session]) => {
+            const project = projects.find((p) => p.id === session.projectId)
+            return (
+              <div
+                key={sid}
+                style={{
+                  flex: 1,
+                  display: currentView === 'session' && sid === activeSessionId ? 'flex' : 'none',
+                  overflow: 'hidden',
+                }}
+              >
+                <TerminalPane
+                  sessionId={sid}
+                  startupCommands={project?.startupCommands?.map((c) => c.value)}
+                  env={
+                    project?.envVars && project.envVars.length > 0
+                      ? Object.fromEntries(project.envVars.map((v) => [v.key, v.value]))
+                      : undefined
+                  }
+                />
+              </div>
+            )
+          })}
         </div>
       </div>
       <StatusBar />

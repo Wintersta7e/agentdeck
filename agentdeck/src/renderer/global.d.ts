@@ -4,7 +4,13 @@ declare global {
   interface Window {
     agentDeck: {
       pty: {
-        spawn: (sessionId: string, cols: number, rows: number) => Promise<void>
+        spawn: (
+          sessionId: string,
+          cols: number,
+          rows: number,
+          startupCommands?: string[],
+          env?: Record<string, string>,
+        ) => Promise<void>
         write: (sessionId: string, data: string) => Promise<void>
         resize: (sessionId: string, cols: number, rows: number) => Promise<void>
         kill: (sessionId: string) => Promise<void>

@@ -3,7 +3,13 @@ import type { IPty } from 'node-pty'
 import * as pty from 'node-pty'
 
 export interface PtyManager {
-  spawn: (sessionId: string, cols: number, rows: number) => void
+  spawn: (
+    sessionId: string,
+    cols: number,
+    rows: number,
+    startupCommands?: string[],
+    env?: Record<string, string>,
+  ) => void
   write: (sessionId: string, data: string) => void
   resize: (sessionId: string, cols: number, rows: number) => void
   kill: (sessionId: string) => void
@@ -13,21 +19,36 @@ export interface PtyManager {
 export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
   const sessions = new Map<string, IPty>()
 
-  function spawn(sessionId: string, cols: number, rows: number): void {
+  function spawn(
+    sessionId: string,
+    cols: number,
+    rows: number,
+    startupCommands?: string[],
+    env?: Record<string, string>,
+  ): void {
     if (sessions.has(sessionId)) {
       kill(sessionId)
     }
 
     const cwd = process.env['USERPROFILE'] ?? process.cwd()
+    const mergedEnv = { ...process.env, ...env } as Record<string, string>
     const proc = pty.spawn('wsl.exe', ['--', '/bin/bash'], {
       name: 'xterm-256color',
       cols: cols ?? 80,
       rows: rows ?? 24,
       cwd,
-      env: { ...process.env } as Record<string, string>,
+      env: mergedEnv,
     })
 
     sessions.set(sessionId, proc)
+
+    if (startupCommands && startupCommands.length > 0) {
+      setTimeout(() => {
+        for (const cmd of startupCommands) {
+          proc.write(cmd + '\n')
+        }
+      }, 500)
+    }
 
     proc.onData((data) => {
       if (!mainWindow.isDestroyed()) {

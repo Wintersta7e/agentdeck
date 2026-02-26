@@ -7,9 +7,15 @@ import './TerminalPane.css'
 
 interface TerminalPaneProps {
   sessionId: string
+  startupCommands?: string[] | undefined
+  env?: Record<string, string> | undefined
 }
 
-export function TerminalPane({ sessionId }: TerminalPaneProps): React.JSX.Element {
+export function TerminalPane({
+  sessionId,
+  startupCommands,
+  env,
+}: TerminalPaneProps): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
@@ -58,7 +64,7 @@ export function TerminalPane({ sessionId }: TerminalPaneProps): React.JSX.Elemen
 
     const { cols, rows } = term
     window.agentDeck.pty
-      .spawn(sessionId, cols, rows)
+      .spawn(sessionId, cols, rows, startupCommands, env)
       .then(() => setSessionStatus(sessionId, 'running'))
       .catch((err: unknown) => {
         console.error('PTY spawn failed:', err)

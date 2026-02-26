@@ -26,9 +26,19 @@ function createWindow(): void {
 
   const ptyManager = createPtyManager(mainWindow)
 
-  ipcMain.handle('pty:spawn', (_, sessionId: string, cols: number, rows: number) => {
-    ptyManager.spawn(sessionId, cols, rows)
-  })
+  ipcMain.handle(
+    'pty:spawn',
+    (
+      _,
+      sessionId: string,
+      cols: number,
+      rows: number,
+      startupCommands?: string[],
+      env?: Record<string, string>,
+    ) => {
+      ptyManager.spawn(sessionId, cols, rows, startupCommands, env)
+    },
+  )
   ipcMain.handle('pty:write', (_, sessionId: string, data: string) => {
     ptyManager.write(sessionId, data)
   })
