@@ -23,10 +23,16 @@ const RULES: DetectionRule[] = [
 const CONTEXT_FILES = ['AGENTS.md', 'CLAUDE.md']
 
 export async function detectStack(
-  wslPath: string,
+  projectPath: string,
   distro = 'Ubuntu-24.04',
 ): Promise<DetectedStack | null> {
-  const windowsPath = wslPathToWindows(wslPath, distro)
+  // Detect if it's already a Windows path or a WSL path
+  let windowsPath: string
+  if (/^[A-Za-z]:/.test(projectPath)) {
+    windowsPath = projectPath
+  } else {
+    windowsPath = wslPathToWindows(projectPath, distro)
+  }
 
   let entries: string[]
   try {
@@ -85,7 +91,7 @@ export async function detectStack(
   }
 
   const suggestedAgent: AgentType = 'claude-code'
-  const suggestedCommands = [`cd "${wslPath.replace(/"/g, '\\"')}"`, 'claude']
+  const suggestedCommands = [`cd "${projectPath.replace(/"/g, '\\"')}"`, 'claude']
 
   return { badge, items, suggestedAgent, suggestedCommands, contextFiles }
 }

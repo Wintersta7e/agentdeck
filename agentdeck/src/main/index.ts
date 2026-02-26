@@ -125,12 +125,21 @@ function registerIpcHandlers(): void {
       throw new Error(`File not permitted: ${filename}`)
     }
     try {
-      const distro = getDefaultDistro()
-      const windowsPath = wslPathToWindows(projectPath, distro)
+      // Determine the Windows-readable path
+      let windowsPath: string
+      if (/^[A-Za-z]:/.test(projectPath)) {
+        // Already a Windows path (e.g., E:\H\LocalAI)
+        windowsPath = projectPath
+      } else {
+        // WSL path — convert to Windows
+        const distro = getDefaultDistro()
+        windowsPath = wslPathToWindows(projectPath, distro)
+      }
       const filePath = path.join(windowsPath, filename)
       const content = await fs.promises.readFile(filePath, 'utf-8')
       return content
-    } catch {
+    } catch (err) {
+      console.error(`[readFile] Failed to read ${filename} from ${projectPath}:`, err)
       return null
     }
   })
