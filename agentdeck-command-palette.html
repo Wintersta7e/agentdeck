@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgentDeck — Command Palette</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg0: #0d0e0f;
+    --bg1: #111213;
+    --bg2: #161718;
+    --bg3: #1c1d1f;
+    --bg4: #222325;
+    --border: #2a2b2d;
+    --border-bright: #363739;
+    --text0: #f0ede8;
+    --text1: #b8b4ae;
+    --text2: #6e6b66;
+    --text3: #3d3b38;
+    --amber: #f5a623;
+    --amber-dim: #c07d0f;
+    --amber-glow: rgba(245,166,35,0.12);
+    --amber-glow2: rgba(245,166,35,0.06);
+    --green: #4caf7d;
+    --green-dim: rgba(76,175,125,0.12);
+    --red: #e05c5c;
+    --blue: #5b9bd5;
+    --purple: #9b72cf;
+    --r: 4px;
+  }
+
+  body {
+    background: var(--bg0);
+    color: var(--text0);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ─── BACKGROUND APP (dimmed) ─── */
+  .app-bg {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    filter: blur(1px);
+    opacity: 0.4;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .titlebar {
+    height: 36px; background: var(--bg0);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 12px; gap: 12px;
+  }
+  .titlebar-controls { display: flex; gap: 6px; }
+  .control { width: 12px; height: 12px; border-radius: 50%; }
+  .control-close { background: #e05c5c; }
+  .control-min { background: #f5a623; }
+  .control-max { background: #4caf7d; }
+  .logo-mark {
+    width: 18px; height: 18px; background: var(--amber);
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    margin-left: 8px;
+  }
+  .logo-text { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 13px; letter-spacing: 0.05em; }
+  .logo-text span { color: var(--amber); }
+  .bg-layout { display: flex; flex: 1; }
+  .bg-sidebar { width: 220px; background: var(--bg1); border-right: 1px solid var(--border); }
+  .bg-main { flex: 1; background: var(--bg0); padding: 48px 40px; }
+  .bg-greeting-line { height: 28px; background: var(--bg3); border-radius: 4px; width: 280px; margin-bottom: 12px; }
+  .bg-greeting-sub { height: 12px; background: var(--bg2); border-radius: 4px; width: 200px; margin-bottom: 40px; }
+  .bg-bar { height: 40px; background: var(--bg2); border-radius: 6px; margin-bottom: 40px; border: 1px solid var(--border-bright); }
+  .bg-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+  .bg-card { height: 120px; background: var(--bg2); border-radius: 6px; border: 1px solid var(--border); }
+
+  /* ─── OVERLAY ─── */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 10;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 80px;
+    animation: fadeOverlay 0.15s ease;
+  }
+  @keyframes fadeOverlay {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  /* ─── PALETTE ─── */
+  .palette {
+    width: 640px;
+    background: var(--bg2);
+    border: 1px solid var(--border-bright);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow:
+      0 0 0 1px rgba(245,166,35,0.08),
+      0 24px 64px rgba(0,0,0,0.7),
+      0 8px 24px rgba(0,0,0,0.4);
+    animation: slideDown 0.15s ease;
+  }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* search input */
+  .palette-search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .palette-search-icon { color: var(--text2); font-size: 14px; flex-shrink: 0; }
+  .palette-input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--text0);
+    caret-color: var(--amber);
+  }
+  .palette-input::placeholder { color: var(--text3); }
+  .palette-esc {
+    font-size: 10px; color: var(--text3);
+    background: var(--bg3); border: 1px solid var(--border);
+    padding: 2px 6px; border-radius: 3px; flex-shrink: 0;
+  }
+
+  /* scope tabs */
+  .palette-scope {
+    display: flex;
+    gap: 0;
+    padding: 8px 16px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .scope-tab {
+    font-size: 10px; color: var(--text2);
+    padding: 4px 10px; cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.12s;
+    letter-spacing: 0.05em;
+  }
+  .scope-tab:hover { color: var(--text1); }
+  .scope-tab.active { color: var(--amber); border-bottom-color: var(--amber); }
+
+  /* results */
+  .palette-results {
+    max-height: 420px;
+    overflow-y: auto;
+    padding: 8px 0;
+    scrollbar-width: thin;
+    scrollbar-color: var(--bg4) transparent;
+  }
+  .palette-results::-webkit-scrollbar { width: 3px; }
+  .palette-results::-webkit-scrollbar-thumb { background: var(--bg4); }
+
+  /* section label */
+  .result-section {
+    font-size: 9px; color: var(--text3);
+    text-transform: uppercase; letter-spacing: 0.1em;
+    padding: 8px 16px 4px;
+  }
+  .result-section:first-child { padding-top: 4px; }
+
+  /* result row */
+  .result-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: background 0.08s;
+    position: relative;
+  }
+  .result-item:hover { background: var(--bg3); }
+  .result-item.selected {
+    background: var(--amber-glow);
+  }
+  .result-item.selected::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 2px;
+    background: var(--amber);
+  }
+
+  .result-icon {
+    width: 28px; height: 28px;
+    border-radius: var(--r);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; flex-shrink: 0;
+    background: var(--bg4);
+    border: 1px solid var(--border);
+  }
+  .result-icon.green { background: var(--green-dim); border-color: rgba(76,175,125,0.2); }
+  .result-icon.amber { background: var(--amber-glow); border-color: rgba(245,166,35,0.2); }
+  .result-icon.red { background: rgba(224,92,92,0.1); border-color: rgba(224,92,92,0.2); }
+  .result-icon.purple { background: rgba(155,114,207,0.1); border-color: rgba(155,114,207,0.2); }
+  .result-icon.blue { background: rgba(91,155,213,0.1); border-color: rgba(91,155,213,0.2); }
+
+  .result-body { flex: 1; min-width: 0; }
+  .result-name {
+    font-size: 12px; color: var(--text0); font-weight: 500;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .result-name .match { color: var(--amber); }
+  .result-detail {
+    font-size: 10px; color: var(--text2); margin-top: 1px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  .result-right {
+    display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+  }
+  .result-badge {
+    font-size: 9px; padding: 1px 6px; border-radius: 2px;
+  }
+  .badge-java { background: rgba(229,89,52,0.2); color: #e55934; }
+  .badge-node { background: rgba(76,175,125,0.2); color: var(--green); }
+  .badge-agent { background: rgba(155,114,207,0.2); color: var(--purple); }
+  .badge-running { background: var(--green-dim); color: var(--green); }
+  .badge-template { background: var(--amber-glow); color: var(--amber); }
+
+  .result-kbd {
+    font-size: 9px; color: var(--text3);
+    background: var(--bg3); border: 1px solid var(--border);
+    padding: 1px 5px; border-radius: 3px;
+  }
+
+  /* divider */
+  .result-divider {
+    height: 1px; background: var(--border);
+    margin: 6px 16px;
+  }
+
+  /* footer */
+  .palette-footer {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--bg1);
+  }
+  .footer-hint {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 10px; color: var(--text3);
+  }
+  .footer-kbd {
+    background: var(--bg3); border: 1px solid var(--border);
+    padding: 1px 5px; border-radius: 3px;
+    font-size: 9px; color: var(--text2);
+  }
+  .footer-sep { color: var(--text3); }
+  .palette-footer-right { margin-left: auto; font-size: 10px; color: var(--text3); }
+
+  /* demo controls */
+  .demo-bar {
+    position: fixed;
+    bottom: 16px; left: 50%; transform: translateX(-50%);
+    background: var(--bg3);
+    border: 1px solid var(--border-bright);
+    border-radius: 20px;
+    padding: 6px 16px;
+    display: flex; gap: 12px; align-items: center;
+    z-index: 100;
+    font-size: 10px; color: var(--text2);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+  .demo-btn {
+    background: var(--bg4); border: 1px solid var(--border);
+    color: var(--text1); padding: 4px 10px; border-radius: 12px;
+    cursor: pointer; font-family: inherit; font-size: 10px;
+    transition: all 0.12s;
+  }
+  .demo-btn:hover { border-color: var(--amber); color: var(--amber); }
+  .demo-btn.active { background: var(--amber-glow); border-color: rgba(245,166,35,0.4); color: var(--amber); }
+</style>
+</head>
+<body>
+
+<!-- BLURRED BG APP -->
+<div class="app-bg">
+  <div class="titlebar">
+    <div class="titlebar-controls">
+      <div class="control control-close"></div>
+      <div class="control control-min"></div>
+      <div class="control control-max"></div>
+    </div>
+    <div class="logo-mark"></div>
+    <div class="logo-text" style="font-family:'Syne',sans-serif;font-weight:800;font-size:13px;margin-left:8px">Agent<span>Deck</span></div>
+  </div>
+  <div class="bg-layout">
+    <div class="bg-sidebar"></div>
+    <div class="bg-main">
+      <div class="bg-greeting-line"></div>
+      <div class="bg-greeting-sub"></div>
+      <div class="bg-bar"></div>
+      <div class="bg-grid">
+        <div class="bg-card"></div>
+        <div class="bg-card"></div>
+        <div class="bg-card"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY -->
+<div class="overlay">
+  <div class="palette">
+
+    <!-- SEARCH INPUT -->
+    <div class="palette-search">
+      <span class="palette-search-icon">⌘</span>
+      <input class="palette-input" id="paletteInput" placeholder="Open project, run template, switch session..." autofocus />
+      <span class="palette-esc">ESC</span>
+    </div>
+
+    <!-- SCOPE TABS -->
+    <div class="palette-scope">
+      <div class="scope-tab active" onclick="setScope(this,'all')">All</div>
+      <div class="scope-tab" onclick="setScope(this,'projects')">Projects</div>
+      <div class="scope-tab" onclick="setScope(this,'templates')">Templates</div>
+      <div class="scope-tab" onclick="setScope(this,'sessions')">Sessions</div>
+      <div class="scope-tab" onclick="setScope(this,'actions')">Actions</div>
+    </div>
+
+    <!-- RESULTS — default / empty query state -->
+    <div class="palette-results" id="results">
+
+      <div class="result-section">Active sessions</div>
+
+      <div class="result-item selected" id="item0">
+        <div class="result-icon green">⬡</div>
+        <div class="result-body">
+          <div class="result-name">xjustiz-tools</div>
+          <div class="result-detail">~/projects/xjustiz-tools · claude-code · running</div>
+        </div>
+        <div class="result-right">
+          <span class="result-badge badge-running">● running</span>
+          <span class="result-badge badge-java">Java</span>
+          <span class="result-kbd">↵</span>
+        </div>
+      </div>
+
+      <div class="result-divider"></div>
+      <div class="result-section">Pinned projects</div>
+
+      <div class="result-item" id="item1">
+        <div class="result-icon">☕</div>
+        <div class="result-body">
+          <div class="result-name">rpgmaker-plugin</div>
+          <div class="result-detail">~/projects/rpgmaker-mz · last opened 3h ago</div>
+        </div>
+        <div class="result-right">
+          <span class="result-badge badge-node">JS</span>
+        </div>
+      </div>
+
+      <div class="result-item" id="item2">
+        <div class="result-icon red">☕</div>
+        <div class="result-body">
+          <div class="result-name">jira-archiver</div>
+          <div class="result-detail">~/projects/jira-archiver · build failed yesterday</div>
+        </div>
+        <div class="result-right">
+          <span class="result-badge badge-java">Java</span>
+        </div>
+      </div>
+
+      <div class="result-divider"></div>
+      <div class="result-section">Templates</div>
+
+      <div class="result-item" id="item3">
+        <div class="result-icon amber">📋</div>
+        <div class="result-body">
+          <div class="result-name">xjustiz-migration</div>
+          <div class="result-detail">Run template · XSD diff analysis</div>
+        </div>
+        <div class="result-right">
+          <span class="result-badge badge-template">template</span>
+        </div>
+      </div>
+
+      <div class="result-item" id="item4">
+        <div class="result-icon amber">📋</div>
+        <div class="result-body">
+          <div class="result-name">xpath-impact</div>
+          <div class="result-detail">Run template · Breaking change check</div>
+        </div>
+        <div class="result-right">
+          <span class="result-badge badge-template">template</span>
+        </div>
+      </div>
+
+      <div class="result-item" id="item5">
+        <div class="result-icon amber">📋</div>
+        <div class="result-body">
+          <div class="result-name">j2ee-review</div>
+          <div class="result-detail">Run template · Code review prompt</div>
+        </div>
+        <div class="result-right">
+          <span class="result-badge badge-template">template</span>
+        </div>
+      </div>
+
+      <div class="result-divider"></div>
+      <div class="result-section">Actions</div>
+
+      <div class="result-item" id="item6">
+        <div class="result-icon blue">+</div>
+        <div class="result-body">
+          <div class="result-name">New Project</div>
+          <div class="result-detail">Open folder and configure a new project</div>
+        </div>
+        <div class="result-right">
+          <span class="result-kbd">⌘N</span>
+        </div>
+      </div>
+
+      <div class="result-item" id="item7">
+        <div class="result-icon purple">⊕</div>
+        <div class="result-body">
+          <div class="result-name">New Template</div>
+          <div class="result-detail">Create a new prompt template</div>
+        </div>
+        <div class="result-right"></div>
+      </div>
+
+      <div class="result-item" id="item8">
+        <div class="result-icon">⚙</div>
+        <div class="result-body">
+          <div class="result-name">Settings</div>
+          <div class="result-detail">App settings, agents, keybindings</div>
+        </div>
+        <div class="result-right">
+          <span class="result-kbd">⌘,</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- FOOTER -->
+    <div class="palette-footer">
+      <div class="footer-hint">
+        <span class="footer-kbd">↑↓</span> navigate
+      </div>
+      <div class="footer-sep">·</div>
+      <div class="footer-hint">
+        <span class="footer-kbd">↵</span> open
+      </div>
+      <div class="footer-sep">·</div>
+      <div class="footer-hint">
+        <span class="footer-kbd">Tab</span> preview
+      </div>
+      <div class="footer-sep">·</div>
+      <div class="footer-hint">
+        <span class="footer-kbd">ESC</span> close
+      </div>
+      <div class="palette-footer-right" id="resultCount">9 results</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- DEMO CONTROLS -->
+<div class="demo-bar">
+  <span>Simulate query:</span>
+  <button class="demo-btn active" onclick="setQuery('')">Empty</button>
+  <button class="demo-btn" onclick="setQuery('xj')">xj</button>
+  <button class="demo-btn" onclick="setQuery('xpath')">xpath</button>
+  <button class="demo-btn" onclick="setQuery('new')">new</button>
+  <button class="demo-btn" onclick="setQuery('kill')">kill</button>
+</div>
+
+<script>
+  // All possible result data
+  const allResults = {
+    '': {
+      sections: [
+        {
+          label: 'Active sessions',
+          items: [
+            { id:'s0', icon:'⬡', iconClass:'green', name:'xjustiz-tools', detail:'~/projects/xjustiz-tools · claude-code · running', badges:['<span class="result-badge badge-running">● running</span>','<span class="result-badge badge-java">Java</span>'], kbd:'↵' },
+          ]
+        },
+        {
+          label: 'Pinned projects',
+          items: [
+            { id:'s1', icon:'☕', iconClass:'', name:'rpgmaker-plugin', detail:'~/projects/rpgmaker-mz · last opened 3h ago', badges:['<span class="result-badge badge-node">JS</span>'], kbd:'' },
+            { id:'s2', icon:'☕', iconClass:'red', name:'jira-archiver', detail:'~/projects/jira-archiver · build failed yesterday', badges:['<span class="result-badge badge-java">Java</span>'], kbd:'' },
+          ]
+        },
+        {
+          label: 'Templates',
+          items: [
+            { id:'s3', icon:'📋', iconClass:'amber', name:'xjustiz-migration', detail:'Run template · XSD diff analysis', badges:['<span class="result-badge badge-template">template</span>'], kbd:'' },
+            { id:'s4', icon:'📋', iconClass:'amber', name:'xpath-impact', detail:'Run template · Breaking change check', badges:['<span class="result-badge badge-template">template</span>'], kbd:'' },
+            { id:'s5', icon:'📋', iconClass:'amber', name:'j2ee-review', detail:'Run template · Code review prompt', badges:['<span class="result-badge badge-template">template</span>'], kbd:'' },
+          ]
+        },
+        {
+          label: 'Actions',
+          items: [
+            { id:'s6', icon:'+', iconClass:'blue', name:'New Project', detail:'Open folder and configure a new project', badges:[], kbd:'⌘N' },
+            { id:'s7', icon:'⊕', iconClass:'purple', name:'New Template', detail:'Create a new prompt template', badges:[], kbd:'' },
+            { id:'s8', icon:'⚙', iconClass:'', name:'Settings', detail:'App settings, agents, keybindings', badges:[], kbd:'⌘,' },
+          ]
+        }
+      ]
+    },
+    'xj': {
+      sections: [
+        {
+          label: 'Projects',
+          items: [
+            { icon:'⬡', iconClass:'green', name:'<span class="match">xj</span>ustiz-tools', detail:'~/projects/xjustiz-tools · running', badges:['<span class="result-badge badge-running">● running</span>'], kbd:'↵' },
+          ]
+        },
+        {
+          label: 'Templates',
+          items: [
+            { icon:'📋', iconClass:'amber', name:'<span class="match">xj</span>ustiz-migration', detail:'XSD diff analysis', badges:['<span class="result-badge badge-template">template</span>'], kbd:'' },
+          ]
+        }
+      ]
+    },
+    'xpath': {
+      sections: [
+        {
+          label: 'Templates',
+          items: [
+            { icon:'📋', iconClass:'amber', name:'<span class="match">xpath</span>-impact', detail:'Breaking change check · last used 2h ago', badges:['<span class="result-badge badge-template">template</span>'], kbd:'↵' },
+          ]
+        },
+        {
+          label: 'Projects',
+          items: [
+            { icon:'☕', iconClass:'', name:'<span class="match">xpath</span>-analyzer', detail:'~/projects/xpath-analyzer · last opened 2h ago', badges:['<span class="result-badge badge-java">Java</span>'], kbd:'' },
+          ]
+        }
+      ]
+    },
+    'new': {
+      sections: [
+        {
+          label: 'Actions',
+          items: [
+            { icon:'+', iconClass:'blue', name:'<span class="match">New</span> Project', detail:'Open folder and configure a new project', badges:[], kbd:'⌘N' },
+            { icon:'⊕', iconClass:'purple', name:'<span class="match">New</span> Template', detail:'Create a new prompt template', badges:[], kbd:'' },
+            { icon:'◈', iconClass:'', name:'<span class="match">New</span> Session', detail:'Start a new agent session', badges:[], kbd:'⌘T' },
+          ]
+        }
+      ]
+    },
+    'kill': {
+      sections: [
+        {
+          label: 'Session actions',
+          items: [
+            { icon:'✕', iconClass:'red', name:'<span class="match">Kill</span> session — xjustiz-tools', detail:'Terminate the running claude-code process', badges:['<span class="result-badge badge-running">● running</span>'], kbd:'↵' },
+          ]
+        }
+      ]
+    }
+  };
+
+  let selectedIndex = 0;
+  let currentQuery = '';
+
+  function renderResults(query) {
+    currentQuery = query;
+    const data = allResults[query] || allResults[''];
+    const container = document.getElementById('results');
+    let html = '';
+    let totalItems = 0;
+    let firstSelected = false;
+
+    data.sections.forEach(section => {
+      html += `<div class="result-section">${section.label}</div>`;
+      section.items.forEach((item, i) => {
+        const isSelected = totalItems === 0 && !firstSelected;
+        if (isSelected) firstSelected = true;
+        html += `
+          <div class="result-item ${isSelected ? 'selected' : ''}" data-index="${totalItems}">
+            <div class="result-icon ${item.iconClass}">${item.icon}</div>
+            <div class="result-body">
+              <div class="result-name">${item.name}</div>
+              <div class="result-detail">${item.detail}</div>
+            </div>
+            <div class="result-right">
+              ${item.badges.join('')}
+              ${item.kbd ? `<span class="result-kbd">${item.kbd}</span>` : ''}
+            </div>
+          </div>`;
+        totalItems++;
+        if (i < section.items.length - 1 || section !== data.sections[data.sections.length-1]) {
+          // add divider between sections
+        }
+      });
+      html += '<div class="result-divider"></div>';
+    });
+
+    container.innerHTML = html;
+    document.getElementById('resultCount').textContent = `${totalItems} result${totalItems !== 1 ? 's' : ''}`;
+    selectedIndex = 0;
+
+    // click handlers
+    container.querySelectorAll('.result-item').forEach(el => {
+      el.addEventListener('mouseenter', () => {
+        container.querySelectorAll('.result-item').forEach(e => e.classList.remove('selected'));
+        el.classList.add('selected');
+        selectedIndex = parseInt(el.dataset.index);
+      });
+    });
+  }
+
+  function setQuery(q) {
+    document.getElementById('paletteInput').value = q;
+    document.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    renderResults(q);
+  }
+
+  function setScope(el, scope) {
+    document.querySelectorAll('.scope-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  // keyboard nav
+  document.addEventListener('keydown', e => {
+    const items = document.querySelectorAll('.result-item');
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      items.forEach(i => i.classList.remove('selected'));
+      selectedIndex = (selectedIndex + 1) % items.length;
+      items[selectedIndex].classList.add('selected');
+      items[selectedIndex].scrollIntoView({ block: 'nearest' });
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      items.forEach(i => i.classList.remove('selected'));
+      selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+      items[selectedIndex].classList.add('selected');
+      items[selectedIndex].scrollIntoView({ block: 'nearest' });
+    }
+  });
+
+  document.getElementById('paletteInput').addEventListener('input', e => {
+    const q = e.target.value.toLowerCase().trim();
+    const known = ['','xj','xpath','new','kill'];
+    const match = known.find(k => k === q) || '';
+    renderResults(match);
+    document.querySelectorAll('.demo-btn').forEach(b => {
+      b.classList.toggle('active', b.textContent.toLowerCase() === (q || 'empty'));
+    });
+  });
+
+  renderResults('');
+</script>
+</body>
+</html>

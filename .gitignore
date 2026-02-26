@@ -1,0 +1,25 @@
+node_modules/
+dist/
+out/
+.vite/
+*.exe
+*.msi
+
+# Electron
+release/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Env
+.env
+.env.local
+
+# Claude Code local instructions
+CLAUDE.md
