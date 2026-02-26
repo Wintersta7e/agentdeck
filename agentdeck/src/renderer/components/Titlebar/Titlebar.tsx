@@ -21,6 +21,7 @@ export function Titlebar({ onCloseTab, onAddTab }: TitlebarProps): React.JSX.Ele
   const previousView = useAppStore((s) => s.previousView)
   const paneLayout = useAppStore((s) => s.paneLayout)
   const cyclePaneLayout = useAppStore((s) => s.cyclePaneLayout)
+  const toggleRightPanel = useAppStore((s) => s.toggleRightPanel)
 
   function getProjectName(session: Session): string {
     const project = projects.find((p) => p.id === session.projectId)
@@ -88,9 +89,14 @@ export function Titlebar({ onCloseTab, onAddTab }: TitlebarProps): React.JSX.Ele
 
       <div className="titlebar-right">
         {currentView === 'session' && (
-          <button className="titlebar-btn" onClick={cyclePaneLayout}>
-            Split{paneLayout > 1 ? ` (${String(paneLayout)})` : ''}
-          </button>
+          <>
+            <button className="titlebar-btn" onClick={cyclePaneLayout}>
+              Split{paneLayout > 1 ? ` (${String(paneLayout)})` : ''}
+            </button>
+            <button className="titlebar-btn" onClick={toggleRightPanel}>
+              Panel
+            </button>
+          </>
         )}
         {currentView === 'home' && (
           <>

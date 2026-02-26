@@ -4,6 +4,7 @@ import { Sidebar } from './components/Sidebar/Sidebar'
 import { StatusBar } from './components/StatusBar/StatusBar'
 import { HomeScreen } from './components/HomeScreen/HomeScreen'
 import { SplitView } from './components/SplitView/SplitView'
+import { RightPanel } from './components/RightPanel/RightPanel'
 import { NewProjectWizard } from './components/NewProjectWizard/NewProjectWizard'
 import { ProjectSettings } from './components/ProjectSettings/ProjectSettings'
 import { useAppStore } from './store/appStore'
@@ -16,6 +17,8 @@ export function App(): React.JSX.Element {
   const addSession = useAppStore((s) => s.addSession)
   const removeSession = useAppStore((s) => s.removeSession)
   const getSessionForProject = useAppStore((s) => s.getSessionForProject)
+
+  const rightPanelOpen = useAppStore((s) => s.rightPanelOpen)
 
   const { updateProject } = useProjects()
 
@@ -80,6 +83,7 @@ export function App(): React.JSX.Element {
             }}
           >
             <SplitView />
+            {rightPanelOpen && <RightPanel />}
           </div>
         </div>
       </div>
