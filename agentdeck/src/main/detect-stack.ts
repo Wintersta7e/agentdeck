@@ -1,6 +1,9 @@
 import { readdir } from 'fs/promises'
 import { wslPathToWindows } from './wsl-utils'
 import type { AgentType, DetectedStack, StackBadge } from '../shared/types'
+import { createLogger } from './logger'
+
+const log = createLogger('detect-stack')
 
 interface DetectionRule {
   file: string
@@ -44,13 +47,13 @@ export async function detectStack(
       try {
         entries = await readdir(fallbackPath)
       } catch {
-        console.error(`[detect-stack] Failed to read directory ${windowsPath}:`, err)
+        log.error(`Failed to read directory ${windowsPath}`, { err: String(err) })
         return null
       }
     } else {
       const code = (err as NodeJS.ErrnoException)?.code
       if (code === 'ENOENT') return null
-      console.error(`[detect-stack] Failed to read directory ${windowsPath}:`, err)
+      log.error(`Failed to read directory ${windowsPath}`, { err: String(err) })
       return null
     }
   }
@@ -104,5 +107,6 @@ export async function detectStack(
   const suggestedAgent: AgentType = 'claude-code'
   const suggestedCommands = [`cd "${projectPath.replace(/"/g, '\\"')}"`, 'claude']
 
+  log.debug(`Detected stack for ${projectPath}`, { badge, itemCount: items.length })
   return { badge, items, suggestedAgent, suggestedCommands, contextFiles }
 }

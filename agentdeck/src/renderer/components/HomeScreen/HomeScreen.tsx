@@ -83,7 +83,14 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
 
   useEffect(() => {
     // Errors are logged to console; useProjects handles user-facing notifications
-    window.agentDeck.agents.check().then(setAgentStatus).catch(console.error)
+    window.agentDeck.agents
+      .check()
+      .then(setAgentStatus)
+      .catch((err: unknown) => {
+        window.agentDeck.log.send('error', 'home', 'Agent detection failed', {
+          err: String(err),
+        })
+      })
   }, [])
 
   const pinned = projects.filter((p) => p.pinned)

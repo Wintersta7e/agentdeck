@@ -2,11 +2,14 @@ import Store from 'electron-store'
 import { ipcMain, safeStorage } from 'electron'
 import { randomUUID } from 'crypto'
 import type { EnvVar, Project, Template } from '../shared/types'
+import { createLogger } from './logger'
+
+const log = createLogger('project-store')
 
 function encryptEnvVars(envVars: EnvVar[] | undefined): EnvVar[] | undefined {
   if (!envVars) return envVars
   if (!safeStorage.isEncryptionAvailable()) {
-    console.warn('[project-store] Encryption unavailable — secret env vars stored as plaintext')
+    log.warn('Encryption unavailable — secret env vars stored as plaintext')
     return envVars
   }
   return envVars.map((v) => {
@@ -14,7 +17,7 @@ function encryptEnvVars(envVars: EnvVar[] | undefined): EnvVar[] | undefined {
     try {
       return { ...v, value: safeStorage.encryptString(v.value).toString('base64') }
     } catch (err) {
-      console.error('[project-store] Failed to encrypt env var, storing as plaintext:', err)
+      log.error('Failed to encrypt env var, storing as plaintext', { err: String(err) })
       return v
     }
   })
@@ -28,7 +31,7 @@ function decryptEnvVars(envVars: EnvVar[] | undefined): EnvVar[] | undefined {
     try {
       return { ...v, value: safeStorage.decryptString(Buffer.from(v.value, 'base64')) }
     } catch (err) {
-      console.error('[project-store] Failed to decrypt env var, returning empty value:', err)
+      log.error('Failed to decrypt env var, returning empty value', { err: String(err) })
       return { ...v, value: '' }
     }
   })
@@ -62,6 +65,7 @@ export function createProjectStore(): Store<StoreSchema> {
   }
   if (migrated) {
     store.set('projects', migrationProjects)
+    log.info('Ran project name migration')
   }
 
   ipcMain.handle('store:getProjects', () => {
@@ -88,12 +92,14 @@ export function createProjectStore(): Store<StoreSchema> {
     const savedIdx = idx >= 0 ? idx : projects.length - 1
     const saved = projects[savedIdx]
     if (!saved) throw new Error('store:saveProject — saved project not found after write')
+    log.info(`Project saved: ${saved.name}`, { id: saved.id })
     return { ...saved, envVars: decryptEnvVars(saved.envVars) }
   })
 
   ipcMain.handle('store:deleteProject', (_, id: string) => {
     const projects = store.get('projects').filter((p) => p.id !== id)
     store.set('projects', projects)
+    log.info(`Project deleted`, { id })
   })
 
   ipcMain.handle('store:getTemplates', () => {

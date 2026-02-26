@@ -70,4 +70,8 @@ contextBridge.exposeInMainWorld('agentDeck', {
       ipcRenderer.invoke('projects:readFile', projectPath, filename) as Promise<string | null>,
   },
   pickFolder: () => ipcRenderer.invoke('dialog:pickFolder'),
+  log: {
+    send: (level: string, mod: string, message: string, data?: unknown) =>
+      ipcRenderer.invoke('log:renderer', level, mod, message, data),
+  },
 })

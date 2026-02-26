@@ -110,7 +110,9 @@ export function TerminalPane({
       )
       .then(() => setSessionStatus(sessionId, 'running'))
       .catch((err: unknown) => {
-        console.error('PTY spawn failed:', err)
+        window.agentDeck.log.send('error', 'terminal', `PTY spawn failed for ${sessionId}`, {
+          err: String(err),
+        })
         setSessionStatus(sessionId, 'exited')
       })
 

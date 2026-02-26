@@ -6,6 +6,9 @@ import { createPtyManager, type PtyManager } from './pty-manager'
 import { createProjectStore } from './project-store'
 import { detectStack } from './detect-stack'
 import { getDefaultDistro, wslPathToWindows } from './wsl-utils'
+import { initLogger, createLogger } from './logger'
+
+const log = createLogger('app')
 
 let mainWindow: BrowserWindow | null = null
 let ptyManager: PtyManager | null = null
@@ -150,7 +153,7 @@ function registerIpcHandlers(): void {
         throw firstErr
       }
     } catch (err) {
-      console.error(`[readFile] Failed to read ${filename} from ${projectPath}:`, err)
+      log.error(`Failed to read ${filename} from ${projectPath}`, { err: String(err) })
       return null
     }
   })
@@ -166,12 +169,32 @@ function registerIpcHandlers(): void {
 }
 
 app.whenReady().then(() => {
+  initLogger()
+  log.info('App ready')
   createProjectStore()
   registerIpcHandlers()
+
+  /* ── Renderer log relay ────────────────────────────────────────── */
+  ipcMain.handle(
+    'log:renderer',
+    (_, level: string, mod: string, message: string, data?: unknown) => {
+      const rendererLog = createLogger(`renderer:${mod}`)
+      const methods: Record<string, (msg: string, d?: unknown) => void> = {
+        info: rendererLog.info,
+        warn: rendererLog.warn,
+        error: rendererLog.error,
+        debug: rendererLog.debug,
+      }
+      methods[level]?.(message, data)
+    },
+  )
+
   createWindow()
+  log.info('Window created')
 })
 
 app.on('before-quit', () => {
+  log.info('App quitting')
   ptyManager?.killAll()
 })
 

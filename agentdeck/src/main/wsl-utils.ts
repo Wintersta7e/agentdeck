@@ -1,4 +1,7 @@
 import { execFileSync } from 'child_process'
+import { createLogger } from './logger'
+
+const log = createLogger('wsl-utils')
 
 export function wslPathToWindows(wslPath: string, distro = 'Ubuntu-24.04'): string {
   // /mnt/X/... paths map directly to Windows drives — no UNC needed
@@ -25,11 +28,13 @@ export function getDefaultDistro(): string {
       .map((l) => l.trim())
       .filter(Boolean)[0]
     if (!first) {
-      console.warn('wsl-utils: wsl.exe returned no distros, falling back to Ubuntu-24.04')
+      log.warn('wsl.exe returned no distros, falling back to Ubuntu-24.04')
+    } else {
+      log.debug(`Resolved WSL distro: ${first}`, { raw: cleaned })
     }
     return first ?? 'Ubuntu-24.04'
   } catch (err) {
-    console.error('wsl-utils: failed to detect WSL distro, falling back to Ubuntu-24.04', err)
+    log.error('Failed to detect WSL distro, falling back to Ubuntu-24.04', { err: String(err) })
     return 'Ubuntu-24.04'
   }
 }

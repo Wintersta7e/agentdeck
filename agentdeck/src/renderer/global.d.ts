@@ -43,6 +43,9 @@ declare global {
         readProjectFile: (projectPath: string, filename: string) => Promise<string | null>
       }
       pickFolder: () => Promise<string | null>
+      log: {
+        send: (level: string, mod: string, message: string, data?: unknown) => Promise<void>
+      }
     }
   }
 }

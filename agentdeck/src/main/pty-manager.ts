@@ -1,6 +1,9 @@
 import type { BrowserWindow } from 'electron'
 import type { IPty } from 'node-pty'
 import * as pty from 'node-pty'
+import { createLogger } from './logger'
+
+const log = createLogger('pty-manager')
 
 const AGENT_BINARIES: Record<string, string> = {
   'claude-code': 'claude',
@@ -89,7 +92,7 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
         env: mergedEnv,
       })
     } catch (err) {
-      console.error(`[pty-manager] Failed to spawn PTY for session ${sessionId}:`, err)
+      log.error(`Failed to spawn PTY for session ${sessionId}`, { err: String(err) })
       if (!mainWindow.isDestroyed()) {
         mainWindow.webContents.send(`pty:exit:${sessionId}`, -1)
       }
@@ -97,6 +100,7 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
     }
 
     sessions.set(sessionId, proc)
+    log.info(`Spawned session ${sessionId}`, { cols, rows, agent, projectPath })
 
     // Build the full command sequence: cd to project dir, startup commands, then launch agent
     const commands: string[] = []
@@ -111,7 +115,9 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
     /* Fix 6 (SEC-2): Validate agentFlags before use */
     let sanitizedFlags = agentFlags
     if (sanitizedFlags && !SAFE_FLAGS_RE.test(sanitizedFlags)) {
-      console.error(`[pty-manager] Rejected unsafe agentFlags: ${sanitizedFlags}`)
+      log.warn(`Rejected unsafe agentFlags for session ${sessionId}`, {
+        agentFlags: sanitizedFlags,
+      })
       sanitizedFlags = undefined
     }
 
@@ -166,6 +172,7 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
     })
 
     proc.onExit(({ exitCode }) => {
+      log.info(`Session ${sessionId} exited`, { exitCode })
       sessions.delete(sessionId)
       /* Fix 2 (LEAK-1): Clean up lineBuffers on natural exit */
       lineBuffers.delete(sessionId)
@@ -199,13 +206,15 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
       lineBuffers.delete(sessionId)
       try {
         proc.kill()
+        log.info(`Killed session ${sessionId}`)
       } catch (err) {
-        console.error(`[pty-manager] Error killing PTY for session ${sessionId}:`, err)
+        log.error(`Error killing PTY for session ${sessionId}`, { err: String(err) })
       }
     }
   }
 
   function killAll(): void {
+    log.info(`Killing all sessions (${sessions.size} active)`)
     for (const [id] of sessions) {
       kill(id)
     }
