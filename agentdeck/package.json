@@ -10,7 +10,15 @@
   "scripts": {
     "dev": "node node_modules/electron-vite/bin/electron-vite.js dev",
     "build": "node node_modules/electron-vite/bin/electron-vite.js build",
-    "postinstall": "node node_modules/@electron/rebuild/lib/cli.js -f -w node-pty"
+    "postinstall": "node node_modules/@electron/rebuild/lib/cli.js -f -w node-pty",
+    "lint": "node node_modules/eslint/bin/eslint.js src/",
+    "lint:fix": "node node_modules/eslint/bin/eslint.js src/ --fix",
+    "format": "node node_modules/prettier/bin/prettier.cjs --write 'src/**/*.{ts,tsx,css}'",
+    "typecheck": "node node_modules/typescript/bin/tsc -p tsconfig.node.json --noEmit && node node_modules/typescript/bin/tsc -p tsconfig.web.json --noEmit"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": ["eslint --fix", "prettier --write"],
+    "*.css": ["prettier --write"]
   },
   "dependencies": {
     "@fontsource-variable/syne": "^5.1.0",
