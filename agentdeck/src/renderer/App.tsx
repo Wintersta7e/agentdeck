@@ -5,6 +5,7 @@ import { StatusBar } from './components/StatusBar/StatusBar'
 import { HomeScreen } from './components/HomeScreen/HomeScreen'
 import { TerminalPane } from './components/Terminal/TerminalPane'
 import { NewProjectWizard } from './components/NewProjectWizard/NewProjectWizard'
+import { ProjectSettings } from './components/ProjectSettings/ProjectSettings'
 import { useAppStore } from './store/appStore'
 import { useProjects } from './hooks/useProjects'
 import type { Project } from '../shared/types'
@@ -53,6 +54,7 @@ export function App(): React.JSX.Element {
         <div className="app-main">
           {currentView === 'home' && <HomeScreen onOpenProject={handleOpenProject} />}
           {currentView === 'wizard' && <NewProjectWizard onCreateProject={handleOpenProject} />}
+          {currentView === 'settings' && <ProjectSettings />}
           {Object.keys(sessions).map((sid) => (
             <div
               key={sid}

@@ -15,6 +15,9 @@ export function Titlebar({ onCloseTab, onAddTab }: TitlebarProps): React.JSX.Ele
   const setActiveSession = useAppStore((s) => s.setActiveSession)
   const setCurrentView = useAppStore((s) => s.setCurrentView)
   const openWizard = useAppStore((s) => s.openWizard)
+  const settingsProjectId = useAppStore((s) => s.settingsProjectId)
+  const closeSettings = useAppStore((s) => s.closeSettings)
+  const previousView = useAppStore((s) => s.previousView)
 
   function getProjectName(session: Session): string {
     const project = projects.find((p) => p.id === session.projectId)
@@ -47,7 +50,11 @@ export function Titlebar({ onCloseTab, onAddTab }: TitlebarProps): React.JSX.Ele
 
       {currentView === 'home' && <div className="titlebar-center">Home</div>}
       {currentView === 'wizard' && <div className="titlebar-center">New Project</div>}
-      {currentView === 'settings' && <div className="titlebar-center">Project Settings</div>}
+      {currentView === 'settings' && (
+        <div className="titlebar-center">
+          Project Settings — {projects.find((p) => p.id === settingsProjectId)?.name}
+        </div>
+      )}
 
       {currentView === 'session' && sessionList.length > 0 && (
         <div className="tab-bar">
@@ -81,6 +88,11 @@ export function Titlebar({ onCloseTab, onAddTab }: TitlebarProps): React.JSX.Ele
         {currentView === 'home' && (
           <button className="titlebar-btn primary" onClick={openWizard}>
             + New Project
+          </button>
+        )}
+        {currentView === 'settings' && (
+          <button className="titlebar-btn" onClick={closeSettings}>
+            {'\u2190'} Back to {previousView}
           </button>
         )}
       </div>

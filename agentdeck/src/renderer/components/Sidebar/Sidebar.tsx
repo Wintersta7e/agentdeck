@@ -23,6 +23,7 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
   const sessions = useAppStore((s) => s.sessions)
   const activeSessionId = useAppStore((s) => s.activeSessionId)
   const openWizard = useAppStore((s) => s.openWizard)
+  const openSettings = useAppStore((s) => s.openSettings)
 
   const pinned = projects.filter((p) => p.pinned)
   const recent = [...projects]
@@ -70,6 +71,16 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
             {p.badge && (
               <span className={`sidebar-badge badge-${p.badge.toLowerCase()}`}>{p.badge}</span>
             )}
+            <button
+              className="sidebar-item-gear"
+              onClick={(e) => {
+                e.stopPropagation()
+                openSettings(p.id)
+              }}
+              title="Project settings"
+            >
+              {'\u2699'}
+            </button>
           </div>
         ))}
       </div>
@@ -92,6 +103,16 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
             {p.badge && (
               <span className={`sidebar-badge badge-${p.badge.toLowerCase()}`}>{p.badge}</span>
             )}
+            <button
+              className="sidebar-item-gear"
+              onClick={(e) => {
+                e.stopPropagation()
+                openSettings(p.id)
+              }}
+              title="Project settings"
+            >
+              {'\u2699'}
+            </button>
           </div>
         ))}
       </div>
