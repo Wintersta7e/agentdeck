@@ -1,38 +1,59 @@
 import { create } from 'zustand'
 
-export const useAppStore = create((set) => ({
-  // Sessions
+export const useAppStore = create((set, get) => ({
+  // Sessions — runtime only, keyed by sessionId
   sessions: {},
   activeSessionId: null,
 
-  addSession: (id) =>
+  addSession: (sessionId, projectId) =>
     set((state) => ({
       sessions: {
         ...state.sessions,
-        [id]: { id, status: 'starting' }
+        [sessionId]: { id: sessionId, projectId, status: 'starting', startedAt: Date.now() }
       },
-      activeSessionId: id
+      activeSessionId: sessionId,
+      currentView: 'session'
     })),
 
-  setSessionStatus: (id, status) =>
+  setSessionStatus: (sessionId, status) =>
     set((state) => ({
       sessions: {
         ...state.sessions,
-        [id]: { ...state.sessions[id], status }
+        [sessionId]: { ...state.sessions[sessionId], status }
       }
     })),
 
-  removeSession: (id) =>
+  setActiveSession: (sessionId) =>
+    set({ activeSessionId: sessionId, currentView: 'session' }),
+
+  removeSession: (sessionId) =>
     set((state) => {
-      const { [id]: _, ...rest } = state.sessions
+      const { [sessionId]: _, ...rest } = state.sessions
+      const remainingIds = Object.keys(rest)
       return {
         sessions: rest,
-        activeSessionId: state.activeSessionId === id
-          ? Object.keys(rest)[0] || null
-          : state.activeSessionId
+        activeSessionId: state.activeSessionId === sessionId
+          ? remainingIds[0] || null
+          : state.activeSessionId,
+        currentView: remainingIds.length === 0 ? 'home' : state.currentView
       }
     }),
 
-  // UI state
-  currentView: 'terminal'
+  // View routing
+  currentView: 'home',
+  setCurrentView: (view) => set({ currentView: view }),
+
+  // Projects — cached from electron-store
+  projects: [],
+  setProjects: (projects) => set({ projects }),
+
+  // Templates — cached from electron-store
+  templates: [],
+  setTemplates: (templates) => set({ templates }),
+
+  // Helpers
+  getSessionForProject: (projectId) => {
+    const { sessions } = get()
+    return Object.values(sessions).find((s) => s.projectId === projectId)
+  }
 }))
