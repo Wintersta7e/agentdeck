@@ -8,6 +8,8 @@ export function StatusBar(): React.JSX.Element {
   const currentView = useAppStore((s) => s.currentView)
 
   const paneLayout = useAppStore((s) => s.paneLayout)
+  const rightPanelOpen = useAppStore((s) => s.rightPanelOpen)
+  const openCommandPalette = useAppStore((s) => s.openCommandPalette)
 
   const activeCount = Object.values(sessions).filter((s) => s.status === 'running').length
   const layoutLabel = paneLayout === 1 ? 'single pane' : `${String(paneLayout)}-pane split`
@@ -41,9 +43,17 @@ export function StatusBar(): React.JSX.Element {
         <>
           <span className="status-sep">|</span>
           <div className="status-item">{layoutLabel}</div>
+          <span className="status-sep">|</span>
+          <div className="status-item">{rightPanelOpen ? 'Panel open' : 'Panel closed'}</div>
         </>
       )}
-      <div className="status-right">v0.1.0-alpha</div>
+      <div className="status-right">
+        <button className="status-cmd" onClick={openCommandPalette}>
+          Ctrl+K
+        </button>
+        <span className="status-sep">|</span>
+        v0.1.0-alpha
+      </div>
     </div>
   )
 }

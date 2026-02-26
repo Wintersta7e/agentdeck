@@ -66,6 +66,17 @@ export function App(): React.JSX.Element {
       if (e.ctrlKey && e.key === 'n') {
         e.preventDefault()
         useAppStore.getState().openWizard()
+        return
+      }
+      if (e.ctrlKey && e.key === '\\') {
+        e.preventDefault()
+        useAppStore.getState().toggleRightPanel()
+        return
+      }
+      if (e.ctrlKey && (e.key === '1' || e.key === '2' || e.key === '3')) {
+        e.preventDefault()
+        useAppStore.getState().setPaneLayout(Number(e.key) as 1 | 2 | 3)
+        return
       }
       if (e.key === 'Escape') {
         const state = useAppStore.getState()

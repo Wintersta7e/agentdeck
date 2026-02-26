@@ -25,6 +25,26 @@
 
 .status-right {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-cmd {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text2);
+  padding: 0 6px;
+  border-radius: 3px;
+  font-size: 9px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  transition: all 0.12s;
+}
+
+.status-cmd:hover {
+  border-color: var(--amber-border);
+  color: var(--amber);
 }
 
 .status-sep {
