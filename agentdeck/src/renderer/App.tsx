@@ -8,6 +8,7 @@ import { RightPanel } from './components/RightPanel/RightPanel'
 import { NewProjectWizard } from './components/NewProjectWizard/NewProjectWizard'
 import { ProjectSettings } from './components/ProjectSettings/ProjectSettings'
 import { CommandPalette } from './components/CommandPalette/CommandPalette'
+import { TemplateEditor } from './components/TemplateEditor/TemplateEditor'
 import { useAppStore } from './store/appStore'
 import { useProjects } from './hooks/useProjects'
 import type { ActivityEvent, Project } from '../shared/types'
@@ -76,6 +77,8 @@ export function App(): React.JSX.Element {
           state.closeWizard()
         } else if (state.currentView === 'settings') {
           state.closeSettings()
+        } else if (state.currentView === 'template-editor') {
+          state.closeTemplateEditor()
         }
       }
     }
@@ -102,6 +105,7 @@ export function App(): React.JSX.Element {
           {currentView === 'home' && <HomeScreen onOpenProject={handleOpenProject} />}
           {currentView === 'wizard' && <NewProjectWizard onCreateProject={handleOpenProject} />}
           {currentView === 'settings' && <ProjectSettings />}
+          {currentView === 'template-editor' && <TemplateEditor />}
           <div
             style={{
               display: currentView === 'session' ? 'flex' : 'none',

@@ -24,6 +24,7 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
   const activeSessionId = useAppStore((s) => s.activeSessionId)
   const openWizard = useAppStore((s) => s.openWizard)
   const openSettings = useAppStore((s) => s.openSettings)
+  const openTemplateEditor = useAppStore((s) => s.openTemplateEditor)
 
   const pinned = projects.filter((p) => p.pinned)
   const recent = [...projects]
@@ -122,12 +123,12 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
       <div className="sidebar-section flex-fill">
         <div className="sidebar-label">
           Templates
-          <button className="sidebar-action" onClick={openWizard}>
+          <button className="sidebar-action" onClick={() => openTemplateEditor()}>
             +
           </button>
         </div>
         {templates.map((t) => (
-          <div key={t.id} className="sidebar-item">
+          <div key={t.id} className="sidebar-item" onClick={() => openTemplateEditor(t.id)}>
             <span style={{ fontSize: '11px' }}>{'\u{1F4CB}'}</span>
             <div className="sidebar-item-info">
               <div className="sidebar-item-name">{t.name}</div>
