@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "node node_modules/electron-vite/bin/electron-vite.js dev",
     "build": "node node_modules/electron-vite/bin/electron-vite.js build",
+    "dist": "node node_modules/electron-vite/bin/electron-vite.js build && node node_modules/electron-builder/out/cli/cli.js --win portable",
     "postinstall": "node node_modules/@electron/rebuild/lib/cli.js -f -w node-pty",
     "lint": "node node_modules/eslint/bin/eslint.js src/",
     "lint:fix": "node node_modules/eslint/bin/eslint.js src/ --fix",
@@ -47,6 +48,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.3.4",
     "electron": "^29.4.6",
+    "electron-builder": "^26.8.1",
     "electron-vite": "^2.3.0",
     "eslint": "^9.39.3",
     "eslint-config-prettier": "^10.1.8",
