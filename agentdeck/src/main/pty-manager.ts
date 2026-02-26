@@ -18,11 +18,12 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
       kill(sessionId)
     }
 
+    const cwd = process.env['USERPROFILE'] ?? process.cwd()
     const proc = pty.spawn('wsl.exe', ['--', '/bin/bash'], {
       name: 'xterm-256color',
       cols: cols ?? 80,
       rows: rows ?? 24,
-      cwd: process.env['USERPROFILE'],
+      cwd,
       env: { ...process.env } as Record<string, string>,
     })
 

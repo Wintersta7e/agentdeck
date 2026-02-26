@@ -24,9 +24,15 @@
   border-radius: 50%;
   cursor: pointer;
 }
-.control-close { background: var(--red); }
-.control-min { background: var(--amber); }
-.control-max { background: var(--green); }
+.control-close {
+  background: var(--red);
+}
+.control-min {
+  background: var(--amber);
+}
+.control-max {
+  background: var(--green);
+}
 
 .titlebar-logo {
   display: flex;

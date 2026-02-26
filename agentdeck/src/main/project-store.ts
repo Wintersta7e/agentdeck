@@ -29,8 +29,9 @@ export function createProjectStore(): Store<StoreSchema> {
     const id = p.id ?? randomUUID()
     const withId = { ...p, id } as Project
     const idx = projects.findIndex((existing) => existing.id === id)
-    if (idx >= 0) {
-      projects[idx] = { ...projects[idx]!, ...withId }
+    const existing = idx >= 0 ? projects[idx] : undefined
+    if (existing != null) {
+      projects[idx] = { ...existing, ...withId }
     } else {
       projects.push(withId)
     }
@@ -56,8 +57,9 @@ export function createProjectStore(): Store<StoreSchema> {
     const id = t.id ?? randomUUID()
     const withId = { ...t, id } as Template
     const idx = templates.findIndex((existing) => existing.id === id)
-    if (idx >= 0) {
-      templates[idx] = { ...templates[idx]!, ...withId }
+    const existingTpl = idx >= 0 ? templates[idx] : undefined
+    if (existingTpl != null) {
+      templates[idx] = { ...existingTpl, ...withId }
     } else {
       templates.push(withId)
     }

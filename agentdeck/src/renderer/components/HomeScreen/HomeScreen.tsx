@@ -101,9 +101,7 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
 
         <div className="quick-open">
           <span className="quick-open-icon">{'\u2318'}</span>
-          <span className="quick-open-text">
-            Open project, run template, or jump to session...
-          </span>
+          <span className="quick-open-text">Open project, run template, or jump to session...</span>
           <span className="quick-open-hint">Ctrl+K</span>
         </div>
 

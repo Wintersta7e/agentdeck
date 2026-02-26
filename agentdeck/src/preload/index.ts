@@ -4,8 +4,7 @@ contextBridge.exposeInMainWorld('agentDeck', {
   pty: {
     spawn: (sessionId: string, cols: number, rows: number) =>
       ipcRenderer.invoke('pty:spawn', sessionId, cols, rows),
-    write: (sessionId: string, data: string) =>
-      ipcRenderer.invoke('pty:write', sessionId, data),
+    write: (sessionId: string, data: string) => ipcRenderer.invoke('pty:write', sessionId, data),
     resize: (sessionId: string, cols: number, rows: number) =>
       ipcRenderer.invoke('pty:resize', sessionId, cols, rows),
     kill: (sessionId: string) => ipcRenderer.invoke('pty:kill', sessionId),
@@ -17,8 +16,7 @@ contextBridge.exposeInMainWorld('agentDeck', {
     },
     onExit: (sessionId: string, cb: (exitCode: number) => void) => {
       const channel = `pty:exit:${sessionId}`
-      const listener = (_event: Electron.IpcRendererEvent, exitCode: number): void =>
-        cb(exitCode)
+      const listener = (_event: Electron.IpcRendererEvent, exitCode: number): void => cb(exitCode)
       ipcRenderer.on(channel, listener)
       return () => ipcRenderer.removeListener(channel, listener)
     },

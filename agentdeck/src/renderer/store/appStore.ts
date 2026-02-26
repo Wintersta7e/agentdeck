@@ -57,7 +57,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       return {
         sessions: rest,
         activeSessionId:
-          state.activeSessionId === sessionId ? remainingIds[0] ?? null : state.activeSessionId,
+          state.activeSessionId === sessionId ? (remainingIds[0] ?? null) : state.activeSessionId,
         currentView: remainingIds.length === 0 ? ('home' as const) : state.currentView,
       }
     }),

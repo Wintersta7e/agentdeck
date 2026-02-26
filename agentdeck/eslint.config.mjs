@@ -7,6 +7,14 @@ export default tseslint.config(
   { ignores: ['out/**', 'dist/**'] },
   ...tseslint.configs.strict,
   {
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', destructuredArrayIgnorePattern: '^_' },
+      ],
+    },
+  },
+  {
     files: ['src/renderer/**/*.{ts,tsx}'],
     plugins: {
       react,

@@ -16,8 +16,12 @@
   align-items: center;
   gap: 5px;
 }
-.status-item.green { color: var(--green); }
-.status-item.amber { color: var(--amber); }
+.status-item.green {
+  color: var(--green);
+}
+.status-item.amber {
+  color: var(--amber);
+}
 
 .status-right {
   margin-left: auto;

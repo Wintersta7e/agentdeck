@@ -4,13 +4,17 @@
 @import '@fontsource/jetbrains-mono/600.css';
 @import '@fontsource-variable/syne';
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   overflow: hidden;
 }

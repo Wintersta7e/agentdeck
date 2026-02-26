@@ -75,9 +75,7 @@ export function Titlebar({ onCloseTab, onAddTab }: TitlebarProps): React.JSX.Ele
 
       <div className="titlebar-right">
         <button className="titlebar-btn">Ctrl+K Command</button>
-        {currentView === 'home' && (
-          <button className="titlebar-btn primary">+ New Project</button>
-        )}
+        {currentView === 'home' && <button className="titlebar-btn primary">+ New Project</button>}
       </div>
     </div>
   )

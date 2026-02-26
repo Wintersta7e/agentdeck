@@ -56,8 +56,7 @@ export function App(): React.JSX.Element {
               key={sid}
               style={{
                 flex: 1,
-                display:
-                  currentView === 'session' && sid === activeSessionId ? 'flex' : 'none',
+                display: currentView === 'session' && sid === activeSessionId ? 'flex' : 'none',
                 overflow: 'hidden',
               }}
             >
