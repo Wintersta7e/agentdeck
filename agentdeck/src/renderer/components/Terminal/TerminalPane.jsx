@@ -55,7 +55,11 @@ export function TerminalPane({ sessionId }) {
     // Spawn PTY with terminal dimensions
     const { cols, rows } = term
     window.agentDeck.pty.spawn(sessionId, cols, rows)
-    setSessionStatus(sessionId, 'running')
+      .then(() => setSessionStatus(sessionId, 'running'))
+      .catch((err) => {
+        console.error('PTY spawn failed:', err)
+        setSessionStatus(sessionId, 'exited')
+      })
 
     // Stream PTY output into terminal
     const unsubData = window.agentDeck.pty.onData(sessionId, (data) => {
@@ -94,7 +98,7 @@ export function TerminalPane({ sessionId }) {
       term.dispose()
       window.agentDeck.pty.kill(sessionId)
     }
-  }, [sessionId])
+  }, [sessionId, setSessionStatus])
 
   return <div ref={containerRef} className="terminal-container" />
 }
