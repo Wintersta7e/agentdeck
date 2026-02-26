@@ -1,0 +1,218 @@
+import { useAppStore } from '../../store/appStore'
+import './HomeScreen.css'
+
+function timeAgo(timestamp) {
+  if (!timestamp) return ''
+  const diff = Date.now() - timestamp
+  const mins = Math.floor(diff / 60000)
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
+}
+
+function getGreeting() {
+  const h = new Date().getHours()
+  if (h < 12) return 'Good morning'
+  if (h < 18) return 'Good afternoon'
+  return 'Good evening'
+}
+
+function formatDate() {
+  return new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  })
+}
+
+const BADGE_ICONS = { Java: '\u2615', JS: '\u2B21', Agent: '\u25C8' }
+const BADGE_ICON_CLASS = { Java: 'card-icon-java', JS: 'card-icon-js', Agent: 'card-icon-agent' }
+
+const AGENTS = [
+  { name: 'claude-code', icon: '\u2B21', desc: 'Anthropic CLI', active: true },
+  { name: 'codex', icon: '\u25C8', desc: 'OpenAI CLI', active: false },
+  { name: 'aider', icon: '\u25B8', desc: 'Git-aware agent', active: false }
+]
+
+export function HomeScreen({ onOpenProject }) {
+  const projects = useAppStore((s) => s.projects)
+  const templates = useAppStore((s) => s.templates)
+  const sessions = useAppStore((s) => s.sessions)
+
+  const pinned = projects.filter((p) => p.pinned)
+  const recent = [...projects]
+    .filter((p) => p.lastOpened)
+    .sort((a, b) => b.lastOpened - a.lastOpened)
+    .slice(0, 5)
+
+  const activeSessions = Object.values(sessions).filter((s) => s.status === 'running').length
+  const erroredSessions = Object.values(sessions).filter((s) => s.status === 'error').length
+
+  function getProjectStatus(projectId) {
+    const session = Object.values(sessions).find((s) => s.projectId === projectId)
+    return session ? session.status : 'idle'
+  }
+
+  function statusColorClass(status) {
+    if (status === 'running') return 'green'
+    if (status === 'error') return 'red'
+    return ''
+  }
+
+  return (
+    <div className="home-main">
+      <div className="home-content">
+
+        <div className="greeting">
+          <div className="greeting-eyebrow">{formatDate()}</div>
+          <div className="greeting-headline">
+            {getGreeting()}, <span>rooty</span>.
+          </div>
+          <div className="greeting-sub">
+            {activeSessions} session{activeSessions !== 1 ? 's' : ''} running
+            {' \u00B7 '}{pinned.length} project{pinned.length !== 1 ? 's' : ''} pinned
+            {' \u00B7 '}{templates.length} template{templates.length !== 1 ? 's' : ''} ready
+          </div>
+        </div>
+
+        <div className="quick-open">
+          <span className="quick-open-icon">{'\u2318'}</span>
+          <span className="quick-open-text">Open project, run template, or jump to session...</span>
+          <span className="quick-open-hint">Ctrl+K</span>
+        </div>
+
+        <div className="stats-row">
+          <div className="stat-item">
+            <div className={`stat-value ${activeSessions > 0 ? 'green' : ''}`}>
+              {activeSessions}
+            </div>
+            <div className="stat-label">Active sessions</div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-value">{projects.length}</div>
+            <div className="stat-label">Projects total</div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-value amber">{templates.length}</div>
+            <div className="stat-label">Templates</div>
+          </div>
+          <div className="stat-item">
+            <div className={`stat-value ${erroredSessions > 0 ? 'red' : ''}`}>
+              {erroredSessions}
+            </div>
+            <div className="stat-label">Errored</div>
+          </div>
+        </div>
+
+        {pinned.length > 0 && (
+          <>
+            <div className="section-header">
+              <div className="section-title">Pinned Projects</div>
+              <button className="section-action">{'Manage \u2192'}</button>
+            </div>
+            <div className="pinned-grid">
+              {pinned.map((p) => {
+                const status = getProjectStatus(p.id)
+                const tNames = (p.attachedTemplates || [])
+                  .map((tid) => templates.find((t) => t.id === tid))
+                  .filter(Boolean)
+                return (
+                  <div
+                    key={p.id}
+                    className={`project-card ${status === 'running' ? 'running' : ''} ${status === 'error' ? 'error' : ''}`}
+                    onClick={() => onOpenProject(p)}
+                  >
+                    <div className="card-top">
+                      <div className={`card-icon ${BADGE_ICON_CLASS[p.badge] || 'card-icon-agent'}`}>
+                        {BADGE_ICONS[p.badge] || '\u25C8'}
+                      </div>
+                      <div className={`card-status ${statusColorClass(status)}`}>
+                        <div className={`card-status-dot ${statusColorClass(status)}`}
+                          style={{
+                            background: status === 'running' ? 'var(--green)' :
+                              status === 'error' ? 'var(--red)' : 'var(--text3)'
+                          }}
+                        />
+                        {status}
+                      </div>
+                    </div>
+                    <div className="card-name">{p.name}</div>
+                    <div className="card-path">{p.path}</div>
+                    <div className="card-meta">
+                      {p.badge && (
+                        <span className={`card-badge badge-${p.badge.toLowerCase()}`}>
+                          {p.badge}
+                        </span>
+                      )}
+                      <span className="card-last">{timeAgo(p.lastOpened)}</span>
+                    </div>
+                    {tNames.length > 0 && (
+                      <div className="card-templates">
+                        {tNames.map((t) => (
+                          <span key={t.id} className="card-template-chip">{t.name}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        )}
+
+        {recent.length > 0 && (
+          <>
+            <div className="section-header">
+              <div className="section-title">Recent</div>
+              <button className="section-action">{'See all \u2192'}</button>
+            </div>
+            <div className="recent-list">
+              {recent.map((p) => {
+                const status = getProjectStatus(p.id)
+                return (
+                  <div key={p.id} className="recent-item" onClick={() => onOpenProject(p)}>
+                    <div className="recent-dot" style={{
+                      background: status === 'running' ? 'var(--green)' :
+                        status === 'error' ? 'var(--red)' : 'var(--text3)'
+                    }} />
+                    <div className="recent-name">{p.name}</div>
+                    <div className="recent-path">{p.path}</div>
+                    {p.badge && (
+                      <span className={`recent-badge badge-${p.badge.toLowerCase()}`}>
+                        {p.badge}
+                      </span>
+                    )}
+                    <div className="recent-time">{timeAgo(p.lastOpened)}</div>
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        )}
+
+        <div className="section-header">
+          <div className="section-title">Available Agents</div>
+          <button className="section-action">{'Configure \u2192'}</button>
+        </div>
+        <div className="agent-grid">
+          {AGENTS.map((a) => (
+            <div key={a.name} className={`agent-card ${a.active ? 'active' : ''}`}>
+              <div className="agent-card-icon">{a.icon}</div>
+              <div className="agent-card-name">{a.name}</div>
+              <div className="agent-card-desc">{a.desc}</div>
+            </div>
+          ))}
+          <div className="agent-card" style={{ borderStyle: 'dashed' }}>
+            <div className="agent-card-icon" style={{ color: 'var(--text3)' }}>+</div>
+            <div className="agent-card-name" style={{ color: 'var(--text2)' }}>Add agent</div>
+            <div className="agent-card-desc">Custom command</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  )
+}
