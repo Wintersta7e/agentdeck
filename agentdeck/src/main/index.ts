@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import { join } from 'path'
 import { createPtyManager } from './pty-manager'
 import { createProjectStore } from './project-store'
@@ -55,6 +55,14 @@ function createWindow(): void {
 
   ipcMain.handle('projects:getDefaultDistro', () => {
     return getDefaultDistro()
+  })
+
+  ipcMain.handle('dialog:pickFolder', async () => {
+    if (!mainWindow) return null
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openDirectory'],
+    })
+    return result.filePaths[0] ?? null
   })
 
   mainWindow.once('ready-to-show', () => {

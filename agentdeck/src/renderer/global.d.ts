@@ -28,6 +28,7 @@ declare global {
         detectStack: (path: string, distro?: string) => Promise<DetectedStack | null>
         getDefaultDistro: () => Promise<string>
       }
+      pickFolder: () => Promise<string | null>
     }
   }
 }

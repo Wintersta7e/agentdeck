@@ -39,4 +39,5 @@ contextBridge.exposeInMainWorld('agentDeck', {
       ipcRenderer.invoke('projects:detectStack', path, distro),
     getDefaultDistro: () => ipcRenderer.invoke('projects:getDefaultDistro'),
   },
+  pickFolder: () => ipcRenderer.invoke('dialog:pickFolder'),
 })

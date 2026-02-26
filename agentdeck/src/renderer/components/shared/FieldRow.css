@@ -1,0 +1,36 @@
+.field-row {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+}
+
+.field-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.field-row-left {
+  width: 160px;
+  flex-shrink: 0;
+}
+
+.form-label {
+  font-size: 10px;
+  color: var(--text1);
+  font-weight: 500;
+}
+
+.form-sublabel {
+  font-size: 9px;
+  color: var(--text2);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+.field-row-right {
+  flex: 1;
+  min-width: 0;
+}

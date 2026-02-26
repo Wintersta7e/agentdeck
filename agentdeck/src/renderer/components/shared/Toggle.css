@@ -1,0 +1,48 @@
+.toggle-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.toggle {
+  position: relative;
+  width: 36px;
+  height: 18px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--bg4);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+}
+
+.toggle-on {
+  background: var(--amber);
+  border-color: var(--amber);
+}
+
+.toggle-thumb {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--bg0);
+  transition: transform 0.2s;
+  pointer-events: none;
+}
+
+.toggle-on .toggle-thumb {
+  transform: translateX(18px);
+}
+
+.toggle-label {
+  font-size: 11px;
+  color: var(--text1);
+  user-select: none;
+}
