@@ -35,6 +35,7 @@ declare global {
       projects: {
         detectStack: (path: string, distro?: string) => Promise<DetectedStack | null>
         getDefaultDistro: () => Promise<string>
+        readProjectFile: (projectPath: string, filename: string) => Promise<string | null>
       }
       pickFolder: () => Promise<string | null>
     }

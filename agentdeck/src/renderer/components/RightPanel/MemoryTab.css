@@ -1,0 +1,33 @@
+.memory-file-content {
+  font-size: 10px;
+  color: var(--text1);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 10px;
+  margin-bottom: 12px;
+  max-height: 300px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+}
+
+.memory-refresh-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text2);
+  padding: 3px 8px;
+  border-radius: var(--r);
+  font-size: 9px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.12s;
+  margin-bottom: 8px;
+}
+
+.memory-refresh-btn:hover {
+  border-color: var(--amber);
+  color: var(--amber);
+}

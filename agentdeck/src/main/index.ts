@@ -1,9 +1,11 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
+import * as fs from 'fs'
+import * as path from 'path'
 import { join } from 'path'
 import { createPtyManager } from './pty-manager'
 import { createProjectStore } from './project-store'
 import { detectStack } from './detect-stack'
-import { getDefaultDistro } from './wsl-utils'
+import { getDefaultDistro, wslPathToWindows } from './wsl-utils'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -66,6 +68,18 @@ function createWindow(): void {
 
   ipcMain.handle('projects:getDefaultDistro', () => {
     return getDefaultDistro()
+  })
+
+  ipcMain.handle('projects:readFile', async (_event, projectPath: string, filename: string) => {
+    try {
+      const distro = getDefaultDistro()
+      const windowsPath = wslPathToWindows(projectPath, distro)
+      const filePath = path.join(windowsPath, filename)
+      const content = await fs.promises.readFile(filePath, 'utf-8')
+      return content
+    } catch {
+      return null
+    }
   })
 
   ipcMain.handle('dialog:pickFolder', async () => {

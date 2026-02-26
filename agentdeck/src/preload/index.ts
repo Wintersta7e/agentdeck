@@ -50,6 +50,8 @@ contextBridge.exposeInMainWorld('agentDeck', {
     detectStack: (path: string, distro?: string) =>
       ipcRenderer.invoke('projects:detectStack', path, distro),
     getDefaultDistro: () => ipcRenderer.invoke('projects:getDefaultDistro'),
+    readProjectFile: (projectPath: string, filename: string) =>
+      ipcRenderer.invoke('projects:readFile', projectPath, filename) as Promise<string | null>,
   },
   pickFolder: () => ipcRenderer.invoke('dialog:pickFolder'),
 })

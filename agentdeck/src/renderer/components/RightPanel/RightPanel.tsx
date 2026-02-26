@@ -1,6 +1,7 @@
 import { useAppStore } from '../../store/appStore'
 import { ActivityTab } from './ActivityTab'
 import { ContextTab } from './ContextTab'
+import { MemoryTab } from './MemoryTab'
 import type { RightPanelTab } from '../../../shared/types'
 import './RightPanel.css'
 
@@ -30,9 +31,7 @@ export function RightPanel(): React.JSX.Element {
       <div className="panel-body">
         {rightPanelTab === 'context' && <ContextTab />}
         {rightPanelTab === 'activity' && <ActivityTab />}
-        {rightPanelTab === 'memory' && (
-          <div className="panel-placeholder">Memory viewer — coming soon</div>
-        )}
+        {rightPanelTab === 'memory' && <MemoryTab />}
       </div>
     </div>
   )
