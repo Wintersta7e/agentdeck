@@ -8,6 +8,7 @@ declare global {
           sessionId: string,
           cols: number,
           rows: number,
+          projectPath?: string,
           startupCommands?: string[],
           env?: Record<string, string>,
         ) => Promise<void>

@@ -88,6 +88,7 @@ export function App(): React.JSX.Element {
               >
                 <TerminalPane
                   sessionId={sid}
+                  projectPath={project?.path}
                   startupCommands={project?.startupCommands?.map((c) => c.value)}
                   env={
                     project?.envVars && project.envVars.length > 0

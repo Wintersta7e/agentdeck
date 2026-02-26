@@ -33,10 +33,11 @@ function createWindow(): void {
       sessionId: string,
       cols: number,
       rows: number,
+      projectPath?: string,
       startupCommands?: string[],
       env?: Record<string, string>,
     ) => {
-      ptyManager.spawn(sessionId, cols, rows, startupCommands, env)
+      ptyManager.spawn(sessionId, cols, rows, projectPath, startupCommands, env)
     },
   )
   ipcMain.handle('pty:write', (_, sessionId: string, data: string) => {
@@ -76,6 +77,7 @@ function createWindow(): void {
   })
 
   mainWindow.once('ready-to-show', () => {
+    mainWindow?.webContents.setZoomFactor(1.2)
     mainWindow?.maximize()
     mainWindow?.show()
   })

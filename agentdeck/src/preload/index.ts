@@ -6,9 +6,10 @@ contextBridge.exposeInMainWorld('agentDeck', {
       sessionId: string,
       cols: number,
       rows: number,
+      projectPath?: string,
       startupCommands?: string[],
       env?: Record<string, string>,
-    ) => ipcRenderer.invoke('pty:spawn', sessionId, cols, rows, startupCommands, env),
+    ) => ipcRenderer.invoke('pty:spawn', sessionId, cols, rows, projectPath, startupCommands, env),
     write: (sessionId: string, data: string) => ipcRenderer.invoke('pty:write', sessionId, data),
     resize: (sessionId: string, cols: number, rows: number) =>
       ipcRenderer.invoke('pty:resize', sessionId, cols, rows),
