@@ -2,6 +2,8 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { createPtyManager } from './pty-manager'
 import { createProjectStore } from './project-store'
+import { detectStack } from './detect-stack'
+import { getDefaultDistro } from './wsl-utils'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -45,6 +47,14 @@ function createWindow(): void {
     } else {
       mainWindow?.maximize()
     }
+  })
+
+  ipcMain.handle('projects:detectStack', (_, path: string, distro?: string) => {
+    return detectStack(path, distro)
+  })
+
+  ipcMain.handle('projects:getDefaultDistro', () => {
+    return getDefaultDistro()
   })
 
   mainWindow.once('ready-to-show', () => {

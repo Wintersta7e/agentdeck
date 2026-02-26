@@ -1,7 +1,25 @@
 import Store from 'electron-store'
-import { ipcMain } from 'electron'
+import { ipcMain, safeStorage } from 'electron'
 import { randomUUID } from 'crypto'
-import type { Project, Template } from '../shared/types'
+import type { EnvVar, Project, Template } from '../shared/types'
+
+function encryptEnvVars(envVars: EnvVar[] | undefined): EnvVar[] | undefined {
+  if (!envVars) return envVars
+  if (!safeStorage.isEncryptionAvailable()) return envVars
+  return envVars.map((v) => ({
+    ...v,
+    value: v.secret ? safeStorage.encryptString(v.value).toString('base64') : v.value,
+  }))
+}
+
+function decryptEnvVars(envVars: EnvVar[] | undefined): EnvVar[] | undefined {
+  if (!envVars) return envVars
+  if (!safeStorage.isEncryptionAvailable()) return envVars
+  return envVars.map((v) => ({
+    ...v,
+    value: v.secret ? safeStorage.decryptString(Buffer.from(v.value, 'base64')) : v.value,
+  }))
+}
 
 interface StoreSchema {
   projects: Project[]
@@ -17,7 +35,8 @@ export function createProjectStore(): Store<StoreSchema> {
   })
 
   ipcMain.handle('store:getProjects', () => {
-    return store.get('projects')
+    const projects = store.get('projects')
+    return projects.map((p) => ({ ...p, envVars: decryptEnvVars(p.envVars) }))
   })
 
   ipcMain.handle('store:saveProject', (_, project: unknown) => {
@@ -27,7 +46,7 @@ export function createProjectStore(): Store<StoreSchema> {
     const p = project as Partial<Project>
     const projects = store.get('projects')
     const id = p.id ?? randomUUID()
-    const withId = { ...p, id } as Project
+    const withId = { ...p, id, envVars: encryptEnvVars(p.envVars) } as Project
     const idx = projects.findIndex((existing) => existing.id === id)
     const existing = idx >= 0 ? projects[idx] : undefined
     if (existing != null) {
