@@ -7,7 +7,10 @@ export function StatusBar(): React.JSX.Element {
   const projects = useAppStore((s) => s.projects)
   const currentView = useAppStore((s) => s.currentView)
 
+  const paneLayout = useAppStore((s) => s.paneLayout)
+
   const activeCount = Object.values(sessions).filter((s) => s.status === 'running').length
+  const layoutLabel = paneLayout === 1 ? 'single pane' : `${String(paneLayout)}-pane split`
 
   let activeProjectName: string | null = null
   if (currentView === 'session' && activeSessionId) {
@@ -32,6 +35,12 @@ export function StatusBar(): React.JSX.Element {
         <>
           <span className="status-sep">|</span>
           <div className="status-item amber">{activeProjectName}</div>
+        </>
+      )}
+      {currentView === 'session' && (
+        <>
+          <span className="status-sep">|</span>
+          <div className="status-item">{layoutLabel}</div>
         </>
       )}
       <div className="status-right">v0.1.0-alpha</div>

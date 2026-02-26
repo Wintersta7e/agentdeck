@@ -1,0 +1,101 @@
+.split-area {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+.split-pane {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg0);
+  position: relative;
+}
+
+.split-pane.focused .pane-focus-indicator {
+  opacity: 1;
+}
+
+.pane-focus-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--amber);
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 2;
+}
+
+.split-divider {
+  width: 4px;
+  background: var(--border);
+  cursor: col-resize;
+  flex-shrink: 0;
+  z-index: 5;
+  transition: background 0.15s;
+  position: relative;
+}
+
+.split-divider:hover {
+  background: rgba(245, 166, 35, 0.5);
+}
+
+.split-divider::after {
+  content: '\2807';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(90deg);
+  font-size: 10px;
+  color: var(--text3);
+  pointer-events: none;
+}
+
+.split-divider:hover::after {
+  color: var(--amber);
+}
+
+.split-pane-placeholder {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text3);
+  font-size: 11px;
+}
+
+.layout-controls {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  display: flex;
+  gap: 5px;
+  z-index: 20;
+}
+
+.lc-btn {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  padding: 5px 9px;
+  border-radius: 4px;
+  font-size: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  transition: all 0.12s;
+}
+
+.lc-btn:hover {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+
+.lc-btn.active {
+  background: var(--amber-glow);
+  border-color: rgba(245, 166, 35, 0.4);
+  color: var(--amber);
+}
