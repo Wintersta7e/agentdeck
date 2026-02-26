@@ -1,0 +1,120 @@
+import { useAppStore } from '../../store/appStore'
+import './Sidebar.css'
+
+function timeAgo(timestamp) {
+  if (!timestamp) return ''
+  const diff = Date.now() - timestamp
+  const mins = Math.floor(diff / 60000)
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
+}
+
+export function Sidebar({ onOpenProject }) {
+  const projects = useAppStore((s) => s.projects)
+  const templates = useAppStore((s) => s.templates)
+  const sessions = useAppStore((s) => s.sessions)
+  const activeSessionId = useAppStore((s) => s.activeSessionId)
+
+  const pinned = projects.filter((p) => p.pinned)
+  const recent = [...projects]
+    .filter((p) => !p.pinned && p.lastOpened)
+    .sort((a, b) => b.lastOpened - a.lastOpened)
+    .slice(0, 5)
+
+  function getProjectStatus(projectId) {
+    const session = Object.values(sessions).find((s) => s.projectId === projectId)
+    return session ? session.status : 'idle'
+  }
+
+  function isActive(projectId) {
+    if (!activeSessionId) return false
+    const session = sessions[activeSessionId]
+    return session && session.projectId === projectId
+  }
+
+  function dotClass(status) {
+    if (status === 'running') return 'dot-running'
+    if (status === 'error') return 'dot-error'
+    return 'dot-idle'
+  }
+
+  return (
+    <div className="sidebar">
+      <div className="sidebar-section">
+        <div className="sidebar-label">
+          Pinned
+          <button className="sidebar-action">+</button>
+        </div>
+        {pinned.map((p) => (
+          <div
+            key={p.id}
+            className={`sidebar-item ${isActive(p.id) ? 'active' : ''}`}
+            onClick={() => onOpenProject(p)}
+          >
+            <div className={`sidebar-dot ${dotClass(getProjectStatus(p.id))}`} />
+            <div className="sidebar-item-info">
+              <div className="sidebar-item-name">{p.name}</div>
+              <div className="sidebar-item-sub">{p.path}</div>
+            </div>
+            {p.badge && (
+              <span className={`sidebar-badge badge-${p.badge.toLowerCase()}`}>
+                {p.badge}
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="sidebar-divider" />
+
+      <div className="sidebar-section">
+        <div className="sidebar-label">Recent</div>
+        {recent.map((p) => (
+          <div
+            key={p.id}
+            className={`sidebar-item ${isActive(p.id) ? 'active' : ''}`}
+            onClick={() => onOpenProject(p)}
+          >
+            <div className={`sidebar-dot ${dotClass(getProjectStatus(p.id))}`} />
+            <div className="sidebar-item-info">
+              <div className="sidebar-item-name">{p.name}</div>
+              <div className="sidebar-item-sub">{timeAgo(p.lastOpened)}</div>
+            </div>
+            {p.badge && (
+              <span className={`sidebar-badge badge-${p.badge.toLowerCase()}`}>
+                {p.badge}
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="sidebar-divider" />
+
+      <div className="sidebar-section flex-fill">
+        <div className="sidebar-label">
+          Templates
+          <button className="sidebar-action">+</button>
+        </div>
+        {templates.map((t) => (
+          <div key={t.id} className="sidebar-item">
+            <span style={{ fontSize: '11px' }}>&#x1F4CB;</span>
+            <div className="sidebar-item-info">
+              <div className="sidebar-item-name">{t.name}</div>
+              <div className="sidebar-item-sub">{t.description}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="sidebar-bottom">
+        <button className="new-project-btn">
+          <span>+</span> New Project
+        </button>
+      </div>
+    </div>
+  )
+}
