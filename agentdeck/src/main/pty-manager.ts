@@ -112,10 +112,6 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
     }
 
     if (agent) {
-      /* Fix 7 (PTY-1): Source NVM before agent launch */
-      commands.push(
-        'export NVM_DIR="$HOME/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" 2>/dev/null',
-      )
       const bin = AGENT_BINARIES[agent] ?? agent
       const agentCmd = sanitizedFlags ? `${bin} ${sanitizedFlags}` : bin
       commands.push(agentCmd)
@@ -123,15 +119,11 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
 
     if (commands.length > 0) {
       const timer = setTimeout(() => {
-        /* Fix 4 (PTY-3): Clean up timer reference */
         spawnTimers.delete(sessionId)
-        /* Fix 5 (PTY-4): Dead-process guard */
         if (!sessions.has(sessionId)) return
-        for (const cmd of commands) {
-          proc.write(cmd + '\n')
-        }
+        // Send all commands as a single compound statement to avoid garbled output
+        proc.write(commands.join(' && ') + '\n')
       }, 500)
-      /* Fix 4 (PTY-3): Store timer handle */
       spawnTimers.set(sessionId, timer)
     }
 

@@ -67,6 +67,28 @@ export function TerminalPane({
       scrollback: 5000,
     })
 
+    // Copy/paste: Ctrl+Shift+C/V or Ctrl+C (with selection) / Ctrl+V
+    term.attachCustomKeyEventHandler((e: KeyboardEvent) => {
+      if (e.type !== 'keydown') return true
+      // Ctrl+Shift+C or Ctrl+C with selection → copy
+      if (e.ctrlKey && e.key === 'c' && (e.shiftKey || term.hasSelection())) {
+        navigator.clipboard.writeText(term.getSelection()).catch(() => {})
+        term.clearSelection()
+        return false
+      }
+      // Ctrl+Shift+V or Ctrl+V → paste
+      if (e.ctrlKey && (e.key === 'v' || e.key === 'V')) {
+        navigator.clipboard
+          .readText()
+          .then((text) => {
+            if (text) window.agentDeck.pty.write(sessionId, text)
+          })
+          .catch(() => {})
+        return false
+      }
+      return true
+    })
+
     const fit = new FitAddon()
     term.loadAddon(fit)
     term.open(containerRef.current)
