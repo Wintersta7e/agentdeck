@@ -17,6 +17,8 @@ export function ProjectSettings(): React.JSX.Element | null {
   const closeSettings = useAppStore((s) => s.closeSettings)
   const projects = useAppStore((s) => s.projects)
   const getSessionForProject = useAppStore((s) => s.getSessionForProject)
+  const addSession = useAppStore((s) => s.addSession)
+  const setActiveSession = useAppStore((s) => s.setActiveSession)
   const { updateProject, deleteProject } = useProjects()
 
   const storedProject = useMemo(
@@ -105,8 +107,20 @@ export function ProjectSettings(): React.JSX.Element | null {
             </div>
           </div>
           <div className="project-header-actions">
-            <button type="button" className="header-action-btn primary">
-              Open session
+            <button
+              type="button"
+              className="header-action-btn primary"
+              onClick={() => {
+                const existing = getSessionForProject(storedProject.id)
+                if (existing) {
+                  setActiveSession(existing.id)
+                } else {
+                  addSession(`session-${storedProject.id}`, storedProject.id)
+                }
+                closeSettings()
+              }}
+            >
+              {isRunning ? 'Switch to session' : 'Open session'}
             </button>
             <button type="button" className="header-action-btn" onClick={() => setActiveTab(5)}>
               Remove project

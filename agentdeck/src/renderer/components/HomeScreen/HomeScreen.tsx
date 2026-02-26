@@ -73,6 +73,7 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
   const projects = useAppStore((s) => s.projects)
   const templates = useAppStore((s) => s.templates)
   const sessions = useAppStore((s) => s.sessions)
+  const openWizard = useAppStore((s) => s.openWizard)
 
   const pinned = projects.filter((p) => p.pinned)
   const recent = [...projects]
@@ -111,10 +112,10 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
           </div>
         </div>
 
-        <div className="quick-open">
+        <div className="quick-open" onClick={openWizard}>
           <span className="quick-open-icon">{'\u2318'}</span>
           <span className="quick-open-text">Open project, run template, or jump to session...</span>
-          <span className="quick-open-hint">Ctrl+K</span>
+          <span className="quick-open-hint">Ctrl+N</span>
         </div>
 
         <div className="stats-row">
@@ -144,7 +145,9 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
           <>
             <div className="section-header">
               <div className="section-title">Pinned Projects</div>
-              <button className="section-action">{'Manage \u2192'}</button>
+              <button className="section-action" onClick={openWizard}>
+                {'+ New \u2192'}
+              </button>
             </div>
             <div className="pinned-grid">
               {pinned.map((p) => {
@@ -254,7 +257,7 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
               <div className="agent-card-desc">{a.desc}</div>
             </div>
           ))}
-          <div className="agent-card" style={{ borderStyle: 'dashed' }}>
+          <div className="agent-card add-agent" onClick={openWizard}>
             <div className="agent-card-icon" style={{ color: 'var(--text3)' }}>
               +
             </div>

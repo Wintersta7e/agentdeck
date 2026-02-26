@@ -122,7 +122,9 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
       <div className="sidebar-section flex-fill">
         <div className="sidebar-label">
           Templates
-          <button className="sidebar-action">+</button>
+          <button className="sidebar-action" onClick={openWizard}>
+            +
+          </button>
         </div>
         {templates.map((t) => (
           <div key={t.id} className="sidebar-item">

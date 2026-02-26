@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { Titlebar } from './components/Titlebar/Titlebar'
 import { Sidebar } from './components/Sidebar/Sidebar'
 import { StatusBar } from './components/StatusBar/StatusBar'
@@ -45,6 +45,25 @@ export function App(): React.JSX.Element {
 
   const handleAddTab = useCallback(() => {
     useAppStore.getState().setCurrentView('home')
+  }, [])
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent): void {
+      if (e.ctrlKey && e.key === 'n') {
+        e.preventDefault()
+        useAppStore.getState().openWizard()
+      }
+      if (e.key === 'Escape') {
+        const state = useAppStore.getState()
+        if (state.currentView === 'wizard') {
+          state.closeWizard()
+        } else if (state.currentView === 'settings') {
+          state.closeSettings()
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
   return (

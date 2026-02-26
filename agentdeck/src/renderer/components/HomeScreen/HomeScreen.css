@@ -345,11 +345,14 @@
   border: 1px solid var(--border);
   border-radius: var(--r);
   padding: 10px 12px;
-  cursor: pointer;
   transition: all 0.12s;
   text-align: center;
 }
-.agent-card:hover {
+.agent-card.add-agent {
+  cursor: pointer;
+  border-style: dashed;
+}
+.agent-card.add-agent:hover {
   border-color: var(--border-bright);
   background: var(--bg3);
 }

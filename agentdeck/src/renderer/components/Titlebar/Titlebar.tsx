@@ -15,6 +15,7 @@ export function Titlebar({ onCloseTab, onAddTab }: TitlebarProps): React.JSX.Ele
   const setActiveSession = useAppStore((s) => s.setActiveSession)
   const setCurrentView = useAppStore((s) => s.setCurrentView)
   const openWizard = useAppStore((s) => s.openWizard)
+  const closeWizard = useAppStore((s) => s.closeWizard)
   const settingsProjectId = useAppStore((s) => s.settingsProjectId)
   const closeSettings = useAppStore((s) => s.closeSettings)
   const previousView = useAppStore((s) => s.previousView)
@@ -84,10 +85,19 @@ export function Titlebar({ onCloseTab, onAddTab }: TitlebarProps): React.JSX.Ele
       )}
 
       <div className="titlebar-right">
-        <button className="titlebar-btn">Ctrl+K Command</button>
         {currentView === 'home' && (
-          <button className="titlebar-btn primary" onClick={openWizard}>
-            + New Project
+          <>
+            <button className="titlebar-btn" onClick={openWizard}>
+              Ctrl+N
+            </button>
+            <button className="titlebar-btn primary" onClick={openWizard}>
+              + New Project
+            </button>
+          </>
+        )}
+        {currentView === 'wizard' && (
+          <button className="titlebar-btn" onClick={closeWizard}>
+            {'\u2190'} Cancel
           </button>
         )}
         {currentView === 'settings' && (
