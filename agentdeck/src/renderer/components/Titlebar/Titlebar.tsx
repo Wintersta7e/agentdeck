@@ -1,7 +1,13 @@
 import { useAppStore } from '../../store/appStore'
+import type { Session } from '../../../shared/types'
 import './Titlebar.css'
 
-export function Titlebar({ onCloseTab, onAddTab }) {
+interface TitlebarProps {
+  onCloseTab: (sessionId: string) => void
+  onAddTab: () => void
+}
+
+export function Titlebar({ onCloseTab, onAddTab }: TitlebarProps): React.JSX.Element {
   const currentView = useAppStore((s) => s.currentView)
   const sessions = useAppStore((s) => s.sessions)
   const activeSessionId = useAppStore((s) => s.activeSessionId)
@@ -9,13 +15,14 @@ export function Titlebar({ onCloseTab, onAddTab }) {
   const setActiveSession = useAppStore((s) => s.setActiveSession)
   const setCurrentView = useAppStore((s) => s.setCurrentView)
 
-  function getProjectName(session) {
+  function getProjectName(session: Session): string {
     const project = projects.find((p) => p.id === session.projectId)
     return project ? project.name : session.id
   }
 
-  function dotStyle(status) {
-    if (status === 'running') return { background: 'var(--green)', boxShadow: '0 0 5px var(--green)' }
+  function dotStyle(status: string): React.CSSProperties {
+    if (status === 'running')
+      return { background: 'var(--green)', boxShadow: '0 0 5px var(--green)' }
     if (status === 'error') return { background: 'var(--red)', boxShadow: '0 0 5px var(--red)' }
     return { background: 'var(--text3)' }
   }
@@ -37,9 +44,7 @@ export function Titlebar({ onCloseTab, onAddTab }) {
         </div>
       </div>
 
-      {currentView === 'home' && (
-        <div className="titlebar-center">Home</div>
-      )}
+      {currentView === 'home' && <div className="titlebar-center">Home</div>}
 
       {currentView === 'session' && sessionList.length > 0 && (
         <div className="tab-bar">
@@ -53,13 +58,18 @@ export function Titlebar({ onCloseTab, onAddTab }) {
               {getProjectName(s)}
               <button
                 className="tab-close"
-                onClick={(e) => { e.stopPropagation(); onCloseTab(s.id) }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onCloseTab(s.id)
+                }}
               >
                 {'\u00D7'}
               </button>
             </div>
           ))}
-          <div className="tab-add" onClick={onAddTab}>+</div>
+          <div className="tab-add" onClick={onAddTab}>
+            +
+          </div>
         </div>
       )}
 

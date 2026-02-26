@@ -5,10 +5,14 @@ import 'xterm/css/xterm.css'
 import { useAppStore } from '../../store/appStore'
 import './TerminalPane.css'
 
-export function TerminalPane({ sessionId }) {
-  const containerRef = useRef(null)
-  const termRef = useRef(null)
-  const fitRef = useRef(null)
+interface TerminalPaneProps {
+  sessionId: string
+}
+
+export function TerminalPane({ sessionId }: TerminalPaneProps): React.JSX.Element {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const termRef = useRef<Terminal | null>(null)
+  const fitRef = useRef<FitAddon | null>(null)
   const setSessionStatus = useAppStore((s) => s.setSessionStatus)
 
   useEffect(() => {
@@ -40,9 +44,9 @@ export function TerminalPane({ sessionId }) {
         brightBlue: '#5b9bd5',
         brightMagenta: '#9b72cf',
         brightCyan: '#5b9bd5',
-        brightWhite: '#f0ede8'
+        brightWhite: '#f0ede8',
       },
-      scrollback: 5000
+      scrollback: 5000,
     })
 
     const fit = new FitAddon()
@@ -52,32 +56,28 @@ export function TerminalPane({ sessionId }) {
     termRef.current = term
     fitRef.current = fit
 
-    // Spawn PTY with terminal dimensions
     const { cols, rows } = term
-    window.agentDeck.pty.spawn(sessionId, cols, rows)
+    window.agentDeck.pty
+      .spawn(sessionId, cols, rows)
       .then(() => setSessionStatus(sessionId, 'running'))
-      .catch((err) => {
+      .catch((err: unknown) => {
         console.error('PTY spawn failed:', err)
         setSessionStatus(sessionId, 'exited')
       })
 
-    // Stream PTY output into terminal
     const unsubData = window.agentDeck.pty.onData(sessionId, (data) => {
       term.write(data)
     })
 
-    // Forward keystrokes to PTY
     const onDataDisposable = term.onData((data) => {
       window.agentDeck.pty.write(sessionId, data)
     })
 
-    // Handle PTY exit
     const unsubExit = window.agentDeck.pty.onExit(sessionId, () => {
       setSessionStatus(sessionId, 'exited')
     })
 
-    // Resize PTY when container changes size
-    let resizeTimeout
+    let resizeTimeout: ReturnType<typeof setTimeout> | undefined
     const ro = new ResizeObserver(() => {
       clearTimeout(resizeTimeout)
       resizeTimeout = setTimeout(() => {

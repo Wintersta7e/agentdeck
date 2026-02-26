@@ -1,7 +1,8 @@
 import { useAppStore } from '../../store/appStore'
+import type { Project, Template } from '../../../shared/types'
 import './HomeScreen.css'
 
-function timeAgo(timestamp) {
+function timeAgo(timestamp: number | undefined): string {
   if (!timestamp) return ''
   const diff = Date.now() - timestamp
   const mins = Math.floor(diff / 60000)
@@ -12,32 +13,51 @@ function timeAgo(timestamp) {
   return `${days}d ago`
 }
 
-function getGreeting() {
+function getGreeting(): string {
   const h = new Date().getHours()
   if (h < 12) return 'Good morning'
   if (h < 18) return 'Good afternoon'
   return 'Good evening'
 }
 
-function formatDate() {
+function formatDate(): string {
   return new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
-    year: 'numeric'
+    year: 'numeric',
   })
 }
 
-const BADGE_ICONS = { Java: '\u2615', JS: '\u2B21', Agent: '\u25C8' }
-const BADGE_ICON_CLASS = { Java: 'card-icon-java', JS: 'card-icon-js', Agent: 'card-icon-agent' }
+const BADGE_ICONS: Record<string, string> = {
+  Java: '\u2615',
+  JS: '\u2B21',
+  Agent: '\u25C8',
+}
+const BADGE_ICON_CLASS: Record<string, string> = {
+  Java: 'card-icon-java',
+  JS: 'card-icon-js',
+  Agent: 'card-icon-agent',
+}
 
-const AGENTS = [
+interface Agent {
+  name: string
+  icon: string
+  desc: string
+  active: boolean
+}
+
+const AGENTS: Agent[] = [
   { name: 'claude-code', icon: '\u2B21', desc: 'Anthropic CLI', active: true },
   { name: 'codex', icon: '\u25C8', desc: 'OpenAI CLI', active: false },
-  { name: 'aider', icon: '\u25B8', desc: 'Git-aware agent', active: false }
+  { name: 'aider', icon: '\u25B8', desc: 'Git-aware agent', active: false },
 ]
 
-export function HomeScreen({ onOpenProject }) {
+interface HomeScreenProps {
+  onOpenProject: (project: Project) => void
+}
+
+export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Element {
   const projects = useAppStore((s) => s.projects)
   const templates = useAppStore((s) => s.templates)
   const sessions = useAppStore((s) => s.sessions)
@@ -45,18 +65,18 @@ export function HomeScreen({ onOpenProject }) {
   const pinned = projects.filter((p) => p.pinned)
   const recent = [...projects]
     .filter((p) => p.lastOpened)
-    .sort((a, b) => b.lastOpened - a.lastOpened)
+    .sort((a, b) => (b.lastOpened ?? 0) - (a.lastOpened ?? 0))
     .slice(0, 5)
 
   const activeSessions = Object.values(sessions).filter((s) => s.status === 'running').length
   const erroredSessions = Object.values(sessions).filter((s) => s.status === 'error').length
 
-  function getProjectStatus(projectId) {
+  function getProjectStatus(projectId: string): string {
     const session = Object.values(sessions).find((s) => s.projectId === projectId)
     return session ? session.status : 'idle'
   }
 
-  function statusColorClass(status) {
+  function statusColorClass(status: string): string {
     if (status === 'running') return 'green'
     if (status === 'error') return 'red'
     return ''
@@ -65,7 +85,6 @@ export function HomeScreen({ onOpenProject }) {
   return (
     <div className="home-main">
       <div className="home-content">
-
         <div className="greeting">
           <div className="greeting-eyebrow">{formatDate()}</div>
           <div className="greeting-headline">
@@ -73,14 +92,18 @@ export function HomeScreen({ onOpenProject }) {
           </div>
           <div className="greeting-sub">
             {activeSessions} session{activeSessions !== 1 ? 's' : ''} running
-            {' \u00B7 '}{pinned.length} project{pinned.length !== 1 ? 's' : ''} pinned
-            {' \u00B7 '}{templates.length} template{templates.length !== 1 ? 's' : ''} ready
+            {' \u00B7 '}
+            {pinned.length} project{pinned.length !== 1 ? 's' : ''} pinned
+            {' \u00B7 '}
+            {templates.length} template{templates.length !== 1 ? 's' : ''} ready
           </div>
         </div>
 
         <div className="quick-open">
           <span className="quick-open-icon">{'\u2318'}</span>
-          <span className="quick-open-text">Open project, run template, or jump to session...</span>
+          <span className="quick-open-text">
+            Open project, run template, or jump to session...
+          </span>
           <span className="quick-open-hint">Ctrl+K</span>
         </div>
 
@@ -116,9 +139,9 @@ export function HomeScreen({ onOpenProject }) {
             <div className="pinned-grid">
               {pinned.map((p) => {
                 const status = getProjectStatus(p.id)
-                const tNames = (p.attachedTemplates || [])
+                const tNames = (p.attachedTemplates ?? [])
                   .map((tid) => templates.find((t) => t.id === tid))
-                  .filter(Boolean)
+                  .filter((t): t is Template => t !== undefined)
                 return (
                   <div
                     key={p.id}
@@ -126,14 +149,21 @@ export function HomeScreen({ onOpenProject }) {
                     onClick={() => onOpenProject(p)}
                   >
                     <div className="card-top">
-                      <div className={`card-icon ${BADGE_ICON_CLASS[p.badge] || 'card-icon-agent'}`}>
-                        {BADGE_ICONS[p.badge] || '\u25C8'}
+                      <div
+                        className={`card-icon ${(p.badge && BADGE_ICON_CLASS[p.badge]) ?? 'card-icon-agent'}`}
+                      >
+                        {(p.badge && BADGE_ICONS[p.badge]) ?? '\u25C8'}
                       </div>
                       <div className={`card-status ${statusColorClass(status)}`}>
-                        <div className={`card-status-dot ${statusColorClass(status)}`}
+                        <div
+                          className={`card-status-dot ${statusColorClass(status)}`}
                           style={{
-                            background: status === 'running' ? 'var(--green)' :
-                              status === 'error' ? 'var(--red)' : 'var(--text3)'
+                            background:
+                              status === 'running'
+                                ? 'var(--green)'
+                                : status === 'error'
+                                  ? 'var(--red)'
+                                  : 'var(--text3)',
                           }}
                         />
                         {status}
@@ -152,7 +182,9 @@ export function HomeScreen({ onOpenProject }) {
                     {tNames.length > 0 && (
                       <div className="card-templates">
                         {tNames.map((t) => (
-                          <span key={t.id} className="card-template-chip">{t.name}</span>
+                          <span key={t.id} className="card-template-chip">
+                            {t.name}
+                          </span>
                         ))}
                       </div>
                     )}
@@ -174,10 +206,17 @@ export function HomeScreen({ onOpenProject }) {
                 const status = getProjectStatus(p.id)
                 return (
                   <div key={p.id} className="recent-item" onClick={() => onOpenProject(p)}>
-                    <div className="recent-dot" style={{
-                      background: status === 'running' ? 'var(--green)' :
-                        status === 'error' ? 'var(--red)' : 'var(--text3)'
-                    }} />
+                    <div
+                      className="recent-dot"
+                      style={{
+                        background:
+                          status === 'running'
+                            ? 'var(--green)'
+                            : status === 'error'
+                              ? 'var(--red)'
+                              : 'var(--text3)',
+                      }}
+                    />
                     <div className="recent-name">{p.name}</div>
                     <div className="recent-path">{p.path}</div>
                     {p.badge && (
@@ -206,12 +245,15 @@ export function HomeScreen({ onOpenProject }) {
             </div>
           ))}
           <div className="agent-card" style={{ borderStyle: 'dashed' }}>
-            <div className="agent-card-icon" style={{ color: 'var(--text3)' }}>+</div>
-            <div className="agent-card-name" style={{ color: 'var(--text2)' }}>Add agent</div>
+            <div className="agent-card-icon" style={{ color: 'var(--text3)' }}>
+              +
+            </div>
+            <div className="agent-card-name" style={{ color: 'var(--text2)' }}>
+              Add agent
+            </div>
             <div className="agent-card-desc">Custom command</div>
           </div>
         </div>
-
       </div>
     </div>
   )

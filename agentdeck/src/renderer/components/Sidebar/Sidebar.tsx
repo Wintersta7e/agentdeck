@@ -1,7 +1,8 @@
 import { useAppStore } from '../../store/appStore'
+import type { Project } from '../../../shared/types'
 import './Sidebar.css'
 
-function timeAgo(timestamp) {
+function timeAgo(timestamp: number | undefined): string {
   if (!timestamp) return ''
   const diff = Date.now() - timestamp
   const mins = Math.floor(diff / 60000)
@@ -12,7 +13,11 @@ function timeAgo(timestamp) {
   return `${days}d ago`
 }
 
-export function Sidebar({ onOpenProject }) {
+interface SidebarProps {
+  onOpenProject: (project: Project) => void
+}
+
+export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
   const projects = useAppStore((s) => s.projects)
   const templates = useAppStore((s) => s.templates)
   const sessions = useAppStore((s) => s.sessions)
@@ -21,21 +26,21 @@ export function Sidebar({ onOpenProject }) {
   const pinned = projects.filter((p) => p.pinned)
   const recent = [...projects]
     .filter((p) => !p.pinned && p.lastOpened)
-    .sort((a, b) => b.lastOpened - a.lastOpened)
+    .sort((a, b) => (b.lastOpened ?? 0) - (a.lastOpened ?? 0))
     .slice(0, 5)
 
-  function getProjectStatus(projectId) {
+  function getProjectStatus(projectId: string): string {
     const session = Object.values(sessions).find((s) => s.projectId === projectId)
     return session ? session.status : 'idle'
   }
 
-  function isActive(projectId) {
+  function isActive(projectId: string): boolean {
     if (!activeSessionId) return false
     const session = sessions[activeSessionId]
-    return session && session.projectId === projectId
+    return session !== undefined && session.projectId === projectId
   }
 
-  function dotClass(status) {
+  function dotClass(status: string): string {
     if (status === 'running') return 'dot-running'
     if (status === 'error') return 'dot-error'
     return 'dot-idle'
@@ -60,9 +65,7 @@ export function Sidebar({ onOpenProject }) {
               <div className="sidebar-item-sub">{p.path}</div>
             </div>
             {p.badge && (
-              <span className={`sidebar-badge badge-${p.badge.toLowerCase()}`}>
-                {p.badge}
-              </span>
+              <span className={`sidebar-badge badge-${p.badge.toLowerCase()}`}>{p.badge}</span>
             )}
           </div>
         ))}
@@ -84,9 +87,7 @@ export function Sidebar({ onOpenProject }) {
               <div className="sidebar-item-sub">{timeAgo(p.lastOpened)}</div>
             </div>
             {p.badge && (
-              <span className={`sidebar-badge badge-${p.badge.toLowerCase()}`}>
-                {p.badge}
-              </span>
+              <span className={`sidebar-badge badge-${p.badge.toLowerCase()}`}>{p.badge}</span>
             )}
           </div>
         ))}
@@ -101,7 +102,7 @@ export function Sidebar({ onOpenProject }) {
         </div>
         {templates.map((t) => (
           <div key={t.id} className="sidebar-item">
-            <span style={{ fontSize: '11px' }}>&#x1F4CB;</span>
+            <span style={{ fontSize: '11px' }}>{'\u{1F4CB}'}</span>
             <div className="sidebar-item-info">
               <div className="sidebar-item-name">{t.name}</div>
               <div className="sidebar-item-sub">{t.description}</div>

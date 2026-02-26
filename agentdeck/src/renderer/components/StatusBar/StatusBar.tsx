@@ -1,17 +1,15 @@
 import { useAppStore } from '../../store/appStore'
 import './StatusBar.css'
 
-export function StatusBar() {
+export function StatusBar(): React.JSX.Element {
   const sessions = useAppStore((s) => s.sessions)
   const activeSessionId = useAppStore((s) => s.activeSessionId)
   const projects = useAppStore((s) => s.projects)
   const currentView = useAppStore((s) => s.currentView)
 
-  const activeCount = Object.values(sessions).filter(
-    (s) => s.status === 'running'
-  ).length
+  const activeCount = Object.values(sessions).filter((s) => s.status === 'running').length
 
-  let activeProjectName = null
+  let activeProjectName: string | null = null
   if (currentView === 'session' && activeSessionId) {
     const session = sessions[activeSessionId]
     if (session) {
@@ -23,13 +21,13 @@ export function StatusBar() {
   return (
     <div className="statusbar">
       <div className={`status-item ${activeCount > 0 ? 'green' : ''}`}>
-        <span>&#x2B21;</span>
+        <span>{'\u2B21'}</span>
         <span>
           {activeCount} session{activeCount !== 1 ? 's' : ''} active
         </span>
       </div>
       <span className="status-sep">|</span>
-      <div className="status-item">WSL2 · Ubuntu-24.04</div>
+      <div className="status-item">WSL2 &middot; Ubuntu-24.04</div>
       {activeProjectName && (
         <>
           <span className="status-sep">|</span>
