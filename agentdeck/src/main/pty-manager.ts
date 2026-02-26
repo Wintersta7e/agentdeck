@@ -27,8 +27,22 @@ export interface PtyManager {
   killAll: () => void
 }
 
+function parseActivityLine(line: string): { type: string; title: string; detail: string } | null {
+  if (line.includes('Read') && (line.includes('file') || line.includes('File')))
+    return { type: 'read', title: 'Reading file', detail: line.trim() }
+  if (line.includes('Write') || line.includes('Writing'))
+    return { type: 'write', title: 'Writing file', detail: line.trim() }
+  if (line.includes('Execute') || line.includes('Running'))
+    return { type: 'command', title: 'Running command', detail: line.trim() }
+  if (line.includes('Tool')) return { type: 'tool', title: 'Tool use', detail: line.trim() }
+  if (line.includes('Thinking') || line.includes('thinking'))
+    return { type: 'think', title: 'Thinking', detail: '' }
+  return null
+}
+
 export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
   const sessions = new Map<string, IPty>()
+  const lineBuffers = new Map<string, string>()
 
   function spawn(
     sessionId: string,
@@ -72,9 +86,33 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
       }, 500)
     }
 
+    lineBuffers.set(sessionId, '')
+
     proc.onData((data) => {
       if (!mainWindow.isDestroyed()) {
         mainWindow.webContents.send(`pty:data:${sessionId}`, data)
+      }
+
+      // Line-based activity parsing
+      const buffer = (lineBuffers.get(sessionId) ?? '') + data
+      const parts = buffer.split('\n')
+      // Keep the incomplete last segment as the new buffer
+      lineBuffers.set(sessionId, parts[parts.length - 1] ?? '')
+
+      // Process all complete lines (everything except the last element)
+      for (let i = 0; i < parts.length - 1; i++) {
+        const line = parts[i] ?? ''
+        const parsed = parseActivityLine(line)
+        if (parsed && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send(`pty:activity:${sessionId}`, {
+            id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            type: parsed.type,
+            title: parsed.title,
+            detail: parsed.detail,
+            status: 'done',
+            timestamp: Date.now(),
+          })
+        }
       }
     })
 
@@ -101,6 +139,7 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
     if (proc) {
       proc.kill()
       sessions.delete(sessionId)
+      lineBuffers.delete(sessionId)
     }
   }
 

@@ -1,4 +1,4 @@
-import type { DetectedStack, Project, Template } from '../shared/types'
+import type { ActivityEvent, DetectedStack, Project, Template } from '../shared/types'
 
 declare global {
   interface Window {
@@ -17,6 +17,7 @@ declare global {
         kill: (sessionId: string) => Promise<void>
         onData: (sessionId: string, cb: (data: string) => void) => () => void
         onExit: (sessionId: string, cb: (exitCode: number) => void) => () => void
+        onActivity: (sessionId: string, cb: (event: ActivityEvent) => void) => () => void
       }
       window: {
         close: () => Promise<void>

@@ -1,4 +1,5 @@
 import { useAppStore } from '../../store/appStore'
+import { ActivityTab } from './ActivityTab'
 import { ContextTab } from './ContextTab'
 import type { RightPanelTab } from '../../../shared/types'
 import './RightPanel.css'
@@ -28,9 +29,7 @@ export function RightPanel(): React.JSX.Element {
       </div>
       <div className="panel-body">
         {rightPanelTab === 'context' && <ContextTab />}
-        {rightPanelTab === 'activity' && (
-          <div className="panel-placeholder">Activity feed — coming soon</div>
-        )}
+        {rightPanelTab === 'activity' && <ActivityTab />}
         {rightPanelTab === 'memory' && (
           <div className="panel-placeholder">Memory viewer — coming soon</div>
         )}

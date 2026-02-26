@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { Titlebar } from './components/Titlebar/Titlebar'
 import { Sidebar } from './components/Sidebar/Sidebar'
 import { StatusBar } from './components/StatusBar/StatusBar'
@@ -9,7 +9,7 @@ import { NewProjectWizard } from './components/NewProjectWizard/NewProjectWizard
 import { ProjectSettings } from './components/ProjectSettings/ProjectSettings'
 import { useAppStore } from './store/appStore'
 import { useProjects } from './hooks/useProjects'
-import type { Project } from '../shared/types'
+import type { ActivityEvent, Project } from '../shared/types'
 import './App.css'
 
 export function App(): React.JSX.Element {
@@ -19,6 +19,8 @@ export function App(): React.JSX.Element {
   const getSessionForProject = useAppStore((s) => s.getSessionForProject)
 
   const rightPanelOpen = useAppStore((s) => s.rightPanelOpen)
+  const sessions = useAppStore((s) => s.sessions)
+  const sessionIds = useMemo(() => Object.keys(sessions), [sessions])
 
   const { updateProject } = useProjects()
 
@@ -65,6 +67,16 @@ export function App(): React.JSX.Element {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
+
+  // Subscribe to PTY activity events for all active sessions
+  useEffect(() => {
+    const cleanups = sessionIds.map((sid) =>
+      window.agentDeck.pty.onActivity(sid, (event: ActivityEvent) => {
+        useAppStore.getState().addActivityEvent(sid, event)
+      }),
+    )
+    return () => cleanups.forEach((fn) => fn())
+  }, [sessionIds])
 
   return (
     <div className="app">

@@ -26,6 +26,12 @@ contextBridge.exposeInMainWorld('agentDeck', {
       ipcRenderer.on(channel, listener)
       return () => ipcRenderer.removeListener(channel, listener)
     },
+    onActivity: (sessionId: string, cb: (event: unknown) => void) => {
+      const channel = `pty:activity:${sessionId}`
+      const handler = (_event: Electron.IpcRendererEvent, data: unknown): void => cb(data)
+      ipcRenderer.on(channel, handler)
+      return () => ipcRenderer.removeListener(channel, handler)
+    },
   },
   window: {
     close: () => ipcRenderer.invoke('window:close'),
