@@ -19,6 +19,8 @@ export function TerminalPane({
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
+  const startupRef = useRef(startupCommands)
+  const envRef = useRef(env)
   const setSessionStatus = useAppStore((s) => s.setSessionStatus)
 
   useEffect(() => {
@@ -64,7 +66,7 @@ export function TerminalPane({
 
     const { cols, rows } = term
     window.agentDeck.pty
-      .spawn(sessionId, cols, rows, startupCommands, env)
+      .spawn(sessionId, cols, rows, startupRef.current, envRef.current)
       .then(() => setSessionStatus(sessionId, 'running'))
       .catch((err: unknown) => {
         console.error('PTY spawn failed:', err)
