@@ -19,14 +19,19 @@ export function SplitView(): React.JSX.Element {
   const paneRefs = useRef<(HTMLDivElement | null)[]>([null, null, null])
   const splitAreaRef = useRef<HTMLDivElement>(null)
 
-  // Reset pane widths to flex:1 when layout changes
+  // Reset pane widths to flex:1 when layout changes or window resizes
   useEffect(() => {
-    for (const paneEl of paneRefs.current) {
-      if (paneEl) {
-        paneEl.style.flex = '1'
-        paneEl.style.width = ''
+    function resetPaneWidths(): void {
+      for (const paneEl of paneRefs.current) {
+        if (paneEl) {
+          paneEl.style.flex = '1'
+          paneEl.style.width = ''
+        }
       }
     }
+    resetPaneWidths()
+    window.addEventListener('resize', resetPaneWidths)
+    return () => window.removeEventListener('resize', resetPaneWidths)
   }, [paneLayout])
 
   const handleDividerMouseDown = useCallback((dividerIndex: number, e: React.MouseEvent) => {

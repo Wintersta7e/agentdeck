@@ -72,7 +72,15 @@ export function App(): React.JSX.Element {
           {currentView === 'home' && <HomeScreen onOpenProject={handleOpenProject} />}
           {currentView === 'wizard' && <NewProjectWizard onCreateProject={handleOpenProject} />}
           {currentView === 'settings' && <ProjectSettings />}
-          {currentView === 'session' && <SplitView />}
+          <div
+            style={{
+              display: currentView === 'session' ? 'flex' : 'none',
+              flex: 1,
+              overflow: 'hidden',
+            }}
+          >
+            <SplitView />
+          </div>
         </div>
       </div>
       <StatusBar />
