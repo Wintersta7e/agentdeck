@@ -22,6 +22,7 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
   const templates = useAppStore((s) => s.templates)
   const sessions = useAppStore((s) => s.sessions)
   const activeSessionId = useAppStore((s) => s.activeSessionId)
+  const openWizard = useAppStore((s) => s.openWizard)
 
   const pinned = projects.filter((p) => p.pinned)
   const recent = [...projects]
@@ -51,7 +52,9 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
       <div className="sidebar-section">
         <div className="sidebar-label">
           Pinned
-          <button className="sidebar-action">+</button>
+          <button className="sidebar-action" onClick={openWizard}>
+            +
+          </button>
         </div>
         {pinned.map((p) => (
           <div
@@ -112,7 +115,7 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
       </div>
 
       <div className="sidebar-bottom">
-        <button className="new-project-btn">
+        <button className="new-project-btn" onClick={openWizard}>
           <span>+</span> New Project
         </button>
       </div>
