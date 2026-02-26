@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { Titlebar } from './components/Titlebar/Titlebar'
 import { Sidebar } from './components/Sidebar/Sidebar'
 import { StatusBar } from './components/StatusBar/StatusBar'
@@ -35,7 +35,7 @@ export function App(): React.JSX.Element {
         const sessionId = `session-${project.id}`
         addSession(sessionId, project.id)
       }
-      void updateProject({ ...project, lastOpened: Date.now() })
+      void updateProject({ ...project, lastOpened: Date.now() }).catch(() => {})
     },
     [addSession, getSessionForProject, updateProject],
   )
@@ -97,14 +97,31 @@ export function App(): React.JSX.Element {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  // Subscribe to PTY activity events for all active sessions
+  // Subscribe to PTY activity events for all active sessions (ref-based to avoid re-subscribing)
+  const subscribedRef = useRef<Map<string, () => void>>(new Map())
+
   useEffect(() => {
-    const cleanups = sessionIds.map((sid) =>
-      window.agentDeck.pty.onActivity(sid, (event: ActivityEvent) => {
-        useAppStore.getState().addActivityEvent(sid, event)
-      }),
-    )
-    return () => cleanups.forEach((fn) => fn())
+    const subscriptions = subscribedRef.current
+    // Subscribe to new sessions only
+    for (const sid of sessionIds) {
+      if (!subscriptions.has(sid)) {
+        const unsub = window.agentDeck.pty.onActivity(sid, (event: ActivityEvent) => {
+          useAppStore.getState().addActivityEvent(sid, event)
+        })
+        subscriptions.set(sid, unsub)
+      }
+    }
+    // Unsubscribe from removed sessions
+    for (const [sid, unsub] of subscriptions) {
+      if (!sessionIds.includes(sid)) {
+        unsub()
+        subscriptions.delete(sid)
+      }
+    }
+    return () => {
+      for (const unsub of subscriptions.values()) unsub()
+      subscriptions.clear()
+    }
   }, [sessionIds])
 
   return (
@@ -115,7 +132,9 @@ export function App(): React.JSX.Element {
         <div className="app-main">
           {currentView === 'home' && <HomeScreen onOpenProject={handleOpenProject} />}
           {currentView === 'wizard' && <NewProjectWizard onCreateProject={handleOpenProject} />}
-          {currentView === 'settings' && <ProjectSettings />}
+          {currentView === 'settings' && (
+            <ProjectSettings key={useAppStore.getState().settingsProjectId} />
+          )}
           {currentView === 'template-editor' && <TemplateEditor />}
           <div
             style={{

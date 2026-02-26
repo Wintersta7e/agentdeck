@@ -78,6 +78,12 @@ function PaletteInner({ onOpenProject }: CommandPaletteProps): React.JSX.Element
 
   const inputRef = useRef<HTMLInputElement>(null)
   const resultsRef = useRef<HTMLDivElement>(null)
+  const selectedIndexRef = useRef(selectedIndex)
+
+  // Keep selectedIndexRef in sync with state
+  useEffect(() => {
+    selectedIndexRef.current = selectedIndex
+  }, [selectedIndex])
 
   // Focus input on mount
   useEffect(() => {
@@ -295,7 +301,7 @@ function PaletteInner({ onOpenProject }: CommandPaletteProps): React.JSX.Element
 
       if (e.key === 'Enter') {
         e.preventDefault()
-        const item = flatItems[selectedIndex]
+        const item = flatItems[selectedIndexRef.current]
         if (item) {
           executeItem(item)
         }
@@ -306,7 +312,7 @@ function PaletteInner({ onOpenProject }: CommandPaletteProps): React.JSX.Element
     // Use capture phase so Escape is caught before App's handler
     window.addEventListener('keydown', handleKeyDown, true)
     return () => window.removeEventListener('keydown', handleKeyDown, true)
-  }, [closePalette, flatItems, selectedIndex, executeItem])
+  }, [closePalette, flatItems, executeItem])
 
   // Scroll selected item into view
   useEffect(() => {

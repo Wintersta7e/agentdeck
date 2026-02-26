@@ -39,6 +39,7 @@ export function MemoryTab(): React.JSX.Element {
 
   useEffect(() => {
     let cancelled = false
+    dispatch({ type: 'start' })
 
     async function fetchFiles(): Promise<void> {
       if (!projectPath) {

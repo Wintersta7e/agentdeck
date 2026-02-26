@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import type { Project } from '../../../shared/types'
 import { useAppStore } from '../../store/appStore'
 import { useProjects } from '../../hooks/useProjects'
@@ -34,6 +34,8 @@ export function ProjectSettings(): React.JSX.Element | null {
     return { id: '', name: '', path: '' }
   })
 
+  const hasUserEdited = useRef(false)
+
   if (!storedProject) return null
 
   const session = getSessionForProject(storedProject.id)
@@ -41,21 +43,32 @@ export function ProjectSettings(): React.JSX.Element | null {
   const isDirty = JSON.stringify(draft) !== JSON.stringify(storedProject)
 
   function handleChange(updates: Partial<Project>): void {
+    hasUserEdited.current = true
     setDraft((prev) => ({ ...prev, ...updates }))
   }
 
   async function handleSave(): Promise<void> {
-    await updateProject(draft)
-    closeSettings()
+    try {
+      await updateProject(draft)
+      hasUserEdited.current = false
+      closeSettings()
+    } catch {
+      // Notification already dispatched by useProjects
+    }
   }
 
   function handleCancel(): void {
+    hasUserEdited.current = false
     closeSettings()
   }
 
   async function handleRemoveProject(): Promise<void> {
-    await deleteProject(draft.id)
-    closeSettings()
+    try {
+      await deleteProject(draft.id)
+      closeSettings()
+    } catch {
+      // Notification already dispatched by useProjects
+    }
   }
 
   const icon = draft.identity?.icon ?? '\u2B21'

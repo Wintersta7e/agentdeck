@@ -21,52 +21,81 @@ export function useProjects(): UseProjectsReturn {
 
   useEffect(() => {
     async function load(): Promise<void> {
-      const [p, t] = await Promise.all([
-        window.agentDeck.store.getProjects(),
-        window.agentDeck.store.getTemplates(),
-      ])
-      setProjects(p)
-      setTemplates(t)
+      if (useAppStore.getState().projects.length > 0) return
+      try {
+        const [p, t] = await Promise.all([
+          window.agentDeck.store.getProjects(),
+          window.agentDeck.store.getTemplates(),
+        ])
+        setProjects(p)
+        setTemplates(t)
+      } catch (err) {
+        useAppStore.getState().addNotification('error', `Failed to load projects: ${String(err)}`)
+      }
     }
     void load()
   }, [setProjects, setTemplates])
 
   async function addProject(project: Partial<Project>): Promise<Project> {
-    const saved: Project = await window.agentDeck.store.saveProject(project)
-    const updated = await window.agentDeck.store.getProjects()
-    setProjects(updated)
-    return saved
+    try {
+      const saved: Project = await window.agentDeck.store.saveProject(project)
+      setProjects([...useAppStore.getState().projects, saved])
+      return saved
+    } catch (err) {
+      useAppStore.getState().addNotification('error', `Failed to add project: ${String(err)}`)
+      throw err
+    }
   }
 
   async function updateProject(project: Partial<Project>): Promise<void> {
-    await window.agentDeck.store.saveProject(project)
-    const updated = await window.agentDeck.store.getProjects()
-    setProjects(updated)
+    try {
+      const saved: Project = await window.agentDeck.store.saveProject(project)
+      setProjects(useAppStore.getState().projects.map((p) => (p.id === saved.id ? saved : p)))
+    } catch (err) {
+      useAppStore.getState().addNotification('error', `Failed to update project: ${String(err)}`)
+      throw err
+    }
   }
 
   async function deleteProject(id: string): Promise<void> {
-    await window.agentDeck.store.deleteProject(id)
-    const updated = await window.agentDeck.store.getProjects()
-    setProjects(updated)
+    try {
+      await window.agentDeck.store.deleteProject(id)
+      setProjects(useAppStore.getState().projects.filter((p) => p.id !== id))
+    } catch (err) {
+      useAppStore.getState().addNotification('error', `Failed to delete project: ${String(err)}`)
+      throw err
+    }
   }
 
   async function addTemplate(template: Partial<Template>): Promise<Template> {
-    const saved: Template = await window.agentDeck.store.saveTemplate(template)
-    const updated = await window.agentDeck.store.getTemplates()
-    setTemplates(updated)
-    return saved
+    try {
+      const saved: Template = await window.agentDeck.store.saveTemplate(template)
+      setTemplates([...useAppStore.getState().templates, saved])
+      return saved
+    } catch (err) {
+      useAppStore.getState().addNotification('error', `Failed to add template: ${String(err)}`)
+      throw err
+    }
   }
 
   async function updateTemplate(template: Partial<Template>): Promise<void> {
-    await window.agentDeck.store.saveTemplate(template)
-    const updated = await window.agentDeck.store.getTemplates()
-    setTemplates(updated)
+    try {
+      const saved: Template = await window.agentDeck.store.saveTemplate(template)
+      setTemplates(useAppStore.getState().templates.map((t) => (t.id === saved.id ? saved : t)))
+    } catch (err) {
+      useAppStore.getState().addNotification('error', `Failed to update template: ${String(err)}`)
+      throw err
+    }
   }
 
   async function deleteTemplate(id: string): Promise<void> {
-    await window.agentDeck.store.deleteTemplate(id)
-    const updated = await window.agentDeck.store.getTemplates()
-    setTemplates(updated)
+    try {
+      await window.agentDeck.store.deleteTemplate(id)
+      setTemplates(useAppStore.getState().templates.filter((t) => t.id !== id))
+    } catch (err) {
+      useAppStore.getState().addNotification('error', `Failed to delete template: ${String(err)}`)
+      throw err
+    }
   }
 
   return {

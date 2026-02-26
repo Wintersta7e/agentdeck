@@ -77,6 +77,7 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
   const [agentStatus, setAgentStatus] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
+    // Errors are logged to console; useProjects handles user-facing notifications
     window.agentDeck.agents.check().then(setAgentStatus).catch(console.error)
   }, [])
 

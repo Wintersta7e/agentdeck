@@ -33,22 +33,29 @@ export interface PtyManager {
   killAll: () => void
 }
 
+/* Fix 1 (PANEL-4): ANSI stripping + regex-based activity parsing */
+const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b\].*?(?:\x07|\x1b\\)/g
+
 function parseActivityLine(line: string): { type: string; title: string; detail: string } | null {
-  if (line.includes('Read') && (line.includes('file') || line.includes('File')))
-    return { type: 'read', title: 'Reading file', detail: line.trim() }
-  if (line.includes('Write') || line.includes('Writing'))
-    return { type: 'write', title: 'Writing file', detail: line.trim() }
-  if (line.includes('Execute') || line.includes('Running'))
-    return { type: 'command', title: 'Running command', detail: line.trim() }
-  if (line.includes('Tool')) return { type: 'tool', title: 'Tool use', detail: line.trim() }
-  if (line.includes('Thinking') || line.includes('thinking'))
-    return { type: 'think', title: 'Thinking', detail: '' }
+  const clean = line.replace(ANSI_RE, '')
+  if (/\bRead\b/i.test(clean)) return { type: 'read', title: 'Reading file', detail: clean.trim() }
+  if (/\bWrit(?:e|ing)\b/i.test(clean))
+    return { type: 'write', title: 'Writing file', detail: clean.trim() }
+  if (/\b(?:Execute|Running|Bash)\b/i.test(clean))
+    return { type: 'command', title: 'Running command', detail: clean.trim() }
+  if (/\bTool\b/i.test(clean)) return { type: 'tool', title: 'Tool use', detail: clean.trim() }
+  if (/\b[Tt]hinking\b/.test(clean)) return { type: 'think', title: 'Thinking', detail: '' }
   return null
 }
+
+/* Fix 6 (SEC-2): agentFlags validation pattern */
+const SAFE_FLAGS_RE = /^[A-Za-z0-9 \-_=./:@,]*$/
 
 export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
   const sessions = new Map<string, IPty>()
   const lineBuffers = new Map<string, string>()
+  /* Fix 4 (PTY-3): Track spawn timers so we can cancel on kill */
+  const spawnTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
   function spawn(
     sessionId: string,
@@ -66,13 +73,24 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
 
     const cwd = process.env['USERPROFILE'] ?? process.cwd()
     const mergedEnv = { ...process.env, ...env } as Record<string, string>
-    const proc = pty.spawn('wsl.exe', ['--', '/bin/bash', '--login'], {
-      name: 'xterm-256color',
-      cols: cols ?? 80,
-      rows: rows ?? 24,
-      cwd,
-      env: mergedEnv,
-    })
+
+    /* Fix 8 (ERR-6): Wrap pty.spawn in try-catch */
+    let proc: IPty
+    try {
+      proc = pty.spawn('wsl.exe', [], {
+        name: 'xterm-256color',
+        cols: cols ?? 80,
+        rows: rows ?? 24,
+        cwd,
+        env: mergedEnv,
+      })
+    } catch (err) {
+      console.error(`[pty-manager] Failed to spawn PTY for session ${sessionId}:`, err)
+      if (!mainWindow.isDestroyed()) {
+        mainWindow.webContents.send(`pty:exit:${sessionId}`, -1)
+      }
+      return
+    }
 
     sessions.set(sessionId, proc)
 
@@ -85,18 +103,36 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
     if (startupCommands) {
       commands.push(...startupCommands)
     }
+
+    /* Fix 6 (SEC-2): Validate agentFlags before use */
+    let sanitizedFlags = agentFlags
+    if (sanitizedFlags && !SAFE_FLAGS_RE.test(sanitizedFlags)) {
+      console.error(`[pty-manager] Rejected unsafe agentFlags: ${sanitizedFlags}`)
+      sanitizedFlags = undefined
+    }
+
     if (agent) {
+      /* Fix 7 (PTY-1): Source NVM before agent launch */
+      commands.push(
+        'export NVM_DIR="$HOME/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" 2>/dev/null',
+      )
       const bin = AGENT_BINARIES[agent] ?? agent
-      const agentCmd = agentFlags ? `${bin} ${agentFlags}` : bin
+      const agentCmd = sanitizedFlags ? `${bin} ${sanitizedFlags}` : bin
       commands.push(agentCmd)
     }
 
     if (commands.length > 0) {
-      setTimeout(() => {
+      const timer = setTimeout(() => {
+        /* Fix 4 (PTY-3): Clean up timer reference */
+        spawnTimers.delete(sessionId)
+        /* Fix 5 (PTY-4): Dead-process guard */
+        if (!sessions.has(sessionId)) return
         for (const cmd of commands) {
           proc.write(cmd + '\n')
         }
       }, 500)
+      /* Fix 4 (PTY-3): Store timer handle */
+      spawnTimers.set(sessionId, timer)
     }
 
     lineBuffers.set(sessionId, '')
@@ -107,7 +143,11 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
       }
 
       // Line-based activity parsing
-      const buffer = (lineBuffers.get(sessionId) ?? '') + data
+      let buffer = (lineBuffers.get(sessionId) ?? '') + data
+      /* Fix 3 (LEAK-4): Cap line buffer at 8KB */
+      if (buffer.length > 8192) {
+        buffer = buffer.slice(-8192)
+      }
       const parts = buffer.split('\n')
       // Keep the incomplete last segment as the new buffer
       lineBuffers.set(sessionId, parts[parts.length - 1] ?? '')
@@ -131,6 +171,8 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
 
     proc.onExit(({ exitCode }) => {
       sessions.delete(sessionId)
+      /* Fix 2 (LEAK-1): Clean up lineBuffers on natural exit */
+      lineBuffers.delete(sessionId)
       if (!mainWindow.isDestroyed()) {
         mainWindow.webContents.send(`pty:exit:${sessionId}`, exitCode)
       }
@@ -148,6 +190,12 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
   }
 
   function kill(sessionId: string): void {
+    /* Fix 4 (PTY-3): Cancel pending spawn timer on kill */
+    const timer = spawnTimers.get(sessionId)
+    if (timer) {
+      clearTimeout(timer)
+      spawnTimers.delete(sessionId)
+    }
     const proc = sessions.get(sessionId)
     if (proc) {
       proc.kill()

@@ -241,7 +241,8 @@
 .te-ln {
   font-size: 10px;
   color: var(--text3);
-  height: 21.6px;
+  line-height: 1.8;
+  height: auto;
   display: flex;
   align-items: center;
   justify-content: flex-end;

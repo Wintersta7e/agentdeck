@@ -22,7 +22,7 @@
 
 /* ─── Palette container ─── */
 .palette {
-  width: 640px;
+  width: min(640px, 90vw);
   background: var(--bg2);
   border: 1px solid var(--border-bright);
   border-radius: 8px;
@@ -51,6 +51,7 @@
   align-items: center;
   gap: 10px;
   padding: 14px 16px;
+  line-height: 1.4;
   border-bottom: 1px solid var(--border);
 }
 

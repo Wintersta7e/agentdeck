@@ -1,14 +1,22 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
-import { execFileSync } from 'child_process'
 import * as fs from 'fs'
 import * as path from 'path'
 import { join } from 'path'
-import { createPtyManager } from './pty-manager'
+import { createPtyManager, type PtyManager } from './pty-manager'
 import { createProjectStore } from './project-store'
 import { detectStack } from './detect-stack'
 import { getDefaultDistro, wslPathToWindows } from './wsl-utils'
 
 let mainWindow: BrowserWindow | null = null
+let ptyManager: PtyManager | null = null
+
+const agentBinaries: Record<string, string> = {
+  'claude-code': 'claude',
+  codex: 'codex',
+  aider: 'aider',
+}
+
+const ALLOWED_FILES = new Set(['CLAUDE.md', 'AGENTS.md', 'README.md'])
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -27,89 +35,7 @@ function createWindow(): void {
     },
   })
 
-  const ptyManager = createPtyManager(mainWindow)
-
-  ipcMain.handle(
-    'pty:spawn',
-    (
-      _,
-      sessionId: string,
-      cols: number,
-      rows: number,
-      projectPath?: string,
-      startupCommands?: string[],
-      env?: Record<string, string>,
-      agent?: string,
-      agentFlags?: string,
-    ) => {
-      ptyManager.spawn(sessionId, cols, rows, projectPath, startupCommands, env, agent, agentFlags)
-    },
-  )
-  ipcMain.handle('pty:write', (_, sessionId: string, data: string) => {
-    ptyManager.write(sessionId, data)
-  })
-  ipcMain.handle('pty:resize', (_, sessionId: string, cols: number, rows: number) => {
-    ptyManager.resize(sessionId, cols, rows)
-  })
-  ipcMain.handle('pty:kill', (_, sessionId: string) => {
-    ptyManager.kill(sessionId)
-  })
-
-  ipcMain.handle('window:close', () => mainWindow?.close())
-  ipcMain.handle('window:minimize', () => mainWindow?.minimize())
-  ipcMain.handle('window:maximize', () => {
-    if (mainWindow?.isMaximized()) {
-      mainWindow.unmaximize()
-    } else {
-      mainWindow?.maximize()
-    }
-  })
-
-  ipcMain.handle('agents:check', () => {
-    const agentBinaries: Record<string, string> = {
-      'claude-code': 'claude',
-      codex: 'codex',
-      aider: 'aider',
-    }
-    const results: Record<string, boolean> = {}
-    for (const [name, bin] of Object.entries(agentBinaries)) {
-      try {
-        execFileSync('wsl.exe', ['--', 'bash', '--login', '-c', `which ${bin}`], { stdio: 'pipe' })
-        results[name] = true
-      } catch {
-        results[name] = false
-      }
-    }
-    return results
-  })
-
-  ipcMain.handle('projects:detectStack', (_, path: string, distro?: string) => {
-    return detectStack(path, distro)
-  })
-
-  ipcMain.handle('projects:getDefaultDistro', () => {
-    return getDefaultDistro()
-  })
-
-  ipcMain.handle('projects:readFile', async (_event, projectPath: string, filename: string) => {
-    try {
-      const distro = getDefaultDistro()
-      const windowsPath = wslPathToWindows(projectPath, distro)
-      const filePath = path.join(windowsPath, filename)
-      const content = await fs.promises.readFile(filePath, 'utf-8')
-      return content
-    } catch {
-      return null
-    }
-  })
-
-  ipcMain.handle('dialog:pickFolder', async () => {
-    if (!mainWindow) return null
-    const result = await dialog.showOpenDialog(mainWindow, {
-      properties: ['openDirectory'],
-    })
-    return result.filePaths[0] ?? null
-  })
+  ptyManager = createPtyManager(mainWindow)
 
   mainWindow.once('ready-to-show', () => {
     mainWindow?.maximize()
@@ -123,14 +49,110 @@ function createWindow(): void {
   }
 
   mainWindow.on('closed', () => {
-    ptyManager.killAll()
+    ptyManager?.killAll()
     mainWindow = null
+  })
+
+  mainWindow.webContents.on('render-process-gone', () => {
+    ptyManager?.killAll()
+  })
+}
+
+function registerIpcHandlers(): void {
+  /* ── PTY handlers ───────────────────────────────────────────────── */
+  ipcMain.handle(
+    'pty:spawn',
+    (
+      _,
+      sessionId: string,
+      cols: number,
+      rows: number,
+      projectPath?: string,
+      startupCommands?: string[],
+      env?: Record<string, string>,
+      agent?: string,
+      agentFlags?: string,
+    ) => {
+      ptyManager?.spawn(sessionId, cols, rows, projectPath, startupCommands, env, agent, agentFlags)
+    },
+  )
+  ipcMain.handle('pty:write', (_, sessionId: string, data: string) => {
+    ptyManager?.write(sessionId, data)
+  })
+  ipcMain.handle('pty:resize', (_, sessionId: string, cols: number, rows: number) => {
+    ptyManager?.resize(sessionId, cols, rows)
+  })
+  ipcMain.handle('pty:kill', (_, sessionId: string) => {
+    ptyManager?.kill(sessionId)
+  })
+
+  /* ── Window controls ────────────────────────────────────────────── */
+  ipcMain.handle('window:close', () => mainWindow?.close())
+  ipcMain.handle('window:minimize', () => mainWindow?.minimize())
+  ipcMain.handle('window:maximize', () => {
+    if (mainWindow?.isMaximized()) {
+      mainWindow.unmaximize()
+    } else {
+      mainWindow?.maximize()
+    }
+  })
+
+  /* ── Agent detection (async, non-blocking) ──────────────────────── */
+  ipcMain.handle('agents:check', async () => {
+    const { execFile } = await import('child_process')
+    const check = (bin: string): Promise<boolean> =>
+      new Promise((resolve) => {
+        execFile('wsl.exe', ['--', 'bash', '-lic', `which ${bin}`], { timeout: 5000 }, (err) =>
+          resolve(!err),
+        )
+      })
+    const entries = Object.entries(agentBinaries)
+    const results = await Promise.all(entries.map(([, bin]) => check(bin)))
+    return Object.fromEntries(entries.map(([name], i) => [name, results[i]]))
+  })
+
+  /* ── Project utilities ──────────────────────────────────────────── */
+  ipcMain.handle('projects:detectStack', (_, p: string, distro?: string) => {
+    return detectStack(p, distro)
+  })
+
+  ipcMain.handle('projects:getDefaultDistro', () => {
+    return getDefaultDistro()
+  })
+
+  ipcMain.handle('projects:readFile', async (_event, projectPath: string, filename: string) => {
+    if (!ALLOWED_FILES.has(filename)) {
+      throw new Error(`File not permitted: ${filename}`)
+    }
+    try {
+      const distro = getDefaultDistro()
+      const windowsPath = wslPathToWindows(projectPath, distro)
+      const filePath = path.join(windowsPath, filename)
+      const content = await fs.promises.readFile(filePath, 'utf-8')
+      return content
+    } catch {
+      return null
+    }
+  })
+
+  /* ── Dialogs ────────────────────────────────────────────────────── */
+  ipcMain.handle('dialog:pickFolder', async () => {
+    if (!mainWindow) return null
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openDirectory'],
+    })
+    return result.filePaths[0] ?? null
   })
 }
 
 app.whenReady().then(() => {
   createProjectStore()
+  registerIpcHandlers()
   createWindow()
+})
+
+app.on('before-quit', () => {
+  ptyManager?.killAll()
 })
 
 app.on('window-all-closed', () => {

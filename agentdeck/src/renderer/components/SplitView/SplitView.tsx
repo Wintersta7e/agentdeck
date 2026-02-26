@@ -20,6 +20,14 @@ export function SplitView(): React.JSX.Element {
 
   const paneRefs = useRef<(HTMLDivElement | null)[]>([null, null, null])
   const splitAreaRef = useRef<HTMLDivElement>(null)
+  const dragCleanupRef = useRef<(() => void) | null>(null)
+
+  // Clean up drag listeners if component unmounts mid-drag
+  useEffect(() => {
+    return () => {
+      dragCleanupRef.current?.()
+    }
+  }, [])
 
   // Reset pane widths to flex:1 when layout changes or window resizes
   useEffect(() => {
@@ -81,6 +89,7 @@ export function SplitView(): React.JSX.Element {
     }
 
     function onMouseUp(): void {
+      dragCleanupRef.current = null
       document.body.style.cursor = savedCursor
       document.body.style.userSelect = savedUserSelect
       document.removeEventListener('mousemove', onMouseMove)
@@ -89,6 +98,13 @@ export function SplitView(): React.JSX.Element {
 
     document.addEventListener('mousemove', onMouseMove)
     document.addEventListener('mouseup', onMouseUp)
+
+    dragCleanupRef.current = () => {
+      document.body.style.cursor = savedCursor
+      document.body.style.userSelect = savedUserSelect
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+    }
   }, [])
 
   // Determine which sessions are assigned to pane slots

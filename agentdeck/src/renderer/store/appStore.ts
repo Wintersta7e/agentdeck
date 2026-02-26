@@ -22,7 +22,7 @@ interface AppState {
   setCurrentView: (view: ViewType) => void
 
   settingsProjectId: string | null
-  previousView: ViewType
+  viewStack: ViewType[]
 
   openWizard: () => void
   closeWizard: () => void
@@ -66,6 +66,16 @@ interface AppState {
   editingTemplateId: string | null
   openTemplateEditor: (templateId?: string) => void
   closeTemplateEditor: () => void
+
+  // Notifications
+  notifications: Array<{
+    id: string
+    type: 'error' | 'warning' | 'info'
+    message: string
+    timestamp: number
+  }>
+  addNotification: (type: 'error' | 'warning' | 'info', message: string) => void
+  dismissNotification: (id: string) => void
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -127,19 +137,31 @@ export const useAppStore = create<AppState>((set, get) => ({
   setCurrentView: (view) => set({ currentView: view }),
 
   settingsProjectId: null,
-  previousView: 'home' as ViewType,
+  viewStack: [] as ViewType[],
 
   openWizard: () =>
-    set((state) => ({ currentView: 'wizard' as const, previousView: state.currentView })),
-  closeWizard: () => set((state) => ({ currentView: state.previousView })),
+    set((state) => ({
+      currentView: 'wizard' as const,
+      viewStack: [...state.viewStack, state.currentView],
+    })),
+  closeWizard: () =>
+    set((state) => {
+      const stack = [...state.viewStack]
+      const prev = stack.pop() ?? 'home'
+      return { currentView: prev, viewStack: stack }
+    }),
   openSettings: (projectId) =>
     set((state) => ({
       currentView: 'settings' as const,
       settingsProjectId: projectId,
-      previousView: state.currentView,
+      viewStack: [...state.viewStack, state.currentView],
     })),
   closeSettings: () =>
-    set((state) => ({ currentView: state.previousView, settingsProjectId: null })),
+    set((state) => {
+      const stack = [...state.viewStack]
+      const prev = stack.pop() ?? 'home'
+      return { currentView: prev, settingsProjectId: null, viewStack: stack }
+    }),
 
   projects: [],
   setProjects: (projects) => set({ projects }),
@@ -202,12 +224,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   activityFeeds: {},
 
   addActivityEvent: (sessionId, event) =>
-    set((state) => ({
-      activityFeeds: {
-        ...state.activityFeeds,
-        [sessionId]: [...(state.activityFeeds[sessionId] ?? []), event],
-      },
-    })),
+    set((state) => {
+      const existing = state.activityFeeds[sessionId] ?? []
+      const updated = [...existing, event].slice(-500)
+      return {
+        activityFeeds: { ...state.activityFeeds, [sessionId]: updated },
+      }
+    }),
 
   clearActivityFeed: (sessionId) =>
     set((state) => ({
@@ -223,13 +246,35 @@ export const useAppStore = create<AppState>((set, get) => ({
   openTemplateEditor: (templateId) =>
     set((state) => ({
       currentView: 'template-editor' as const,
-      previousView: state.currentView,
+      viewStack: [...state.viewStack, state.currentView],
       editingTemplateId: templateId ?? null,
     })),
 
   closeTemplateEditor: () =>
+    set((state) => {
+      const stack = [...state.viewStack]
+      const prev = stack.pop() ?? 'home'
+      return { currentView: prev, editingTemplateId: null, viewStack: stack }
+    }),
+
+  // Notifications
+  notifications: [],
+
+  addNotification: (type, message) =>
     set((state) => ({
-      currentView: state.previousView,
-      editingTemplateId: null,
+      notifications: [
+        ...state.notifications,
+        {
+          id: `n-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          type,
+          message,
+          timestamp: Date.now(),
+        },
+      ].slice(-10),
+    })),
+
+  dismissNotification: (id) =>
+    set((state) => ({
+      notifications: state.notifications.filter((n) => n.id !== id),
     })),
 }))

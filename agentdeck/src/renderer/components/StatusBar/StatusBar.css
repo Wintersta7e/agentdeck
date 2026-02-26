@@ -1,5 +1,6 @@
 .statusbar {
   height: 22px;
+  line-height: 22px;
   background: var(--bg0);
   border-top: 1px solid var(--border);
   display: flex;

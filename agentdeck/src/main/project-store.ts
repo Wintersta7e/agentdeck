@@ -5,20 +5,33 @@ import type { EnvVar, Project, Template } from '../shared/types'
 
 function encryptEnvVars(envVars: EnvVar[] | undefined): EnvVar[] | undefined {
   if (!envVars) return envVars
-  if (!safeStorage.isEncryptionAvailable()) return envVars
-  return envVars.map((v) => ({
-    ...v,
-    value: v.secret ? safeStorage.encryptString(v.value).toString('base64') : v.value,
-  }))
+  if (!safeStorage.isEncryptionAvailable()) {
+    console.warn('[project-store] Encryption unavailable — secret env vars stored as plaintext')
+    return envVars
+  }
+  return envVars.map((v) => {
+    if (!v.secret) return v
+    try {
+      return { ...v, value: safeStorage.encryptString(v.value).toString('base64') }
+    } catch (err) {
+      console.error('[project-store] Failed to encrypt env var, storing as plaintext:', err)
+      return v
+    }
+  })
 }
 
 function decryptEnvVars(envVars: EnvVar[] | undefined): EnvVar[] | undefined {
   if (!envVars) return envVars
   if (!safeStorage.isEncryptionAvailable()) return envVars
-  return envVars.map((v) => ({
-    ...v,
-    value: v.secret ? safeStorage.decryptString(Buffer.from(v.value, 'base64')) : v.value,
-  }))
+  return envVars.map((v) => {
+    if (!v.secret) return v
+    try {
+      return { ...v, value: safeStorage.decryptString(Buffer.from(v.value, 'base64')) }
+    } catch (err) {
+      console.error('[project-store] Failed to decrypt env var, returning empty value:', err)
+      return { ...v, value: '' }
+    }
+  })
 }
 
 interface StoreSchema {
@@ -55,7 +68,10 @@ export function createProjectStore(): Store<StoreSchema> {
       projects.push(withId)
     }
     store.set('projects', projects)
-    return projects[idx >= 0 ? idx : projects.length - 1]
+    const savedIdx = idx >= 0 ? idx : projects.length - 1
+    const saved = projects[savedIdx]
+    if (!saved) throw new Error('store:saveProject — saved project not found after write')
+    return { ...saved, envVars: decryptEnvVars(saved.envVars) }
   })
 
   ipcMain.handle('store:deleteProject', (_, id: string) => {

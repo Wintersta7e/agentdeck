@@ -31,7 +31,10 @@ export async function detectStack(
   let entries: string[]
   try {
     entries = await readdir(windowsPath)
-  } catch {
+  } catch (err: unknown) {
+    const code = (err as NodeJS.ErrnoException)?.code
+    if (code === 'ENOENT') return null
+    console.error(`[detect-stack] Failed to read directory ${windowsPath}:`, err)
     return null
   }
 
@@ -82,7 +85,7 @@ export async function detectStack(
   }
 
   const suggestedAgent: AgentType = 'claude-code'
-  const suggestedCommands = [`cd ${wslPath}`, 'claude']
+  const suggestedCommands = [`cd "${wslPath.replace(/"/g, '\\"')}"`, 'claude']
 
   return { badge, items, suggestedAgent, suggestedCommands, contextFiles }
 }

@@ -100,24 +100,30 @@ export function TerminalPane({
       window.agentDeck.pty.write(sessionId, data)
     })
 
+    let exitTimeout: ReturnType<typeof setTimeout> | undefined
     const unsubExit = window.agentDeck.pty.onExit(sessionId, () => {
       setSessionStatus(sessionId, 'exited')
-      setTimeout(() => removeSession(sessionId), 800)
+      exitTimeout = setTimeout(() => removeSession(sessionId), 800)
     })
 
     let resizeTimeout: ReturnType<typeof setTimeout> | undefined
     const ro = new ResizeObserver(() => {
       clearTimeout(resizeTimeout)
       resizeTimeout = setTimeout(() => {
-        if (fitRef.current && containerRef.current) {
-          fit.fit()
-          window.agentDeck.pty.resize(sessionId, term.cols, term.rows)
+        try {
+          if (fitRef.current && containerRef.current) {
+            fitRef.current.fit()
+            window.agentDeck.pty.resize(sessionId, term.cols, term.rows)
+          }
+        } catch {
+          // terminal may have been disposed
         }
       }, 80)
     })
     ro.observe(containerRef.current)
 
     return () => {
+      clearTimeout(exitTimeout)
       clearTimeout(resizeTimeout)
       unsubData()
       unsubExit()

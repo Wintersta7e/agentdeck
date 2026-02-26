@@ -1,7 +1,10 @@
 import { execFileSync } from 'child_process'
 
 export function wslPathToWindows(wslPath: string, distro = 'Ubuntu-24.04'): string {
-  return `\\\\wsl$\\${distro}\\${wslPath.replace(/\//g, '\\')}`
+  if (!/^[A-Za-z0-9_. -]+$/.test(distro)) {
+    throw new Error(`Invalid WSL distro name: ${distro}`)
+  }
+  return `\\\\wsl.localhost\\${distro}\\${wslPath.replace(/\//g, '\\')}`
 }
 
 export function getDefaultDistro(): string {
@@ -11,8 +14,12 @@ export function getDefaultDistro(): string {
       .split('\n')
       .map((l) => l.trim())
       .filter(Boolean)[0]
+    if (!first) {
+      console.warn('wsl-utils: wsl.exe returned no distros, falling back to Ubuntu-24.04')
+    }
     return first ?? 'Ubuntu-24.04'
-  } catch {
+  } catch (err) {
+    console.error('wsl-utils: failed to detect WSL distro, falling back to Ubuntu-24.04', err)
     return 'Ubuntu-24.04'
   }
 }

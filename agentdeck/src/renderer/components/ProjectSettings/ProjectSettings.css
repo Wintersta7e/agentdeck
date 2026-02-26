@@ -233,6 +233,7 @@
   font-size: 10px;
   color: var(--text1);
   font-weight: 500;
+  line-height: 1.5;
 }
 .form-sublabel {
   font-size: 9px;
@@ -640,7 +641,7 @@
   border-radius: var(--r);
   padding: 6px 10px;
   color: var(--text0);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   outline: none;
   margin-right: 8px;

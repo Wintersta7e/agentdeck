@@ -43,13 +43,19 @@ export function NewProjectWizard({ onCreateProject }: NewProjectWizardProps): Re
   })
   const [detectedStack, setDetectedStack] = useState<DetectedStack | null>(null)
   const [distro, setDistro] = useState('')
+  const [isCreating, setIsCreating] = useState(false)
 
   // Prefill default WSL distro on mount
   useEffect(() => {
-    void window.agentDeck.projects.getDefaultDistro().then((d) => {
-      setDistro(d)
-      setWizardData((prev) => ({ ...prev, wslDistro: d }))
-    })
+    void window.agentDeck.projects
+      .getDefaultDistro()
+      .then((d) => {
+        setDistro(d)
+        setWizardData((prev) => ({ ...prev, wslDistro: d }))
+      })
+      .catch(() => {
+        // Use default, notification not needed for this
+      })
   }, [])
 
   // Run stack detection when path is set (triggered on blur)
@@ -189,10 +195,18 @@ export function NewProjectWizard({ onCreateProject }: NewProjectWizardProps): Re
   }
 
   async function handleCreate(): Promise<void> {
-    const saved = await addProject(wizardData)
-    await updateProject({ ...saved, lastOpened: Date.now() })
-    onCreateProject(saved)
-    closeWizard()
+    if (isCreating) return
+    setIsCreating(true)
+    try {
+      const saved = await addProject(wizardData)
+      await updateProject({ ...saved, lastOpened: Date.now() })
+      onCreateProject(saved)
+      closeWizard()
+    } catch {
+      // Notification dispatched by useProjects
+    } finally {
+      setIsCreating(false)
+    }
   }
 
   // Find template names by ID for the summary view
@@ -513,6 +527,7 @@ export function NewProjectWizard({ onCreateProject }: NewProjectWizardProps): Re
             <button
               type="button"
               className="wizard-btn primary"
+              disabled={!isNextEnabled() || isCreating}
               onClick={() => void handleCreate()}
             >
               {'\u2713'} Create Project

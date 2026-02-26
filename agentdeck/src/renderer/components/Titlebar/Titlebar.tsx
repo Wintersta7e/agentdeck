@@ -17,7 +17,8 @@ export function Titlebar({ onCloseTab, onAddTab }: TitlebarProps): React.JSX.Ele
   const closeWizard = useAppStore((s) => s.closeWizard)
   const settingsProjectId = useAppStore((s) => s.settingsProjectId)
   const closeSettings = useAppStore((s) => s.closeSettings)
-  const previousView = useAppStore((s) => s.previousView)
+  const viewStack = useAppStore((s) => s.viewStack)
+  const previousView = viewStack.length > 0 ? viewStack[viewStack.length - 1] : 'home'
   const paneLayout = useAppStore((s) => s.paneLayout)
   const cyclePaneLayout = useAppStore((s) => s.cyclePaneLayout)
   const toggleRightPanel = useAppStore((s) => s.toggleRightPanel)

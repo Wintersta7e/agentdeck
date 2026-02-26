@@ -94,32 +94,40 @@ export function TemplateEditor(): React.JSX.Element {
 
   // Create new template
   const handleNew = useCallback(async () => {
-    const newId = `tpl-${Date.now()}`
-    const saved = await addTemplate({
-      id: newId,
-      name: 'New template',
-      description: '',
-      content: '',
-    })
-    setSelectedId(saved.id)
-    setEditingName(saved.name)
-    setEditingContent(saved.content ?? '')
-    // Focus the name input after creation
-    requestAnimationFrame(() => {
-      nameInputRef.current?.focus()
-      nameInputRef.current?.select()
-    })
+    try {
+      const newId = `tpl-${Date.now()}`
+      const saved = await addTemplate({
+        id: newId,
+        name: 'New template',
+        description: '',
+        content: '',
+      })
+      setSelectedId(saved.id)
+      setEditingName(saved.name)
+      setEditingContent(saved.content ?? '')
+      // Focus the name input after creation
+      requestAnimationFrame(() => {
+        nameInputRef.current?.focus()
+        nameInputRef.current?.select()
+      })
+    } catch {
+      // Notification already dispatched by useProjects
+    }
   }, [addTemplate])
 
   // Save template
   const handleSave = useCallback(async () => {
     if (!selectedId) return
-    await updateTemplate({
-      id: selectedId,
-      name: editingName,
-      description: editingContent.split('\n')[0]?.slice(0, 60) ?? '',
-      content: editingContent,
-    })
+    try {
+      await updateTemplate({
+        id: selectedId,
+        name: editingName,
+        description: editingContent.split('\n')[0]?.slice(0, 60) ?? '',
+        content: editingContent,
+      })
+    } catch {
+      // Notification already dispatched by useProjects
+    }
   }, [selectedId, editingName, editingContent, updateTemplate])
 
   // Discard changes
@@ -133,20 +141,24 @@ export function TemplateEditor(): React.JSX.Element {
   // Delete template
   const handleDelete = useCallback(async () => {
     if (!selectedId) return
-    await removeTemplate(selectedId)
-    // Select the first remaining template or clear
-    const remaining = templates.filter((t) => t.id !== selectedId)
-    const first = remaining[0]
-    if (first) {
-      setSelectedId(first.id)
-      setEditingName(first.name)
-      setEditingContent(first.content ?? '')
-    } else {
-      setSelectedId(null)
-      setEditingName('')
-      setEditingContent('')
+    try {
+      await removeTemplate(selectedId)
+      // Read fresh state after deletion to avoid stale closure
+      const freshTemplates = useAppStore.getState().templates
+      const first = freshTemplates[0]
+      if (first) {
+        setSelectedId(first.id)
+        setEditingName(first.name)
+        setEditingContent(first.content ?? '')
+      } else {
+        setSelectedId(null)
+        setEditingName('')
+        setEditingContent('')
+      }
+    } catch {
+      // Notification already dispatched by useProjects
     }
-  }, [selectedId, templates, removeTemplate])
+  }, [selectedId, removeTemplate])
 
   // Ctrl+S shortcut
   useEffect(() => {
