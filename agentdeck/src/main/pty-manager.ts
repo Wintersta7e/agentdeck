@@ -79,7 +79,12 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
     }
 
     const cwd = process.env['USERPROFILE'] ?? process.cwd()
-    const mergedEnv = { ...process.env, ...env } as Record<string, string>
+    // Strip Windows PATH so WSL's native PATH (set by .bashrc / NVM) takes
+    // precedence. Without this, npm global installs inside a session don't
+    // persist across PTY restarts because wsl.exe inherits the Windows PATH
+    // which can shadow the WSL node/npm that the user actually updated.
+    const { PATH: _winPath, Path: _winPath2, ...cleanEnv } = process.env as Record<string, string>
+    const mergedEnv = { ...cleanEnv, ...env }
 
     /* Fix 8 (ERR-6): Wrap pty.spawn in try-catch */
     let proc: IPty

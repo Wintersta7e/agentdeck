@@ -160,17 +160,24 @@ export function TemplateEditor(): React.JSX.Element {
     }
   }, [selectedId, removeTemplate])
 
-  // Ctrl+S shortcut
+  // Keyboard shortcuts: Ctrl+S to save, Delete to delete
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent): void {
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
         e.preventDefault()
         void handleSave()
       }
+      if (e.key === 'Delete' && selectedId) {
+        // Don't trigger when typing in an input/textarea
+        const tag = (e.target as HTMLElement)?.tagName
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return
+        e.preventDefault()
+        void handleDelete()
+      }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [handleSave])
+  }, [handleSave, handleDelete, selectedId])
 
   return (
     <div className="template-editor">

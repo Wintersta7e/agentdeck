@@ -56,13 +56,16 @@ export function Titlebar({ onCloseTab, onAddTab }: TitlebarProps): React.JSX.Ele
       )}
       {currentView === 'template-editor' && <div className="titlebar-center">Templates</div>}
 
-      {currentView === 'session' && sessionList.length > 0 && (
+      {sessionList.length > 0 && (
         <div className="tab-bar">
           {sessionList.map((s) => (
             <div
               key={s.id}
-              className={`tab ${s.id === activeSessionId ? 'active' : ''}`}
-              onClick={() => setActiveSession(s.id)}
+              className={`tab ${s.id === activeSessionId && currentView === 'session' ? 'active' : ''}`}
+              onClick={() => {
+                setActiveSession(s.id)
+                setCurrentView('session')
+              }}
             >
               <div className="tab-dot" style={dotStyle(s.status)} />
               {getProjectName(s)}
@@ -84,7 +87,7 @@ export function Titlebar({ onCloseTab, onAddTab }: TitlebarProps): React.JSX.Ele
       )}
 
       <div className="titlebar-right">
-        {currentView === 'session' && (
+        {sessionList.length > 0 && (
           <>
             <button className="titlebar-btn" onClick={cyclePaneLayout}>
               Split{paneLayout > 1 ? ` (${String(paneLayout)})` : ''}
