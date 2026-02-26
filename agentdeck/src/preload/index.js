@@ -22,5 +22,13 @@ contextBridge.exposeInMainWorld('agentDeck', {
       ipcRenderer.on(channel, listener)
       return () => ipcRenderer.removeListener(channel, listener)
     }
+  },
+  store: {
+    getProjects: () => ipcRenderer.invoke('store:getProjects'),
+    saveProject: (project) => ipcRenderer.invoke('store:saveProject', project),
+    deleteProject: (id) => ipcRenderer.invoke('store:deleteProject', id),
+    getTemplates: () => ipcRenderer.invoke('store:getTemplates'),
+    saveTemplate: (template) => ipcRenderer.invoke('store:saveTemplate', template),
+    deleteTemplate: (id) => ipcRenderer.invoke('store:deleteTemplate', id)
   }
 })
