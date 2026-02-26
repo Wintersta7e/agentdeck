@@ -8,8 +8,8 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "dev": "electron-vite dev",
-    "build": "electron-vite build",
+    "dev": "node node_modules/electron-vite/bin/electron-vite.js dev",
+    "build": "node node_modules/electron-vite/bin/electron-vite.js build",
     "postinstall": "node node_modules/@electron/rebuild/lib/cli.js -f -w node-pty"
   },
   "dependencies": {
