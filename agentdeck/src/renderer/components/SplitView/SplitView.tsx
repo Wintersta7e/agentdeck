@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { useAppStore } from '../../store/appStore'
+import { PaneTopbar } from './PaneTopbar'
 import { TerminalPane } from '../Terminal/TerminalPane'
 import type { PaneLayout } from '../../../shared/types'
 import './SplitView.css'
@@ -133,16 +134,19 @@ export function SplitView(): React.JSX.Element {
             >
               <div className="pane-focus-indicator" />
               {session ? (
-                <TerminalPane
-                  sessionId={sessionId}
-                  projectPath={project?.path}
-                  startupCommands={project?.startupCommands?.map((c) => c.value)}
-                  env={
-                    project?.envVars && project.envVars.length > 0
-                      ? Object.fromEntries(project.envVars.map((v) => [v.key, v.value]))
-                      : undefined
-                  }
-                />
+                <>
+                  <PaneTopbar sessionId={sessionId} focused={isFocused} />
+                  <TerminalPane
+                    sessionId={sessionId}
+                    projectPath={project?.path}
+                    startupCommands={project?.startupCommands?.map((c) => c.value)}
+                    env={
+                      project?.envVars && project.envVars.length > 0
+                        ? Object.fromEntries(project.envVars.map((v) => [v.key, v.value]))
+                        : undefined
+                    }
+                  />
+                </>
               ) : (
                 <div className="split-pane-placeholder">
                   No session &mdash; open a project to start
