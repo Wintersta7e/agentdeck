@@ -25,9 +25,9 @@ export function Titlebar({ onCloseTab, onAddTab }) {
   return (
     <div className="titlebar">
       <div className="titlebar-controls">
-        <div className="control control-close" />
-        <div className="control control-min" />
-        <div className="control control-max" />
+        <div className="control control-close" onClick={() => window.agentDeck.window.close()} />
+        <div className="control control-min" onClick={() => window.agentDeck.window.minimize()} />
+        <div className="control control-max" onClick={() => window.agentDeck.window.maximize()} />
       </div>
 
       <div className="titlebar-logo" onClick={() => setCurrentView('home')}>

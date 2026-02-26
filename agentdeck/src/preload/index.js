@@ -23,6 +23,11 @@ contextBridge.exposeInMainWorld('agentDeck', {
       return () => ipcRenderer.removeListener(channel, listener)
     }
   },
+  window: {
+    close: () => ipcRenderer.invoke('window:close'),
+    minimize: () => ipcRenderer.invoke('window:minimize'),
+    maximize: () => ipcRenderer.invoke('window:maximize')
+  },
   store: {
     getProjects: () => ipcRenderer.invoke('store:getProjects'),
     saveProject: (project) => ipcRenderer.invoke('store:saveProject', project),

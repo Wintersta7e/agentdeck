@@ -38,6 +38,17 @@ function createWindow() {
     ptyManager.kill(sessionId)
   })
 
+  // Window control IPC handlers
+  ipcMain.handle('window:close', () => mainWindow.close())
+  ipcMain.handle('window:minimize', () => mainWindow.minimize())
+  ipcMain.handle('window:maximize', () => {
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize()
+    } else {
+      mainWindow.maximize()
+    }
+  })
+
   // Show maximized once ready to avoid white flash
   mainWindow.once('ready-to-show', () => {
     mainWindow.maximize()
