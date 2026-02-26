@@ -16,6 +16,16 @@ export function PaneTopbar({ sessionId, focused }: PaneTopbarProps): React.JSX.E
   const accentColor = project?.identity?.accentColor ?? undefined
   const agentName = project?.agent ?? 'claude-code'
 
+  // Extract a clean display name: use project name, but if it looks like a path, take the last segment
+  const rawName = project?.name ?? 'Unknown'
+  const displayName =
+    rawName.includes('/') || rawName.includes('\\')
+      ? (rawName.split(/[/\\]/).filter(Boolean).pop() ?? rawName)
+      : rawName
+  const projectPath = project?.path ?? ''
+  // Only show path separately if it adds info beyond the name
+  const showPath = projectPath !== '' && projectPath !== rawName
+
   const handleRestart = useCallback(() => {
     void window.agentDeck.pty.kill(sessionId)
   }, [sessionId])
@@ -23,9 +33,13 @@ export function PaneTopbar({ sessionId, focused }: PaneTopbarProps): React.JSX.E
   return (
     <div className={`pane-topbar${focused ? ' focused' : ''}`}>
       <div className="pane-accent" style={accentColor ? { background: accentColor } : undefined} />
-      <span className="pane-project">{project?.name ?? 'Unknown'}</span>
-      <span className="pane-sep">&gt;</span>
-      <span className="pane-path">{project?.path ?? ''}</span>
+      <span className="pane-project">{displayName}</span>
+      {showPath && (
+        <>
+          <span className="pane-sep">&gt;</span>
+          <span className="pane-path">{projectPath}</span>
+        </>
+      )}
       <div className="pane-status">
         <div className={`pane-status-dot ${status}`} />
         <span className={`pane-status-text ${status}`}>{status}</span>

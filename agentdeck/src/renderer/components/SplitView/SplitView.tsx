@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { PaneTopbar } from './PaneTopbar'
 import { TerminalPane } from '../Terminal/TerminalPane'
-import { InputBar } from '../InputBar/InputBar'
 import type { PaneLayout } from '../../../shared/types'
 import './SplitView.css'
 
@@ -164,11 +163,6 @@ export function SplitView(): React.JSX.Element {
                     }
                     agent={project?.agent ?? undefined}
                     agentFlags={project?.agentFlags ?? undefined}
-                  />
-                  <InputBar
-                    sessionId={sessionId}
-                    focused={isFocused}
-                    projectId={session.projectId}
                   />
                 </>
               ) : (

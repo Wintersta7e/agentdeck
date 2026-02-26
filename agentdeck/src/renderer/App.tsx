@@ -18,7 +18,6 @@ export function App(): React.JSX.Element {
   const currentView = useAppStore((s) => s.currentView)
   const addSession = useAppStore((s) => s.addSession)
   const removeSession = useAppStore((s) => s.removeSession)
-  const getSessionForProject = useAppStore((s) => s.getSessionForProject)
 
   const rightPanelOpen = useAppStore((s) => s.rightPanelOpen)
   const sessions = useAppStore((s) => s.sessions)
@@ -28,16 +27,11 @@ export function App(): React.JSX.Element {
 
   const handleOpenProject = useCallback(
     (project: Project) => {
-      const existing = getSessionForProject(project.id)
-      if (existing) {
-        useAppStore.getState().setActiveSession(existing.id)
-      } else {
-        const sessionId = `session-${project.id}`
-        addSession(sessionId, project.id)
-      }
+      const sessionId = `session-${project.id}-${Date.now()}`
+      addSession(sessionId, project.id)
       void updateProject({ ...project, lastOpened: Date.now() }).catch(() => {})
     },
-    [addSession, getSessionForProject, updateProject],
+    [addSession, updateProject],
   )
 
   const handleCloseTab = useCallback(
