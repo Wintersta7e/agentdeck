@@ -8,13 +8,19 @@ export function createPtyManager(mainWindow) {
       kill(sessionId)
     }
 
-    const proc = pty.spawn('wsl.exe', ['--', '/bin/bash'], {
-      name: 'xterm-256color',
-      cols: cols || 80,
-      rows: rows || 24,
-      cwd: process.env.USERPROFILE,
-      env: { ...process.env }
-    })
+    let proc
+    try {
+      proc = pty.spawn('wsl.exe', ['--', '/bin/bash'], {
+        name: 'xterm-256color',
+        cols: cols ?? 80,
+        rows: rows ?? 24,
+        cwd: process.env.USERPROFILE,
+        env: { ...process.env }
+      })
+    } catch (err) {
+      console.error(`[pty-manager] Failed to spawn session ${sessionId}:`, err)
+      throw err
+    }
 
     sessions.set(sessionId, proc)
 
