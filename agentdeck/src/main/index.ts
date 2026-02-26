@@ -66,14 +66,18 @@ function createWindow(): void {
   })
 
   ipcMain.handle('agents:check', () => {
-    const agents = ['claude-code', 'codex', 'aider']
+    const agentBinaries: Record<string, string> = {
+      'claude-code': 'claude',
+      codex: 'codex',
+      aider: 'aider',
+    }
     const results: Record<string, boolean> = {}
-    for (const agent of agents) {
+    for (const [name, bin] of Object.entries(agentBinaries)) {
       try {
-        execFileSync('wsl.exe', ['--', 'which', agent], { stdio: 'pipe' })
-        results[agent] = true
+        execFileSync('wsl.exe', ['--', 'which', bin], { stdio: 'pipe' })
+        results[name] = true
       } catch {
-        results[agent] = false
+        results[name] = false
       }
     }
     return results

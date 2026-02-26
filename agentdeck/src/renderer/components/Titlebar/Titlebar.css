@@ -12,45 +12,6 @@
   z-index: 10;
 }
 
-.titlebar-controls {
-  display: flex;
-  gap: 6px;
-  -webkit-app-region: no-drag;
-}
-
-.control {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  cursor: pointer;
-  transition:
-    opacity 0.12s,
-    transform 0.12s;
-  opacity: 0.85;
-}
-.control:hover {
-  opacity: 1;
-  transform: scale(1.2);
-}
-.control-close {
-  background: var(--red);
-}
-.control-close:hover {
-  box-shadow: 0 0 6px var(--red);
-}
-.control-min {
-  background: var(--amber);
-}
-.control-min:hover {
-  box-shadow: 0 0 6px var(--amber);
-}
-.control-max {
-  background: var(--green);
-}
-.control-max:hover {
-  box-shadow: 0 0 6px var(--green);
-}
-
 .titlebar-logo {
   display: flex;
   align-items: center;
@@ -178,6 +139,40 @@
   gap: 8px;
   flex-shrink: 0;
   -webkit-app-region: no-drag;
+}
+
+/* Windows-style window controls — always rightmost */
+.window-controls {
+  display: flex;
+  align-items: stretch;
+  height: 36px;
+  margin-left: 8px;
+  -webkit-app-region: no-drag;
+  flex-shrink: 0;
+}
+.window-btn {
+  width: 46px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text2);
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    background 0.1s,
+    color 0.1s;
+  font-family: inherit;
+}
+.window-btn:hover {
+  background: var(--bg3);
+  color: var(--text0);
+}
+.window-btn-close:hover {
+  background: var(--red);
+  color: #fff;
 }
 
 .titlebar-btn {

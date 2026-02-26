@@ -31,6 +31,7 @@ export function TerminalPane({
   const agentRef = useRef(agent)
   const agentFlagsRef = useRef(agentFlags)
   const setSessionStatus = useAppStore((s) => s.setSessionStatus)
+  const removeSession = useAppStore((s) => s.removeSession)
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -101,6 +102,7 @@ export function TerminalPane({
 
     const unsubExit = window.agentDeck.pty.onExit(sessionId, () => {
       setSessionStatus(sessionId, 'exited')
+      setTimeout(() => removeSession(sessionId), 800)
     })
 
     let resizeTimeout: ReturnType<typeof setTimeout> | undefined
@@ -124,7 +126,7 @@ export function TerminalPane({
       term.dispose()
       window.agentDeck.pty.kill(sessionId)
     }
-  }, [sessionId, setSessionStatus])
+  }, [sessionId, setSessionStatus, removeSession])
 
   return <div ref={containerRef} className="terminal-container" />
 }

@@ -2,6 +2,10 @@ import type { BrowserWindow } from 'electron'
 import type { IPty } from 'node-pty'
 import * as pty from 'node-pty'
 
+const AGENT_BINARIES: Record<string, string> = {
+  'claude-code': 'claude',
+}
+
 function toWslPath(path: string): string {
   const match = path.match(/^([A-Za-z]):[/\\](.*)$/)
   if (match && match[1] && match[2] !== undefined) {
@@ -82,7 +86,8 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
       commands.push(...startupCommands)
     }
     if (agent) {
-      const agentCmd = agentFlags ? `${agent} ${agentFlags}` : agent
+      const bin = AGENT_BINARIES[agent] ?? agent
+      const agentCmd = agentFlags ? `${bin} ${agentFlags}` : bin
       commands.push(agentCmd)
     }
 

@@ -14,7 +14,6 @@ export function Titlebar({ onCloseTab, onAddTab }: TitlebarProps): React.JSX.Ele
   const projects = useAppStore((s) => s.projects)
   const setActiveSession = useAppStore((s) => s.setActiveSession)
   const setCurrentView = useAppStore((s) => s.setCurrentView)
-  const openWizard = useAppStore((s) => s.openWizard)
   const closeWizard = useAppStore((s) => s.closeWizard)
   const settingsProjectId = useAppStore((s) => s.settingsProjectId)
   const closeSettings = useAppStore((s) => s.closeSettings)
@@ -40,12 +39,6 @@ export function Titlebar({ onCloseTab, onAddTab }: TitlebarProps): React.JSX.Ele
 
   return (
     <div className="titlebar">
-      <div className="titlebar-controls">
-        <div className="control control-close" onClick={() => window.agentDeck.window.close()} />
-        <div className="control control-min" onClick={() => window.agentDeck.window.minimize()} />
-        <div className="control control-max" onClick={() => window.agentDeck.window.maximize()} />
-      </div>
-
       <div className="titlebar-logo" onClick={() => setCurrentView('home')}>
         <div className="logo-mark" />
         <div className="logo-text">
@@ -100,16 +93,6 @@ export function Titlebar({ onCloseTab, onAddTab }: TitlebarProps): React.JSX.Ele
             </button>
           </>
         )}
-        {currentView === 'home' && (
-          <>
-            <button className="titlebar-btn" onClick={openWizard}>
-              Ctrl+N
-            </button>
-            <button className="titlebar-btn primary" onClick={openWizard}>
-              + New Project
-            </button>
-          </>
-        )}
         {currentView === 'wizard' && (
           <button className="titlebar-btn" onClick={closeWizard}>
             {'\u2190'} Cancel
@@ -125,6 +108,30 @@ export function Titlebar({ onCloseTab, onAddTab }: TitlebarProps): React.JSX.Ele
             {'\u2190'} Back
           </button>
         )}
+      </div>
+
+      <div className="window-controls">
+        <button
+          className="window-btn"
+          onClick={() => window.agentDeck.window.minimize()}
+          title="Minimize"
+        >
+          {'\u2500'}
+        </button>
+        <button
+          className="window-btn"
+          onClick={() => window.agentDeck.window.maximize()}
+          title="Maximize"
+        >
+          {'\u25A1'}
+        </button>
+        <button
+          className="window-btn window-btn-close"
+          onClick={() => window.agentDeck.window.close()}
+          title="Close"
+        >
+          {'\u2715'}
+        </button>
       </div>
     </div>
   )
