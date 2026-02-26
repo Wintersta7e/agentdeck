@@ -40,7 +40,7 @@
 }
 
 .split-divider:hover {
-  background: rgba(245, 166, 35, 0.5);
+  background: var(--amber-hover);
 }
 
 .split-divider::after {
@@ -96,6 +96,6 @@
 
 .lc-btn.active {
   background: var(--amber-glow);
-  border-color: rgba(245, 166, 35, 0.4);
+  border-color: var(--amber-border);
   color: var(--amber);
 }

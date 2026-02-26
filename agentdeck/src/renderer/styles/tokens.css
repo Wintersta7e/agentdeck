@@ -21,6 +21,8 @@
   --amber-dim: #c07d0f;
   --amber-glow: rgba(245, 166, 35, 0.12);
   --amber-glow2: rgba(245, 166, 35, 0.06);
+  --amber-border: rgba(245, 166, 35, 0.4);
+  --amber-hover: rgba(245, 166, 35, 0.5);
 
   --green: #4caf7d;
   --green-dim: rgba(76, 175, 125, 0.12);
