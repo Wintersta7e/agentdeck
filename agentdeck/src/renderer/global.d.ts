@@ -1,4 +1,4 @@
-import type { Project, Template } from '../shared/types'
+import type { DetectedStack, Project, Template } from '../shared/types'
 
 declare global {
   interface Window {
@@ -23,6 +23,10 @@ declare global {
         getTemplates: () => Promise<Template[]>
         saveTemplate: (template: Partial<Template>) => Promise<Template>
         deleteTemplate: (id: string) => Promise<void>
+      }
+      projects: {
+        detectStack: (path: string, distro?: string) => Promise<DetectedStack | null>
+        getDefaultDistro: () => Promise<string>
       }
     }
   }

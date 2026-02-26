@@ -34,4 +34,9 @@ contextBridge.exposeInMainWorld('agentDeck', {
     saveTemplate: (template: unknown) => ipcRenderer.invoke('store:saveTemplate', template),
     deleteTemplate: (id: string) => ipcRenderer.invoke('store:deleteTemplate', id),
   },
+  projects: {
+    detectStack: (path: string, distro?: string) =>
+      ipcRenderer.invoke('projects:detectStack', path, distro),
+    getDefaultDistro: () => ipcRenderer.invoke('projects:getDefaultDistro'),
+  },
 })
