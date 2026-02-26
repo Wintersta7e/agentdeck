@@ -47,6 +47,23 @@ export function createProjectStore(): Store<StoreSchema> {
     },
   })
 
+  // One-time migration: fix project names that were set to the raw path
+  const migrationProjects = store.get('projects')
+  let migrated = false
+  for (const p of migrationProjects) {
+    if (p.name === p.path || p.name.includes('\\') || p.name.includes('/')) {
+      p.name =
+        p.path
+          .replace(/[/\\]+$/, '')
+          .split(/[/\\]/)
+          .pop() ?? p.name
+      migrated = true
+    }
+  }
+  if (migrated) {
+    store.set('projects', migrationProjects)
+  }
+
   ipcMain.handle('store:getProjects', () => {
     const projects = store.get('projects')
     return projects.map((p) => ({ ...p, envVars: decryptEnvVars(p.envVars) }))
