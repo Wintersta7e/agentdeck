@@ -3,9 +3,9 @@ import { join } from 'path'
 import { createPtyManager } from './pty-manager'
 import { createProjectStore } from './project-store'
 
-let mainWindow = null
+let mainWindow: BrowserWindow | null = null
 
-function createWindow() {
+function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -18,44 +18,40 @@ function createWindow() {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false
-    }
+      sandbox: false,
+    },
   })
 
   const ptyManager = createPtyManager(mainWindow)
 
-  // PTY IPC handlers
-  ipcMain.handle('pty:spawn', (_, sessionId, cols, rows) => {
+  ipcMain.handle('pty:spawn', (_, sessionId: string, cols: number, rows: number) => {
     ptyManager.spawn(sessionId, cols, rows)
   })
-  ipcMain.handle('pty:write', (_, sessionId, data) => {
+  ipcMain.handle('pty:write', (_, sessionId: string, data: string) => {
     ptyManager.write(sessionId, data)
   })
-  ipcMain.handle('pty:resize', (_, sessionId, cols, rows) => {
+  ipcMain.handle('pty:resize', (_, sessionId: string, cols: number, rows: number) => {
     ptyManager.resize(sessionId, cols, rows)
   })
-  ipcMain.handle('pty:kill', (_, sessionId) => {
+  ipcMain.handle('pty:kill', (_, sessionId: string) => {
     ptyManager.kill(sessionId)
   })
 
-  // Window control IPC handlers
-  ipcMain.handle('window:close', () => mainWindow.close())
-  ipcMain.handle('window:minimize', () => mainWindow.minimize())
+  ipcMain.handle('window:close', () => mainWindow?.close())
+  ipcMain.handle('window:minimize', () => mainWindow?.minimize())
   ipcMain.handle('window:maximize', () => {
-    if (mainWindow.isMaximized()) {
+    if (mainWindow?.isMaximized()) {
       mainWindow.unmaximize()
     } else {
-      mainWindow.maximize()
+      mainWindow?.maximize()
     }
   })
 
-  // Show maximized once ready to avoid white flash
   mainWindow.once('ready-to-show', () => {
-    mainWindow.maximize()
-    mainWindow.show()
+    mainWindow?.maximize()
+    mainWindow?.show()
   })
 
-  // Load renderer
   if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {

@@ -1,67 +1,71 @@
 import Store from 'electron-store'
 import { ipcMain } from 'electron'
 import { randomUUID } from 'crypto'
+import type { Project, Template } from '../shared/types'
 
-const schema = {
-  projects: { type: 'array', default: [] },
-  templates: { type: 'array', default: [] }
+interface StoreSchema {
+  projects: Project[]
+  templates: Template[]
 }
 
-export function createProjectStore() {
-  const store = new Store({ schema })
+export function createProjectStore(): Store<StoreSchema> {
+  const store = new Store<StoreSchema>({
+    defaults: {
+      projects: [],
+      templates: [],
+    },
+  })
 
-  // Projects
   ipcMain.handle('store:getProjects', () => {
     return store.get('projects')
   })
 
-  ipcMain.handle('store:saveProject', (_, project) => {
+  ipcMain.handle('store:saveProject', (_, project: unknown) => {
     if (!project || typeof project !== 'object') {
       throw new Error('store:saveProject requires a non-null object')
     }
+    const p = project as Partial<Project>
     const projects = store.get('projects')
-    if (!project.id) {
-      project.id = randomUUID()
-    }
-    const idx = projects.findIndex((p) => p.id === project.id)
+    const id = p.id ?? randomUUID()
+    const withId = { ...p, id } as Project
+    const idx = projects.findIndex((existing) => existing.id === id)
     if (idx >= 0) {
-      projects[idx] = { ...projects[idx], ...project }
+      projects[idx] = { ...projects[idx]!, ...withId }
     } else {
-      projects.push(project)
+      projects.push(withId)
     }
     store.set('projects', projects)
     return projects[idx >= 0 ? idx : projects.length - 1]
   })
 
-  ipcMain.handle('store:deleteProject', (_, id) => {
+  ipcMain.handle('store:deleteProject', (_, id: string) => {
     const projects = store.get('projects').filter((p) => p.id !== id)
     store.set('projects', projects)
   })
 
-  // Templates
   ipcMain.handle('store:getTemplates', () => {
     return store.get('templates')
   })
 
-  ipcMain.handle('store:saveTemplate', (_, template) => {
+  ipcMain.handle('store:saveTemplate', (_, template: unknown) => {
     if (!template || typeof template !== 'object') {
       throw new Error('store:saveTemplate requires a non-null object')
     }
+    const t = template as Partial<Template>
     const templates = store.get('templates')
-    if (!template.id) {
-      template.id = randomUUID()
-    }
-    const idx = templates.findIndex((t) => t.id === template.id)
+    const id = t.id ?? randomUUID()
+    const withId = { ...t, id } as Template
+    const idx = templates.findIndex((existing) => existing.id === id)
     if (idx >= 0) {
-      templates[idx] = { ...templates[idx], ...template }
+      templates[idx] = { ...templates[idx]!, ...withId }
     } else {
-      templates.push(template)
+      templates.push(withId)
     }
     store.set('templates', templates)
     return templates[idx >= 0 ? idx : templates.length - 1]
   })
 
-  ipcMain.handle('store:deleteTemplate', (_, id) => {
+  ipcMain.handle('store:deleteTemplate', (_, id: string) => {
     const templates = store.get('templates').filter((t) => t.id !== id)
     store.set('templates', templates)
   })
