@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { createPtyManager } from './pty-manager'
+import { createProjectStore } from './project-store'
 
 let mainWindow = null
 
@@ -56,7 +57,10 @@ function createWindow() {
   })
 }
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => {
+  createProjectStore()
+  createWindow()
+})
 
 app.on('window-all-closed', () => {
   app.quit()
