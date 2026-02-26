@@ -9,6 +9,7 @@
   border-bottom: 2px solid var(--border);
   font-family: var(--font-mono);
   user-select: none;
+  overflow: hidden;
 }
 
 .pane-topbar.focused {
@@ -28,6 +29,7 @@
   font-weight: 500;
   color: var(--text0);
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .pane-sep {

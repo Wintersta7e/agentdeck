@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useAppStore } from '../store/appStore'
 import type { Project, Template } from '../../shared/types'
 
@@ -36,67 +36,85 @@ export function useProjects(): UseProjectsReturn {
     void load()
   }, [setProjects, setTemplates])
 
-  async function addProject(project: Partial<Project>): Promise<Project> {
-    try {
-      const saved: Project = await window.agentDeck.store.saveProject(project)
-      setProjects([...useAppStore.getState().projects, saved])
-      return saved
-    } catch (err) {
-      useAppStore.getState().addNotification('error', `Failed to add project: ${String(err)}`)
-      throw err
-    }
-  }
+  const addProject = useCallback(
+    async (project: Partial<Project>): Promise<Project> => {
+      try {
+        const saved: Project = await window.agentDeck.store.saveProject(project)
+        setProjects([...useAppStore.getState().projects, saved])
+        return saved
+      } catch (err) {
+        useAppStore.getState().addNotification('error', `Failed to add project: ${String(err)}`)
+        throw err
+      }
+    },
+    [setProjects],
+  )
 
-  async function updateProject(project: Partial<Project>): Promise<void> {
-    try {
-      const saved: Project = await window.agentDeck.store.saveProject(project)
-      setProjects(useAppStore.getState().projects.map((p) => (p.id === saved.id ? saved : p)))
-    } catch (err) {
-      useAppStore.getState().addNotification('error', `Failed to update project: ${String(err)}`)
-      throw err
-    }
-  }
+  const updateProject = useCallback(
+    async (project: Partial<Project>): Promise<void> => {
+      try {
+        const saved: Project = await window.agentDeck.store.saveProject(project)
+        setProjects(useAppStore.getState().projects.map((p) => (p.id === saved.id ? saved : p)))
+      } catch (err) {
+        useAppStore.getState().addNotification('error', `Failed to update project: ${String(err)}`)
+        throw err
+      }
+    },
+    [setProjects],
+  )
 
-  async function deleteProject(id: string): Promise<void> {
-    try {
-      await window.agentDeck.store.deleteProject(id)
-      setProjects(useAppStore.getState().projects.filter((p) => p.id !== id))
-    } catch (err) {
-      useAppStore.getState().addNotification('error', `Failed to delete project: ${String(err)}`)
-      throw err
-    }
-  }
+  const deleteProject = useCallback(
+    async (id: string): Promise<void> => {
+      try {
+        await window.agentDeck.store.deleteProject(id)
+        setProjects(useAppStore.getState().projects.filter((p) => p.id !== id))
+      } catch (err) {
+        useAppStore.getState().addNotification('error', `Failed to delete project: ${String(err)}`)
+        throw err
+      }
+    },
+    [setProjects],
+  )
 
-  async function addTemplate(template: Partial<Template>): Promise<Template> {
-    try {
-      const saved: Template = await window.agentDeck.store.saveTemplate(template)
-      setTemplates([...useAppStore.getState().templates, saved])
-      return saved
-    } catch (err) {
-      useAppStore.getState().addNotification('error', `Failed to add template: ${String(err)}`)
-      throw err
-    }
-  }
+  const addTemplate = useCallback(
+    async (template: Partial<Template>): Promise<Template> => {
+      try {
+        const saved: Template = await window.agentDeck.store.saveTemplate(template)
+        setTemplates([...useAppStore.getState().templates, saved])
+        return saved
+      } catch (err) {
+        useAppStore.getState().addNotification('error', `Failed to add template: ${String(err)}`)
+        throw err
+      }
+    },
+    [setTemplates],
+  )
 
-  async function updateTemplate(template: Partial<Template>): Promise<void> {
-    try {
-      const saved: Template = await window.agentDeck.store.saveTemplate(template)
-      setTemplates(useAppStore.getState().templates.map((t) => (t.id === saved.id ? saved : t)))
-    } catch (err) {
-      useAppStore.getState().addNotification('error', `Failed to update template: ${String(err)}`)
-      throw err
-    }
-  }
+  const updateTemplate = useCallback(
+    async (template: Partial<Template>): Promise<void> => {
+      try {
+        const saved: Template = await window.agentDeck.store.saveTemplate(template)
+        setTemplates(useAppStore.getState().templates.map((t) => (t.id === saved.id ? saved : t)))
+      } catch (err) {
+        useAppStore.getState().addNotification('error', `Failed to update template: ${String(err)}`)
+        throw err
+      }
+    },
+    [setTemplates],
+  )
 
-  async function deleteTemplate(id: string): Promise<void> {
-    try {
-      await window.agentDeck.store.deleteTemplate(id)
-      setTemplates(useAppStore.getState().templates.filter((t) => t.id !== id))
-    } catch (err) {
-      useAppStore.getState().addNotification('error', `Failed to delete template: ${String(err)}`)
-      throw err
-    }
-  }
+  const deleteTemplate = useCallback(
+    async (id: string): Promise<void> => {
+      try {
+        await window.agentDeck.store.deleteTemplate(id)
+        setTemplates(useAppStore.getState().templates.filter((t) => t.id !== id))
+      } catch (err) {
+        useAppStore.getState().addNotification('error', `Failed to delete template: ${String(err)}`)
+        throw err
+      }
+    },
+    [setTemplates],
+  )
 
   return {
     projects,

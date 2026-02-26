@@ -10,6 +10,7 @@ interface PaneTopbarProps {
 export function PaneTopbar({ sessionId, focused }: PaneTopbarProps): React.JSX.Element {
   const session = useAppStore((s) => s.sessions[sessionId])
   const projects = useAppStore((s) => s.projects)
+  const restartSession = useAppStore((s) => s.restartSession)
   const project = session ? projects.find((p) => p.id === session.projectId) : undefined
 
   const status = session?.status ?? 'exited'
@@ -27,8 +28,11 @@ export function PaneTopbar({ sessionId, focused }: PaneTopbarProps): React.JSX.E
   const showPath = projectPath !== '' && projectPath !== rawName
 
   const handleRestart = useCallback(() => {
-    void window.agentDeck.pty.kill(sessionId)
-  }, [sessionId])
+    // Kill old PTY, then swap in a fresh session for the same project
+    void window.agentDeck.pty.kill(sessionId).then(() => {
+      restartSession(sessionId)
+    })
+  }, [sessionId, restartSession])
 
   return (
     <div className={`pane-topbar${focused ? ' focused' : ''}`}>

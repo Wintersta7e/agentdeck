@@ -153,6 +153,7 @@ export function SplitView(): React.JSX.Element {
                 <>
                   <PaneTopbar sessionId={sessionId} focused={isFocused} />
                   <TerminalPane
+                    key={sessionId}
                     sessionId={sessionId}
                     projectPath={project?.path}
                     startupCommands={project?.startupCommands?.map((c) => c.value)}

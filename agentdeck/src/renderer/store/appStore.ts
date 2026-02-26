@@ -17,6 +17,7 @@ interface AppState {
   setSessionStatus: (sessionId: string, status: SessionStatus) => void
   setActiveSession: (sessionId: string) => void
   removeSession: (sessionId: string) => void
+  restartSession: (oldSessionId: string) => string | null
 
   currentView: ViewType
   setCurrentView: (view: ViewType) => void
@@ -144,6 +145,49 @@ export const useAppStore = create<AppState>((set, get) => ({
         paneSessions,
       }
     }),
+
+  restartSession: (oldSessionId) => {
+    const state = get()
+    const oldSession = state.sessions[oldSessionId]
+    if (!oldSession) return null
+
+    const projectId = oldSession.projectId
+    const newSessionId = `session-${projectId}-${Date.now()}`
+
+    // Find which pane slot the old session occupies
+    const paneIndex = state.paneSessions.indexOf(oldSessionId)
+
+    set((s) => {
+      // Remove old session
+      const { [oldSessionId]: _, ...rest } = s.sessions
+      const { [oldSessionId]: _feed, ...remainingFeeds } = s.activityFeeds
+
+      // Place new session in the same pane slot
+      const paneSessions = s.paneSessions.map((id) => (id === oldSessionId ? newSessionId : id))
+      if (paneIndex === -1) {
+        // Old session wasn't in a pane — put new one in focused pane
+        while (paneSessions.length <= s.focusedPane) paneSessions.push('')
+        paneSessions[s.focusedPane] = newSessionId
+      }
+
+      return {
+        sessions: {
+          ...rest,
+          [newSessionId]: {
+            id: newSessionId,
+            projectId,
+            status: 'starting' as const,
+            startedAt: Date.now(),
+          },
+        },
+        activityFeeds: remainingFeeds,
+        activeSessionId: newSessionId,
+        paneSessions,
+      }
+    })
+
+    return newSessionId
+  },
 
   currentView: 'home',
   setCurrentView: (view) => set({ currentView: view }),
