@@ -1,8 +1,12 @@
 {
   "name": "agentdeck",
   "version": "0.1.0-alpha",
+  "private": true,
   "description": "Electron desktop app for managing WSL agent sessions",
   "main": "./out/main/index.js",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
