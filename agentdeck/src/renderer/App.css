@@ -5,6 +5,12 @@
   overflow: hidden;
 }
 
+.app-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
 .app-main {
   flex: 1;
   display: flex;

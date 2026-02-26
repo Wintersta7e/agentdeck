@@ -1,25 +1,64 @@
-import { useEffect } from 'react'
+import { useCallback } from 'react'
 import { Titlebar } from './components/Titlebar/Titlebar'
+import { Sidebar } from './components/Sidebar/Sidebar'
 import { StatusBar } from './components/StatusBar/StatusBar'
+import { HomeScreen } from './components/HomeScreen/HomeScreen'
 import { TerminalPane } from './components/Terminal/TerminalPane'
 import { useAppStore } from './store/appStore'
+import { useProjects } from './hooks/useProjects'
 import './App.css'
 
-const DEFAULT_SESSION = 'default'
-
 export function App() {
-  const addSession = useAppStore((s) => s.addSession)
+  const currentView = useAppStore((s) => s.currentView)
   const activeSessionId = useAppStore((s) => s.activeSessionId)
+  const sessions = useAppStore((s) => s.sessions)
+  const addSession = useAppStore((s) => s.addSession)
+  const removeSession = useAppStore((s) => s.removeSession)
+  const getSessionForProject = useAppStore((s) => s.getSessionForProject)
 
-  useEffect(() => {
-    addSession(DEFAULT_SESSION)
+  const { updateProject } = useProjects()
+
+  const handleOpenProject = useCallback((project) => {
+    const existing = getSessionForProject(project.id)
+    if (existing) {
+      useAppStore.getState().setActiveSession(existing.id)
+    } else {
+      const sessionId = `session-${project.id}`
+      addSession(sessionId, project.id)
+    }
+    updateProject({ ...project, lastOpened: Date.now() })
+  }, [addSession, getSessionForProject, updateProject])
+
+  const handleCloseTab = useCallback((sessionId) => {
+    removeSession(sessionId)
+  }, [removeSession])
+
+  const handleAddTab = useCallback(() => {
+    useAppStore.getState().setCurrentView('home')
   }, [])
 
   return (
     <div className="app">
-      <Titlebar centerText="AgentDeck — Terminal" />
-      <div className="app-main">
-        {activeSessionId && <TerminalPane sessionId={activeSessionId} />}
+      <Titlebar onCloseTab={handleCloseTab} onAddTab={handleAddTab} />
+      <div className="app-body">
+        <Sidebar onOpenProject={handleOpenProject} />
+        <div className="app-main">
+          {currentView === 'home' && (
+            <HomeScreen onOpenProject={handleOpenProject} />
+          )}
+          {Object.keys(sessions).map((sid) => (
+            <div
+              key={sid}
+              style={{
+                flex: 1,
+                display: currentView === 'session' && sid === activeSessionId ? 'flex' : 'none',
+                overflow: 'hidden'
+              }}
+            >
+              <TerminalPane sessionId={sid} />
+            </div>
+          ))}
+        </div>
       </div>
       <StatusBar />
     </div>
