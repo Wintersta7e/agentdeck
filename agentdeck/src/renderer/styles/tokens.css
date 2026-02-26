@@ -1,0 +1,42 @@
+:root {
+  /* Backgrounds — layered from darkest to lightest */
+  --bg0: #0d0e0f;
+  --bg1: #111213;
+  --bg2: #161718;
+  --bg3: #1c1d1f;
+  --bg4: #222325;
+
+  /* Borders */
+  --border: #2a2b2d;
+  --border-bright: #363739;
+
+  /* Text hierarchy */
+  --text0: #f0ede8;
+  --text1: #b8b4ae;
+  --text2: #6e6b66;
+  --text3: #3d3b38;
+
+  /* Accent colours */
+  --amber: #f5a623;
+  --amber-dim: #c07d0f;
+  --amber-glow: rgba(245, 166, 35, 0.12);
+  --amber-glow2: rgba(245, 166, 35, 0.06);
+
+  --green: #4caf7d;
+  --green-dim: rgba(76, 175, 125, 0.12);
+
+  --red: #e05c5c;
+  --red-dim: rgba(224, 92, 92, 0.12);
+
+  --blue: #5b9bd5;
+  --blue-dim: rgba(91, 155, 213, 0.12);
+
+  --purple: #9b72cf;
+
+  /* Shape */
+  --r: 4px;
+
+  /* Typography */
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-display: 'Syne Variable', 'Syne', sans-serif;
+}
