@@ -18,7 +18,9 @@ export function wslPathToWindows(wslPath: string, distro = 'Ubuntu-24.04'): stri
 export function getDefaultDistro(): string {
   try {
     const output = execFileSync('wsl.exe', ['-l', '--quiet'], { encoding: 'utf16le' })
-    const first = output
+    // wsl.exe output often contains null bytes, BOM, and \r — strip them all
+    const cleaned = output.replace(/\0/g, '').replace(/\ufeff/g, '')
+    const first = cleaned
       .split('\n')
       .map((l) => l.trim())
       .filter(Boolean)[0]

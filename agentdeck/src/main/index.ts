@@ -136,8 +136,19 @@ function registerIpcHandlers(): void {
         windowsPath = wslPathToWindows(projectPath, distro)
       }
       const filePath = path.join(windowsPath, filename)
-      const content = await fs.promises.readFile(filePath, 'utf-8')
-      return content
+      try {
+        const content = await fs.promises.readFile(filePath, 'utf-8')
+        return content
+      } catch (firstErr) {
+        // If UNC path via wsl.localhost failed, try wsl$ fallback
+        if (windowsPath.startsWith('\\\\wsl.localhost\\')) {
+          const fallbackPath = windowsPath.replace('\\\\wsl.localhost\\', '\\\\wsl$\\')
+          const fallbackFile = path.join(fallbackPath, filename)
+          const content = await fs.promises.readFile(fallbackFile, 'utf-8')
+          return content
+        }
+        throw firstErr
+      }
     } catch (err) {
       console.error(`[readFile] Failed to read ${filename} from ${projectPath}:`, err)
       return null

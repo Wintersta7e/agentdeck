@@ -38,10 +38,21 @@ export async function detectStack(
   try {
     entries = await readdir(windowsPath)
   } catch (err: unknown) {
-    const code = (err as NodeJS.ErrnoException)?.code
-    if (code === 'ENOENT') return null
-    console.error(`[detect-stack] Failed to read directory ${windowsPath}:`, err)
-    return null
+    // If UNC path via wsl.localhost failed, try wsl$ fallback
+    if (windowsPath.startsWith('\\\\wsl.localhost\\')) {
+      const fallbackPath = windowsPath.replace('\\\\wsl.localhost\\', '\\\\wsl$\\')
+      try {
+        entries = await readdir(fallbackPath)
+      } catch {
+        console.error(`[detect-stack] Failed to read directory ${windowsPath}:`, err)
+        return null
+      }
+    } else {
+      const code = (err as NodeJS.ErrnoException)?.code
+      if (code === 'ENOENT') return null
+      console.error(`[detect-stack] Failed to read directory ${windowsPath}:`, err)
+      return null
+    }
   }
 
   const entrySet = new Set(entries)
