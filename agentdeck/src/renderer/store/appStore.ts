@@ -85,12 +85,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   addSession: (sessionId, projectId) =>
     set((state) => {
       const paneSessions = [...state.paneSessions]
-      const emptyIndex = paneSessions.indexOf('')
-      if (emptyIndex !== -1) {
-        paneSessions[emptyIndex] = sessionId
-      } else if (paneSessions.length < 3) {
-        paneSessions.push(sessionId)
+      // Place new session in the focused pane so it's always visible
+      const targetPane = state.focusedPane
+      while (paneSessions.length <= targetPane) {
+        paneSessions.push('')
       }
+      paneSessions[targetPane] = sessionId
       return {
         sessions: {
           ...state.sessions,
@@ -115,7 +115,19 @@ export const useAppStore = create<AppState>((set, get) => ({
     }),
 
   setActiveSession: (sessionId) =>
-    set({ activeSessionId: sessionId, currentView: 'session' as const }),
+    set((state) => {
+      const paneSessions = [...state.paneSessions]
+      // If session isn't already in a visible pane, put it in the focused pane
+      const visibleIndex = paneSessions.slice(0, state.paneLayout).indexOf(sessionId)
+      if (visibleIndex === -1) {
+        const targetPane = state.focusedPane
+        while (paneSessions.length <= targetPane) {
+          paneSessions.push('')
+        }
+        paneSessions[targetPane] = sessionId
+      }
+      return { activeSessionId: sessionId, currentView: 'session' as const, paneSessions }
+    }),
 
   removeSession: (sessionId) =>
     set((state) => {

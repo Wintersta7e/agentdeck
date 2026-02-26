@@ -79,8 +79,8 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
     try {
       proc = pty.spawn('wsl.exe', [], {
         name: 'xterm-256color',
-        cols: cols ?? 80,
-        rows: rows ?? 24,
+        cols: cols > 0 ? cols : 80,
+        rows: rows > 0 ? rows : 24,
         cwd,
         env: mergedEnv,
       })
