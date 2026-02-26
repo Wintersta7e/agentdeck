@@ -11,6 +11,7 @@ function createWindow() {
     minWidth: 900,
     minHeight: 600,
     frame: false,
+    show: false,
     backgroundColor: '#0d0e0f',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -34,6 +35,12 @@ function createWindow() {
   })
   ipcMain.handle('pty:kill', (_, sessionId) => {
     ptyManager.kill(sessionId)
+  })
+
+  // Show maximized once ready to avoid white flash
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.maximize()
+    mainWindow.show()
   })
 
   // Load renderer
