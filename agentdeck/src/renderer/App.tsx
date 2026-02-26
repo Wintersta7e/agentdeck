@@ -36,6 +36,9 @@ export function App(): React.JSX.Element {
 
   const handleCloseTab = useCallback(
     (sessionId: string) => {
+      // Kill PTY immediately on explicit close — don't rely only on
+      // TerminalPane cleanup which may race with React's unmount timing.
+      window.agentDeck.pty.kill(sessionId).catch(() => {})
       removeSession(sessionId)
     },
     [removeSession],

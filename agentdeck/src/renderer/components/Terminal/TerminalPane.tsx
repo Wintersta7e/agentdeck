@@ -152,7 +152,13 @@ export function TerminalPane({
       onDataDisposable.dispose()
       ro.disconnect()
       term.dispose()
-      window.agentDeck.pty.kill(sessionId)
+      // Only kill the PTY if the session was actually removed from the store.
+      // If the session still exists (e.g. moved from visible pane to hidden),
+      // keep the PTY alive to avoid conpty kill+spawn race crashes.
+      const state = useAppStore.getState()
+      if (!state.sessions[sessionId]) {
+        window.agentDeck.pty.kill(sessionId)
+      }
     }
   }, [sessionId, setSessionStatus, removeSession])
 

@@ -4,6 +4,8 @@ import * as pty from 'node-pty'
 
 const AGENT_BINARIES: Record<string, string> = {
   'claude-code': 'claude',
+  codex: 'codex',
+  aider: 'aider',
 }
 
 function toWslPath(path: string): string {
@@ -67,8 +69,10 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
     agent?: string,
     agentFlags?: string,
   ): void {
+    // If a PTY already exists for this session (e.g. session moved from visible
+    // pane to hidden section), don't kill and respawn — just reuse it.
     if (sessions.has(sessionId)) {
-      kill(sessionId)
+      return
     }
 
     const cwd = process.env['USERPROFILE'] ?? process.cwd()
@@ -190,9 +194,14 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
     }
     const proc = sessions.get(sessionId)
     if (proc) {
-      proc.kill()
+      // Remove from maps BEFORE killing to prevent re-entrant callbacks
       sessions.delete(sessionId)
       lineBuffers.delete(sessionId)
+      try {
+        proc.kill()
+      } catch (err) {
+        console.error(`[pty-manager] Error killing PTY for session ${sessionId}:`, err)
+      }
     }
   }
 
