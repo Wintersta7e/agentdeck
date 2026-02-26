@@ -1,0 +1,59 @@
+.env-var-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.env-key-input {
+  width: 140px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 4px 8px;
+  color: var(--blue);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  outline: none;
+}
+
+.env-key-input:focus {
+  border-color: rgba(245, 166, 35, 0.4);
+}
+
+.env-eq {
+  color: var(--text3);
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+
+.env-val-input {
+  flex: 1;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 4px 8px;
+  color: var(--text1);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  outline: none;
+}
+
+.env-val-input:focus {
+  border-color: rgba(245, 166, 35, 0.4);
+}
+
+.secret-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  flex-shrink: 0;
+  padding: 2px;
+  opacity: 0.7;
+  transition: opacity 0.12s;
+}
+
+.secret-toggle:hover {
+  opacity: 1;
+}
