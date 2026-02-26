@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { PaneTopbar } from './PaneTopbar'
 import { TerminalPane } from '../Terminal/TerminalPane'
+import { InputBar } from '../InputBar/InputBar'
 import type { PaneLayout } from '../../../shared/types'
 import './SplitView.css'
 
@@ -145,6 +146,11 @@ export function SplitView(): React.JSX.Element {
                         ? Object.fromEntries(project.envVars.map((v) => [v.key, v.value]))
                         : undefined
                     }
+                  />
+                  <InputBar
+                    sessionId={sessionId}
+                    focused={isFocused}
+                    projectId={session.projectId}
                   />
                 </>
               ) : (

@@ -1,0 +1,65 @@
+.input-bar {
+  border-top: 1px solid var(--border);
+  background: var(--bg1);
+  flex-shrink: 0;
+}
+
+.input-row {
+  display: flex;
+  align-items: center;
+  padding: 7px 12px;
+  gap: 8px;
+}
+
+.input-prompt-sym {
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.input-prompt-sym.focused {
+  color: var(--amber);
+}
+
+.input-prompt-sym.dim {
+  color: var(--text3);
+}
+
+.input-field {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text0);
+  caret-color: var(--amber);
+}
+
+.input-field::placeholder {
+  color: var(--text3);
+}
+
+.input-chips {
+  display: flex;
+  gap: 5px;
+  padding: 0 12px 7px;
+  flex-wrap: wrap;
+}
+
+.input-chip {
+  font-size: 9px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+
+.input-chip:hover {
+  border-color: var(--amber-border);
+  color: var(--amber);
+  background: var(--amber-glow);
+}
