@@ -74,7 +74,7 @@ function createWindow(): void {
     const results: Record<string, boolean> = {}
     for (const [name, bin] of Object.entries(agentBinaries)) {
       try {
-        execFileSync('wsl.exe', ['--', 'which', bin], { stdio: 'pipe' })
+        execFileSync('wsl.exe', ['--', 'bash', '--login', '-c', `which ${bin}`], { stdio: 'pipe' })
         results[name] = true
       } catch {
         results[name] = false

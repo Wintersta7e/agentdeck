@@ -66,7 +66,7 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
 
     const cwd = process.env['USERPROFILE'] ?? process.cwd()
     const mergedEnv = { ...process.env, ...env } as Record<string, string>
-    const proc = pty.spawn('wsl.exe', ['--', '/bin/bash'], {
+    const proc = pty.spawn('wsl.exe', ['--', '/bin/bash', '--login'], {
       name: 'xterm-256color',
       cols: cols ?? 80,
       rows: rows ?? 24,
