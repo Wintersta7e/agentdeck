@@ -63,8 +63,12 @@ export function NewProjectWizard({ onCreateProject }: NewProjectWizardProps): Re
     async (path: string): Promise<void> => {
       if (!path.trim()) return
 
-      // Auto-fill name from path
-      const folderName = path.split('/').pop() ?? ''
+      // Auto-fill name from path (handle both / and \ separators)
+      const folderName =
+        path
+          .replace(/[/\\]+$/, '')
+          .split(/[/\\]/)
+          .pop() ?? ''
       setWizardData((prev) => ({
         ...prev,
         name: prev.name || folderName,

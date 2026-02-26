@@ -2,6 +2,10 @@ import { useAppStore } from '../../store/appStore'
 import type { Project } from '../../../shared/types'
 import './Sidebar.css'
 
+function badgeClass(badge: string): string {
+  return badge.toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
 function timeAgo(timestamp: number | undefined): string {
   if (!timestamp) return ''
   const diff = Date.now() - timestamp
@@ -70,7 +74,7 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
               <div className="sidebar-item-sub">{p.path}</div>
             </div>
             {p.badge && (
-              <span className={`sidebar-badge badge-${p.badge.toLowerCase()}`}>{p.badge}</span>
+              <span className={`sidebar-badge badge-${badgeClass(p.badge)}`}>{p.badge}</span>
             )}
             <button
               className="sidebar-item-gear"
@@ -102,7 +106,7 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
               <div className="sidebar-item-sub">{timeAgo(p.lastOpened)}</div>
             </div>
             {p.badge && (
-              <span className={`sidebar-badge badge-${p.badge.toLowerCase()}`}>{p.badge}</span>
+              <span className={`sidebar-badge badge-${badgeClass(p.badge)}`}>{p.badge}</span>
             )}
             <button
               className="sidebar-item-gear"

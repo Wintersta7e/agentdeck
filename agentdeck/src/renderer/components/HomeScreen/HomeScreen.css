@@ -218,8 +218,26 @@
 .card-icon-js {
   background: rgba(76, 175, 125, 0.15);
 }
+.card-icon-ts {
+  background: rgba(49, 120, 198, 0.15);
+}
+.card-icon-python {
+  background: rgba(255, 212, 59, 0.1);
+}
+.card-icon-rust {
+  background: rgba(206, 100, 50, 0.15);
+}
+.card-icon-go {
+  background: rgba(0, 173, 216, 0.12);
+}
+.card-icon-dotnet {
+  background: rgba(91, 45, 168, 0.15);
+}
 .card-icon-agent {
   background: rgba(155, 114, 207, 0.15);
+}
+.card-icon-other {
+  background: rgba(110, 107, 102, 0.15);
 }
 
 .card-status {

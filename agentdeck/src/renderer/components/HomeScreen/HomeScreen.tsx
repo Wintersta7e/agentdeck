@@ -30,6 +30,11 @@ function formatDate(): string {
   })
 }
 
+/** Sanitize badge to a valid CSS class segment (e.g. ".NET" → "net") */
+function badgeClass(badge: string): string {
+  return badge.toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
 const BADGE_ICONS: Record<StackBadge, string> = {
   Java: '\u2615',
   JS: '\u2B21',
@@ -192,9 +197,7 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
                     <div className="card-path">{p.path}</div>
                     <div className="card-meta">
                       {p.badge && (
-                        <span className={`card-badge badge-${p.badge.toLowerCase()}`}>
-                          {p.badge}
-                        </span>
+                        <span className={`card-badge badge-${badgeClass(p.badge)}`}>{p.badge}</span>
                       )}
                       <span className="card-last">{timeAgo(p.lastOpened)}</span>
                     </div>
@@ -239,9 +242,7 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
                     <div className="recent-name">{p.name}</div>
                     <div className="recent-path">{p.path}</div>
                     {p.badge && (
-                      <span className={`recent-badge badge-${p.badge.toLowerCase()}`}>
-                        {p.badge}
-                      </span>
+                      <span className={`recent-badge badge-${badgeClass(p.badge)}`}>{p.badge}</span>
                     )}
                     <div className="recent-time">{timeAgo(p.lastOpened)}</div>
                   </div>
