@@ -110,10 +110,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   removeSession: (sessionId) =>
     set((state) => {
       const { [sessionId]: _, ...rest } = state.sessions
+      const { [sessionId]: _feed, ...remainingFeeds } = state.activityFeeds
       const remainingIds = Object.keys(rest)
       const paneSessions = state.paneSessions.map((id) => (id === sessionId ? '' : id))
       return {
         sessions: rest,
+        activityFeeds: remainingFeeds,
         activeSessionId:
           state.activeSessionId === sessionId ? (remainingIds[0] ?? null) : state.activeSessionId,
         currentView: remainingIds.length === 0 ? ('home' as const) : state.currentView,
@@ -170,7 +172,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
     }),
 
-  setFocusedPane: (pane) => set({ focusedPane: pane }),
+  setFocusedPane: (pane) =>
+    set((state) => ({
+      focusedPane: pane < state.paneLayout ? pane : state.focusedPane,
+    })),
 
   setPaneSession: (paneIndex, sessionId) =>
     set((state) => {
