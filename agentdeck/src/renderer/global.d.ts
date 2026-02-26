@@ -11,6 +11,8 @@ declare global {
           projectPath?: string,
           startupCommands?: string[],
           env?: Record<string, string>,
+          agent?: string,
+          agentFlags?: string,
         ) => Promise<void>
         write: (sessionId: string, data: string) => Promise<void>
         resize: (sessionId: string, cols: number, rows: number) => Promise<void>
@@ -31,6 +33,9 @@ declare global {
         getTemplates: () => Promise<Template[]>
         saveTemplate: (template: Partial<Template>) => Promise<Template>
         deleteTemplate: (id: string) => Promise<void>
+      }
+      agents: {
+        check: () => Promise<Record<string, boolean>>
       }
       projects: {
         detectStack: (path: string, distro?: string) => Promise<DetectedStack | null>

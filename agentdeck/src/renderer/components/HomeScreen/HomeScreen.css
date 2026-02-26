@@ -374,6 +374,13 @@
   color: var(--text2);
   margin-top: 2px;
 }
+.agent-installed {
+  color: var(--green);
+  font-weight: 600;
+}
+.agent-missing {
+  color: var(--text3);
+}
 
 /* Scrollbar */
 .home-main::-webkit-scrollbar {

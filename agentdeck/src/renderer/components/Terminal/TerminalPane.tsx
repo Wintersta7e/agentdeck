@@ -10,6 +10,8 @@ interface TerminalPaneProps {
   projectPath?: string | undefined
   startupCommands?: string[] | undefined
   env?: Record<string, string> | undefined
+  agent?: string | undefined
+  agentFlags?: string | undefined
 }
 
 export function TerminalPane({
@@ -17,6 +19,8 @@ export function TerminalPane({
   projectPath,
   startupCommands,
   env,
+  agent,
+  agentFlags,
 }: TerminalPaneProps): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
@@ -24,6 +28,8 @@ export function TerminalPane({
   const projectPathRef = useRef(projectPath)
   const startupRef = useRef(startupCommands)
   const envRef = useRef(env)
+  const agentRef = useRef(agent)
+  const agentFlagsRef = useRef(agentFlags)
   const setSessionStatus = useAppStore((s) => s.setSessionStatus)
 
   useEffect(() => {
@@ -69,7 +75,16 @@ export function TerminalPane({
 
     const { cols, rows } = term
     window.agentDeck.pty
-      .spawn(sessionId, cols, rows, projectPathRef.current, startupRef.current, envRef.current)
+      .spawn(
+        sessionId,
+        cols,
+        rows,
+        projectPathRef.current,
+        startupRef.current,
+        envRef.current,
+        agentRef.current,
+        agentFlagsRef.current,
+      )
       .then(() => setSessionStatus(sessionId, 'running'))
       .catch((err: unknown) => {
         console.error('PTY spawn failed:', err)

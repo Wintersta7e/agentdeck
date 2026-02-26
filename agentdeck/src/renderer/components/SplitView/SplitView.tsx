@@ -146,6 +146,8 @@ export function SplitView(): React.JSX.Element {
                         ? Object.fromEntries(project.envVars.map((v) => [v.key, v.value]))
                         : undefined
                     }
+                    agent={project?.agent ?? undefined}
+                    agentFlags={project?.agentFlags ?? undefined}
                   />
                   <InputBar
                     sessionId={sessionId}
@@ -179,6 +181,8 @@ export function SplitView(): React.JSX.Element {
                   ? Object.fromEntries(project.envVars.map((v) => [v.key, v.value]))
                   : undefined
               }
+              agent={project?.agent ?? undefined}
+              agentFlags={project?.agentFlags ?? undefined}
             />
           </div>
         )

@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
+import { execFileSync } from 'child_process'
 import * as fs from 'fs'
 import * as path from 'path'
 import { join } from 'path'
@@ -38,8 +39,10 @@ function createWindow(): void {
       projectPath?: string,
       startupCommands?: string[],
       env?: Record<string, string>,
+      agent?: string,
+      agentFlags?: string,
     ) => {
-      ptyManager.spawn(sessionId, cols, rows, projectPath, startupCommands, env)
+      ptyManager.spawn(sessionId, cols, rows, projectPath, startupCommands, env, agent, agentFlags)
     },
   )
   ipcMain.handle('pty:write', (_, sessionId: string, data: string) => {
@@ -60,6 +63,20 @@ function createWindow(): void {
     } else {
       mainWindow?.maximize()
     }
+  })
+
+  ipcMain.handle('agents:check', () => {
+    const agents = ['claude-code', 'codex', 'aider']
+    const results: Record<string, boolean> = {}
+    for (const agent of agents) {
+      try {
+        execFileSync('wsl.exe', ['--', 'which', agent], { stdio: 'pipe' })
+        results[agent] = true
+      } catch {
+        results[agent] = false
+      }
+    }
+    return results
   })
 
   ipcMain.handle('projects:detectStack', (_, path: string, distro?: string) => {
@@ -91,7 +108,6 @@ function createWindow(): void {
   })
 
   mainWindow.once('ready-to-show', () => {
-    mainWindow?.webContents.setZoomFactor(1.2)
     mainWindow?.maximize()
     mainWindow?.show()
   })

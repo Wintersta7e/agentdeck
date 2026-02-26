@@ -9,7 +9,20 @@ contextBridge.exposeInMainWorld('agentDeck', {
       projectPath?: string,
       startupCommands?: string[],
       env?: Record<string, string>,
-    ) => ipcRenderer.invoke('pty:spawn', sessionId, cols, rows, projectPath, startupCommands, env),
+      agent?: string,
+      agentFlags?: string,
+    ) =>
+      ipcRenderer.invoke(
+        'pty:spawn',
+        sessionId,
+        cols,
+        rows,
+        projectPath,
+        startupCommands,
+        env,
+        agent,
+        agentFlags,
+      ),
     write: (sessionId: string, data: string) => ipcRenderer.invoke('pty:write', sessionId, data),
     resize: (sessionId: string, cols: number, rows: number) =>
       ipcRenderer.invoke('pty:resize', sessionId, cols, rows),
@@ -45,6 +58,9 @@ contextBridge.exposeInMainWorld('agentDeck', {
     getTemplates: () => ipcRenderer.invoke('store:getTemplates'),
     saveTemplate: (template: unknown) => ipcRenderer.invoke('store:saveTemplate', template),
     deleteTemplate: (id: string) => ipcRenderer.invoke('store:deleteTemplate', id),
+  },
+  agents: {
+    check: () => ipcRenderer.invoke('agents:check') as Promise<Record<string, boolean>>,
   },
   projects: {
     detectStack: (path: string, distro?: string) =>

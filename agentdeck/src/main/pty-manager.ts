@@ -20,6 +20,8 @@ export interface PtyManager {
     projectPath?: string,
     startupCommands?: string[],
     env?: Record<string, string>,
+    agent?: string,
+    agentFlags?: string,
   ) => void
   write: (sessionId: string, data: string) => void
   resize: (sessionId: string, cols: number, rows: number) => void
@@ -51,6 +53,8 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
     projectPath?: string,
     startupCommands?: string[],
     env?: Record<string, string>,
+    agent?: string,
+    agentFlags?: string,
   ): void {
     if (sessions.has(sessionId)) {
       kill(sessionId)
@@ -68,7 +72,7 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
 
     sessions.set(sessionId, proc)
 
-    // Build the full command sequence: cd to project dir, then startup commands
+    // Build the full command sequence: cd to project dir, startup commands, then launch agent
     const commands: string[] = []
     if (projectPath) {
       const wslPath = toWslPath(projectPath)
@@ -76,6 +80,10 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
     }
     if (startupCommands) {
       commands.push(...startupCommands)
+    }
+    if (agent) {
+      const agentCmd = agentFlags ? `${agent} ${agentFlags}` : agent
+      commands.push(agentCmd)
     }
 
     if (commands.length > 0) {

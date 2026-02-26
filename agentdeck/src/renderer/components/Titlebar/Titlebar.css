@@ -19,19 +19,36 @@
 }
 
 .control {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   cursor: pointer;
+  transition:
+    opacity 0.12s,
+    transform 0.12s;
+  opacity: 0.85;
+}
+.control:hover {
+  opacity: 1;
+  transform: scale(1.2);
 }
 .control-close {
   background: var(--red);
 }
+.control-close:hover {
+  box-shadow: 0 0 6px var(--red);
+}
 .control-min {
   background: var(--amber);
 }
+.control-min:hover {
+  box-shadow: 0 0 6px var(--amber);
+}
 .control-max {
   background: var(--green);
+}
+.control-max:hover {
+  box-shadow: 0 0 6px var(--green);
 }
 
 .titlebar-logo {

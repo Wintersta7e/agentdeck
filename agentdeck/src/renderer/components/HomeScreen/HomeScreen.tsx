@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import type { Project, Template, StackBadge } from '../../../shared/types'
 import './HomeScreen.css'
@@ -52,17 +53,16 @@ const BADGE_ICON_CLASS: Record<StackBadge, string> = {
   Other: 'card-icon-other',
 }
 
-interface Agent {
+interface AgentInfo {
   name: string
   icon: string
   desc: string
-  active: boolean
 }
 
-const AGENTS: Agent[] = [
-  { name: 'claude-code', icon: '\u2B21', desc: 'Anthropic CLI', active: true },
-  { name: 'codex', icon: '\u25C8', desc: 'OpenAI CLI', active: false },
-  { name: 'aider', icon: '\u25B8', desc: 'Git-aware agent', active: false },
+const AGENTS: AgentInfo[] = [
+  { name: 'claude-code', icon: '\u2B21', desc: 'Anthropic CLI' },
+  { name: 'codex', icon: '\u25C8', desc: 'OpenAI CLI' },
+  { name: 'aider', icon: '\u25B8', desc: 'Git-aware agent' },
 ]
 
 interface HomeScreenProps {
@@ -74,6 +74,11 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
   const templates = useAppStore((s) => s.templates)
   const sessions = useAppStore((s) => s.sessions)
   const openWizard = useAppStore((s) => s.openWizard)
+  const [agentStatus, setAgentStatus] = useState<Record<string, boolean>>({})
+
+  useEffect(() => {
+    window.agentDeck.agents.check().then(setAgentStatus).catch(console.error)
+  }, [])
 
   const pinned = projects.filter((p) => p.pinned)
   const recent = [...projects]
@@ -251,10 +256,17 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
         </div>
         <div className="agent-grid">
           {AGENTS.map((a) => (
-            <div key={a.name} className={`agent-card ${a.active ? 'active' : ''}`}>
+            <div key={a.name} className={`agent-card ${agentStatus[a.name] ? 'active' : ''}`}>
               <div className="agent-card-icon">{a.icon}</div>
               <div className="agent-card-name">{a.name}</div>
-              <div className="agent-card-desc">{a.desc}</div>
+              <div className="agent-card-desc">
+                {a.desc}
+                {agentStatus[a.name] !== undefined && (
+                  <span className={agentStatus[a.name] ? 'agent-installed' : 'agent-missing'}>
+                    {agentStatus[a.name] ? ' \u2713 installed' : ' \u2717 not found'}
+                  </span>
+                )}
+              </div>
             </div>
           ))}
           <div className="agent-card add-agent" onClick={openWizard}>
