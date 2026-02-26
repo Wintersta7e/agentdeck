@@ -14,11 +14,17 @@
     "lint": "node node_modules/eslint/bin/eslint.js src/",
     "lint:fix": "node node_modules/eslint/bin/eslint.js src/ --fix",
     "format": "node node_modules/prettier/bin/prettier.cjs --write 'src/**/*.{ts,tsx,css}'",
-    "typecheck": "node node_modules/typescript/bin/tsc -p tsconfig.node.json --noEmit && node node_modules/typescript/bin/tsc -p tsconfig.web.json --noEmit"
+    "typecheck": "node node_modules/typescript/bin/tsc -p tsconfig.node.json --noEmit && node node_modules/typescript/bin/tsc -p tsconfig.web.json --noEmit",
+    "prepare": "cd .. && node agentdeck/node_modules/husky/bin.js"
   },
   "lint-staged": {
-    "*.{ts,tsx}": ["eslint --fix", "prettier --write"],
-    "*.css": ["prettier --write"]
+    "*.{ts,tsx}": [
+      "node node_modules/eslint/bin/eslint.js --fix",
+      "node node_modules/prettier/bin/prettier.cjs --write"
+    ],
+    "*.css": [
+      "node node_modules/prettier/bin/prettier.cjs --write"
+    ]
   },
   "dependencies": {
     "@fontsource-variable/syne": "^5.1.0",
