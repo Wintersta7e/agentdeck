@@ -7,6 +7,7 @@ import { SplitView } from './components/SplitView/SplitView'
 import { RightPanel } from './components/RightPanel/RightPanel'
 import { NewProjectWizard } from './components/NewProjectWizard/NewProjectWizard'
 import { ProjectSettings } from './components/ProjectSettings/ProjectSettings'
+import { CommandPalette } from './components/CommandPalette/CommandPalette'
 import { useAppStore } from './store/appStore'
 import { useProjects } from './hooks/useProjects'
 import type { ActivityEvent, Project } from '../shared/types'
@@ -51,12 +52,26 @@ export function App(): React.JSX.Element {
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent): void {
+      if (e.ctrlKey && e.key === 'k') {
+        e.preventDefault()
+        const state = useAppStore.getState()
+        if (state.commandPaletteOpen) {
+          state.closeCommandPalette()
+        } else {
+          state.openCommandPalette()
+        }
+        return
+      }
       if (e.ctrlKey && e.key === 'n') {
         e.preventDefault()
         useAppStore.getState().openWizard()
       }
       if (e.key === 'Escape') {
         const state = useAppStore.getState()
+        if (state.commandPaletteOpen) {
+          // Let the CommandPalette's own capture-phase handler close it
+          return
+        }
         if (state.currentView === 'wizard') {
           state.closeWizard()
         } else if (state.currentView === 'settings') {
@@ -100,6 +115,7 @@ export function App(): React.JSX.Element {
         </div>
       </div>
       <StatusBar />
+      <CommandPalette onOpenProject={handleOpenProject} />
     </div>
   )
 }

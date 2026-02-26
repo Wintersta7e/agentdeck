@@ -26,14 +26,19 @@
 
   --green: #4caf7d;
   --green-dim: rgba(76, 175, 125, 0.12);
+  --green-border: rgba(76, 175, 125, 0.2);
 
   --red: #e05c5c;
   --red-dim: rgba(224, 92, 92, 0.12);
+  --red-border: rgba(224, 92, 92, 0.2);
 
   --blue: #5b9bd5;
   --blue-dim: rgba(91, 155, 213, 0.12);
+  --blue-border: rgba(91, 155, 213, 0.2);
 
   --purple: #9b72cf;
+  --purple-dim: rgba(155, 114, 207, 0.1);
+  --purple-border: rgba(155, 114, 207, 0.2);
 
   /* Shape */
   --r: 4px;
