@@ -65,7 +65,20 @@ export interface Session {
   startedAt: number
 }
 
-export type ViewType = 'home' | 'session' | 'wizard' | 'settings'
+export type ViewType = 'home' | 'session' | 'wizard' | 'settings' | 'template-editor'
+
+export type PaneLayout = 1 | 2 | 3
+
+export interface ActivityEvent {
+  id: string
+  type: 'read' | 'write' | 'command' | 'tool' | 'think' | 'error'
+  title: string
+  detail: string
+  status: 'done' | 'active' | 'pending'
+  timestamp: number
+}
+
+export type RightPanelTab = 'context' | 'activity' | 'memory'
 
 export interface DetectedStack {
   badge: StackBadge

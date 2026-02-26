@@ -1,5 +1,14 @@
 import { create } from 'zustand'
-import type { Project, Template, Session, SessionStatus, ViewType } from '../../shared/types'
+import type {
+  Project,
+  Template,
+  Session,
+  SessionStatus,
+  ViewType,
+  PaneLayout,
+  RightPanelTab,
+  ActivityEvent,
+} from '../../shared/types'
 
 interface AppState {
   sessions: Record<string, Session>
@@ -27,6 +36,36 @@ interface AppState {
   setTemplates: (templates: Template[]) => void
 
   getSessionForProject: (projectId: string) => Session | undefined
+
+  // Split View
+  paneLayout: PaneLayout
+  focusedPane: number
+  paneSessions: string[]
+  setPaneLayout: (layout: PaneLayout) => void
+  cyclePaneLayout: () => void
+  setFocusedPane: (pane: number) => void
+  setPaneSession: (paneIndex: number, sessionId: string) => void
+
+  // Command Palette
+  commandPaletteOpen: boolean
+  openCommandPalette: () => void
+  closeCommandPalette: () => void
+
+  // Right Panel
+  rightPanelOpen: boolean
+  rightPanelTab: RightPanelTab
+  toggleRightPanel: () => void
+  setRightPanelTab: (tab: RightPanelTab) => void
+
+  // Activity Feed (per-session)
+  activityFeeds: Record<string, ActivityEvent[]>
+  addActivityEvent: (sessionId: string, event: ActivityEvent) => void
+  clearActivityFeed: (sessionId: string) => void
+
+  // Template Editor
+  editingTemplateId: string | null
+  openTemplateEditor: (templateId?: string) => void
+  closeTemplateEditor: () => void
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -34,14 +73,24 @@ export const useAppStore = create<AppState>((set, get) => ({
   activeSessionId: null,
 
   addSession: (sessionId, projectId) =>
-    set((state) => ({
-      sessions: {
-        ...state.sessions,
-        [sessionId]: { id: sessionId, projectId, status: 'starting', startedAt: Date.now() },
-      },
-      activeSessionId: sessionId,
-      currentView: 'session' as const,
-    })),
+    set((state) => {
+      const paneSessions = [...state.paneSessions]
+      const emptyIndex = paneSessions.indexOf('')
+      if (emptyIndex !== -1) {
+        paneSessions[emptyIndex] = sessionId
+      } else if (paneSessions.length < 3) {
+        paneSessions.push(sessionId)
+      }
+      return {
+        sessions: {
+          ...state.sessions,
+          [sessionId]: { id: sessionId, projectId, status: 'starting', startedAt: Date.now() },
+        },
+        activeSessionId: sessionId,
+        currentView: 'session' as const,
+        paneSessions,
+      }
+    }),
 
   setSessionStatus: (sessionId, status) =>
     set((state) => {
@@ -62,11 +111,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((state) => {
       const { [sessionId]: _, ...rest } = state.sessions
       const remainingIds = Object.keys(rest)
+      const paneSessions = state.paneSessions.map((id) => (id === sessionId ? '' : id))
       return {
         sessions: rest,
         activeSessionId:
           state.activeSessionId === sessionId ? (remainingIds[0] ?? null) : state.activeSessionId,
         currentView: remainingIds.length === 0 ? ('home' as const) : state.currentView,
+        paneSessions,
       }
     }),
 
@@ -98,4 +149,82 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { sessions } = get()
     return Object.values(sessions).find((s) => s.projectId === projectId)
   },
+
+  // Split View
+  paneLayout: 1,
+  focusedPane: 0,
+  paneSessions: [],
+
+  setPaneLayout: (layout) =>
+    set((state) => ({
+      paneLayout: layout,
+      focusedPane: state.focusedPane >= layout ? 0 : state.focusedPane,
+    })),
+
+  cyclePaneLayout: () =>
+    set((state) => {
+      const next = (state.paneLayout === 3 ? 1 : state.paneLayout + 1) as PaneLayout
+      return {
+        paneLayout: next,
+        focusedPane: state.focusedPane >= next ? 0 : state.focusedPane,
+      }
+    }),
+
+  setFocusedPane: (pane) => set({ focusedPane: pane }),
+
+  setPaneSession: (paneIndex, sessionId) =>
+    set((state) => {
+      const paneSessions = [...state.paneSessions]
+      while (paneSessions.length <= paneIndex) {
+        paneSessions.push('')
+      }
+      paneSessions[paneIndex] = sessionId
+      return { paneSessions }
+    }),
+
+  // Command Palette
+  commandPaletteOpen: false,
+  openCommandPalette: () => set({ commandPaletteOpen: true }),
+  closeCommandPalette: () => set({ commandPaletteOpen: false }),
+
+  // Right Panel
+  rightPanelOpen: false,
+  rightPanelTab: 'context',
+  toggleRightPanel: () => set((state) => ({ rightPanelOpen: !state.rightPanelOpen })),
+  setRightPanelTab: (tab) => set({ rightPanelTab: tab }),
+
+  // Activity Feed
+  activityFeeds: {},
+
+  addActivityEvent: (sessionId, event) =>
+    set((state) => ({
+      activityFeeds: {
+        ...state.activityFeeds,
+        [sessionId]: [...(state.activityFeeds[sessionId] ?? []), event],
+      },
+    })),
+
+  clearActivityFeed: (sessionId) =>
+    set((state) => ({
+      activityFeeds: {
+        ...state.activityFeeds,
+        [sessionId]: [],
+      },
+    })),
+
+  // Template Editor
+  editingTemplateId: null,
+
+  openTemplateEditor: (templateId) =>
+    set((state) => ({
+      currentView: 'template-editor' as const,
+      previousView: state.currentView,
+      editingTemplateId: templateId ?? null,
+    })),
+
+  closeTemplateEditor: () =>
+    set((state) => ({
+      currentView: state.previousView,
+      editingTemplateId: null,
+    })),
 }))
