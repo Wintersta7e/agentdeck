@@ -12,6 +12,14 @@ interface AppState {
   currentView: ViewType
   setCurrentView: (view: ViewType) => void
 
+  settingsProjectId: string | null
+  previousView: ViewType
+
+  openWizard: () => void
+  closeWizard: () => void
+  openSettings: (projectId: string) => void
+  closeSettings: () => void
+
   projects: Project[]
   setProjects: (projects: Project[]) => void
 
@@ -64,6 +72,21 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   currentView: 'home',
   setCurrentView: (view) => set({ currentView: view }),
+
+  settingsProjectId: null,
+  previousView: 'home' as ViewType,
+
+  openWizard: () =>
+    set((state) => ({ currentView: 'wizard' as const, previousView: state.currentView })),
+  closeWizard: () => set((state) => ({ currentView: state.previousView })),
+  openSettings: (projectId) =>
+    set((state) => ({
+      currentView: 'settings' as const,
+      settingsProjectId: projectId,
+      previousView: state.currentView,
+    })),
+  closeSettings: () =>
+    set((state) => ({ currentView: state.previousView, settingsProjectId: null })),
 
   projects: [],
   setProjects: (projects) => set({ projects }),
