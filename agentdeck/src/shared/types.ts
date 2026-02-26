@@ -1,11 +1,52 @@
+export type AgentType = 'claude-code' | 'codex' | 'aider' | (string & {})
+export type StackBadge =
+  | 'Java'
+  | 'JS'
+  | 'TS'
+  | 'Python'
+  | 'Rust'
+  | 'Go'
+  | '.NET'
+  | 'Agent'
+  | 'Other'
+
+export interface StartupCommand {
+  id: string
+  value: string
+}
+
+export interface EnvVar {
+  id: string
+  key: string
+  value: string
+  secret: boolean
+}
+
+export interface ProjectIdentity {
+  icon: string
+  accentColor: string
+}
+
 export interface Project {
   id: string
   name: string
   path: string
   pinned?: boolean | undefined
   lastOpened?: number | undefined
-  badge?: string | undefined
+  badge?: StackBadge | undefined
   attachedTemplates?: string[] | undefined
+  wslDistro?: string | undefined
+  notes?: string | undefined
+  startupCommands?: StartupCommand[] | undefined
+  envVars?: EnvVar[] | undefined
+  agent?: AgentType | undefined
+  agentFlags?: string | undefined
+  contextFile?: string | undefined
+  identity?: ProjectIdentity | undefined
+  autoOpen?: boolean | undefined
+  scrollbackLines?: number | undefined
+  fontSize?: number | undefined
+  shell?: string | undefined
 }
 
 export interface Template {
@@ -24,4 +65,12 @@ export interface Session {
   startedAt: number
 }
 
-export type ViewType = 'home' | 'session'
+export type ViewType = 'home' | 'session' | 'wizard' | 'settings'
+
+export interface DetectedStack {
+  badge: StackBadge
+  items: { label: string; detail: string }[]
+  suggestedAgent: AgentType
+  suggestedCommands: string[]
+  contextFiles: string[]
+}

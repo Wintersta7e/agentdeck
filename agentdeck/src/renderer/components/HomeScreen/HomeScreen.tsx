@@ -1,5 +1,5 @@
 import { useAppStore } from '../../store/appStore'
-import type { Project, Template } from '../../../shared/types'
+import type { Project, Template, StackBadge } from '../../../shared/types'
 import './HomeScreen.css'
 
 function timeAgo(timestamp: number | undefined): string {
@@ -29,15 +29,27 @@ function formatDate(): string {
   })
 }
 
-const BADGE_ICONS: Record<string, string> = {
+const BADGE_ICONS: Record<StackBadge, string> = {
   Java: '\u2615',
   JS: '\u2B21',
+  TS: '\u2B21',
+  Python: '\uD83D\uDC0D',
+  Rust: '\uD83E\uDD80',
+  Go: '\u25C8',
+  '.NET': '\u266F',
   Agent: '\u25C8',
+  Other: '\u26A1',
 }
-const BADGE_ICON_CLASS: Record<string, string> = {
+const BADGE_ICON_CLASS: Record<StackBadge, string> = {
   Java: 'card-icon-java',
   JS: 'card-icon-js',
+  TS: 'card-icon-ts',
+  Python: 'card-icon-python',
+  Rust: 'card-icon-rust',
+  Go: 'card-icon-go',
+  '.NET': 'card-icon-dotnet',
   Agent: 'card-icon-agent',
+  Other: 'card-icon-other',
 }
 
 interface Agent {
