@@ -66,7 +66,7 @@ export function StatusBar({ onAboutClick }: StatusBarProps): React.JSX.Element {
             <span className="status-sep">|</span>
           </>
         )}
-        <button className="status-cmd" onClick={openCommandPalette}>
+        <button className="status-cmd" onClick={() => openCommandPalette()}>
           Ctrl+K
         </button>
         <span className="status-sep">|</span>

@@ -49,7 +49,8 @@ interface AppState {
 
   // Command Palette
   commandPaletteOpen: boolean
-  openCommandPalette: () => void
+  commandPaletteInitialSubMenu: 'theme' | 'agents' | null
+  openCommandPalette: (subMenu?: 'theme' | 'agents') => void
   closeCommandPalette: () => void
 
   // Right Panel
@@ -288,8 +289,10 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   // Command Palette
   commandPaletteOpen: false,
-  openCommandPalette: () => set({ commandPaletteOpen: true }),
-  closeCommandPalette: () => set({ commandPaletteOpen: false }),
+  commandPaletteInitialSubMenu: null,
+  openCommandPalette: (subMenu) =>
+    set({ commandPaletteOpen: true, commandPaletteInitialSubMenu: subMenu ?? null }),
+  closeCommandPalette: () => set({ commandPaletteOpen: false, commandPaletteInitialSubMenu: null }),
 
   // Right Panel
   rightPanelOpen: false,

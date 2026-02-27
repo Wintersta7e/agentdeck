@@ -96,9 +96,11 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
   const templates = useAppStore((s) => s.templates)
   const sessions = useAppStore((s) => s.sessions)
   const openWizard = useAppStore((s) => s.openWizard)
+  const openCommandPalette = useAppStore((s) => s.openCommandPalette)
   const visibleAgents = useAppStore((s) => s.visibleAgents)
   const [agentStatus, setAgentStatus] = useState<Record<string, boolean>>({})
   const [username, setUsername] = useState('')
+  const [showAllRecent, setShowAllRecent] = useState(false)
 
   useEffect(() => {
     window.agentDeck.app
@@ -117,10 +119,10 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
   }, [])
 
   const pinned = projects.filter((p) => p.pinned)
-  const recent = [...projects]
+  const allRecent = [...projects]
     .filter((p) => p.lastOpened)
     .sort((a, b) => (b.lastOpened ?? 0) - (a.lastOpened ?? 0))
-    .slice(0, 5)
+  const recent = showAllRecent ? allRecent : allRecent.slice(0, 5)
 
   const activeSessions = Object.values(sessions).filter((s) => s.status === 'running').length
   const erroredSessions = Object.values(sessions).filter((s) => s.status === 'error').length
@@ -256,7 +258,11 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
           <>
             <div className="section-header">
               <div className="section-title">Recent</div>
-              <button className="section-action">{'See all \u2192'}</button>
+              {allRecent.length > 5 && (
+                <button className="section-action" onClick={() => setShowAllRecent((v) => !v)}>
+                  {showAllRecent ? 'Show less' : `See all (${allRecent.length}) \u2192`}
+                </button>
+              )}
             </div>
             <div className="recent-list">
               {recent.map((p, index) => {
@@ -294,7 +300,9 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
 
         <div className="section-header">
           <div className="section-title">Available Agents</div>
-          <button className="section-action">{'Configure \u2192'}</button>
+          <button className="section-action" onClick={() => openCommandPalette('agents')}>
+            {'Configure \u2192'}
+          </button>
         </div>
         <div className="agent-grid">
           {AGENTS.filter((a) => !visibleAgents || visibleAgents.includes(a.name)).map((a) => (
@@ -311,7 +319,7 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
               </div>
             </div>
           ))}
-          <div className="agent-card add-agent" onClick={openWizard}>
+          <div className="agent-card add-agent" onClick={() => openCommandPalette('agents')}>
             <div className="agent-card-icon" style={{ color: 'var(--text3)' }}>
               +
             </div>

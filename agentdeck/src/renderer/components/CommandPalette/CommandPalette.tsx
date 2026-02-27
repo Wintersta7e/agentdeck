@@ -144,7 +144,8 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
   const [query, setQuery] = useState('')
   const [scope, setScope] = useState<ScopeTab>('all')
   const [selectedIndex, setSelectedIndex] = useState(0)
-  const [subMenu, setSubMenu] = useState<'theme' | 'agents' | null>(null)
+  const initialSubMenu = useAppStore((s) => s.commandPaletteInitialSubMenu)
+  const [subMenu, setSubMenu] = useState<'theme' | 'agents' | null>(initialSubMenu)
   const [previewOriginal, setPreviewOriginal] = useState('')
 
   const inputRef = useRef<HTMLInputElement>(null)
