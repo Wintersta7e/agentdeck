@@ -149,6 +149,45 @@
   flex-shrink: 0;
 }
 
+/* ─── Context menu ─── */
+.sidebar-context-menu {
+  position: fixed;
+  z-index: 1000;
+  background: var(--bg2);
+  border: 1px solid var(--border-bright);
+  border-radius: var(--r);
+  padding: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  min-width: 140px;
+}
+
+.sidebar-context-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--text1);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.sidebar-context-item:hover {
+  background: var(--bg3);
+}
+
+.sidebar-context-item.danger {
+  color: var(--red);
+}
+
+.sidebar-context-item.danger:hover {
+  background: var(--red-dim);
+}
+
 /* ─── Template category groups ─── */
 .sidebar-group-label {
   font-size: 9px;

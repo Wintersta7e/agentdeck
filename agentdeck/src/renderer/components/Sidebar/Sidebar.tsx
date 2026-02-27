@@ -1,21 +1,12 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
+import { useProjects } from '../../hooks/useProjects'
 import type { Project } from '../../../shared/types'
 import { groupTemplates } from '../../utils/templateUtils'
 import './Sidebar.css'
 
 function badgeClass(badge: string): string {
   return badge.toLowerCase().replace(/[^a-z0-9]/g, '')
-}
-
-function timeAgo(timestamp: number | undefined): string {
-  if (!timestamp) return ''
-  const diff = Date.now() - timestamp
-  const mins = Math.floor(diff / 60000)
-  if (mins < 60) return `${mins}m ago`
-  const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  return `${days}d ago`
 }
 
 interface SidebarProps {
@@ -30,12 +21,50 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
   const openWizard = useAppStore((s) => s.openWizard)
   const openSettings = useAppStore((s) => s.openSettings)
   const openTemplateEditor = useAppStore((s) => s.openTemplateEditor)
+  const { deleteProject } = useProjects()
 
   const pinned = projects.filter((p) => p.pinned)
-  const recent = [...projects]
-    .filter((p) => !p.pinned && p.lastOpened)
-    .sort((a, b) => (b.lastOpened ?? 0) - (a.lastOpened ?? 0))
-    .slice(0, 5)
+
+  // Right-click context menu state
+  const [contextMenu, setContextMenu] = useState<{
+    x: number
+    y: number
+    projectId: string
+  } | null>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  const closeMenu = useCallback(() => setContextMenu(null), [])
+
+  // Close on outside click or Escape
+  useEffect(() => {
+    if (!contextMenu) return
+    function handleClick(e: MouseEvent): void {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        closeMenu()
+      }
+    }
+    function handleKey(e: KeyboardEvent): void {
+      if (e.key === 'Escape') closeMenu()
+    }
+    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [contextMenu, closeMenu])
+
+  function handleContextMenu(e: React.MouseEvent, projectId: string): void {
+    e.preventDefault()
+    e.stopPropagation()
+    setContextMenu({ x: e.clientX, y: e.clientY, projectId })
+  }
+
+  function handleRemoveProject(): void {
+    if (!contextMenu) return
+    void deleteProject(contextMenu.projectId)
+    closeMenu()
+  }
 
   function getProjectStatus(projectId: string): string {
     const session = Object.values(sessions).find((s) => s.projectId === projectId)
@@ -68,6 +97,7 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
             key={p.id}
             className={`sidebar-item ${isActive(p.id) ? 'active' : ''}`}
             onClick={() => onOpenProject(p)}
+            onContextMenu={(e) => handleContextMenu(e, p.id)}
           >
             <div className={`sidebar-dot ${dotClass(getProjectStatus(p.id))}`} />
             <div className="sidebar-item-info">
@@ -93,37 +123,18 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
 
       <div className="sidebar-divider" />
 
-      <div className="sidebar-section">
-        <div className="sidebar-label">Recent</div>
-        {recent.map((p) => (
-          <div
-            key={p.id}
-            className={`sidebar-item ${isActive(p.id) ? 'active' : ''}`}
-            onClick={() => onOpenProject(p)}
-          >
-            <div className={`sidebar-dot ${dotClass(getProjectStatus(p.id))}`} />
-            <div className="sidebar-item-info">
-              <div className="sidebar-item-name">{p.name}</div>
-              <div className="sidebar-item-sub">{timeAgo(p.lastOpened)}</div>
-            </div>
-            {p.badge && (
-              <span className={`sidebar-badge badge-${badgeClass(p.badge)}`}>{p.badge}</span>
-            )}
-            <button
-              className="sidebar-item-gear"
-              onClick={(e) => {
-                e.stopPropagation()
-                openSettings(p.id)
-              }}
-              title="Project settings"
-            >
-              {'\u2699'}
-            </button>
-          </div>
-        ))}
-      </div>
-
-      <div className="sidebar-divider" />
+      {/* Context menu portal */}
+      {contextMenu && (
+        <div
+          ref={menuRef}
+          className="sidebar-context-menu"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+        >
+          <button className="sidebar-context-item danger" onClick={handleRemoveProject}>
+            Remove project
+          </button>
+        </div>
+      )}
 
       <div className="sidebar-section flex-fill">
         <div className="sidebar-label">
