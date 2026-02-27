@@ -76,6 +76,10 @@ interface AppState {
   theme: string
   setTheme: (name: string) => void
 
+  // Visible Agents (home screen)
+  visibleAgents: string[] | null
+  setVisibleAgents: (agents: string[]) => void
+
   // Notifications
   notifications: Array<{
     id: string
@@ -340,6 +344,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     document.documentElement.dataset.theme = name
     window.agentDeck.theme.set(name)
     set({ theme: name })
+  },
+
+  // Visible Agents
+  visibleAgents: null,
+  setVisibleAgents: (agents) => {
+    window.agentDeck.agents.setVisible(agents)
+    set({ visibleAgents: agents })
   },
 
   // Notifications

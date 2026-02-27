@@ -252,6 +252,15 @@ function registerIpcHandlers(store: AppStore): void {
     return Object.fromEntries(entries.map(([name], i) => [name, results[i]]))
   })
 
+  /* ── Agent visibility ─────────────────────────────────────────── */
+  ipcMain.handle('agents:getVisible', () => {
+    return store.get('appPrefs').visibleAgents ?? null
+  })
+  ipcMain.handle('agents:setVisible', (_, agents: string[]) => {
+    store.set('appPrefs', { ...store.get('appPrefs'), visibleAgents: agents })
+    return agents
+  })
+
   /* ── WSL username ─────────────────────────────────────────────── */
   ipcMain.handle('app:wslUsername', async () => {
     const { execFile } = await import('child_process')

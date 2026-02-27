@@ -80,6 +80,7 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
   const templates = useAppStore((s) => s.templates)
   const sessions = useAppStore((s) => s.sessions)
   const openWizard = useAppStore((s) => s.openWizard)
+  const visibleAgents = useAppStore((s) => s.visibleAgents)
   const [agentStatus, setAgentStatus] = useState<Record<string, boolean>>({})
   const [username, setUsername] = useState('')
 
@@ -280,7 +281,7 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
           <button className="section-action">{'Configure \u2192'}</button>
         </div>
         <div className="agent-grid">
-          {AGENTS.map((a) => (
+          {AGENTS.filter((a) => !visibleAgents || visibleAgents.includes(a.name)).map((a) => (
             <div key={a.name} className={`agent-card ${agentStatus[a.name] ? 'active' : ''}`}>
               <div className="agent-card-icon">{a.icon}</div>
               <div className="agent-card-name">{a.name}</div>

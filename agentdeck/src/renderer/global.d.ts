@@ -50,6 +50,8 @@ declare global {
       }
       agents: {
         check: () => Promise<Record<string, boolean>>
+        getVisible: () => Promise<string[] | null>
+        setVisible: (agents: string[]) => Promise<string[]>
       }
       projects: {
         detectStack: (path: string, distro?: string) => Promise<DetectedStack | null>

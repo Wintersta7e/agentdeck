@@ -40,6 +40,12 @@ const SECTION_ORDER: { type: ResultType; label: string }[] = [
   { type: 'action', label: 'Actions' },
 ]
 
+const ALL_AGENTS = [
+  { id: 'claude-code', label: 'Claude Code', desc: 'Anthropic CLI' },
+  { id: 'codex', label: 'Codex', desc: 'OpenAI CLI' },
+  { id: 'aider', label: 'Aider', desc: 'Git-aware agent' },
+] as const
+
 const THEMES = [
   { id: '', label: 'Amber', accent: '#f5a623' },
   { id: 'cyan', label: 'Navy + Cyan', accent: '#00d4ff' },
@@ -106,11 +112,13 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
 
   const theme = useAppStore((s) => s.theme)
   const setTheme = useAppStore((s) => s.setTheme)
+  const visibleAgents = useAppStore((s) => s.visibleAgents)
+  const setVisibleAgents = useAppStore((s) => s.setVisibleAgents)
 
   const [query, setQuery] = useState('')
   const [scope, setScope] = useState<ScopeTab>('all')
   const [selectedIndex, setSelectedIndex] = useState(0)
-  const [subMenu, setSubMenu] = useState<'theme' | null>(null)
+  const [subMenu, setSubMenu] = useState<'theme' | 'agents' | null>(null)
   const [previewOriginal, setPreviewOriginal] = useState('')
 
   const inputRef = useRef<HTMLInputElement>(null)
@@ -131,6 +139,11 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
   useEffect(() => {
     previewOriginalRef.current = previewOriginal
   }, [previewOriginal])
+
+  const visibleAgentsRef = useRef(visibleAgents)
+  useEffect(() => {
+    visibleAgentsRef.current = visibleAgents
+  }, [visibleAgents])
 
   // Focus input on mount
   useEffect(() => {
@@ -236,6 +249,14 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
       name: 'Change Theme',
       detail: 'Switch between Amber, Cyan, Violet, and Ice themes',
     })
+    items.push({
+      type: 'action',
+      id: 'action-pinned-agents',
+      icon: '\u2699', // gear
+      iconClass: '',
+      name: 'Pinned Agents',
+      detail: 'Choose which agents appear on the home screen',
+    })
 
     return items
   }, [sessions, projects, templates])
@@ -307,6 +328,13 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
         return
       }
 
+      // Agents sub-menu
+      if (item.id === 'action-pinned-agents') {
+        setSubMenu('agents')
+        setSelectedIndex(0)
+        return
+      }
+
       closePalette()
 
       switch (item.type) {
@@ -351,6 +379,41 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
   // Keyboard navigation
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent): void {
+      // Agents sub-menu keyboard handling
+      if (subMenuRef.current === 'agents') {
+        if (e.key === 'Escape') {
+          e.preventDefault()
+          e.stopPropagation()
+          setSubMenu(null)
+          setSelectedIndex(0)
+          return
+        }
+        if (e.key === 'ArrowDown') {
+          e.preventDefault()
+          setSelectedIndex((prev) => Math.min(prev + 1, ALL_AGENTS.length - 1))
+          return
+        }
+        if (e.key === 'ArrowUp') {
+          e.preventDefault()
+          setSelectedIndex((prev) => Math.max(prev - 1, 0))
+          return
+        }
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          const agent = ALL_AGENTS[selectedIndexRef.current]
+          if (agent) {
+            const current = visibleAgentsRef.current ?? ALL_AGENTS.map((a) => a.id)
+            const isVisible = current.includes(agent.id)
+            const updated = isVisible
+              ? current.filter((id) => id !== agent.id)
+              : [...current, agent.id]
+            setVisibleAgents(updated)
+          }
+          return
+        }
+        return
+      }
+
       // Theme sub-menu keyboard handling
       if (subMenuRef.current === 'theme') {
         if (e.key === 'Escape') {
@@ -424,7 +487,7 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
     // Use capture phase so Escape is caught before App's handler
     window.addEventListener('keydown', handleKeyDown, true)
     return () => window.removeEventListener('keydown', handleKeyDown, true)
-  }, [closePalette, flatItems, executeItem, setTheme])
+  }, [closePalette, flatItems, executeItem, setTheme, setVisibleAgents])
 
   // Scroll selected item into view
   useEffect(() => {
@@ -478,7 +541,45 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
         </div>
 
         {/* Results */}
-        {subMenu === 'theme' ? (
+        {subMenu === 'agents' ? (
+          <div className="palette-results">
+            <div className="cp-submenu-header">
+              <button
+                className="cp-back-btn"
+                onClick={() => {
+                  setSubMenu(null)
+                  setSelectedIndex(0)
+                }}
+              >
+                {'\u2190'} back
+              </button>
+              <span>Pinned Agents</span>
+            </div>
+            {ALL_AGENTS.map((a, i) => {
+              const current = visibleAgents ?? ALL_AGENTS.map((ag) => ag.id)
+              const isVisible = current.includes(a.id)
+              return (
+                <div
+                  key={a.id}
+                  className={`cp-agent-item${selectedIndex === i ? ' selected' : ''}`}
+                  onClick={() => {
+                    const updated = isVisible
+                      ? current.filter((id) => id !== a.id)
+                      : [...current, a.id]
+                    setVisibleAgents(updated)
+                  }}
+                  onMouseEnter={() => setSelectedIndex(i)}
+                >
+                  <span className={`cp-agent-check${isVisible ? ' checked' : ''}`}>
+                    {isVisible ? '\u2611' : '\u2610'}
+                  </span>
+                  <span className="cp-agent-label">{a.label}</span>
+                  <span className="cp-agent-desc">{a.desc}</span>
+                </div>
+              )
+            })}
+          </div>
+        ) : subMenu === 'theme' ? (
           <div className="palette-results">
             <div className="cp-submenu-header">
               <button

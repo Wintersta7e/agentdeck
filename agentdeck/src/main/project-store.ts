@@ -40,7 +40,12 @@ function decryptEnvVars(envVars: EnvVar[] | undefined): EnvVar[] | undefined {
 export interface StoreSchema {
   projects: Project[]
   templates: Template[]
-  appPrefs: { zoomFactor: number; zoomAutoDetected?: boolean | number; theme?: string }
+  appPrefs: {
+    zoomFactor: number
+    zoomAutoDetected?: boolean | number
+    theme?: string
+    visibleAgents?: string[]
+  }
 }
 
 export type AppStore = Store<StoreSchema>

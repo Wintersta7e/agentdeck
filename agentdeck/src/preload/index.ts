@@ -80,6 +80,9 @@ contextBridge.exposeInMainWorld('agentDeck', {
   },
   agents: {
     check: () => ipcRenderer.invoke('agents:check') as Promise<Record<string, boolean>>,
+    getVisible: () => ipcRenderer.invoke('agents:getVisible') as Promise<string[] | null>,
+    setVisible: (agents: string[]) =>
+      ipcRenderer.invoke('agents:setVisible', agents) as Promise<string[]>,
   },
   projects: {
     detectStack: (path: string, distro?: string) =>
