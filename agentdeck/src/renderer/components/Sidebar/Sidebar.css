@@ -52,16 +52,22 @@
   padding: 7px 8px;
   border-radius: var(--r);
   cursor: pointer;
-  transition: all 0.12s;
+  transition: all 0.15s ease;
   margin-bottom: 1px;
   border: 1px solid transparent;
 }
 .sidebar-item:hover {
   background: var(--bg3);
+  box-shadow:
+    inset 2px 0 0 var(--accent),
+    0 0 8px rgba(var(--accent-rgb, 245, 166, 35), 0.05);
 }
 .sidebar-item.active {
   background: var(--amber-glow);
   border-color: rgba(245, 166, 35, 0.2);
+  box-shadow:
+    inset 2px 0 0 var(--accent),
+    0 0 12px rgba(var(--accent-rgb, 245, 166, 35), 0.1);
 }
 .sidebar-item.active .sidebar-item-name {
   color: var(--amber);
@@ -172,9 +178,17 @@
   transition: all 0.15s;
 }
 .new-project-btn:hover {
-  border-color: var(--amber-dim);
-  color: var(--amber);
-  background: var(--amber-glow2);
+  border-color: var(--accent-dim);
+  color: var(--accent);
+  background: var(--accent-glow2);
+  box-shadow: 0 0 12px rgba(var(--accent-rgb, 245, 166, 35), 0.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-item,
+  .new-project-btn {
+    transition: none;
+  }
 }
 
 .sidebar ::-webkit-scrollbar {
