@@ -135,12 +135,17 @@ export const useAppStore = create<AppState>((set, get) => ({
       const { [sessionId]: _, ...rest } = state.sessions
       const { [sessionId]: _feed, ...remainingFeeds } = state.activityFeeds
       const remainingIds = Object.keys(rest)
-      const paneSessions = state.paneSessions.map((id) => (id === sessionId ? '' : id))
+      // Clear removed session from pane slots, then compact left so pane 0 always
+      // has a session if any exist (prevents empty pane with sessions in hidden slots)
+      const cleared = state.paneSessions.map((id) => (id === sessionId ? '' : id))
+      const filled = cleared.filter((id) => id !== '')
+      const paneSessions = [...filled, ...Array<string>(cleared.length - filled.length).fill('')]
+      const firstPane = paneSessions[0]
+      const newActive = firstPane && firstPane !== '' ? firstPane : (remainingIds[0] ?? null)
       return {
         sessions: rest,
         activityFeeds: remainingFeeds,
-        activeSessionId:
-          state.activeSessionId === sessionId ? (remainingIds[0] ?? null) : state.activeSessionId,
+        activeSessionId: state.activeSessionId === sessionId ? newActive : state.activeSessionId,
         currentView: remainingIds.length === 0 ? ('home' as const) : state.currentView,
         paneSessions,
       }

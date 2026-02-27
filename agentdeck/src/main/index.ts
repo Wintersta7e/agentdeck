@@ -153,7 +153,13 @@ function registerIpcHandlers(): void {
         throw firstErr
       }
     } catch (err) {
-      log.error(`Failed to read ${filename} from ${projectPath}`, { err: String(err) })
+      // ENOENT is expected for optional files like AGENTS.md — don't log as error
+      const errStr = String(err)
+      if (errStr.includes('ENOENT')) {
+        log.debug(`${filename} not found in ${projectPath}`)
+      } else {
+        log.error(`Failed to read ${filename} from ${projectPath}`, { err: errStr })
+      }
       return null
     }
   })
