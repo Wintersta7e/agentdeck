@@ -119,7 +119,16 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
       commands.push(`cd "${wslPath}"`)
     }
     if (startupCommands) {
-      commands.push(...startupCommands)
+      // Filter out cd and agent commands — those are handled by projectPath auto-cd
+      // and the agent param. Legacy projects may still have them in stored config.
+      const agentBins = new Set(Object.values(AGENT_BINARIES))
+      const filtered = startupCommands.filter((cmd) => {
+        const trimmed = cmd.trim()
+        if (/^cd\s+/.test(trimmed)) return false
+        if (agentBins.has(trimmed)) return false
+        return true
+      })
+      commands.push(...filtered)
     }
 
     /* Fix 6 (SEC-2): Validate agentFlags before use */
