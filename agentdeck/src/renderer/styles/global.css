@@ -100,3 +100,32 @@ body {
     display: none;
   }
 }
+
+/* ─── Circular theme reveal (View Transition API) ─── */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.4s;
+  animation-timing-function: ease-in-out;
+}
+
+::view-transition-new(root) {
+  clip-path: circle(0% at var(--reveal-x, 50%) var(--reveal-y, 50%));
+  animation: circleReveal 0.4s ease-in-out forwards;
+}
+
+::view-transition-old(root) {
+  animation: none;
+}
+
+@keyframes circleReveal {
+  to {
+    clip-path: circle(150% at var(--reveal-x, 50%) var(--reveal-y, 50%));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+}

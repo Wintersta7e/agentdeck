@@ -47,6 +47,27 @@ const THEMES = [
   { id: 'ice', label: 'Charcoal + Ice', accent: '#60a5fa' },
 ] as const
 
+function applyThemeWithTransition(themeId: string, x?: number, y?: number): void {
+  const apply = (): void => {
+    document.documentElement.dataset.theme = themeId
+  }
+
+  if (!document.startViewTransition) {
+    apply()
+    return
+  }
+
+  // Set custom properties for the circular clip origin
+  document.documentElement.style.setProperty('--reveal-x', `${x ?? window.innerWidth / 2}px`)
+  document.documentElement.style.setProperty('--reveal-y', `${y ?? window.innerHeight / 2}px`)
+
+  const transition = document.startViewTransition(apply)
+  transition.finished.then(() => {
+    document.documentElement.style.removeProperty('--reveal-x')
+    document.documentElement.style.removeProperty('--reveal-y')
+  })
+}
+
 function highlightMatch(text: string, query: string): React.JSX.Element {
   if (!query) return <>{text}</>
   const lowerText = text.toLowerCase()
@@ -359,7 +380,10 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
         if (e.key === 'Enter') {
           e.preventDefault()
           const selected = THEMES[selectedIndexRef.current]
-          if (selected) setTheme(selected.id)
+          if (selected) {
+            applyThemeWithTransition(selected.id)
+            setTheme(selected.id)
+          }
           closePalette()
           return
         }
@@ -473,7 +497,8 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
               <div
                 key={t.id || 'default'}
                 className={`cp-theme-item${selectedIndex === i ? ' selected' : ''}${theme === t.id ? ' active' : ''}`}
-                onClick={() => {
+                onClick={(e) => {
+                  applyThemeWithTransition(t.id, e.clientX, e.clientY)
                   setTheme(t.id)
                   closePalette()
                 }}
