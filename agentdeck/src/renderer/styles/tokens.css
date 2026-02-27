@@ -48,6 +48,10 @@
   --purple-dim: rgba(155, 114, 207, 0.1);
   --purple-border: rgba(155, 114, 207, 0.2);
 
+  /* Badge overrides for light-theme contrast */
+  --badge-python: #ffd43b;
+  --badge-python-bg: rgba(255, 212, 59, 0.2);
+
   /* RGB triplets for rgba() usage */
   --accent-rgb: 245, 166, 35;
   --bg1-rgb: 17, 18, 19;
@@ -149,6 +153,138 @@
   --red: #f87171;
   --red-dim: rgba(248, 113, 113, 0.12);
   --red-border: rgba(248, 113, 113, 0.2);
+}
+
+/* ─── Theme: Parchment (light) ─── */
+[data-theme='parchment'] {
+  --bg0: #f5f0e8;
+  --bg1: #ede5d8;
+  --bg2: #e4dace;
+  --bg3: #d8cfc2;
+  --bg4: #cfc6ba;
+  --border: #c8bfb0;
+  --border-bright: #b8ae9e;
+  --text0: #2a1f0e;
+  --text1: #4a3822;
+  --text2: #7a6548;
+  --text3: #a89070;
+  --accent: #c87800;
+  --accent-dim: #a06000;
+  --accent-glow: rgba(200, 120, 0, 0.1);
+  --accent-glow2: rgba(200, 120, 0, 0.05);
+  --accent-border: rgba(200, 120, 0, 0.35);
+  --accent-hover: rgba(200, 120, 0, 0.45);
+  --accent-rgb: 200, 120, 0;
+  --bg1-rgb: 237, 229, 216;
+  --green: #1a7a4a;
+  --green-dim: rgba(26, 122, 74, 0.12);
+  --green-border: rgba(26, 122, 74, 0.2);
+  --red: #c0392b;
+  --red-dim: rgba(192, 57, 43, 0.12);
+  --red-border: rgba(192, 57, 43, 0.2);
+  --blue: #2563eb;
+  --purple: #6b4c9a;
+  --badge-python: #b08800;
+  --badge-python-bg: rgba(176, 136, 0, 0.15);
+}
+
+/* ─── Theme: Fog (light) ─── */
+[data-theme='fog'] {
+  --bg0: #f0f4f8;
+  --bg1: #e4eaf2;
+  --bg2: #d8e2ec;
+  --bg3: #ccd6e4;
+  --bg4: #c2cedb;
+  --border: #b8c6d8;
+  --border-bright: #a8b8cc;
+  --text0: #0f1f33;
+  --text1: #253a55;
+  --text2: #4a6280;
+  --text3: #7a96b2;
+  --accent: #2563eb;
+  --accent-dim: #1d4ed8;
+  --accent-glow: rgba(37, 99, 235, 0.1);
+  --accent-glow2: rgba(37, 99, 235, 0.05);
+  --accent-border: rgba(37, 99, 235, 0.3);
+  --accent-hover: rgba(37, 99, 235, 0.4);
+  --accent-rgb: 37, 99, 235;
+  --bg1-rgb: 228, 234, 242;
+  --green: #16a34a;
+  --green-dim: rgba(22, 163, 74, 0.12);
+  --green-border: rgba(22, 163, 74, 0.2);
+  --red: #dc2626;
+  --red-dim: rgba(220, 38, 38, 0.12);
+  --red-border: rgba(220, 38, 38, 0.2);
+  --blue: #2563eb;
+  --purple: #7c3aed;
+  --badge-python: #b08800;
+  --badge-python-bg: rgba(176, 136, 0, 0.15);
+}
+
+/* ─── Theme: Lavender (light) ─── */
+[data-theme='lavender'] {
+  --bg0: #f4f2f8;
+  --bg1: #ece8f4;
+  --bg2: #e2dced;
+  --bg3: #d6cfe6;
+  --bg4: #cfc7e3;
+  --border: #c0b8d8;
+  --border-bright: #b0a8cc;
+  --text0: #1a1030;
+  --text1: #32234a;
+  --text2: #5e4880;
+  --text3: #9078b0;
+  --accent: #6d28d9;
+  --accent-dim: #5b21b6;
+  --accent-glow: rgba(109, 40, 217, 0.1);
+  --accent-glow2: rgba(109, 40, 217, 0.05);
+  --accent-border: rgba(109, 40, 217, 0.3);
+  --accent-hover: rgba(109, 40, 217, 0.4);
+  --accent-rgb: 109, 40, 217;
+  --bg1-rgb: 236, 232, 244;
+  --green: #059669;
+  --green-dim: rgba(5, 150, 105, 0.12);
+  --green-border: rgba(5, 150, 105, 0.2);
+  --red: #dc2626;
+  --red-dim: rgba(220, 38, 38, 0.12);
+  --red-border: rgba(220, 38, 38, 0.2);
+  --blue: #2563eb;
+  --purple: #7c3aed;
+  --badge-python: #b08800;
+  --badge-python-bg: rgba(176, 136, 0, 0.15);
+}
+
+/* ─── Theme: Stone (light) ─── */
+[data-theme='stone'] {
+  --bg0: #f2f1ef;
+  --bg1: #e8e6e2;
+  --bg2: #dddad5;
+  --bg3: #d2cec8;
+  --bg4: #c8c6c0;
+  --border: #b8b5ae;
+  --border-bright: #a8a49c;
+  --text0: #1a1916;
+  --text1: #343028;
+  --text2: #6a6560;
+  --text3: #9a9590;
+  --accent: #0d9488;
+  --accent-dim: #0f766e;
+  --accent-glow: rgba(13, 148, 136, 0.1);
+  --accent-glow2: rgba(13, 148, 136, 0.05);
+  --accent-border: rgba(13, 148, 136, 0.3);
+  --accent-hover: rgba(13, 148, 136, 0.4);
+  --accent-rgb: 13, 148, 136;
+  --bg1-rgb: 232, 230, 226;
+  --green: #16a34a;
+  --green-dim: rgba(22, 163, 74, 0.12);
+  --green-border: rgba(22, 163, 74, 0.2);
+  --red: #dc2626;
+  --red-dim: rgba(220, 38, 38, 0.12);
+  --red-border: rgba(220, 38, 38, 0.2);
+  --blue: #2563eb;
+  --purple: #7c3aed;
+  --badge-python: #b08800;
+  --badge-python-bg: rgba(176, 136, 0, 0.15);
 }
 
 /* ─── Theme transition ─── */

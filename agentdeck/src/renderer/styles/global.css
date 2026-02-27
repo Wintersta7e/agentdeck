@@ -54,8 +54,8 @@ body {
   color: #3178c6;
 }
 .badge-python {
-  background: rgba(255, 212, 59, 0.2);
-  color: #ffd43b;
+  background: var(--badge-python-bg);
+  color: var(--badge-python);
 }
 .badge-rust {
   background: rgba(206, 100, 50, 0.2);

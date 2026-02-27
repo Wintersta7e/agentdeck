@@ -359,6 +359,21 @@
   color: var(--accent);
 }
 
+.cp-theme-group + .cp-theme-group {
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+  padding-top: 4px;
+}
+
+.cp-theme-group-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text3);
+  font-weight: 600;
+  padding: 6px 14px 2px;
+}
+
 .cp-theme-item {
   display: flex;
   align-items: center;

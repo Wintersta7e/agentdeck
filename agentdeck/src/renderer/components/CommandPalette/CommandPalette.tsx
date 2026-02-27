@@ -46,12 +46,34 @@ const ALL_AGENTS = [
   { id: 'aider', label: 'Aider', desc: 'Git-aware agent' },
 ] as const
 
-const THEMES = [
-  { id: '', label: 'Amber', accent: '#f5a623' },
-  { id: 'cyan', label: 'Navy + Cyan', accent: '#00d4ff' },
-  { id: 'violet', label: 'Midnight + Violet', accent: '#a78bfa' },
-  { id: 'ice', label: 'Charcoal + Ice', accent: '#60a5fa' },
-] as const
+interface ThemeOption {
+  id: string
+  label: string
+  accent: string
+}
+
+const THEME_GROUPS: { label: string; themes: ThemeOption[] }[] = [
+  {
+    label: 'Dark',
+    themes: [
+      { id: '', label: 'Amber', accent: '#f5a623' },
+      { id: 'cyan', label: 'Navy + Cyan', accent: '#00d4ff' },
+      { id: 'violet', label: 'Midnight + Violet', accent: '#a78bfa' },
+      { id: 'ice', label: 'Charcoal + Ice', accent: '#60a5fa' },
+    ],
+  },
+  {
+    label: 'Light',
+    themes: [
+      { id: 'parchment', label: 'Parchment', accent: '#c87800' },
+      { id: 'fog', label: 'Fog', accent: '#2563eb' },
+      { id: 'lavender', label: 'Lavender', accent: '#6d28d9' },
+      { id: 'stone', label: 'Stone', accent: '#0d9488' },
+    ],
+  },
+]
+
+const ALL_THEMES: ThemeOption[] = THEME_GROUPS.flatMap((g) => g.themes)
 
 function applyThemeWithTransition(themeId: string, x?: number, y?: number): void {
   const apply = (): void => {
@@ -247,7 +269,7 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
       icon: '\u25D1', // half circle
       iconClass: '',
       name: 'Change Theme',
-      detail: 'Switch between Amber, Cyan, Violet, and Ice themes',
+      detail: 'Switch between 8 dark and light themes',
     })
     items.push({
       type: 'action',
@@ -324,7 +346,7 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
       if (item.id === 'action-change-theme') {
         setPreviewOriginal(theme)
         setSubMenu('theme')
-        setSelectedIndex(THEMES.findIndex((t) => t.id === theme))
+        setSelectedIndex(ALL_THEMES.findIndex((t) => t.id === theme))
         return
       }
 
@@ -426,9 +448,9 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
         }
         if (e.key === 'ArrowDown') {
           e.preventDefault()
-          setSelectedIndex((prev) => Math.min(prev + 1, THEMES.length - 1))
-          const nextIndex = Math.min(selectedIndexRef.current + 1, THEMES.length - 1)
-          const nextTheme = THEMES[nextIndex]
+          setSelectedIndex((prev) => Math.min(prev + 1, ALL_THEMES.length - 1))
+          const nextIndex = Math.min(selectedIndexRef.current + 1, ALL_THEMES.length - 1)
+          const nextTheme = ALL_THEMES[nextIndex]
           if (nextTheme) document.documentElement.dataset.theme = nextTheme.id
           return
         }
@@ -436,13 +458,13 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
           e.preventDefault()
           setSelectedIndex((prev) => Math.max(prev - 1, 0))
           const prevIndex = Math.max(selectedIndexRef.current - 1, 0)
-          const prevTheme = THEMES[prevIndex]
+          const prevTheme = ALL_THEMES[prevIndex]
           if (prevTheme) document.documentElement.dataset.theme = prevTheme.id
           return
         }
         if (e.key === 'Enter') {
           e.preventDefault()
-          const selected = THEMES[selectedIndexRef.current]
+          const selected = ALL_THEMES[selectedIndexRef.current]
           if (selected) {
             applyThemeWithTransition(selected.id)
             setTheme(selected.id)
@@ -594,25 +616,39 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
               </button>
               <span>Change theme</span>
             </div>
-            {THEMES.map((t, i) => (
-              <div
-                key={t.id || 'default'}
-                className={`cp-theme-item${selectedIndex === i ? ' selected' : ''}${theme === t.id ? ' active' : ''}`}
-                onClick={(e) => {
-                  applyThemeWithTransition(t.id, e.clientX, e.clientY)
-                  setTheme(t.id)
-                  closePalette()
-                }}
-                onMouseEnter={() => {
-                  setSelectedIndex(i)
-                  document.documentElement.dataset.theme = t.id
-                }}
-              >
-                <span className="cp-theme-swatch" style={{ background: t.accent }} />
-                <span className="cp-theme-label">{t.label}</span>
-                {theme === t.id && <span className="cp-theme-check">{'\u2713'}</span>}
-              </div>
-            ))}
+            {THEME_GROUPS.map((group, gi) => {
+              const groupOffset = THEME_GROUPS.slice(0, gi).reduce(
+                (sum, g) => sum + g.themes.length,
+                0,
+              )
+              return (
+                <div key={group.label} className="cp-theme-group">
+                  <div className="cp-theme-group-label">{group.label}</div>
+                  {group.themes.map((t, ti) => {
+                    const flatIdx = groupOffset + ti
+                    return (
+                      <div
+                        key={t.id || 'default'}
+                        className={`cp-theme-item${selectedIndex === flatIdx ? ' selected' : ''}${theme === t.id ? ' active' : ''}`}
+                        onClick={(e) => {
+                          applyThemeWithTransition(t.id, e.clientX, e.clientY)
+                          setTheme(t.id)
+                          closePalette()
+                        }}
+                        onMouseEnter={() => {
+                          setSelectedIndex(flatIdx)
+                          document.documentElement.dataset.theme = t.id
+                        }}
+                      >
+                        <span className="cp-theme-swatch" style={{ background: t.accent }} />
+                        <span className="cp-theme-label">{t.label}</span>
+                        {theme === t.id && <span className="cp-theme-check">{'\u2713'}</span>}
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            })}
           </div>
         ) : (
           <div className="palette-results" ref={resultsRef}>

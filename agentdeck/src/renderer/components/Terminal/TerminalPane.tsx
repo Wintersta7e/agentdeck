@@ -49,6 +49,30 @@ const XTERM_THEME_OVERRIDES: Record<string, Partial<ITheme>> = {
     cursor: '#60a5fa',
     selectionBackground: 'rgba(96,165,250,0.20)',
   },
+  parchment: {
+    background: '#1a1510',
+    foreground: '#f0ede8',
+    cursor: '#c87800',
+    selectionBackground: 'rgba(200,120,0,0.25)',
+  },
+  fog: {
+    background: '#0f1f33',
+    foreground: '#e4eaf2',
+    cursor: '#2563eb',
+    selectionBackground: 'rgba(37,99,235,0.25)',
+  },
+  lavender: {
+    background: '#1a1030',
+    foreground: '#ece8f4',
+    cursor: '#6d28d9',
+    selectionBackground: 'rgba(109,40,217,0.25)',
+  },
+  stone: {
+    background: '#1a1916',
+    foreground: '#f2f1ef',
+    cursor: '#0d9488',
+    selectionBackground: 'rgba(13,148,136,0.25)',
+  },
 }
 
 function getXtermTheme(themeId: string): ITheme {
