@@ -148,7 +148,6 @@ export function SplitView(): React.JSX.Element {
               }}
               onClick={() => setFocusedPane(paneIndex)}
             >
-              <div className="pane-focus-indicator" />
               {session ? (
                 <>
                   <PaneTopbar sessionId={sessionId} focused={isFocused} />

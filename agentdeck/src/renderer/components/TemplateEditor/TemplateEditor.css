@@ -93,8 +93,9 @@
 }
 
 .te-row.active {
-  background: var(--amber-glow);
+  background: rgba(245, 166, 35, 0.18);
   border-color: var(--amber-border);
+  box-shadow: inset 2px 0 0 var(--amber);
 }
 
 .te-row-icon {

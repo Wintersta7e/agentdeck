@@ -13,21 +13,9 @@
   position: relative;
 }
 
-.split-pane.focused .pane-focus-indicator {
-  opacity: 1;
-}
-
-.pane-focus-indicator {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--amber);
-  opacity: 0;
-  transition: opacity 0.15s;
-  z-index: 2;
-}
+/* Focus indicator removed — pane-topbar.focused border-bottom already provides
+   the visual cue. The top-of-pane amber line created visual confusion with the
+   titlebar's active tab underline. */
 
 .split-divider {
   width: 4px;

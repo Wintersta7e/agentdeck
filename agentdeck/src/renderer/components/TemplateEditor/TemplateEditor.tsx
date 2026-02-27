@@ -45,6 +45,27 @@ export function TemplateEditor(): React.JSX.Element {
     return tpl?.content ?? ''
   })
 
+  // Sync selection when editingTemplateId changes from sidebar clicks
+  // (React "adjusting state during rendering" pattern — no useEffect needed)
+  const [prevEditingId, setPrevEditingId] = useState(editingTemplateId)
+  if (editingTemplateId !== prevEditingId) {
+    setPrevEditingId(editingTemplateId)
+    if (editingTemplateId && editingTemplateId !== selectedId) {
+      const tpl = findTemplate(templates, editingTemplateId)
+      setSelectedId(editingTemplateId)
+      setEditingName(tpl?.name ?? '')
+      setEditingContent(tpl?.content ?? '')
+    }
+  }
+
+  // Auto-select first template if none is selected
+  if (!selectedId && templates.length > 0 && templates[0]) {
+    const first = templates[0]
+    setSelectedId(first.id)
+    setEditingName(first.name)
+    setEditingContent(first.content ?? '')
+  }
+
   // Refs for scroll sync
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const lineNumsRef = useRef<HTMLDivElement>(null)
@@ -81,15 +102,29 @@ export function TemplateEditor(): React.JSX.Element {
     }
   }, [])
 
-  // Select a template — sets all three pieces of state at once
+  // Select a template — auto-saves dirty changes, then switches
   const handleSelect = useCallback(
     (id: string) => {
+      // Auto-save current template if dirty
+      if (selectedId) {
+        const current = templates.find((t) => t.id === selectedId)
+        const nameChanged = current && editingName !== current.name
+        const contentChanged = current && editingContent !== (current.content ?? '')
+        if (nameChanged || contentChanged) {
+          void updateTemplate({
+            id: selectedId,
+            name: editingName,
+            description: editingContent.split('\n')[0]?.slice(0, 60) ?? '',
+            content: editingContent,
+          }).catch(() => {})
+        }
+      }
       const tpl = findTemplate(templates, id)
       setSelectedId(id)
       setEditingName(tpl?.name ?? '')
       setEditingContent(tpl?.content ?? '')
     },
-    [templates],
+    [templates, selectedId, editingName, editingContent, updateTemplate],
   )
 
   // Create new template
