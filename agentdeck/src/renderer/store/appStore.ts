@@ -72,6 +72,10 @@ interface AppState {
   zoomFactor: number
   setZoomFactor: (factor: number) => void
 
+  // Theme
+  theme: string
+  setTheme: (name: string) => void
+
   // Notifications
   notifications: Array<{
     id: string
@@ -329,6 +333,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Zoom
   zoomFactor: 1.0,
   setZoomFactor: (factor) => set({ zoomFactor: factor }),
+
+  // Theme
+  theme: document.documentElement.dataset.theme ?? '',
+  setTheme: (name) => {
+    document.documentElement.dataset.theme = name
+    window.agentDeck.theme.set(name)
+    set({ theme: name })
+  },
 
   // Notifications
   notifications: [],
