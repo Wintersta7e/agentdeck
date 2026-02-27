@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
-import { Terminal, type ITheme } from 'xterm'
-import { FitAddon } from 'xterm-addon-fit'
-import 'xterm/css/xterm.css'
+import { Terminal, type ITheme } from '@xterm/xterm'
+import { FitAddon } from '@xterm/addon-fit'
+import '@xterm/xterm/css/xterm.css'
 import { useAppStore } from '../../store/appStore'
 import './TerminalPane.css'
 
@@ -81,6 +81,7 @@ function getXtermTheme(themeId: string): ITheme {
 
 interface TerminalPaneProps {
   sessionId: string
+  focused?: boolean | undefined
   projectPath?: string | undefined
   startupCommands?: string[] | undefined
   env?: Record<string, string> | undefined
@@ -90,6 +91,7 @@ interface TerminalPaneProps {
 
 export function TerminalPane({
   sessionId,
+  focused,
   projectPath,
   startupCommands,
   env,
@@ -115,6 +117,7 @@ export function TerminalPane({
       fontSize: 12,
       lineHeight: 1.5,
       cursorBlink: true,
+      cursorInactiveStyle: 'none',
       theme: getXtermTheme(document.documentElement.dataset.theme ?? ''),
       scrollback: 5000,
     })
@@ -217,15 +220,23 @@ export function TerminalPane({
       onDataDisposable.dispose()
       ro.disconnect()
       term.dispose()
-      // Only kill the PTY if the session was actually removed from the store.
-      // If the session still exists (e.g. moved from visible pane to hidden),
-      // keep the PTY alive to avoid conpty kill+spawn race crashes.
       const state = useAppStore.getState()
       if (!state.sessions[sessionId]) {
         window.agentDeck.pty.kill(sessionId)
       }
     }
   }, [sessionId, setSessionStatus, removeSession])
+
+  // Sync xterm internal focus with pane focus state
+  useEffect(() => {
+    const term = termRef.current
+    if (!term) return
+    if (focused) {
+      term.focus()
+    } else {
+      term.blur()
+    }
+  }, [focused])
 
   return <div ref={containerRef} className="terminal-container" />
 }

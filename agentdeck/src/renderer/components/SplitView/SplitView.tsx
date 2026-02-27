@@ -154,6 +154,7 @@ export function SplitView(): React.JSX.Element {
                   <TerminalPane
                     key={sessionId}
                     sessionId={sessionId}
+                    focused={isFocused}
                     projectPath={project?.path}
                     startupCommands={project?.startupCommands?.map((c) => c.value)}
                     env={
@@ -184,6 +185,7 @@ export function SplitView(): React.JSX.Element {
           <div key={sid} style={{ display: 'none' }}>
             <TerminalPane
               sessionId={sid}
+              focused={false}
               projectPath={project?.path}
               startupCommands={project?.startupCommands?.map((c) => c.value)}
               env={
