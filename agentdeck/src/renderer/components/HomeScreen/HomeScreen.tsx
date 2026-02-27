@@ -168,7 +168,7 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
               </button>
             </div>
             <div className="pinned-grid">
-              {pinned.map((p) => {
+              {pinned.map((p, index) => {
                 const status = getProjectStatus(p.id)
                 const tNames = (p.attachedTemplates ?? [])
                   .map((tid) => templates.find((t) => t.id === tid))
@@ -176,7 +176,8 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
                 return (
                   <div
                     key={p.id}
-                    className={`project-card ${status === 'running' ? 'running' : ''} ${status === 'error' ? 'error' : ''}`}
+                    className={`project-card stagger-item ${status === 'running' ? 'running' : ''} ${status === 'error' ? 'error' : ''}`}
+                    style={{ animationDelay: `${index * 60}ms` }}
                     onClick={() => onOpenProject(p)}
                   >
                     <div className="card-top">
@@ -231,10 +232,15 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
               <button className="section-action">{'See all \u2192'}</button>
             </div>
             <div className="recent-list">
-              {recent.map((p) => {
+              {recent.map((p, index) => {
                 const status = getProjectStatus(p.id)
                 return (
-                  <div key={p.id} className="recent-item" onClick={() => onOpenProject(p)}>
+                  <div
+                    key={p.id}
+                    className="recent-item stagger-item"
+                    style={{ animationDelay: `${index * 60}ms` }}
+                    onClick={() => onOpenProject(p)}
+                  >
                     <div
                       className="recent-dot"
                       style={{
