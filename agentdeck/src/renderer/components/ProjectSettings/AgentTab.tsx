@@ -63,6 +63,21 @@ export function AgentTab({ draft, onChange }: TabProps): React.JSX.Element {
                 className="settings-input"
                 value={draft.agentFlags ?? ''}
                 onChange={(e) => onChange({ agentFlags: e.target.value })}
+                onPaste={(e) => {
+                  e.preventDefault()
+                  const text = e.clipboardData
+                    .getData('text/plain')
+                    .replace(/[\r\n]+/g, ' ')
+                    .trim()
+                    .slice(0, 200)
+                  const input = e.currentTarget
+                  const start = input.selectionStart ?? 0
+                  const end = input.selectionEnd ?? 0
+                  const current = draft.agentFlags ?? ''
+                  const next = current.slice(0, start) + text + current.slice(end)
+                  onChange({ agentFlags: next.slice(0, 200) })
+                }}
+                maxLength={200}
                 placeholder="e.g. --model claude-opus-4-5"
               />
             </div>
