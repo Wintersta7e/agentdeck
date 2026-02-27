@@ -121,8 +121,10 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
 
   return (
     <div className="home-main">
-      <div className="home-aurora" />
-      <ParticleField />
+      <div className="home-decor">
+        <div className="home-aurora" />
+        <ParticleField />
+      </div>
       <div className="home-content">
         <div className="greeting">
           <div className="greeting-eyebrow">{formatDate()}</div>

@@ -474,6 +474,15 @@
   background: transparent;
 }
 
+/* Decorative layer — clips aurora/particles so they don't extend scroll area */
+.home-decor {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
 /* Aurora gradient background */
 @keyframes auroraShift {
   0%,
