@@ -130,6 +130,15 @@ function registerIpcHandlers(store: AppStore): void {
     return 1.0
   })
 
+  /* ── Theme ──────────────────────────────────────────────────────── */
+  ipcMain.handle('theme:get', () => store.get('appPrefs').theme ?? '')
+  ipcMain.handle('theme:set', (_, theme: string) => {
+    const valid = ['', 'cyan', 'violet', 'ice']
+    const safe = valid.includes(theme) ? theme : ''
+    store.set('appPrefs', { ...store.get('appPrefs'), theme: safe })
+    return safe
+  })
+
   /* ── App info ─────────────────────────────────────────────────────── */
   ipcMain.handle('app:version', () => app.getVersion())
   ipcMain.handle('app:versions', () => ({
