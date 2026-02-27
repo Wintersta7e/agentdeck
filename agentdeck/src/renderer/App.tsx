@@ -53,6 +53,19 @@ export function App(): React.JSX.Element {
     useAppStore.getState().openCommandPalette()
   }, [])
 
+  // Spotlight cursor effect
+  const spotlightRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const handler = (e: MouseEvent): void => {
+      if (spotlightRef.current) {
+        spotlightRef.current.style.left = `${e.clientX}px`
+        spotlightRef.current.style.top = `${e.clientY}px`
+      }
+    }
+    window.addEventListener('mousemove', handler)
+    return () => window.removeEventListener('mousemove', handler)
+  }, [])
+
   // Load saved zoom level on mount
   useEffect(() => {
     window.agentDeck.zoom.get().then((factor) => {
@@ -157,6 +170,7 @@ export function App(): React.JSX.Element {
 
   return (
     <div className="app">
+      <div className="spotlight" ref={spotlightRef} />
       <Titlebar onCloseTab={handleCloseTab} onAddTab={handleAddTab} />
       <div className="app-body">
         <Sidebar onOpenProject={handleOpenProject} />

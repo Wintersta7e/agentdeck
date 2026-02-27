@@ -77,3 +77,26 @@ body {
   background: rgba(110, 107, 102, 0.2);
   color: var(--text2);
 }
+
+/* ─── Spotlight cursor effect ─── */
+.spotlight {
+  position: fixed;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(var(--accent-rgb, 245, 166, 35), 0.03) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 0;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.3s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spotlight {
+    display: none;
+  }
+}
