@@ -77,6 +77,30 @@ body {
   background: rgba(110, 107, 102, 0.2);
   color: var(--text2);
 }
+.badge-cc {
+  background: rgba(0, 89, 156, 0.2);
+  color: #00599c;
+}
+.badge-ruby {
+  background: rgba(204, 52, 45, 0.2);
+  color: #cc342d;
+}
+.badge-php {
+  background: rgba(119, 123, 180, 0.2);
+  color: #777bb4;
+}
+.badge-kotlin {
+  background: rgba(127, 82, 255, 0.2);
+  color: #7f52ff;
+}
+.badge-swift {
+  background: rgba(240, 81, 56, 0.2);
+  color: #f05138;
+}
+.badge-dart {
+  background: rgba(1, 167, 220, 0.2);
+  color: #01a7dc;
+}
 
 /* ─── Spotlight cursor effect ─── */
 .spotlight {

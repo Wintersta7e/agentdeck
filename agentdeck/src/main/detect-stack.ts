@@ -14,6 +14,12 @@ interface DetectionRule {
 
 const RULES: DetectionRule[] = [
   { file: 'pom.xml', badge: 'Java', label: 'Java', detail: 'Maven (pom.xml)' },
+  {
+    file: 'build.gradle.kts',
+    badge: 'Kotlin',
+    label: 'Kotlin',
+    detail: 'Kotlin (build.gradle.kts)',
+  },
   { file: 'build.gradle', badge: 'Java', label: 'Java', detail: 'Gradle (build.gradle)' },
   { file: 'package.json', badge: 'JS', label: 'JavaScript', detail: 'Node.js (package.json)' },
   { file: 'Cargo.toml', badge: 'Rust', label: 'Rust', detail: 'Cargo (Cargo.toml)' },
@@ -21,6 +27,12 @@ const RULES: DetectionRule[] = [
   { file: 'setup.py', badge: 'Python', label: 'Python', detail: 'setup.py' },
   { file: 'requirements.txt', badge: 'Python', label: 'Python', detail: 'requirements.txt' },
   { file: 'go.mod', badge: 'Go', label: 'Go', detail: 'Go module (go.mod)' },
+  { file: 'CMakeLists.txt', badge: 'C/C++', label: 'C/C++', detail: 'CMake (CMakeLists.txt)' },
+  { file: 'Makefile', badge: 'C/C++', label: 'C/C++', detail: 'Make (Makefile)' },
+  { file: 'Gemfile', badge: 'Ruby', label: 'Ruby', detail: 'Ruby (Gemfile)' },
+  { file: 'composer.json', badge: 'PHP', label: 'PHP', detail: 'PHP (composer.json)' },
+  { file: 'Package.swift', badge: 'Swift', label: 'Swift', detail: 'Swift (Package.swift)' },
+  { file: 'pubspec.yaml', badge: 'Dart', label: 'Dart', detail: 'Dart/Flutter (pubspec.yaml)' },
 ]
 
 const CONTEXT_FILES = ['AGENTS.md', 'CLAUDE.md']

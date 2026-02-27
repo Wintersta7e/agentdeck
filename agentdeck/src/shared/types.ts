@@ -7,6 +7,12 @@ export type StackBadge =
   | 'Rust'
   | 'Go'
   | '.NET'
+  | 'C/C++'
+  | 'Ruby'
+  | 'PHP'
+  | 'Kotlin'
+  | 'Swift'
+  | 'Dart'
   | 'Agent'
   | 'Other'
 

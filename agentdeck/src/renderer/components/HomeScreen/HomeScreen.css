@@ -289,6 +289,24 @@
 .card-icon-other {
   background: rgba(110, 107, 102, 0.15);
 }
+.card-icon-cc {
+  background: rgba(0, 89, 156, 0.15);
+}
+.card-icon-ruby {
+  background: rgba(204, 52, 45, 0.15);
+}
+.card-icon-php {
+  background: rgba(119, 123, 180, 0.15);
+}
+.card-icon-kotlin {
+  background: rgba(127, 82, 255, 0.15);
+}
+.card-icon-swift {
+  background: rgba(240, 81, 56, 0.15);
+}
+.card-icon-dart {
+  background: rgba(1, 167, 220, 0.15);
+}
 
 .card-status {
   display: flex;
@@ -416,7 +434,7 @@
 /* Agent grid */
 .agent-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 8px;
   margin-bottom: 32px;
 }

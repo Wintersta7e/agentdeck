@@ -9,6 +9,10 @@ const AGENTS: { type: AgentType; icon: string; name: string; desc: string }[] = 
   { type: 'claude-code', icon: '\u2B21', name: 'claude-code', desc: 'Anthropic CLI agent' },
   { type: 'codex', icon: '\u25C8', name: 'codex', desc: 'OpenAI CLI agent' },
   { type: 'aider', icon: '\u25B8', name: 'aider', desc: 'Git-aware coding assistant' },
+  { type: 'goose', icon: '\u25C6', name: 'goose', desc: 'Block open-source agent' },
+  { type: 'gemini-cli', icon: '\u2726', name: 'gemini-cli', desc: 'Google AI agent' },
+  { type: 'amazon-q', icon: '\u25C9', name: 'amazon-q', desc: 'AWS CLI agent' },
+  { type: 'opencode', icon: '\u25CB', name: 'opencode', desc: 'Multi-model agent' },
 ]
 
 export function AgentTab({ draft, onChange }: TabProps): React.JSX.Element {

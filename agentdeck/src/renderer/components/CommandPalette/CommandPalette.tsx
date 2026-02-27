@@ -44,6 +44,10 @@ const ALL_AGENTS = [
   { id: 'claude-code', label: 'Claude Code', desc: 'Anthropic CLI' },
   { id: 'codex', label: 'Codex', desc: 'OpenAI CLI' },
   { id: 'aider', label: 'Aider', desc: 'Git-aware agent' },
+  { id: 'goose', label: 'Goose', desc: 'Block open-source agent' },
+  { id: 'gemini-cli', label: 'Gemini CLI', desc: 'Google AI agent' },
+  { id: 'amazon-q', label: 'Amazon Q', desc: 'AWS CLI agent' },
+  { id: 'opencode', label: 'OpenCode', desc: 'Multi-model agent' },
 ] as const
 
 interface ThemeOption {

@@ -44,6 +44,12 @@ const BADGE_ICONS: Record<StackBadge, string> = {
   Rust: '\uD83E\uDD80',
   Go: '\u25C8',
   '.NET': '\u266F',
+  'C/C++': '\u2699',
+  Ruby: '\u2666',
+  PHP: '\uD83D\uDC18',
+  Kotlin: 'K',
+  Swift: '\uD83D\uDC26',
+  Dart: '\u25B8',
   Agent: '\u25C8',
   Other: '\u26A1',
 }
@@ -55,6 +61,12 @@ const BADGE_ICON_CLASS: Record<StackBadge, string> = {
   Rust: 'card-icon-rust',
   Go: 'card-icon-go',
   '.NET': 'card-icon-dotnet',
+  'C/C++': 'card-icon-cc',
+  Ruby: 'card-icon-ruby',
+  PHP: 'card-icon-php',
+  Kotlin: 'card-icon-kotlin',
+  Swift: 'card-icon-swift',
+  Dart: 'card-icon-dart',
   Agent: 'card-icon-agent',
   Other: 'card-icon-other',
 }
@@ -69,6 +81,10 @@ const AGENTS: AgentInfo[] = [
   { name: 'claude-code', icon: '\u2B21', desc: 'Anthropic CLI' },
   { name: 'codex', icon: '\u25C8', desc: 'OpenAI CLI' },
   { name: 'aider', icon: '\u25B8', desc: 'Git-aware agent' },
+  { name: 'goose', icon: '\u25C6', desc: 'Block open-source agent' },
+  { name: 'gemini-cli', icon: '\u2726', desc: 'Google AI agent' },
+  { name: 'amazon-q', icon: '\u25C9', desc: 'AWS CLI agent' },
+  { name: 'opencode', icon: '\u25CB', desc: 'Multi-model agent' },
 ]
 
 interface HomeScreenProps {

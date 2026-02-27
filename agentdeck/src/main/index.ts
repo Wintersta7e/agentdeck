@@ -18,6 +18,10 @@ const agentBinaries: Record<string, string> = {
   'claude-code': 'claude',
   codex: 'codex',
   aider: 'aider',
+  goose: 'goose',
+  'gemini-cli': 'gemini',
+  'amazon-q': 'q',
+  opencode: 'opencode',
 }
 
 const ALLOWED_FILES = new Set(['CLAUDE.md', 'AGENTS.md', 'README.md'])

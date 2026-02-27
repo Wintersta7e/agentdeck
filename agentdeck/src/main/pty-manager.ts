@@ -9,6 +9,10 @@ const AGENT_BINARIES: Record<string, string> = {
   'claude-code': 'claude',
   codex: 'codex',
   aider: 'aider',
+  goose: 'goose',
+  'gemini-cli': 'gemini',
+  'amazon-q': 'q',
+  opencode: 'opencode',
 }
 
 /**
