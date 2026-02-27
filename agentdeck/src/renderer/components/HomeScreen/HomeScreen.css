@@ -164,6 +164,16 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
   margin-bottom: 32px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.pinned-grid::-webkit-scrollbar {
+  width: 3px;
+}
+.pinned-grid::-webkit-scrollbar-thumb {
+  background: var(--bg4);
+  border-radius: 2px;
 }
 
 .project-card {
@@ -342,6 +352,16 @@
 /* Recent list */
 .recent-list {
   margin-bottom: 32px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.recent-list::-webkit-scrollbar {
+  width: 3px;
+}
+.recent-list::-webkit-scrollbar-thumb {
+  background: var(--bg4);
+  border-radius: 2px;
 }
 .recent-item {
   display: flex;
