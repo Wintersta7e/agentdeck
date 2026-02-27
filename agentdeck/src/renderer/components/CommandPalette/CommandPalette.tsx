@@ -40,6 +40,13 @@ const SECTION_ORDER: { type: ResultType; label: string }[] = [
   { type: 'action', label: 'Actions' },
 ]
 
+const THEMES = [
+  { id: '', label: 'Amber', accent: '#f5a623' },
+  { id: 'cyan', label: 'Navy + Cyan', accent: '#00d4ff' },
+  { id: 'violet', label: 'Midnight + Violet', accent: '#a78bfa' },
+  { id: 'ice', label: 'Charcoal + Ice', accent: '#60a5fa' },
+] as const
+
 function highlightMatch(text: string, query: string): React.JSX.Element {
   if (!query) return <>{text}</>
   const lowerText = text.toLowerCase()
@@ -76,9 +83,14 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
   const projects = useAppStore((s) => s.projects)
   const templates = useAppStore((s) => s.templates)
 
+  const theme = useAppStore((s) => s.theme)
+  const setTheme = useAppStore((s) => s.setTheme)
+
   const [query, setQuery] = useState('')
   const [scope, setScope] = useState<ScopeTab>('all')
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const [subMenu, setSubMenu] = useState<'theme' | null>(null)
+  const [previewOriginal, setPreviewOriginal] = useState('')
 
   const inputRef = useRef<HTMLInputElement>(null)
   const resultsRef = useRef<HTMLDivElement>(null)
@@ -88,6 +100,16 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
   useEffect(() => {
     selectedIndexRef.current = selectedIndex
   }, [selectedIndex])
+
+  const subMenuRef = useRef(subMenu)
+  useEffect(() => {
+    subMenuRef.current = subMenu
+  }, [subMenu])
+
+  const previewOriginalRef = useRef(previewOriginal)
+  useEffect(() => {
+    previewOriginalRef.current = previewOriginal
+  }, [previewOriginal])
 
   // Focus input on mount
   useEffect(() => {
@@ -185,6 +207,14 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
       name: 'About',
       detail: 'Version info and credits',
     })
+    items.push({
+      type: 'action',
+      id: 'action-change-theme',
+      icon: '\u25D1', // half circle
+      iconClass: '',
+      name: 'Change Theme',
+      detail: 'Switch between Amber, Cyan, Violet, and Ice themes',
+    })
 
     return items
   }, [sessions, projects, templates])
@@ -248,6 +278,14 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
   // Execute action for the selected item
   const executeItem = useCallback(
     (item: PaletteItem) => {
+      // Theme sub-menu: don't close palette, show sub-menu instead
+      if (item.id === 'action-change-theme') {
+        setPreviewOriginal(theme)
+        setSubMenu('theme')
+        setSelectedIndex(THEMES.findIndex((t) => t.id === theme))
+        return
+      }
+
       closePalette()
 
       switch (item.type) {
@@ -286,12 +324,48 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
         }
       }
     },
-    [closePalette, onOpenProject, onAbout],
+    [closePalette, onOpenProject, onAbout, theme],
   )
 
   // Keyboard navigation
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent): void {
+      // Theme sub-menu keyboard handling
+      if (subMenuRef.current === 'theme') {
+        if (e.key === 'Escape') {
+          e.preventDefault()
+          e.stopPropagation()
+          document.documentElement.dataset.theme = previewOriginalRef.current
+          setSubMenu(null)
+          setSelectedIndex(0)
+          return
+        }
+        if (e.key === 'ArrowDown') {
+          e.preventDefault()
+          setSelectedIndex((prev) => Math.min(prev + 1, THEMES.length - 1))
+          const nextIndex = Math.min(selectedIndexRef.current + 1, THEMES.length - 1)
+          const nextTheme = THEMES[nextIndex]
+          if (nextTheme) document.documentElement.dataset.theme = nextTheme.id
+          return
+        }
+        if (e.key === 'ArrowUp') {
+          e.preventDefault()
+          setSelectedIndex((prev) => Math.max(prev - 1, 0))
+          const prevIndex = Math.max(selectedIndexRef.current - 1, 0)
+          const prevTheme = THEMES[prevIndex]
+          if (prevTheme) document.documentElement.dataset.theme = prevTheme.id
+          return
+        }
+        if (e.key === 'Enter') {
+          e.preventDefault()
+          const selected = THEMES[selectedIndexRef.current]
+          if (selected) setTheme(selected.id)
+          closePalette()
+          return
+        }
+        return
+      }
+
       if (e.key === 'Escape') {
         e.preventDefault()
         e.stopPropagation()
@@ -326,7 +400,7 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
     // Use capture phase so Escape is caught before App's handler
     window.addEventListener('keydown', handleKeyDown, true)
     return () => window.removeEventListener('keydown', handleKeyDown, true)
-  }, [closePalette, flatItems, executeItem])
+  }, [closePalette, flatItems, executeItem, setTheme])
 
   // Scroll selected item into view
   useEffect(() => {
@@ -380,57 +454,93 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
         </div>
 
         {/* Results */}
-        <div className="palette-results" ref={resultsRef}>
-          {flatItems.length === 0 && (
-            <div className="palette-empty">
-              {query ? `No results for "${query}"` : 'No items available'}
+        {subMenu === 'theme' ? (
+          <div className="palette-results">
+            <div className="cp-submenu-header">
+              <button
+                className="cp-back-btn"
+                onClick={() => {
+                  document.documentElement.dataset.theme = previewOriginal
+                  setSubMenu(null)
+                  setSelectedIndex(0)
+                }}
+              >
+                {'\u2190'} back
+              </button>
+              <span>Change theme</span>
             </div>
-          )}
-          {groupedSections.map((section, sectionIdx) => {
-            const sectionStartIndex = globalIndex
-            const elements = (
-              <div key={section.label}>
-                <div className="result-section">{section.label}</div>
-                {section.items.map((item, itemIdx) => {
-                  const flatIdx = sectionStartIndex + itemIdx
-                  const isSelected = flatIdx === selectedIndex
-                  return (
-                    <div
-                      key={item.id}
-                      className={`result-item${isSelected ? ' selected' : ''}`}
-                      onClick={() => executeItem(item)}
-                      onMouseEnter={() => setSelectedIndex(flatIdx)}
-                    >
-                      <div className={`result-icon${item.iconClass ? ` ${item.iconClass}` : ''}`}>
-                        {item.icon}
-                      </div>
-                      <div className="result-body">
-                        <div className="result-name">{highlightMatch(item.name, query)}</div>
-                        <div className="result-detail">{item.detail}</div>
-                      </div>
-                      <div className="result-right">
-                        {item.type === 'session' && item.badge && (
-                          <span className="result-badge badge-running">{item.badge}</span>
-                        )}
-                        {item.type === 'project' && item.badge && (
-                          <span className="result-badge badge-stack">{item.badge}</span>
-                        )}
-                        {item.type === 'template' && (
-                          <span className="result-badge badge-template">template</span>
-                        )}
-                        {item.kbd && <span className="result-kbd">{item.kbd}</span>}
-                        {isSelected && <span className="result-kbd">{'\u21B5'}</span>}
-                      </div>
-                    </div>
-                  )
-                })}
-                {sectionIdx < groupedSections.length - 1 && <div className="result-divider" />}
+            {THEMES.map((t, i) => (
+              <div
+                key={t.id || 'default'}
+                className={`cp-theme-item${selectedIndex === i ? ' selected' : ''}${theme === t.id ? ' active' : ''}`}
+                onClick={() => {
+                  setTheme(t.id)
+                  closePalette()
+                }}
+                onMouseEnter={() => {
+                  setSelectedIndex(i)
+                  document.documentElement.dataset.theme = t.id
+                }}
+              >
+                <span className="cp-theme-swatch" style={{ background: t.accent }} />
+                <span className="cp-theme-label">{t.label}</span>
+                {theme === t.id && <span className="cp-theme-check">{'\u2713'}</span>}
               </div>
-            )
-            globalIndex += section.items.length
-            return elements
-          })}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="palette-results" ref={resultsRef}>
+            {flatItems.length === 0 && (
+              <div className="palette-empty">
+                {query ? `No results for "${query}"` : 'No items available'}
+              </div>
+            )}
+            {groupedSections.map((section, sectionIdx) => {
+              const sectionStartIndex = globalIndex
+              const elements = (
+                <div key={section.label}>
+                  <div className="result-section">{section.label}</div>
+                  {section.items.map((item, itemIdx) => {
+                    const flatIdx = sectionStartIndex + itemIdx
+                    const isSelected = flatIdx === selectedIndex
+                    return (
+                      <div
+                        key={item.id}
+                        className={`result-item${isSelected ? ' selected' : ''}`}
+                        onClick={() => executeItem(item)}
+                        onMouseEnter={() => setSelectedIndex(flatIdx)}
+                      >
+                        <div className={`result-icon${item.iconClass ? ` ${item.iconClass}` : ''}`}>
+                          {item.icon}
+                        </div>
+                        <div className="result-body">
+                          <div className="result-name">{highlightMatch(item.name, query)}</div>
+                          <div className="result-detail">{item.detail}</div>
+                        </div>
+                        <div className="result-right">
+                          {item.type === 'session' && item.badge && (
+                            <span className="result-badge badge-running">{item.badge}</span>
+                          )}
+                          {item.type === 'project' && item.badge && (
+                            <span className="result-badge badge-stack">{item.badge}</span>
+                          )}
+                          {item.type === 'template' && (
+                            <span className="result-badge badge-template">template</span>
+                          )}
+                          {item.kbd && <span className="result-kbd">{item.kbd}</span>}
+                          {isSelected && <span className="result-kbd">{'\u21B5'}</span>}
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {sectionIdx < groupedSections.length - 1 && <div className="result-divider" />}
+                </div>
+              )
+              globalIndex += section.items.length
+              return elements
+            })}
+          </div>
+        )}
 
         {/* Footer */}
         <div className="palette-footer">
