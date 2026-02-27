@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
+import { ParticleField } from './ParticleField'
 import type { Project, Template, StackBadge } from '../../../shared/types'
 import './HomeScreen.css'
 
@@ -116,6 +117,7 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
   return (
     <div className="home-main">
       <div className="home-aurora" />
+      <ParticleField />
       <div className="home-content">
         <div className="greeting">
           <div className="greeting-eyebrow">{formatDate()}</div>
