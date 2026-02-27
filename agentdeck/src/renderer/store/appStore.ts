@@ -68,6 +68,10 @@ interface AppState {
   openTemplateEditor: (templateId?: string) => void
   closeTemplateEditor: () => void
 
+  // Zoom
+  zoomFactor: number
+  setZoomFactor: (factor: number) => void
+
   // Notifications
   notifications: Array<{
     id: string
@@ -142,6 +146,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       const paneSessions = [...filled, ...Array<string>(cleared.length - filled.length).fill('')]
       const firstPane = paneSessions[0]
       const newActive = firstPane && firstPane !== '' ? firstPane : (remainingIds[0] ?? null)
+      // If pane 0 is empty but we still have sessions, place the new active there
+      if (paneSessions[0] === '' && newActive) {
+        paneSessions[0] = newActive
+      }
       return {
         sessions: rest,
         activityFeeds: remainingFeeds,
@@ -317,6 +325,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       const prev = stack.pop() ?? 'home'
       return { currentView: prev, editingTemplateId: null, viewStack: stack }
     }),
+
+  // Zoom
+  zoomFactor: 1.0,
+  setZoomFactor: (factor) => set({ zoomFactor: factor }),
 
   // Notifications
   notifications: [],

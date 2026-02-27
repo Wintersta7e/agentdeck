@@ -45,11 +45,40 @@ export function App(): React.JSX.Element {
   )
 
   const handleAddTab = useCallback(() => {
-    useAppStore.getState().setCurrentView('home')
+    useAppStore.getState().openCommandPalette()
+  }, [])
+
+  // Load saved zoom level on mount
+  useEffect(() => {
+    window.agentDeck.zoom.get().then((factor) => {
+      useAppStore.getState().setZoomFactor(factor)
+    })
   }, [])
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent): void {
+      // Zoom shortcuts
+      if (e.ctrlKey && (e.key === '=' || e.key === '+')) {
+        e.preventDefault()
+        const current = useAppStore.getState().zoomFactor
+        window.agentDeck.zoom
+          .set(current + 0.1)
+          .then((z) => useAppStore.getState().setZoomFactor(z))
+        return
+      }
+      if (e.ctrlKey && e.key === '-') {
+        e.preventDefault()
+        const current = useAppStore.getState().zoomFactor
+        window.agentDeck.zoom
+          .set(current - 0.1)
+          .then((z) => useAppStore.getState().setZoomFactor(z))
+        return
+      }
+      if (e.ctrlKey && e.key === '0') {
+        e.preventDefault()
+        window.agentDeck.zoom.reset().then((z) => useAppStore.getState().setZoomFactor(z))
+        return
+      }
       if (e.ctrlKey && e.key === 'k') {
         e.preventDefault()
         const state = useAppStore.getState()
