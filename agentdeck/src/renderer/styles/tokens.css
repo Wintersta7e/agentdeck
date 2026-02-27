@@ -16,13 +16,21 @@
   --text2: #6e6b66;
   --text3: #3d3b38;
 
-  /* Accent colours */
-  --amber: #f5a623;
-  --amber-dim: #c07d0f;
-  --amber-glow: rgba(245, 166, 35, 0.12);
-  --amber-glow2: rgba(245, 166, 35, 0.06);
-  --amber-border: rgba(245, 166, 35, 0.4);
-  --amber-hover: rgba(245, 166, 35, 0.5);
+  /* Accent colours (theme-overridable) */
+  --accent: #f5a623;
+  --accent-dim: #c07d0f;
+  --accent-glow: rgba(245, 166, 35, 0.12);
+  --accent-glow2: rgba(245, 166, 35, 0.06);
+  --accent-border: rgba(245, 166, 35, 0.4);
+  --accent-hover: rgba(245, 166, 35, 0.5);
+
+  /* Backward-compatible aliases — existing CSS uses var(--amber-*) */
+  --amber: var(--accent);
+  --amber-dim: var(--accent-dim);
+  --amber-glow: var(--accent-glow);
+  --amber-glow2: var(--accent-glow2);
+  --amber-border: var(--accent-border);
+  --amber-hover: var(--accent-hover);
 
   --green: #4caf7d;
   --green-dim: rgba(76, 175, 125, 0.12);
@@ -46,4 +54,102 @@
   /* Typography */
   --font-mono: 'JetBrains Mono', monospace;
   --font-display: 'Syne Variable', 'Syne', sans-serif;
+
+  /* Theme transition — smooth switching */
+  --theme-transition:
+    background-color 0.18s ease, color 0.12s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+/* ─── Theme: Cyan ─── */
+[data-theme='cyan'] {
+  --bg0: #080b14;
+  --bg1: #0c1020;
+  --bg2: #10162a;
+  --bg3: #151d33;
+  --bg4: #1a2340;
+  --border: #1e2842;
+  --border-bright: #253150;
+  --text0: #e8eef8;
+  --text1: #a8b5cc;
+  --text2: #5c6e8a;
+  --text3: #2e3d55;
+  --accent: #00d4ff;
+  --accent-dim: #0099bb;
+  --accent-glow: rgba(0, 212, 255, 0.1);
+  --accent-glow2: rgba(0, 212, 255, 0.05);
+  --accent-border: rgba(0, 212, 255, 0.35);
+  --accent-hover: rgba(0, 212, 255, 0.45);
+  --green: #00e5a0;
+  --green-dim: rgba(0, 229, 160, 0.12);
+  --green-border: rgba(0, 229, 160, 0.2);
+  --red: #ff4d6a;
+  --red-dim: rgba(255, 77, 106, 0.12);
+  --red-border: rgba(255, 77, 106, 0.2);
+}
+
+/* ─── Theme: Violet ─── */
+[data-theme='violet'] {
+  --bg0: #0a0a12;
+  --bg1: #0f0f1c;
+  --bg2: #141424;
+  --bg3: #19192e;
+  --bg4: #1e1e38;
+  --border: #252540;
+  --border-bright: #2e2e50;
+  --text0: #ece9f8;
+  --text1: #b0aacc;
+  --text2: #5f5880;
+  --text3: #312d50;
+  --accent: #a78bfa;
+  --accent-dim: #7c5dd4;
+  --accent-glow: rgba(167, 139, 250, 0.1);
+  --accent-glow2: rgba(167, 139, 250, 0.05);
+  --accent-border: rgba(167, 139, 250, 0.35);
+  --accent-hover: rgba(167, 139, 250, 0.45);
+  --green: #34d399;
+  --green-dim: rgba(52, 211, 153, 0.12);
+  --green-border: rgba(52, 211, 153, 0.2);
+  --red: #f87171;
+  --red-dim: rgba(248, 113, 113, 0.12);
+  --red-border: rgba(248, 113, 113, 0.2);
+}
+
+/* ─── Theme: Ice ─── */
+[data-theme='ice'] {
+  --bg0: #0c0d10;
+  --bg1: #101218;
+  --bg2: #141620;
+  --bg3: #181b26;
+  --bg4: #1e2130;
+  --border: #252836;
+  --border-bright: #2e3342;
+  --text0: #e4e8f2;
+  --text1: #a8afc4;
+  --text2: #555e78;
+  --text3: #2c3248;
+  --accent: #60a5fa;
+  --accent-dim: #3b82f6;
+  --accent-glow: rgba(96, 165, 250, 0.1);
+  --accent-glow2: rgba(96, 165, 250, 0.05);
+  --accent-border: rgba(96, 165, 250, 0.35);
+  --accent-hover: rgba(96, 165, 250, 0.45);
+  --green: #4ade80;
+  --green-dim: rgba(74, 222, 128, 0.12);
+  --green-border: rgba(74, 222, 128, 0.2);
+  --red: #f87171;
+  --red-dim: rgba(248, 113, 113, 0.12);
+  --red-border: rgba(248, 113, 113, 0.2);
+}
+
+/* ─── Theme transition ─── */
+*,
+*::before,
+*::after {
+  transition: var(--theme-transition);
+}
+
+/* Except terminal — xterm.js manages its own canvas, transitions break it */
+.terminal-container,
+.terminal-container * {
+  transition: none !important;
 }
