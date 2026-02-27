@@ -49,14 +49,17 @@ function createWindow(): void {
   mainWindow.webContents.once('did-finish-load', () => {
     const prefs = appStore?.get('appPrefs')
     let zoom = prefs?.zoomFactor ?? 1.0
-    // Auto-detect high-DPI on first launch only
-    if (!prefs?.zoomAutoDetected && mainWindow) {
+    // Auto-detect high-DPI — re-trigger when detection version changes
+    const DETECT_VERSION = 2
+    const detected = prefs?.zoomAutoDetected
+    const needsDetect = !detected || (typeof detected === 'number' && detected < DETECT_VERSION)
+    if (needsDetect && mainWindow) {
       const display = screen.getPrimaryDisplay()
-      // 4K (3840×2160+) or high scale factor → default to 1.3
+      // 4K (3840×2160+) or high scale factor → default to 1.5
       if (display.size.width >= 3840 || display.scaleFactor >= 2) {
-        zoom = 1.3
+        zoom = 1.5
       }
-      appStore?.set('appPrefs', { ...prefs, zoomFactor: zoom, zoomAutoDetected: true })
+      appStore?.set('appPrefs', { ...prefs, zoomFactor: zoom, zoomAutoDetected: DETECT_VERSION })
     }
     if (zoom !== 1.0) mainWindow?.webContents.setZoomFactor(zoom)
   })

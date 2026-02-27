@@ -1,6 +1,6 @@
 .statusbar {
-  height: 22px;
-  line-height: 22px;
+  height: 26px;
+  line-height: 26px;
   background: var(--bg0);
   border-top: 1px solid var(--border);
   display: flex;
@@ -8,7 +8,7 @@
   padding: 0 12px;
   gap: 16px;
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text2);
 }
 
@@ -37,7 +37,7 @@
   color: var(--text2);
   padding: 0 6px;
   border-radius: 3px;
-  font-size: 9px;
+  font-size: 10px;
   cursor: pointer;
   font-family: var(--font-mono);
   transition: all 0.12s;
@@ -52,7 +52,7 @@
   background: none;
   border: none;
   color: var(--text2);
-  font-size: 10px;
+  font-size: 11px;
   font-family: var(--font-mono);
   cursor: pointer;
   padding: 0;
@@ -65,5 +65,5 @@
 
 .status-sep {
   color: var(--text3);
-  font-size: 8px;
+  font-size: 9px;
 }
