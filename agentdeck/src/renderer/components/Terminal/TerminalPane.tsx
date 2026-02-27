@@ -1,9 +1,59 @@
 import { useEffect, useRef } from 'react'
-import { Terminal } from 'xterm'
+import { Terminal, type ITheme } from 'xterm'
 import { FitAddon } from 'xterm-addon-fit'
 import 'xterm/css/xterm.css'
 import { useAppStore } from '../../store/appStore'
 import './TerminalPane.css'
+
+const BASE_XTERM_THEME: ITheme = {
+  background: '#0d0e0f',
+  foreground: '#b8b4ae',
+  cursor: '#f5a623',
+  cursorAccent: '#0d0e0f',
+  selectionBackground: 'rgba(245, 166, 35, 0.2)',
+  black: '#0d0e0f',
+  red: '#e05c5c',
+  green: '#4caf7d',
+  yellow: '#f5a623',
+  blue: '#5b9bd5',
+  magenta: '#9b72cf',
+  cyan: '#5b9bd5',
+  white: '#b8b4ae',
+  brightBlack: '#3d3b38',
+  brightRed: '#e05c5c',
+  brightGreen: '#4caf7d',
+  brightYellow: '#f5a623',
+  brightBlue: '#5b9bd5',
+  brightMagenta: '#9b72cf',
+  brightCyan: '#5b9bd5',
+  brightWhite: '#f0ede8',
+}
+
+const XTERM_THEME_OVERRIDES: Record<string, Partial<ITheme>> = {
+  '': {},
+  cyan: {
+    background: '#080b14',
+    foreground: '#a8b5cc',
+    cursor: '#00d4ff',
+    selectionBackground: 'rgba(0,212,255,0.20)',
+  },
+  violet: {
+    background: '#0a0a12',
+    foreground: '#b0aacc',
+    cursor: '#a78bfa',
+    selectionBackground: 'rgba(167,139,250,0.20)',
+  },
+  ice: {
+    background: '#0c0d10',
+    foreground: '#a8afc4',
+    cursor: '#60a5fa',
+    selectionBackground: 'rgba(96,165,250,0.20)',
+  },
+}
+
+function getXtermTheme(themeId: string): ITheme {
+  return { ...BASE_XTERM_THEME, ...(XTERM_THEME_OVERRIDES[themeId] ?? {}) }
+}
 
 interface TerminalPaneProps {
   sessionId: string
@@ -41,29 +91,7 @@ export function TerminalPane({
       fontSize: 12,
       lineHeight: 1.5,
       cursorBlink: true,
-      theme: {
-        background: '#0d0e0f',
-        foreground: '#b8b4ae',
-        cursor: '#f5a623',
-        cursorAccent: '#0d0e0f',
-        selectionBackground: 'rgba(245, 166, 35, 0.2)',
-        black: '#0d0e0f',
-        red: '#e05c5c',
-        green: '#4caf7d',
-        yellow: '#f5a623',
-        blue: '#5b9bd5',
-        magenta: '#9b72cf',
-        cyan: '#5b9bd5',
-        white: '#b8b4ae',
-        brightBlack: '#3d3b38',
-        brightRed: '#e05c5c',
-        brightGreen: '#4caf7d',
-        brightYellow: '#f5a623',
-        brightBlue: '#5b9bd5',
-        brightMagenta: '#9b72cf',
-        brightCyan: '#5b9bd5',
-        brightWhite: '#f0ede8',
-      },
+      theme: getXtermTheme(document.documentElement.dataset.theme ?? ''),
       scrollback: 5000,
     })
 
@@ -95,6 +123,16 @@ export function TerminalPane({
     fit.fit()
     termRef.current = term
     fitRef.current = fit
+
+    // Sync xterm theme when data-theme attribute changes
+    const themeObserver = new MutationObserver(() => {
+      const t = document.documentElement.dataset.theme ?? ''
+      term.options.theme = getXtermTheme(t)
+    })
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    })
 
     const { cols, rows } = term
     window.agentDeck.pty
@@ -147,6 +185,7 @@ export function TerminalPane({
     ro.observe(containerRef.current)
 
     return () => {
+      themeObserver.disconnect()
       clearTimeout(exitTimeout)
       clearTimeout(resizeTimeout)
       unsubData()
