@@ -105,7 +105,9 @@ export async function detectStack(
   }
 
   const suggestedAgent: AgentType = 'claude-code'
-  const suggestedCommands = [`cd "${projectPath.replace(/"/g, '\\"')}"`, 'claude']
+  // cd and agent launch are handled by dedicated fields (projectPath → auto-cd, agent → auto-launch)
+  // suggestedCommands should only contain actual setup commands (e.g. `nvm use 18`)
+  const suggestedCommands: string[] = []
 
   log.debug(`Detected stack for ${projectPath}`, { badge, itemCount: items.length })
   return { badge, items, suggestedAgent, suggestedCommands, contextFiles }
