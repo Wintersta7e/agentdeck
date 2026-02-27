@@ -11,6 +11,16 @@ const AGENT_BINARIES: Record<string, string> = {
   aider: 'aider',
 }
 
+/**
+ * Map of agent name → npm package info for agents installed via npm.
+ * Used to fix missing bin symlinks in WSL (npm global installs sometimes
+ * lose their bin symlinks, causing the Windows-side binary to shadow the
+ * newer WSL-installed version).
+ */
+const NPM_AGENT_PACKAGES: Record<string, { pkg: string; binEntry: string }> = {
+  codex: { pkg: '@openai/codex', binEntry: 'bin/codex.js' },
+}
+
 function toWslPath(path: string): string {
   const match = path.match(/^([A-Za-z]):[/\\](.*)$/)
   if (match && match[1] && match[2] !== undefined) {
@@ -79,12 +89,7 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
     }
 
     const cwd = process.env['USERPROFILE'] ?? process.cwd()
-    // Strip Windows PATH so WSL's native PATH (set by .bashrc / NVM) takes
-    // precedence. Without this, npm global installs inside a session don't
-    // persist across PTY restarts because wsl.exe inherits the Windows PATH
-    // which can shadow the WSL node/npm that the user actually updated.
-    const { PATH: _winPath, Path: _winPath2, ...cleanEnv } = process.env as Record<string, string>
-    const mergedEnv = { ...cleanEnv, ...env }
+    const mergedEnv = { ...process.env, ...env } as Record<string, string>
 
     /* Fix 8 (ERR-6): Wrap pty.spawn in try-catch */
     let proc: IPty
@@ -128,6 +133,18 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
 
     if (agent) {
       const bin = AGENT_BINARIES[agent] ?? agent
+
+      // Fix missing npm global bin symlinks for npm-installed agents.
+      // WSL sometimes loses these, causing the stale Windows-side binary to
+      // shadow the newer WSL-installed version (e.g. codex update loop).
+      const npmInfo = NPM_AGENT_PACKAGES[agent]
+      if (npmInfo) {
+        const { pkg, binEntry } = npmInfo
+        commands.push(
+          `NPM_G=$(npm prefix -g 2>/dev/null) && [ -d "$NPM_G/lib/node_modules/${pkg}" ] && [ ! -x "$NPM_G/bin/${bin}" ] && ln -sf "../lib/node_modules/${pkg}/${binEntry}" "$NPM_G/bin/${bin}" 2>/dev/null; true`,
+        )
+      }
+
       const agentCmd = sanitizedFlags ? `${bin} ${sanitizedFlags}` : bin
       commands.push(agentCmd)
     }
