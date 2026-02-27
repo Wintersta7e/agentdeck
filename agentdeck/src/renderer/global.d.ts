@@ -35,6 +35,10 @@ declare global {
         set: (factor: number) => Promise<number>
         reset: () => Promise<number>
       }
+      theme: {
+        get: () => Promise<string>
+        set: (name: string) => Promise<string>
+      }
       store: {
         getProjects: () => Promise<Project[]>
         saveProject: (project: Partial<Project>) => Promise<Project>
