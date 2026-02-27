@@ -149,6 +149,20 @@
   flex-shrink: 0;
 }
 
+/* ─── Template category groups ─── */
+.sidebar-group-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text3);
+  font-weight: 600;
+  padding: 6px 4px 2px;
+}
+
+.sidebar-tpl-group + .sidebar-tpl-group .sidebar-group-label {
+  margin-top: 4px;
+}
+
 .sidebar-divider {
   height: 1px;
   background: var(--border);

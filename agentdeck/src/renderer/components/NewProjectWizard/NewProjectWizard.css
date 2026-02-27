@@ -213,6 +213,19 @@
   gap: 6px;
   margin-bottom: 20px;
 }
+
+.template-group-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text2);
+  font-weight: 600;
+  padding: 8px 0 2px;
+}
+
+.template-group + .template-group .template-group-label {
+  margin-top: 4px;
+}
 .template-opt {
   display: flex;
   align-items: center;

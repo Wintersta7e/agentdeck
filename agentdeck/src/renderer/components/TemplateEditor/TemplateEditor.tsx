@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { TemplateCategory } from '../../../shared/types'
 import { useAppStore } from '../../store/appStore'
 import { useProjects } from '../../hooks/useProjects'
+import { groupTemplates, CATEGORY_ORDER } from '../../utils/templateUtils'
 import './TemplateEditor.css'
 
 /** Badge colour for a project's stack badge. */
@@ -15,13 +17,18 @@ function badgeClass(badge: string | undefined): string {
 
 /** Look up a template by id from the templates array. */
 function findTemplate(
-  templates: { id: string; name: string; content?: string | undefined }[],
+  templates: {
+    id: string
+    name: string
+    content?: string | undefined
+    category?: TemplateCategory | undefined
+  }[],
   id: string | null,
-): { name: string; content: string } | null {
+): { name: string; content: string; category: TemplateCategory | undefined } | null {
   if (!id) return null
   const t = templates.find((tpl) => tpl.id === id)
   if (!t) return null
-  return { name: t.name, content: t.content ?? '' }
+  return { name: t.name, content: t.content ?? '', category: t.category }
 }
 
 export function TemplateEditor(): React.JSX.Element {
@@ -44,6 +51,10 @@ export function TemplateEditor(): React.JSX.Element {
     const tpl = findTemplate(templates, editingTemplateId)
     return tpl?.content ?? ''
   })
+  const [editingCategory, setEditingCategory] = useState<TemplateCategory | undefined>(() => {
+    const tpl = findTemplate(templates, editingTemplateId)
+    return tpl?.category
+  })
 
   // Sync selection when editingTemplateId changes from sidebar clicks
   // (React "adjusting state during rendering" pattern — no useEffect needed)
@@ -55,6 +66,7 @@ export function TemplateEditor(): React.JSX.Element {
       setSelectedId(editingTemplateId)
       setEditingName(tpl?.name ?? '')
       setEditingContent(tpl?.content ?? '')
+      setEditingCategory(tpl?.category)
     }
   }
 
@@ -64,6 +76,7 @@ export function TemplateEditor(): React.JSX.Element {
     setSelectedId(first.id)
     setEditingName(first.name)
     setEditingContent(first.content ?? '')
+    setEditingCategory(first.category)
   }
 
   // Refs for scroll sync
@@ -80,8 +93,12 @@ export function TemplateEditor(): React.JSX.Element {
   // Dirty check: compare local state to saved data
   const isDirty = useMemo(() => {
     if (!savedTemplate) return editingName.length > 0 || editingContent.length > 0
-    return editingName !== savedTemplate.name || editingContent !== (savedTemplate.content ?? '')
-  }, [savedTemplate, editingName, editingContent])
+    return (
+      editingName !== savedTemplate.name ||
+      editingContent !== (savedTemplate.content ?? '') ||
+      editingCategory !== savedTemplate.category
+    )
+  }, [savedTemplate, editingName, editingContent, editingCategory])
 
   // Line numbers
   const lineCount = useMemo(() => {
@@ -110,12 +127,14 @@ export function TemplateEditor(): React.JSX.Element {
         const current = templates.find((t) => t.id === selectedId)
         const nameChanged = current && editingName !== current.name
         const contentChanged = current && editingContent !== (current.content ?? '')
-        if (nameChanged || contentChanged) {
+        const categoryChanged = current && editingCategory !== current.category
+        if (nameChanged || contentChanged || categoryChanged) {
           void updateTemplate({
             id: selectedId,
             name: editingName,
             description: editingContent.split('\n')[0]?.slice(0, 60) ?? '',
             content: editingContent,
+            category: editingCategory,
           }).catch(() => {})
         }
       }
@@ -123,8 +142,9 @@ export function TemplateEditor(): React.JSX.Element {
       setSelectedId(id)
       setEditingName(tpl?.name ?? '')
       setEditingContent(tpl?.content ?? '')
+      setEditingCategory(tpl?.category)
     },
-    [templates, selectedId, editingName, editingContent, updateTemplate],
+    [templates, selectedId, editingName, editingContent, editingCategory, updateTemplate],
   )
 
   // Create new template
@@ -140,6 +160,7 @@ export function TemplateEditor(): React.JSX.Element {
       setSelectedId(saved.id)
       setEditingName(saved.name)
       setEditingContent(saved.content ?? '')
+      setEditingCategory(undefined)
       // Focus the name input after creation
       requestAnimationFrame(() => {
         nameInputRef.current?.focus()
@@ -159,17 +180,19 @@ export function TemplateEditor(): React.JSX.Element {
         name: editingName,
         description: editingContent.split('\n')[0]?.slice(0, 60) ?? '',
         content: editingContent,
+        category: editingCategory,
       })
     } catch {
       // Notification already dispatched by useProjects
     }
-  }, [selectedId, editingName, editingContent, updateTemplate])
+  }, [selectedId, editingName, editingContent, editingCategory, updateTemplate])
 
   // Discard changes
   const handleDiscard = useCallback(() => {
     if (savedTemplate) {
       setEditingName(savedTemplate.name)
       setEditingContent(savedTemplate.content ?? '')
+      setEditingCategory(savedTemplate.category)
     }
   }, [savedTemplate])
 
@@ -185,10 +208,12 @@ export function TemplateEditor(): React.JSX.Element {
         setSelectedId(first.id)
         setEditingName(first.name)
         setEditingContent(first.content ?? '')
+        setEditingCategory(first.category)
       } else {
         setSelectedId(null)
         setEditingName('')
         setEditingContent('')
+        setEditingCategory(undefined)
       }
     } catch {
       // Notification already dispatched by useProjects
@@ -225,19 +250,23 @@ export function TemplateEditor(): React.JSX.Element {
           </button>
         </div>
         <div className="te-list-body">
-          <div className="te-section-label">All templates</div>
-          {templates.map((t) => (
-            <div
-              key={t.id}
-              className={`te-row ${t.id === selectedId ? 'active' : ''}`}
-              onClick={() => handleSelect(t.id)}
-            >
-              <div className="te-row-icon">{'\u{1F4CB}'}</div>
-              <div className="te-row-body">
-                <div className="te-row-name">{t.name}</div>
-                <div className="te-row-desc">{t.description}</div>
-                <TemplateUsageLabel templateId={t.id} />
-              </div>
+          {groupTemplates(templates).map((group) => (
+            <div key={group.category} className="te-group">
+              <div className="te-group-label">{group.category}</div>
+              {group.templates.map((t) => (
+                <div
+                  key={t.id}
+                  className={`te-row ${t.id === selectedId ? 'active' : ''}`}
+                  onClick={() => handleSelect(t.id)}
+                >
+                  <div className="te-row-icon">{'\u{1F4CB}'}</div>
+                  <div className="te-row-body">
+                    <div className="te-row-name">{t.name}</div>
+                    <div className="te-row-desc">{t.description}</div>
+                    <TemplateUsageLabel templateId={t.id} />
+                  </div>
+                </div>
+              ))}
             </div>
           ))}
         </div>
@@ -257,6 +286,21 @@ export function TemplateEditor(): React.JSX.Element {
                 value={editingName}
                 onChange={(e) => setEditingName(e.target.value)}
               />
+              <div className="te-namebar-sep" />
+              <select
+                className="te-category-select"
+                value={editingCategory ?? ''}
+                onChange={(e) =>
+                  setEditingCategory((e.target.value as TemplateCategory) || undefined)
+                }
+              >
+                <option value="">No category</option>
+                {CATEGORY_ORDER.filter((c) => c !== 'Other').map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
               <div className="te-namebar-sep" />
               <span className="te-char-count">{editingContent.length} chars</span>
             </div>

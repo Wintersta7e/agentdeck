@@ -1,5 +1,6 @@
 import { useAppStore } from '../../store/appStore'
 import type { Project } from '../../../shared/types'
+import { groupTemplates } from '../../utils/templateUtils'
 import './Sidebar.css'
 
 function badgeClass(badge: string): string {
@@ -131,13 +132,18 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
             +
           </button>
         </div>
-        {templates.map((t) => (
-          <div key={t.id} className="sidebar-item" onClick={() => openTemplateEditor(t.id)}>
-            <span style={{ fontSize: '11px' }}>{'\u{1F4CB}'}</span>
-            <div className="sidebar-item-info">
-              <div className="sidebar-item-name">{t.name}</div>
-              <div className="sidebar-item-sub">{t.description}</div>
-            </div>
+        {groupTemplates(templates).map((group) => (
+          <div key={group.category} className="sidebar-tpl-group">
+            <div className="sidebar-group-label">{group.category}</div>
+            {group.templates.map((t) => (
+              <div key={t.id} className="sidebar-item" onClick={() => openTemplateEditor(t.id)}>
+                <span style={{ fontSize: '11px' }}>{'\u{1F4CB}'}</span>
+                <div className="sidebar-item-info">
+                  <div className="sidebar-item-name">{t.name}</div>
+                  <div className="sidebar-item-sub">{t.description}</div>
+                </div>
+              </div>
+            ))}
           </div>
         ))}
       </div>

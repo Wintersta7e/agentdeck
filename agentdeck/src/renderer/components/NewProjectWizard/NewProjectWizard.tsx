@@ -8,6 +8,7 @@ import type {
 } from '../../../shared/types'
 import { useProjects } from '../../hooks/useProjects'
 import { useAppStore } from '../../store/appStore'
+import { groupTemplates } from '../../utils/templateUtils'
 import { PathInput } from '../shared/PathInput'
 import { Toggle } from '../shared/Toggle'
 import { AgentSelector } from '../shared/AgentSelector'
@@ -398,24 +399,29 @@ export function NewProjectWizard({ onCreateProject }: NewProjectWizardProps): Re
               </div>
               {templates.length > 0 ? (
                 <div className="template-select-list">
-                  {templates.map((tpl) => {
-                    const isSelected = (wizardData.attachedTemplates ?? []).includes(tpl.id)
-                    return (
-                      <div
-                        key={tpl.id}
-                        className={`template-opt ${isSelected ? 'selected' : ''}`}
-                        onClick={() => toggleTemplate(tpl.id)}
-                      >
-                        <div className="template-checkbox">{isSelected ? '\u2713' : ''}</div>
-                        <div className="template-opt-body">
-                          <div className="template-opt-name">{tpl.name}</div>
-                          {tpl.description && (
-                            <div className="template-opt-desc">{tpl.description}</div>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
+                  {groupTemplates(templates).map((group) => (
+                    <div key={group.category} className="template-group">
+                      <div className="template-group-label">{group.category}</div>
+                      {group.templates.map((tpl) => {
+                        const isSelected = (wizardData.attachedTemplates ?? []).includes(tpl.id)
+                        return (
+                          <div
+                            key={tpl.id}
+                            className={`template-opt ${isSelected ? 'selected' : ''}`}
+                            onClick={() => toggleTemplate(tpl.id)}
+                          >
+                            <div className="template-checkbox">{isSelected ? '\u2713' : ''}</div>
+                            <div className="template-opt-body">
+                              <div className="template-opt-name">{tpl.name}</div>
+                              {tpl.description && (
+                                <div className="template-opt-desc">{tpl.description}</div>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <div className="detection-empty">
