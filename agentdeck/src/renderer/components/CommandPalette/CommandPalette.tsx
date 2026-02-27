@@ -22,6 +22,7 @@ interface PaletteItem {
 
 interface CommandPaletteProps {
   onOpenProject: (project: Project) => void
+  onAbout?: (() => void) | undefined
 }
 
 const SCOPE_TABS: { label: string; value: ScopeTab }[] = [
@@ -58,15 +59,18 @@ function highlightMatch(text: string, query: string): React.JSX.Element {
  * Wrapper component that conditionally renders the palette inner.
  * By unmounting/remounting PaletteInner, we get fresh state each time the palette opens.
  */
-export function CommandPalette({ onOpenProject }: CommandPaletteProps): React.JSX.Element | null {
+export function CommandPalette({
+  onOpenProject,
+  onAbout,
+}: CommandPaletteProps): React.JSX.Element | null {
   const isOpen = useAppStore((s) => s.commandPaletteOpen)
 
   if (!isOpen) return null
 
-  return <PaletteInner onOpenProject={onOpenProject} />
+  return <PaletteInner onOpenProject={onOpenProject} onAbout={onAbout} />
 }
 
-function PaletteInner({ onOpenProject }: CommandPaletteProps): React.JSX.Element {
+function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JSX.Element {
   const closePalette = useAppStore((s) => s.closeCommandPalette)
   const sessions = useAppStore((s) => s.sessions)
   const projects = useAppStore((s) => s.projects)
@@ -173,6 +177,14 @@ function PaletteInner({ onOpenProject }: CommandPaletteProps): React.JSX.Element
       detail: 'App settings, agents, keybindings',
       kbd: 'Ctrl+,',
     })
+    items.push({
+      type: 'action',
+      id: 'action-about',
+      icon: '\u24D8', // info circle
+      iconClass: '',
+      name: 'About',
+      detail: 'Version info and credits',
+    })
 
     return items
   }, [sessions, projects, templates])
@@ -267,12 +279,14 @@ function PaletteInner({ onOpenProject }: CommandPaletteProps): React.JSX.Element
             if (firstProject) {
               useAppStore.getState().openSettings(firstProject.id)
             }
+          } else if (item.id === 'action-about') {
+            onAbout?.()
           }
           break
         }
       }
     },
-    [closePalette, onOpenProject],
+    [closePalette, onOpenProject, onAbout],
   )
 
   // Keyboard navigation

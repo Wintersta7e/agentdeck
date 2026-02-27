@@ -46,6 +46,15 @@ contextBridge.exposeInMainWorld('agentDeck', {
       return () => ipcRenderer.removeListener(channel, handler)
     },
   },
+  app: {
+    version: () => ipcRenderer.invoke('app:version') as Promise<string>,
+    versions: () =>
+      ipcRenderer.invoke('app:versions') as Promise<{
+        electron: string
+        chrome: string
+        node: string
+      }>,
+  },
   window: {
     close: () => ipcRenderer.invoke('window:close'),
     minimize: () => ipcRenderer.invoke('window:minimize'),

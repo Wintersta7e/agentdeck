@@ -130,6 +130,14 @@ function registerIpcHandlers(store: AppStore): void {
     return 1.0
   })
 
+  /* ── App info ─────────────────────────────────────────────────────── */
+  ipcMain.handle('app:version', () => app.getVersion())
+  ipcMain.handle('app:versions', () => ({
+    electron: process.versions.electron,
+    chrome: process.versions.chrome,
+    node: process.versions.node,
+  }))
+
   /* ── Agent detection (async, non-blocking) ──────────────────────── */
   ipcMain.handle('agents:check', async () => {
     const { execFile } = await import('child_process')

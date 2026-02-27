@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Titlebar } from './components/Titlebar/Titlebar'
 import { Sidebar } from './components/Sidebar/Sidebar'
 import { StatusBar } from './components/StatusBar/StatusBar'
@@ -9,6 +9,7 @@ import { NewProjectWizard } from './components/NewProjectWizard/NewProjectWizard
 import { ProjectSettings } from './components/ProjectSettings/ProjectSettings'
 import { CommandPalette } from './components/CommandPalette/CommandPalette'
 import { TemplateEditor } from './components/TemplateEditor/TemplateEditor'
+import { AboutDialog } from './components/AboutDialog/AboutDialog'
 import { useAppStore } from './store/appStore'
 import { useProjects } from './hooks/useProjects'
 import type { ActivityEvent, Project } from '../shared/types'
@@ -22,6 +23,10 @@ export function App(): React.JSX.Element {
   const rightPanelOpen = useAppStore((s) => s.rightPanelOpen)
   const sessions = useAppStore((s) => s.sessions)
   const sessionIds = useMemo(() => Object.keys(sessions), [sessions])
+
+  const [aboutOpen, setAboutOpen] = useState(false)
+  const openAbout = useCallback(() => setAboutOpen(true), [])
+  const closeAbout = useCallback(() => setAboutOpen(false), [])
 
   const { updateProject } = useProjects()
 
@@ -174,8 +179,9 @@ export function App(): React.JSX.Element {
           </div>
         </div>
       </div>
-      <StatusBar />
-      <CommandPalette onOpenProject={handleOpenProject} />
+      <StatusBar onAboutClick={openAbout} />
+      <CommandPalette onOpenProject={handleOpenProject} onAbout={openAbout} />
+      {aboutOpen && <AboutDialog onClose={closeAbout} />}
     </div>
   )
 }

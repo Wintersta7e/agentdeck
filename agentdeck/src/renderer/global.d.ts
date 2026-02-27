@@ -3,6 +3,10 @@ import type { ActivityEvent, DetectedStack, Project, Template } from '../shared/
 declare global {
   interface Window {
     agentDeck: {
+      app: {
+        version: () => Promise<string>
+        versions: () => Promise<{ electron: string; chrome: string; node: string }>
+      }
       pty: {
         spawn: (
           sessionId: string,
