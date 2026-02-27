@@ -48,6 +48,10 @@
   --purple-dim: rgba(155, 114, 207, 0.1);
   --purple-border: rgba(155, 114, 207, 0.2);
 
+  /* RGB triplets for rgba() usage */
+  --accent-rgb: 245, 166, 35;
+  --bg1-rgb: 17, 18, 19;
+
   /* Shape */
   --r: 4px;
 
@@ -79,6 +83,8 @@
   --accent-glow2: rgba(0, 212, 255, 0.05);
   --accent-border: rgba(0, 212, 255, 0.35);
   --accent-hover: rgba(0, 212, 255, 0.45);
+  --accent-rgb: 0, 212, 255;
+  --bg1-rgb: 12, 16, 32;
   --green: #00e5a0;
   --green-dim: rgba(0, 229, 160, 0.12);
   --green-border: rgba(0, 229, 160, 0.2);
@@ -106,6 +112,8 @@
   --accent-glow2: rgba(167, 139, 250, 0.05);
   --accent-border: rgba(167, 139, 250, 0.35);
   --accent-hover: rgba(167, 139, 250, 0.45);
+  --accent-rgb: 167, 139, 250;
+  --bg1-rgb: 15, 15, 28;
   --green: #34d399;
   --green-dim: rgba(52, 211, 153, 0.12);
   --green-border: rgba(52, 211, 153, 0.2);
@@ -133,6 +141,8 @@
   --accent-glow2: rgba(96, 165, 250, 0.05);
   --accent-border: rgba(96, 165, 250, 0.35);
   --accent-hover: rgba(96, 165, 250, 0.45);
+  --accent-rgb: 96, 165, 250;
+  --bg1-rgb: 16, 18, 24;
   --green: #4ade80;
   --green-dim: rgba(74, 222, 128, 0.12);
   --green-border: rgba(74, 222, 128, 0.2);
