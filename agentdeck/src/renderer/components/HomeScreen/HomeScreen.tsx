@@ -115,6 +115,7 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
 
   return (
     <div className="home-main">
+      <div className="home-aurora" />
       <div className="home-content">
         <div className="greeting">
           <div className="greeting-eyebrow">{formatDate()}</div>

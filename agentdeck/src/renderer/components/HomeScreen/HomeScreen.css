@@ -453,6 +453,46 @@
   background: transparent;
 }
 
+/* Aurora gradient background */
+@keyframes auroraShift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.home-aurora {
+  position: absolute;
+  top: -50%;
+  left: -25%;
+  width: 150%;
+  height: 200%;
+  background:
+    radial-gradient(
+      ellipse at 30% 20%,
+      rgba(var(--accent-rgb, 245, 166, 35), 0.04) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse at 70% 80%,
+      rgba(var(--accent-rgb, 245, 166, 35), 0.03) 0%,
+      transparent 50%
+    );
+  background-size: 200% 200%;
+  animation: auroraShift 20s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-aurora {
+    animation: none;
+  }
+}
+
 /* Staggered reveal animation */
 @keyframes fadeSlideUp {
   from {
