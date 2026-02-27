@@ -6,6 +6,7 @@ declare global {
       app: {
         version: () => Promise<string>
         versions: () => Promise<{ electron: string; chrome: string; node: string }>
+        wslUsername: () => Promise<string>
       }
       pty: {
         spawn: (

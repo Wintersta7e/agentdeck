@@ -81,8 +81,13 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
   const sessions = useAppStore((s) => s.sessions)
   const openWizard = useAppStore((s) => s.openWizard)
   const [agentStatus, setAgentStatus] = useState<Record<string, boolean>>({})
+  const [username, setUsername] = useState('')
 
   useEffect(() => {
+    window.agentDeck.app
+      .wslUsername()
+      .then(setUsername)
+      .catch(() => {})
     // Errors are logged to console; useProjects handles user-facing notifications
     window.agentDeck.agents
       .check()
@@ -122,7 +127,7 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
         <div className="greeting">
           <div className="greeting-eyebrow">{formatDate()}</div>
           <div className="greeting-headline">
-            {getGreeting()}, <span>rooty</span>.
+            {getGreeting()}, <span>{username || 'operator'}</span>.
           </div>
           <div className="greeting-sub">
             {activeSessions} session{activeSessions !== 1 ? 's' : ''} running

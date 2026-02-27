@@ -54,6 +54,7 @@ contextBridge.exposeInMainWorld('agentDeck', {
         chrome: string
         node: string
       }>,
+    wslUsername: () => ipcRenderer.invoke('app:wslUsername') as Promise<string>,
   },
   window: {
     close: () => ipcRenderer.invoke('window:close'),

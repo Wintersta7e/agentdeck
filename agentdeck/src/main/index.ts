@@ -164,6 +164,16 @@ function registerIpcHandlers(store: AppStore): void {
     return Object.fromEntries(entries.map(([name], i) => [name, results[i]]))
   })
 
+  /* ── WSL username ─────────────────────────────────────────────── */
+  ipcMain.handle('app:wslUsername', async () => {
+    const { execFile } = await import('child_process')
+    return new Promise<string>((resolve) => {
+      execFile('wsl.exe', ['--', 'whoami'], { timeout: 5000 }, (err, stdout) => {
+        resolve(err ? '' : stdout.trim())
+      })
+    })
+  })
+
   /* ── Project utilities ──────────────────────────────────────────── */
   ipcMain.handle('projects:detectStack', (_, p: string, distro?: string) => {
     return detectStack(p, distro)
