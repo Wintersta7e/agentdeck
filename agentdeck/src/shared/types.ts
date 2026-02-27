@@ -49,11 +49,22 @@ export interface Project {
   shell?: string | undefined
 }
 
+export type TemplateCategory =
+  | 'Orient'
+  | 'Review'
+  | 'Fix'
+  | 'Test'
+  | 'Refactor'
+  | 'Debug'
+  | 'Docs'
+  | 'Git'
+
 export interface Template {
   id: string
   name: string
   description: string
   content?: string | undefined
+  category?: TemplateCategory | undefined
 }
 
 export type SessionStatus = 'starting' | 'running' | 'error' | 'exited'

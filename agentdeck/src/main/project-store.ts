@@ -1,7 +1,7 @@
 import Store from 'electron-store'
 import { ipcMain, safeStorage } from 'electron'
 import { randomUUID } from 'crypto'
-import type { EnvVar, Project, Template } from '../shared/types'
+import type { EnvVar, Project, Template, TemplateCategory } from '../shared/types'
 import { createLogger } from './logger'
 
 const log = createLogger('project-store')
@@ -45,6 +45,7 @@ export interface StoreSchema {
     zoomAutoDetected?: boolean | number
     theme?: string
     visibleAgents?: string[]
+    seeded?: boolean
   }
 }
 
@@ -140,4 +141,98 @@ export function createProjectStore(): Store<StoreSchema> {
   })
 
   return store
+}
+
+const SEED_TEMPLATES: Omit<Template, 'id'>[] = [
+  {
+    name: 'Codebase tour',
+    category: 'Orient' as TemplateCategory,
+    description: 'Understand the architecture and key modules of an unfamiliar project',
+    content:
+      'Give me a tour of this codebase. Start with the overall architecture and main entry points, then walk through the key modules and how they connect. Note anything unusual, any obvious tech debt, and anything I should know before making changes.',
+  },
+  {
+    name: 'Before I start',
+    category: 'Orient' as TemplateCategory,
+    description: 'Summarise current project state before making changes',
+    content:
+      "Before I make any changes: summarise the current state of this project. What's the stack, what does it do, what's the folder structure, and are there any known issues, TODOs, or incomplete work I should be aware of?",
+  },
+  {
+    name: 'Review this file',
+    category: 'Review' as TemplateCategory,
+    description: 'Thorough review of the current file for bugs and clarity',
+    content:
+      "Review the current file. Look for logic errors, edge cases that aren't handled, anything that could break under unexpected input, and any code that's harder to read than it needs to be. Be direct — don't soften findings.",
+  },
+  {
+    name: 'Review recent changes',
+    category: 'Review' as TemplateCategory,
+    description: 'Review everything changed in this session',
+    content:
+      "Review the changes I've made in this session. Does the implementation match the intent? Are there any bugs, missing error handling, or cases I haven't considered? Suggest improvements.",
+  },
+  {
+    name: 'Fix failing tests',
+    category: 'Fix' as TemplateCategory,
+    description: 'Diagnose and fix failing tests without weakening assertions',
+    content:
+      "The tests are failing. Diagnose why, fix the root cause, and make sure you're not just making the tests pass by weakening the assertions. Explain what was wrong.",
+  },
+  {
+    name: 'Write tests',
+    category: 'Test' as TemplateCategory,
+    description: 'Write tests covering happy path, edge cases and failure modes',
+    content:
+      'Write tests for the code in this session. Cover the happy path, edge cases, and failure modes. Use the existing test style and framework already in the project.',
+  },
+  {
+    name: 'Clean this up',
+    category: 'Refactor' as TemplateCategory,
+    description: 'Refactor for clarity without changing behaviour',
+    content:
+      "Refactor the current file to improve clarity and maintainability. Don't change behaviour — just make it easier to read and work with. Explain the key changes you made and why.",
+  },
+  {
+    name: 'Explain this error',
+    category: 'Debug' as TemplateCategory,
+    description: 'Trace an error or unexpected output to its root cause',
+    content:
+      "Read the error or unexpected output above. Explain what's actually happening, trace it to the root cause, and tell me what needs to change to fix it properly.",
+  },
+  {
+    name: 'Update documentation',
+    category: 'Docs' as TemplateCategory,
+    description: 'Update README and inline docs to match recent changes',
+    content:
+      "Update the documentation for the code changed in this session. If there's a README, update the relevant sections. If there are inline comments or docstrings, update those too. Keep it accurate and concise.",
+  },
+  {
+    name: 'Commit message',
+    category: 'Git' as TemplateCategory,
+    description: 'Write a conventional commit message for this session',
+    content:
+      'Write a commit message for the changes in this session. Use the conventional commits format. Be specific about what changed and why — not just what files were touched.',
+  },
+]
+
+export function seedTemplates(store: AppStore): void {
+  const prefs = store.get('appPrefs')
+  if (prefs.seeded) return
+
+  const existing = store.get('templates')
+  if (existing.length > 0) {
+    store.set('appPrefs', { ...prefs, seeded: true })
+    log.info('Existing templates found — skipping seed, setting flag')
+    return
+  }
+
+  const seeded: Template[] = SEED_TEMPLATES.map((t) => ({
+    ...t,
+    id: `seed-${randomUUID()}`,
+  }))
+
+  store.set('templates', seeded)
+  store.set('appPrefs', { ...prefs, seeded: true })
+  log.info(`Seeded ${seeded.length} built-in templates`)
 }
