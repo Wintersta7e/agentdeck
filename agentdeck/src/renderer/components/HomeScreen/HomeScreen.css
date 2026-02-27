@@ -46,6 +46,9 @@
   font-weight: 800;
   color: var(--text0);
   line-height: 1.2;
+  text-shadow:
+    0 0 20px rgba(var(--accent-rgb, 245, 166, 35), 0.3),
+    0 0 40px rgba(var(--accent-rgb, 245, 166, 35), 0.1);
 }
 .greeting-headline span {
   color: var(--amber);

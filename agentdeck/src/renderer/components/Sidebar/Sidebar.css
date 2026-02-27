@@ -75,8 +75,10 @@
 }
 .dot-running {
   background: var(--green);
-  box-shadow: 0 0 6px var(--green);
-  animation: pulse-dot 2s infinite;
+  box-shadow:
+    0 0 6px var(--green),
+    0 0 12px rgba(74, 222, 128, 0.3);
+  animation: pulse-dot 2s ease-in-out infinite;
 }
 .dot-idle {
   background: var(--text3);
