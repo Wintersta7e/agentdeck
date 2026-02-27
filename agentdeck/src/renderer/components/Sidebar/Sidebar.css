@@ -140,42 +140,6 @@
   border-radius: 2px;
   flex-shrink: 0;
 }
-.badge-java {
-  background: rgba(229, 89, 52, 0.2);
-  color: #e55934;
-}
-.badge-js {
-  background: rgba(76, 175, 125, 0.2);
-  color: var(--green);
-}
-.badge-ts {
-  background: rgba(49, 120, 198, 0.2);
-  color: #3178c6;
-}
-.badge-python {
-  background: rgba(255, 212, 59, 0.2);
-  color: #ffd43b;
-}
-.badge-rust {
-  background: rgba(206, 100, 50, 0.2);
-  color: #ce6432;
-}
-.badge-go {
-  background: rgba(0, 173, 216, 0.2);
-  color: #00add8;
-}
-.badge-net {
-  background: rgba(91, 45, 168, 0.2);
-  color: #512bd4;
-}
-.badge-agent {
-  background: rgba(155, 114, 207, 0.2);
-  color: var(--purple);
-}
-.badge-other {
-  background: rgba(110, 107, 102, 0.2);
-  color: var(--text2);
-}
 
 .sidebar-divider {
   height: 1px;
