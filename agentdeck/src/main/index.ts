@@ -1,9 +1,9 @@
-import { app, BrowserWindow, dialog, ipcMain } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, screen } from 'electron'
 import * as fs from 'fs'
 import * as path from 'path'
 import { join } from 'path'
 import { createPtyManager, type PtyManager } from './pty-manager'
-import { createProjectStore } from './project-store'
+import { createProjectStore, type AppStore } from './project-store'
 import { detectStack } from './detect-stack'
 import { getDefaultDistro, wslPathToWindows } from './wsl-utils'
 import { initLogger, createLogger } from './logger'
@@ -12,6 +12,7 @@ const log = createLogger('app')
 
 let mainWindow: BrowserWindow | null = null
 let ptyManager: PtyManager | null = null
+let appStore: AppStore | null = null
 
 const agentBinaries: Record<string, string> = {
   'claude-code': 'claude',
@@ -45,6 +46,21 @@ function createWindow(): void {
     mainWindow?.show()
   })
 
+  mainWindow.webContents.once('did-finish-load', () => {
+    const prefs = appStore?.get('appPrefs')
+    let zoom = prefs?.zoomFactor ?? 1.0
+    // Auto-detect high-DPI on first launch only
+    if (!prefs?.zoomAutoDetected && mainWindow) {
+      const display = screen.getPrimaryDisplay()
+      // 4K (3840×2160+) or high scale factor → default to 1.3
+      if (display.size.width >= 3840 || display.scaleFactor >= 2) {
+        zoom = 1.3
+      }
+      appStore?.set('appPrefs', { ...prefs, zoomFactor: zoom, zoomAutoDetected: true })
+    }
+    if (zoom !== 1.0) mainWindow?.webContents.setZoomFactor(zoom)
+  })
+
   if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
@@ -61,7 +77,7 @@ function createWindow(): void {
   })
 }
 
-function registerIpcHandlers(): void {
+function registerIpcHandlers(store: AppStore): void {
   /* ── PTY handlers ───────────────────────────────────────────────── */
   ipcMain.handle(
     'pty:spawn',
@@ -98,6 +114,20 @@ function registerIpcHandlers(): void {
     } else {
       mainWindow?.maximize()
     }
+  })
+
+  /* ── Zoom ─────────────────────────────────────────────────────────── */
+  ipcMain.handle('zoom:get', () => store.get('appPrefs').zoomFactor)
+  ipcMain.handle('zoom:set', (_, factor: number) => {
+    const clamped = Math.round(Math.max(0.5, Math.min(2.5, factor)) * 10) / 10
+    store.set('appPrefs', { ...store.get('appPrefs'), zoomFactor: clamped })
+    mainWindow?.webContents.setZoomFactor(clamped)
+    return clamped
+  })
+  ipcMain.handle('zoom:reset', () => {
+    store.set('appPrefs', { ...store.get('appPrefs'), zoomFactor: 1.0 })
+    mainWindow?.webContents.setZoomFactor(1.0)
+    return 1.0
   })
 
   /* ── Agent detection (async, non-blocking) ──────────────────────── */
@@ -177,8 +207,8 @@ function registerIpcHandlers(): void {
 app.whenReady().then(() => {
   initLogger()
   log.info('App ready')
-  createProjectStore()
-  registerIpcHandlers()
+  appStore = createProjectStore()
+  registerIpcHandlers(appStore)
 
   /* ── Renderer log relay ────────────────────────────────────────── */
   ipcMain.handle(

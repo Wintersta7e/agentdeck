@@ -10,6 +10,7 @@ export function StatusBar(): React.JSX.Element {
   const paneLayout = useAppStore((s) => s.paneLayout)
   const rightPanelOpen = useAppStore((s) => s.rightPanelOpen)
   const openCommandPalette = useAppStore((s) => s.openCommandPalette)
+  const zoomFactor = useAppStore((s) => s.zoomFactor)
 
   const activeCount = Object.values(sessions).filter((s) => s.status === 'running').length
   const layoutLabel = paneLayout === 1 ? 'single pane' : `${String(paneLayout)}-pane split`
@@ -48,6 +49,12 @@ export function StatusBar(): React.JSX.Element {
         </>
       )}
       <div className="status-right">
+        {zoomFactor !== 1.0 && (
+          <>
+            <span className="status-item">{Math.round(zoomFactor * 100)}%</span>
+            <span className="status-sep">|</span>
+          </>
+        )}
         <button className="status-cmd" onClick={openCommandPalette}>
           Ctrl+K
         </button>

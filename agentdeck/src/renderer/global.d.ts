@@ -26,6 +26,11 @@ declare global {
         minimize: () => Promise<void>
         maximize: () => Promise<void>
       }
+      zoom: {
+        get: () => Promise<number>
+        set: (factor: number) => Promise<number>
+        reset: () => Promise<number>
+      }
       store: {
         getProjects: () => Promise<Project[]>
         saveProject: (project: Partial<Project>) => Promise<Project>

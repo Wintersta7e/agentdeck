@@ -51,6 +51,11 @@ contextBridge.exposeInMainWorld('agentDeck', {
     minimize: () => ipcRenderer.invoke('window:minimize'),
     maximize: () => ipcRenderer.invoke('window:maximize'),
   },
+  zoom: {
+    get: () => ipcRenderer.invoke('zoom:get') as Promise<number>,
+    set: (factor: number) => ipcRenderer.invoke('zoom:set', factor) as Promise<number>,
+    reset: () => ipcRenderer.invoke('zoom:reset') as Promise<number>,
+  },
   store: {
     getProjects: () => ipcRenderer.invoke('store:getProjects'),
     saveProject: (project: unknown) => ipcRenderer.invoke('store:saveProject', project),
