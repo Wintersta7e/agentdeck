@@ -5,13 +5,23 @@ import { App } from './App'
 import './styles/tokens.css'
 import './styles/global.css'
 
-const root = document.getElementById('root')
-if (!root) throw new Error('Root element #root not found')
+async function initAndRender(): Promise<void> {
+  // Apply persisted theme before first render to avoid flash
+  const theme = await window.agentDeck.theme.get()
+  if (theme) {
+    document.documentElement.dataset.theme = theme
+  }
 
-createRoot(root).render(
-  <StrictMode>
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
-  </StrictMode>,
-)
+  const root = document.getElementById('root')
+  if (!root) throw new Error('Root element #root not found')
+
+  createRoot(root).render(
+    <StrictMode>
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    </StrictMode>,
+  )
+}
+
+initAndRender()
