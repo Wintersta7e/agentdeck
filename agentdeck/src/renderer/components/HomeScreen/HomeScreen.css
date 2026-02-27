@@ -182,12 +182,48 @@
   background: var(--border);
   transition: background 0.15s;
 }
+.project-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -75%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(var(--accent-rgb, 245, 166, 35), 0.06),
+    transparent
+  );
+  transform: skewX(-15deg);
+  transition: left 0.5s ease;
+  pointer-events: none;
+  z-index: 1;
+}
 .project-card:hover {
   border-color: var(--border-bright);
   background: var(--bg3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 .project-card:hover::before {
   background: var(--amber);
+}
+.project-card:hover::after {
+  left: 125%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .project-card {
+    transition: none;
+  }
+  .project-card:hover {
+    transform: none;
+    box-shadow: none;
+  }
+  .project-card::after {
+    display: none;
+  }
 }
 .project-card.running::before {
   background: var(--green);
