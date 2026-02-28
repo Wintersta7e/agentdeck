@@ -81,7 +81,7 @@ const AGENTS: AgentInfo[] = [
   { name: 'claude-code', icon: '\u2B21', desc: 'Anthropic CLI' },
   { name: 'codex', icon: '\u25C8', desc: 'OpenAI CLI' },
   { name: 'aider', icon: '\u25B8', desc: 'Git-aware agent' },
-  { name: 'goose', icon: '\u25C6', desc: 'Block open-source agent' },
+  { name: 'goose', icon: '\u25C6', desc: 'Open-source AI agent' },
   { name: 'gemini-cli', icon: '\u2726', desc: 'Google AI agent' },
   { name: 'amazon-q', icon: '\u25C9', desc: 'AWS CLI agent' },
   { name: 'opencode', icon: '\u25CB', desc: 'Multi-model agent' },
@@ -309,14 +309,12 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
             <div key={a.name} className={`agent-card ${agentStatus[a.name] ? 'active' : ''}`}>
               <div className="agent-card-icon">{a.icon}</div>
               <div className="agent-card-name">{a.name}</div>
-              <div className="agent-card-desc">
-                {a.desc}
-                {agentStatus[a.name] !== undefined && (
-                  <span className={agentStatus[a.name] ? 'agent-installed' : 'agent-missing'}>
-                    {agentStatus[a.name] ? ' \u2713 installed' : ' \u2717 not found'}
-                  </span>
-                )}
-              </div>
+              <div className="agent-card-desc">{a.desc}</div>
+              {agentStatus[a.name] !== undefined && (
+                <div className={agentStatus[a.name] ? 'agent-installed' : 'agent-missing'}>
+                  {agentStatus[a.name] ? '\u2713 installed' : '\u2717 not found'}
+                </div>
+              )}
             </div>
           ))}
           <div className="agent-card add-agent" onClick={() => openCommandPalette('agents')}>
