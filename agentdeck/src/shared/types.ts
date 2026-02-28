@@ -82,7 +82,7 @@ export interface Session {
   startedAt: number
 }
 
-export type ViewType = 'home' | 'session' | 'wizard' | 'settings' | 'template-editor'
+export type ViewType = 'home' | 'session' | 'wizard' | 'settings' | 'template-editor' | 'workflow'
 
 export type PaneLayout = 1 | 2 | 3
 
@@ -103,4 +103,76 @@ export interface DetectedStack {
   suggestedAgent: AgentType
   suggestedCommands: string[]
   contextFiles: string[]
+}
+
+/* ── Workflow Types ─────────────────────────────── */
+
+export type WorkflowNodeType = 'agent' | 'shell' | 'checkpoint'
+
+export interface WorkflowNode {
+  id: string
+  type: WorkflowNodeType
+  name: string
+  x: number
+  y: number
+
+  // agent nodes
+  agent?: AgentType | undefined
+  agentFlags?: string | undefined
+  prompt?: string | undefined
+
+  // shell nodes
+  command?: string | undefined
+
+  // checkpoint nodes
+  message?: string | undefined
+}
+
+export interface WorkflowEdge {
+  id: string
+  fromNodeId: string
+  toNodeId: string
+}
+
+export interface Workflow {
+  id: string
+  name: string
+  description?: string | undefined
+  nodes: WorkflowNode[]
+  edges: WorkflowEdge[]
+  projectId?: string | undefined
+  createdAt: number
+  updatedAt: number
+}
+
+export interface WorkflowMeta {
+  id: string
+  name: string
+  description?: string | undefined
+  nodeCount: number
+  updatedAt: number
+}
+
+export type WorkflowNodeStatus = 'idle' | 'running' | 'done' | 'error' | 'paused'
+export type WorkflowStatus = 'idle' | 'running' | 'done' | 'error' | 'stopped'
+
+export type WorkflowEventType =
+  | 'workflow:started'
+  | 'workflow:stopped'
+  | 'workflow:done'
+  | 'workflow:error'
+  | 'node:started'
+  | 'node:output'
+  | 'node:done'
+  | 'node:error'
+  | 'node:paused'
+  | 'node:resumed'
+
+export interface WorkflowEvent {
+  id: string
+  type: WorkflowEventType
+  workflowId: string
+  nodeId?: string | undefined
+  message: string
+  timestamp: number
 }
