@@ -66,6 +66,21 @@ export function App(): React.JSX.Element {
     return () => window.removeEventListener('mousemove', handler)
   }, [])
 
+  // File drag-and-drop: preload handles the DOM drop event (File.path is only
+  // available in the preload world with contextIsolation). Main process converts
+  // paths to WSL and sends them here via IPC.
+  useEffect(() => {
+    const unsub = window.agentDeck.onFileDrop((wslPaths: string[]) => {
+      const state = useAppStore.getState()
+      if (state.currentView !== 'session') return
+      const sid = state.paneSessions[state.focusedPane]
+      if (!sid) return
+      const escaped = wslPaths.map((p) => (p.includes(' ') ? `"${p}"` : p)).join(' ')
+      window.agentDeck.pty.write(sid, escaped)
+    })
+    return unsub
+  }, [])
+
   // Load saved zoom level on mount
   useEffect(() => {
     window.agentDeck.zoom.get().then((factor) => {

@@ -26,6 +26,16 @@ const agentBinaries: Record<string, string> = {
 
 const ALLOWED_FILES = new Set(['CLAUDE.md', 'AGENTS.md', 'README.md'])
 
+/** Convert a Windows path (C:\Users\...) to WSL (/mnt/c/Users/...) */
+function toWslPathMain(p: string): string {
+  const normalized = p.replace(/\\/g, '/')
+  const match = normalized.match(/^([A-Za-z]):\/(.*)$/)
+  if (match && match[1] && match[2] !== undefined) {
+    return `/mnt/${match[1].toLowerCase()}/${match[2]}`
+  }
+  return normalized
+}
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -81,6 +91,29 @@ function createWindow(): void {
 
   mainWindow.webContents.on('render-process-gone', () => {
     ptyManager?.killAll()
+  })
+
+  // Intercept file drops: the browser tries to navigate or open a new window
+  // for the dropped file's file:// URL. Catch both pathways.
+  const handleFileUrl = (url: string): void => {
+    if (!url.startsWith('file://')) return
+    let pathname = decodeURIComponent(new URL(url).pathname)
+    if (/^\/[A-Za-z]:/.test(pathname)) pathname = pathname.slice(1)
+    const wslPath = toWslPathMain(pathname)
+    log.info(`File drop intercepted: ${url} → ${wslPath}`)
+    mainWindow?.webContents.send('file-dropped', [wslPath])
+  }
+
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (url.startsWith('file://')) {
+      event.preventDefault()
+      handleFileUrl(url)
+    }
+  })
+
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    handleFileUrl(url)
+    return { action: 'deny' }
   })
 }
 
@@ -341,6 +374,38 @@ app.whenReady().then(() => {
   appStore = createProjectStore()
   seedTemplates(appStore)
   registerIpcHandlers(appStore)
+
+  /* ── Clipboard: read file paths from copied files ────────────── */
+  ipcMain.handle('clipboard:readFilePaths', async () => {
+    // Use PowerShell Get-Clipboard to read CF_HDROP (file drop list) —
+    // this is the reliable way to get copied file paths from Windows Explorer.
+    const { execFile } = await import('child_process')
+    return new Promise<string[]>((resolve) => {
+      execFile(
+        'powershell.exe',
+        [
+          '-NoProfile',
+          '-NoLogo',
+          '-Command',
+          'Get-Clipboard -Format FileDropList | ForEach-Object { $_.FullName }',
+        ],
+        { timeout: 5000 },
+        (err, stdout) => {
+          if (err || !stdout?.trim()) {
+            log.debug('clipboard:readFilePaths — no file paths found')
+            resolve([])
+            return
+          }
+          const paths = stdout
+            .trim()
+            .split(/\r?\n/)
+            .map((p) => toWslPathMain(p.trim()))
+          log.info(`clipboard:readFilePaths → ${JSON.stringify(paths)}`)
+          resolve(paths)
+        },
+      )
+    })
+  })
 
   /* ── Renderer log relay ────────────────────────────────────────── */
   ipcMain.handle(

@@ -1,5 +1,13 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
+// File drag-and-drop: accept drops visually (dragover), but let the default
+// drop behavior trigger navigation to file:// URL. The main process intercepts
+// via will-navigate and extracts the file path.
+document.addEventListener('dragover', (e) => {
+  e.preventDefault()
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
+})
+
 contextBridge.exposeInMainWorld('agentDeck', {
   pty: {
     spawn: (
@@ -95,5 +103,13 @@ contextBridge.exposeInMainWorld('agentDeck', {
   log: {
     send: (level: string, mod: string, message: string, data?: unknown) =>
       ipcRenderer.invoke('log:renderer', level, mod, message, data),
+  },
+  clipboard: {
+    readFilePaths: () => ipcRenderer.invoke('clipboard:readFilePaths') as Promise<string[]>,
+  },
+  onFileDrop: (cb: (wslPaths: string[]) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, wslPaths: string[]): void => cb(wslPaths)
+    ipcRenderer.on('file-dropped', listener)
+    return () => ipcRenderer.removeListener('file-dropped', listener)
   },
 })

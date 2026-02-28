@@ -138,14 +138,28 @@ export function TerminalPane({
         term.clearSelection()
         return false
       }
-      // Ctrl+Shift+V or Ctrl+V → paste
+      // Ctrl+Shift+V or Ctrl+V → paste text or file paths
       if (e.ctrlKey && (e.key === 'v' || e.key === 'V')) {
-        navigator.clipboard
-          .readText()
-          .then((text) => {
-            if (text) window.agentDeck.pty.write(sessionId, text)
-          })
-          .catch(() => {})
+        e.preventDefault() // block native paste so onData doesn't fire a second time
+        ;(async () => {
+          // Try plain text first
+          let text = ''
+          try {
+            text = await navigator.clipboard.readText()
+          } catch {
+            // Permission denied or no text — fall through to file paths
+          }
+          if (text) {
+            window.agentDeck.pty.write(sessionId, text)
+            return
+          }
+          // No text on clipboard — check for copied files
+          const paths = await window.agentDeck.clipboard.readFilePaths()
+          if (paths.length > 0) {
+            const escaped = paths.map((p) => (p.includes(' ') ? `"${p}"` : p)).join(' ')
+            window.agentDeck.pty.write(sessionId, escaped)
+          }
+        })().catch(() => {})
         return false
       }
       return true

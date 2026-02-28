@@ -62,6 +62,10 @@ declare global {
       log: {
         send: (level: string, mod: string, message: string, data?: unknown) => Promise<void>
       }
+      clipboard: {
+        readFilePaths: () => Promise<string[]>
+      }
+      onFileDrop: (cb: (wslPaths: string[]) => void) => () => void
     }
   }
 }
