@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type { Workflow, WorkflowMeta, WorkflowEvent } from '../shared/types'
 
 // File drag-and-drop: accept drops visually (dragover), but let the default
 // drop behavior trigger navigation to file:// URL. The main process intercepts
@@ -111,5 +112,21 @@ contextBridge.exposeInMainWorld('agentDeck', {
     const listener = (_event: Electron.IpcRendererEvent, wslPaths: string[]): void => cb(wslPaths)
     ipcRenderer.on('file-dropped', listener)
     return () => ipcRenderer.removeListener('file-dropped', listener)
+  },
+  workflows: {
+    list: (): Promise<WorkflowMeta[]> => ipcRenderer.invoke('workflows:list'),
+    load: (id: string): Promise<Workflow | null> => ipcRenderer.invoke('workflows:load', id),
+    save: (w: Workflow): Promise<Workflow> => ipcRenderer.invoke('workflows:save', w),
+    delete: (id: string): Promise<void> => ipcRenderer.invoke('workflows:delete', id),
+    run: (id: string, path?: string): Promise<void> => ipcRenderer.invoke('workflow:run', id, path),
+    stop: (id: string): Promise<void> => ipcRenderer.invoke('workflow:stop', id),
+    resume: (id: string, nodeId: string): Promise<void> =>
+      ipcRenderer.invoke('workflow:resume', id, nodeId),
+    onEvent: (workflowId: string, cb: (event: WorkflowEvent) => void): (() => void) => {
+      const ch = `workflow:event:${workflowId}`
+      const handler = (_: unknown, e: WorkflowEvent): void => cb(e)
+      ipcRenderer.on(ch, handler)
+      return () => ipcRenderer.removeListener(ch, handler)
+    },
   },
 })
