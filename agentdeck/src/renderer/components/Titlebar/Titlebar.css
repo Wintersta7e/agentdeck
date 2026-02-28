@@ -197,3 +197,7 @@
   color: var(--amber);
   background: var(--amber-glow);
 }
+
+.titlebar-wf-label {
+  color: var(--purple);
+}

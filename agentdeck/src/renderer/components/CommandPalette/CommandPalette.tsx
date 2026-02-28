@@ -140,6 +140,8 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
   const setTheme = useAppStore((s) => s.setTheme)
   const visibleAgents = useAppStore((s) => s.visibleAgents)
   const setVisibleAgents = useAppStore((s) => s.setVisibleAgents)
+  const setWorkflows = useAppStore((s) => s.setWorkflows)
+  const openWorkflow = useAppStore((s) => s.openWorkflow)
 
   const [query, setQuery] = useState('')
   const [scope, setScope] = useState<ScopeTab>('all')
@@ -284,6 +286,14 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
       name: 'Pinned Agents',
       detail: 'Choose which agents appear on the home screen',
     })
+    items.push({
+      type: 'action',
+      id: 'action-new-workflow',
+      icon: '\u2B21', // hexagon
+      iconClass: 'purple',
+      name: 'New Workflow',
+      detail: 'Create a new agentic workflow',
+    })
 
     return items
   }, [sessions, projects, templates])
@@ -395,12 +405,28 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
             }
           } else if (item.id === 'action-about') {
             onAbout?.()
+          } else if (item.id === 'action-new-workflow') {
+            const blank = {
+              id: '',
+              name: 'New Workflow',
+              nodes: [],
+              edges: [],
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+            }
+            window.agentDeck.workflows
+              .save(blank as import('../../../shared/types').Workflow)
+              .then(async (saved) => {
+                const list = await window.agentDeck.workflows.list()
+                setWorkflows(list)
+                openWorkflow(saved.id)
+              })
           }
           break
         }
       }
     },
-    [closePalette, onOpenProject, onAbout, theme],
+    [closePalette, onOpenProject, onAbout, theme, setWorkflows, openWorkflow],
   )
 
   // Keyboard navigation

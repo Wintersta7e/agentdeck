@@ -21,6 +21,10 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
   const openWizard = useAppStore((s) => s.openWizard)
   const openSettings = useAppStore((s) => s.openSettings)
   const openTemplateEditor = useAppStore((s) => s.openTemplateEditor)
+  const workflows = useAppStore((s) => s.workflows)
+  const setWorkflows = useAppStore((s) => s.setWorkflows)
+  const editingWorkflowId = useAppStore((s) => s.editingWorkflowId)
+  const openWorkflow = useAppStore((s) => s.openWorkflow)
   const { deleteProject } = useProjects()
 
   const pinned = projects.filter((p) => p.pinned)
@@ -53,6 +57,28 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
       document.removeEventListener('keydown', handleKey)
     }
   }, [contextMenu, closeMenu])
+
+  // Load workflows on mount
+  useEffect(() => {
+    window.agentDeck.workflows.list().then(setWorkflows)
+  }, [setWorkflows])
+
+  const createNewWorkflow = useCallback(async () => {
+    const blank = {
+      id: '',
+      name: 'New Workflow',
+      nodes: [],
+      edges: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    }
+    const saved = await window.agentDeck.workflows.save(
+      blank as import('../../../shared/types').Workflow,
+    )
+    const list = await window.agentDeck.workflows.list()
+    setWorkflows(list)
+    openWorkflow(saved.id)
+  }, [setWorkflows, openWorkflow])
 
   function handleContextMenu(e: React.MouseEvent, projectId: string): void {
     e.preventDefault()
@@ -159,9 +185,35 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
         ))}
       </div>
 
+      <div className="sidebar-divider" />
+      <div className="sidebar-section">
+        <div className="sidebar-label">
+          Workflows
+          <button className="sidebar-action" onClick={createNewWorkflow}>
+            +
+          </button>
+        </div>
+        {workflows.map((w) => (
+          <div
+            key={w.id}
+            className={`sidebar-item${editingWorkflowId === w.id ? ' sidebar-item-wf-active' : ''}`}
+            onClick={() => openWorkflow(w.id)}
+          >
+            <div className="sidebar-dot sidebar-dot-wf" />
+            <div className="sidebar-item-info">
+              <div className="sidebar-item-name">{w.name}</div>
+              <div className="sidebar-item-sub">{w.nodeCount} nodes</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
       <div className="sidebar-bottom">
         <button className="new-project-btn" onClick={openWizard}>
           <span>+</span> New Project
+        </button>
+        <button className="sidebar-new-wf" onClick={createNewWorkflow}>
+          {'\u2B21'} New Workflow
         </button>
       </div>
     </div>

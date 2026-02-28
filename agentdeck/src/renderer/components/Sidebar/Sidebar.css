@@ -237,6 +237,42 @@
   box-shadow: 0 0 12px rgba(var(--accent-rgb, 245, 166, 35), 0.08);
 }
 
+/* ─── Workflow sidebar items ─── */
+.sidebar-dot-wf {
+  background: var(--purple) !important;
+}
+.sidebar-item-wf-active {
+  background: var(--purple-dim);
+  border-color: rgba(155, 114, 207, 0.25) !important;
+}
+.sidebar-item-wf-active .sidebar-item-name {
+  color: var(--purple);
+}
+
+/* New Workflow button */
+.sidebar-new-wf {
+  width: 100%;
+  padding: 6px;
+  border: 1px dashed var(--border-bright);
+  border-radius: var(--r);
+  background: none;
+  color: var(--text2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 4px;
+}
+.sidebar-new-wf:hover {
+  border-color: rgba(155, 114, 207, 0.5);
+  color: var(--purple);
+  background: var(--purple-dim);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sidebar-item,
   .new-project-btn {

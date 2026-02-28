@@ -23,6 +23,9 @@ export function Titlebar({ onCloseTab, onAddTab }: TitlebarProps): React.JSX.Ele
   const cyclePaneLayout = useAppStore((s) => s.cyclePaneLayout)
   const toggleRightPanel = useAppStore((s) => s.toggleRightPanel)
   const closeTemplateEditor = useAppStore((s) => s.closeTemplateEditor)
+  const editingWorkflowId = useAppStore((s) => s.editingWorkflowId)
+  const workflows = useAppStore((s) => s.workflows)
+  const closeWorkflow = useAppStore((s) => s.closeWorkflow)
 
   function getProjectName(session: Session): string {
     const project = projects.find((p) => p.id === session.projectId)
@@ -55,6 +58,11 @@ export function Titlebar({ onCloseTab, onAddTab }: TitlebarProps): React.JSX.Ele
         </div>
       )}
       {currentView === 'template-editor' && <div className="titlebar-center">Templates</div>}
+      {currentView === 'workflow' && (
+        <div className="titlebar-center titlebar-wf-label">
+          {'\u2B21'} {workflows.find((w) => w.id === editingWorkflowId)?.name ?? 'Workflow'}
+        </div>
+      )}
 
       {sessionList.length > 0 && (
         <div className="tab-bar">
@@ -109,6 +117,11 @@ export function Titlebar({ onCloseTab, onAddTab }: TitlebarProps): React.JSX.Ele
         )}
         {currentView === 'template-editor' && (
           <button className="titlebar-btn" onClick={closeTemplateEditor}>
+            {'\u2190'} Back
+          </button>
+        )}
+        {currentView === 'workflow' && (
+          <button className="titlebar-btn" onClick={closeWorkflow}>
             {'\u2190'} Back
           </button>
         )}

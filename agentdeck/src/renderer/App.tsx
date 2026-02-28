@@ -9,6 +9,7 @@ import { NewProjectWizard } from './components/NewProjectWizard/NewProjectWizard
 import { ProjectSettings } from './components/ProjectSettings/ProjectSettings'
 import { CommandPalette } from './components/CommandPalette/CommandPalette'
 import { TemplateEditor } from './components/TemplateEditor/TemplateEditor'
+import WorkflowEditor from './screens/WorkflowEditor/WorkflowEditor'
 import { AboutDialog } from './components/AboutDialog/AboutDialog'
 import { useAppStore } from './store/appStore'
 import { useProjects } from './hooks/useProjects'
@@ -19,6 +20,8 @@ export function App(): React.JSX.Element {
   const currentView = useAppStore((s) => s.currentView)
   const addSession = useAppStore((s) => s.addSession)
   const removeSession = useAppStore((s) => s.removeSession)
+
+  const editingWorkflowId = useAppStore((s) => s.editingWorkflowId)
 
   const rightPanelOpen = useAppStore((s) => s.rightPanelOpen)
   const sessions = useAppStore((s) => s.sessions)
@@ -149,6 +152,8 @@ export function App(): React.JSX.Element {
           state.closeSettings()
         } else if (state.currentView === 'template-editor') {
           state.closeTemplateEditor()
+        } else if (state.currentView === 'workflow') {
+          state.closeWorkflow()
         }
       }
     }
@@ -196,6 +201,9 @@ export function App(): React.JSX.Element {
             <ProjectSettings key={useAppStore.getState().settingsProjectId} />
           )}
           {currentView === 'template-editor' && <TemplateEditor />}
+          {currentView === 'workflow' && editingWorkflowId && (
+            <WorkflowEditor workflowId={editingWorkflowId} />
+          )}
           <div
             style={{
               display: currentView === 'session' ? 'flex' : 'none',
