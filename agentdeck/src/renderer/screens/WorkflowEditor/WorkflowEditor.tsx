@@ -216,22 +216,6 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
     [autoSave, selectedNodeId],
   )
 
-  const handleDeleteEdge = useCallback(
-    (edgeId: string) => {
-      setWorkflow((prev) => {
-        if (!prev) return prev
-        const updated: Workflow = {
-          ...prev,
-          edges: prev.edges.filter((e) => e.id !== edgeId),
-          updatedAt: Date.now(),
-        }
-        autoSave(updated)
-        return updated
-      })
-    },
-    [autoSave],
-  )
-
   const handleSelectNode = useCallback(
     (id: string | null) => {
       setSelectedNodeId(id)
@@ -318,7 +302,6 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
             onConnect={handleConnect}
             onUpdateNode={handleUpdateNode}
             onDeleteNode={handleDeleteNode}
-            onDeleteEdge={handleDeleteEdge}
           />
 
           {/* Detail panel — absolute-positioned at bottom of canvas area */}

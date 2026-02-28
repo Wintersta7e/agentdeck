@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import type { Project } from '../../../shared/types'
+import { createBlankWorkflow } from '../../utils/workflowUtils'
 import './CommandPalette.css'
 
 type ScopeTab = 'all' | 'projects' | 'templates' | 'sessions' | 'actions'
@@ -406,21 +407,7 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
           } else if (item.id === 'action-about') {
             onAbout?.()
           } else if (item.id === 'action-new-workflow') {
-            const blank = {
-              id: '',
-              name: 'New Workflow',
-              nodes: [],
-              edges: [],
-              createdAt: Date.now(),
-              updatedAt: Date.now(),
-            }
-            window.agentDeck.workflows
-              .save(blank as import('../../../shared/types').Workflow)
-              .then(async (saved) => {
-                const list = await window.agentDeck.workflows.list()
-                setWorkflows(list)
-                openWorkflow(saved.id)
-              })
+            void createBlankWorkflow(setWorkflows, openWorkflow)
           }
           break
         }

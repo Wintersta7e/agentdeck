@@ -6,6 +6,11 @@ import type { Workflow, WorkflowMeta } from '../shared/types'
 
 const log = createLogger('workflow-store')
 
+/** Strip path separators and relative components to prevent path traversal */
+function safeId(id: string): string {
+  return id.replace(/[^a-zA-Z0-9_-]/g, '')
+}
+
 function getWorkflowsDir(): string {
   const dir = path.join(app.getPath('userData'), 'workflows')
   fs.mkdirSync(dir, { recursive: true })
@@ -37,7 +42,7 @@ export function listWorkflows(): WorkflowMeta[] {
 
 export function loadWorkflow(id: string): Workflow | null {
   try {
-    const file = path.join(getWorkflowsDir(), `${id}.json`)
+    const file = path.join(getWorkflowsDir(), `${safeId(id)}.json`)
     return JSON.parse(fs.readFileSync(file, 'utf-8')) as Workflow
   } catch {
     return null
@@ -52,14 +57,14 @@ export function saveWorkflow(workflow: Workflow): Workflow {
     createdAt: workflow.createdAt || now,
     id: workflow.id || crypto.randomUUID(),
   }
-  const file = path.join(getWorkflowsDir(), `${w.id}.json`)
+  const file = path.join(getWorkflowsDir(), `${safeId(w.id)}.json`)
   fs.writeFileSync(file, JSON.stringify(w, null, 2), 'utf-8')
   log.info('Workflow saved', { id: w.id, name: w.name })
   return w
 }
 
 export function deleteWorkflow(id: string): void {
-  const file = path.join(getWorkflowsDir(), `${id}.json`)
+  const file = path.join(getWorkflowsDir(), `${safeId(id)}.json`)
   fs.rmSync(file, { force: true })
   log.info('Workflow deleted', { id })
 }

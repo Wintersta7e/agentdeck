@@ -239,11 +239,11 @@
 
 /* ─── Workflow sidebar items ─── */
 .sidebar-dot-wf {
-  background: var(--purple) !important;
+  background: var(--purple);
 }
-.sidebar-item-wf-active {
+.sidebar-item.sidebar-item-wf-active {
   background: var(--purple-dim);
-  border-color: rgba(155, 114, 207, 0.25) !important;
+  border-color: rgba(var(--purple-rgb), 0.25);
 }
 .sidebar-item-wf-active .sidebar-item-name {
   color: var(--purple);
@@ -268,7 +268,7 @@
   margin-top: 4px;
 }
 .sidebar-new-wf:hover {
-  border-color: rgba(155, 114, 207, 0.5);
+  border-color: rgba(var(--purple-rgb), 0.5);
   color: var(--purple);
   background: var(--purple-dim);
 }

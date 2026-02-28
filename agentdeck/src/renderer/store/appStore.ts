@@ -9,9 +9,6 @@ import type {
   RightPanelTab,
   ActivityEvent,
   WorkflowMeta,
-  WorkflowStatus,
-  WorkflowNodeStatus,
-  WorkflowEvent,
 } from '../../shared/types'
 
 interface AppState {
@@ -79,15 +76,6 @@ interface AppState {
   editingWorkflowId: string | null
   openWorkflow: (id: string) => void
   closeWorkflow: () => void
-
-  // Workflow execution (runtime only)
-  workflowStatuses: Record<string, WorkflowStatus>
-  workflowNodeStatuses: Record<string, Record<string, WorkflowNodeStatus>>
-  workflowLogs: Record<string, WorkflowEvent[]>
-  setWorkflowStatus: (workflowId: string, status: WorkflowStatus) => void
-  setNodeStatus: (workflowId: string, nodeId: string, status: WorkflowNodeStatus) => void
-  appendWorkflowLog: (workflowId: string, event: WorkflowEvent) => void
-  clearWorkflowLog: (workflowId: string) => void
 
   // Zoom
   zoomFactor: number
@@ -374,39 +362,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       currentView: state.viewStack[state.viewStack.length - 1] ?? 'home',
       editingWorkflowId: null,
       viewStack: state.viewStack.slice(0, -1),
-    })),
-
-  // Workflow execution
-  workflowStatuses: {},
-  workflowNodeStatuses: {},
-  workflowLogs: {},
-
-  setWorkflowStatus: (workflowId, status) =>
-    set((state) => ({
-      workflowStatuses: { ...state.workflowStatuses, [workflowId]: status },
-    })),
-
-  setNodeStatus: (workflowId, nodeId, status) =>
-    set((state) => ({
-      workflowNodeStatuses: {
-        ...state.workflowNodeStatuses,
-        [workflowId]: {
-          ...state.workflowNodeStatuses[workflowId],
-          [nodeId]: status,
-        },
-      },
-    })),
-
-  appendWorkflowLog: (workflowId, event) =>
-    set((state) => {
-      const existing = state.workflowLogs[workflowId] ?? []
-      const logs = [...existing, event].slice(-1000)
-      return { workflowLogs: { ...state.workflowLogs, [workflowId]: logs } }
-    }),
-
-  clearWorkflowLog: (workflowId) =>
-    set((state) => ({
-      workflowLogs: { ...state.workflowLogs, [workflowId]: [] },
     })),
 
   // Zoom

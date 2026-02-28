@@ -3,6 +3,7 @@ import { useAppStore } from '../../store/appStore'
 import { useProjects } from '../../hooks/useProjects'
 import type { Project } from '../../../shared/types'
 import { groupTemplates } from '../../utils/templateUtils'
+import { createBlankWorkflow } from '../../utils/workflowUtils'
 import './Sidebar.css'
 
 function badgeClass(badge: string): string {
@@ -63,22 +64,10 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
     window.agentDeck.workflows.list().then(setWorkflows)
   }, [setWorkflows])
 
-  const createNewWorkflow = useCallback(async () => {
-    const blank = {
-      id: '',
-      name: 'New Workflow',
-      nodes: [],
-      edges: [],
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    }
-    const saved = await window.agentDeck.workflows.save(
-      blank as import('../../../shared/types').Workflow,
-    )
-    const list = await window.agentDeck.workflows.list()
-    setWorkflows(list)
-    openWorkflow(saved.id)
-  }, [setWorkflows, openWorkflow])
+  const createNewWorkflow = useCallback(
+    () => createBlankWorkflow(setWorkflows, openWorkflow),
+    [setWorkflows, openWorkflow],
+  )
 
   function handleContextMenu(e: React.MouseEvent, projectId: string): void {
     e.preventDefault()

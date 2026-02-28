@@ -17,7 +17,6 @@ interface WorkflowCanvasProps {
   onConnect: (fromNodeId: string, toNodeId: string) => void
   onUpdateNode: (node: WorkflowNode) => void
   onDeleteNode: (nodeId: string) => void
-  onDeleteEdge: (edgeId: string) => void
 }
 
 /** Estimated node height for arrow center calculation */
@@ -59,7 +58,6 @@ export function WorkflowCanvas({
   onConnect,
   onUpdateNode,
   onDeleteNode,
-  onDeleteEdge: _onDeleteEdge,
 }: WorkflowCanvasProps): React.JSX.Element {
   const wrapRef = useRef<HTMLDivElement>(null)
 

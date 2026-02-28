@@ -82,6 +82,7 @@ export function createWorkflowEngine(
   function runWorkflow(workflow: Workflow, projectPath?: string): void {
     let stopped = false
     const nodeOutputs = new Map<string, string>()
+    const activeSessions = new Set<string>()
 
     function runAgentNode(node: WorkflowNode, contextSummary: string): Promise<void> {
       return new Promise<void>((resolve, reject) => {
@@ -118,12 +119,14 @@ export function createWorkflowEngine(
         const onExit = (code: number): void => {
           ptyBus.removeListener(dataChannel, onData)
           ptyBus.removeListener(exitChannel, onExit)
+          activeSessions.delete(sessionId)
           if (code === 0 || code === null) resolve()
           else reject(new Error(`Agent exited with code ${code}`))
         }
 
         ptyBus.on(dataChannel, onData)
         ptyBus.on(exitChannel, onExit)
+        activeSessions.add(sessionId)
 
         ptyManager.spawn(
           sessionId,
@@ -275,6 +278,14 @@ export function createWorkflowEngine(
     const handle = {
       stop: () => {
         stopped = true
+        for (const sid of activeSessions) {
+          ptyManager.kill(sid)
+        }
+        activeSessions.clear()
+        for (const [, resolve] of checkpoints) {
+          resolve()
+        }
+        checkpoints.clear()
       },
     }
     activeRuns.set(workflow.id, handle)

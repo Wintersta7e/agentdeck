@@ -55,6 +55,9 @@
   /* RGB triplets for rgba() usage */
   --accent-rgb: 245, 166, 35;
   --bg1-rgb: 17, 18, 19;
+  --purple-rgb: 155, 114, 207;
+  --green-rgb: 76, 175, 125;
+  --red-rgb: 224, 92, 92;
 
   /* Shape */
   --r: 4px;
@@ -89,6 +92,8 @@
   --accent-hover: rgba(0, 212, 255, 0.45);
   --accent-rgb: 0, 212, 255;
   --bg1-rgb: 12, 16, 32;
+  --green-rgb: 0, 229, 160;
+  --red-rgb: 255, 77, 106;
   --green: #00e5a0;
   --green-dim: rgba(0, 229, 160, 0.12);
   --green-border: rgba(0, 229, 160, 0.2);
@@ -118,6 +123,8 @@
   --accent-hover: rgba(167, 139, 250, 0.45);
   --accent-rgb: 167, 139, 250;
   --bg1-rgb: 15, 15, 28;
+  --green-rgb: 52, 211, 153;
+  --red-rgb: 248, 113, 113;
   --green: #34d399;
   --green-dim: rgba(52, 211, 153, 0.12);
   --green-border: rgba(52, 211, 153, 0.2);
@@ -147,6 +154,8 @@
   --accent-hover: rgba(96, 165, 250, 0.45);
   --accent-rgb: 96, 165, 250;
   --bg1-rgb: 16, 18, 24;
+  --green-rgb: 74, 222, 128;
+  --red-rgb: 248, 113, 113;
   --green: #4ade80;
   --green-dim: rgba(74, 222, 128, 0.12);
   --green-border: rgba(74, 222, 128, 0.2);
@@ -176,6 +185,9 @@
   --accent-hover: rgba(200, 120, 0, 0.45);
   --accent-rgb: 200, 120, 0;
   --bg1-rgb: 237, 229, 216;
+  --purple-rgb: 107, 76, 154;
+  --green-rgb: 26, 122, 74;
+  --red-rgb: 192, 57, 43;
   --green: #1a7a4a;
   --green-dim: rgba(26, 122, 74, 0.12);
   --green-border: rgba(26, 122, 74, 0.2);
@@ -209,6 +221,9 @@
   --accent-hover: rgba(37, 99, 235, 0.4);
   --accent-rgb: 37, 99, 235;
   --bg1-rgb: 228, 234, 242;
+  --purple-rgb: 124, 58, 237;
+  --green-rgb: 22, 163, 74;
+  --red-rgb: 220, 38, 38;
   --green: #16a34a;
   --green-dim: rgba(22, 163, 74, 0.12);
   --green-border: rgba(22, 163, 74, 0.2);
@@ -242,6 +257,9 @@
   --accent-hover: rgba(109, 40, 217, 0.4);
   --accent-rgb: 109, 40, 217;
   --bg1-rgb: 236, 232, 244;
+  --purple-rgb: 124, 58, 237;
+  --green-rgb: 5, 150, 105;
+  --red-rgb: 220, 38, 38;
   --green: #059669;
   --green-dim: rgba(5, 150, 105, 0.12);
   --green-border: rgba(5, 150, 105, 0.2);
@@ -275,6 +293,9 @@
   --accent-hover: rgba(13, 148, 136, 0.4);
   --accent-rgb: 13, 148, 136;
   --bg1-rgb: 232, 230, 226;
+  --purple-rgb: 124, 58, 237;
+  --green-rgb: 22, 163, 74;
+  --red-rgb: 220, 38, 38;
   --green: #16a34a;
   --green-dim: rgba(22, 163, 74, 0.12);
   --green-border: rgba(22, 163, 74, 0.2);

@@ -29,8 +29,8 @@
 .wf-node.running {
   border-color: var(--green-border);
   box-shadow:
-    0 0 0 1px rgba(76, 175, 125, 0.15),
-    0 0 20px rgba(76, 175, 125, 0.1);
+    0 0 0 1px rgba(var(--green-rgb), 0.15),
+    0 0 20px rgba(var(--green-rgb), 0.1);
   animation: wf-node-pulse 2s infinite;
 }
 
@@ -39,20 +39,20 @@
 }
 
 .wf-node.error {
-  border-color: rgba(224, 92, 92, 0.5);
+  border-color: rgba(var(--red-rgb), 0.5);
 }
 
 @keyframes wf-node-pulse {
   0%,
   100% {
     box-shadow:
-      0 0 0 1px rgba(76, 175, 125, 0.15),
-      0 0 20px rgba(76, 175, 125, 0.1);
+      0 0 0 1px rgba(var(--green-rgb), 0.15),
+      0 0 20px rgba(var(--green-rgb), 0.1);
   }
   50% {
     box-shadow:
-      0 0 0 1px rgba(76, 175, 125, 0.3),
-      0 0 30px rgba(76, 175, 125, 0.2);
+      0 0 0 1px rgba(var(--green-rgb), 0.3),
+      0 0 30px rgba(var(--green-rgb), 0.2);
   }
 }
 
