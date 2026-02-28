@@ -1,0 +1,80 @@
+/* ── AddNodeMenu ─────────────────────────────── */
+
+.wf-add-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 50;
+  min-width: 240px;
+  background: var(--bg2);
+  border: 1px solid var(--border-bright);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  padding: 4px;
+  overflow: hidden;
+}
+
+.wf-add-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.wf-add-menu-item:hover {
+  background: var(--bg3);
+}
+
+/* Icon circle */
+.wf-add-menu-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.wf-add-icon-agent {
+  background: var(--accent-glow);
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+}
+
+.wf-add-icon-shell {
+  background: var(--green-dim);
+  color: var(--green);
+  border: 1px solid var(--green-border);
+}
+
+.wf-add-icon-checkpoint {
+  background: var(--purple-dim);
+  color: var(--purple);
+  border: 1px solid var(--purple-border);
+}
+
+/* Text */
+.wf-add-menu-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.wf-add-menu-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text0);
+}
+
+.wf-add-menu-desc {
+  font-size: 9px;
+  color: var(--text2);
+  line-height: 1.4;
+}

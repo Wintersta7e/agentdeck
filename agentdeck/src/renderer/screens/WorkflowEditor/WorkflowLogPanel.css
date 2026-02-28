@@ -1,0 +1,244 @@
+/* ── WorkflowLogPanel ─────────────────────────────── */
+
+.wf-log-panel {
+  width: 320px;
+  background: var(--bg1);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.wf-log-header {
+  padding: 0 14px;
+  height: 36px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.wf-log-title {
+  font-size: 11px;
+  color: var(--text0);
+  font-weight: 600;
+  flex: 1;
+}
+
+.wf-log-clear {
+  background: none;
+  border: none;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  cursor: pointer;
+  transition: color 0.12s;
+}
+
+.wf-log-clear:hover {
+  color: var(--text1);
+}
+
+/* ── Tabs ── */
+
+.wf-log-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+
+.wf-log-tab {
+  padding: 6px 12px;
+  font-size: 10px;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.12s;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+}
+
+.wf-log-tab:hover {
+  color: var(--text1);
+}
+
+.wf-log-tab.active {
+  color: var(--purple);
+  border-bottom-color: var(--purple);
+}
+
+/* ── Body ── */
+
+.wf-log-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+.wf-log-body::-webkit-scrollbar {
+  width: 3px;
+}
+
+.wf-log-body::-webkit-scrollbar-thumb {
+  background: var(--bg4);
+}
+
+/* ── Log entries ── */
+
+.wf-log-entry {
+  margin-bottom: 2px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.wf-log-time {
+  color: var(--text3);
+  flex-shrink: 0;
+  font-size: 9px;
+  padding-top: 1px;
+}
+
+.wf-log-source {
+  flex-shrink: 0;
+  font-size: 9px;
+  padding: 1px 6px;
+  border-radius: 2px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* Source badge colors */
+.wf-log-src-system {
+  background: var(--bg4);
+  color: var(--text2);
+}
+
+.wf-log-src-agent {
+  background: var(--accent-glow);
+  color: var(--accent);
+}
+
+.wf-log-src-shell {
+  background: var(--green-dim);
+  color: var(--green);
+}
+
+.wf-log-src-checkpoint {
+  background: var(--purple-dim);
+  color: var(--purple);
+}
+
+/* Message styling */
+.wf-log-msg {
+  color: var(--text1);
+  flex: 1;
+}
+
+.wf-log-msg.dim {
+  color: var(--text2);
+}
+
+.wf-log-msg.ok {
+  color: var(--green);
+}
+
+.wf-log-msg.err {
+  color: var(--red);
+}
+
+.wf-log-msg.accent {
+  color: var(--accent);
+}
+
+/* ── Node section header ── */
+
+.wf-log-node-hdr {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--bg2);
+  border-radius: var(--r);
+  margin-bottom: 6px;
+  border: 1px solid var(--border);
+}
+
+.wf-log-node-hdr-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text3);
+  flex-shrink: 0;
+}
+
+.wf-log-node-hdr-dot.run {
+  background: var(--green);
+  box-shadow: 0 0 5px var(--green);
+  animation: wf-log-pulse 1.2s infinite;
+}
+
+.wf-log-node-hdr-dot.done {
+  background: var(--green);
+}
+
+.wf-log-node-hdr-dot.err {
+  background: var(--red);
+}
+
+.wf-log-node-hdr-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text0);
+  flex: 1;
+}
+
+.wf-log-node-hdr-time {
+  font-size: 9px;
+  color: var(--text3);
+}
+
+@keyframes wf-log-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+/* ── Log divider ── */
+
+.wf-log-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 8px 0;
+}
+
+/* ── Resume button ── */
+
+.wf-log-resume-row {
+  padding: 4px 0 6px 58px;
+}
+
+.wf-log-resume-btn {
+  padding: 3px 12px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  border: 1px solid rgba(155, 114, 207, 0.4);
+  border-radius: var(--r);
+  background: var(--purple-dim);
+  color: var(--purple);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.wf-log-resume-btn:hover {
+  border-color: var(--purple);
+  background: rgba(155, 114, 207, 0.2);
+}
