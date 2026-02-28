@@ -7,11 +7,16 @@ import { createProjectStore, seedTemplates, type AppStore } from './project-stor
 import { detectStack } from './detect-stack'
 import { getDefaultDistro, wslPathToWindows } from './wsl-utils'
 import { initLogger, createLogger } from './logger'
+import { listWorkflows, loadWorkflow, saveWorkflow, deleteWorkflow } from './workflow-store'
+import { createWorkflowEngine } from './workflow-engine'
+import type { WorkflowEngine } from './workflow-engine'
+import type { Workflow } from '../shared/types'
 
 const log = createLogger('app')
 
 let mainWindow: BrowserWindow | null = null
 let ptyManager: PtyManager | null = null
+let workflowEngine: WorkflowEngine | null = null
 let appStore: AppStore | null = null
 
 const agentBinaries: Record<string, string> = {
@@ -54,6 +59,7 @@ function createWindow(): void {
   })
 
   ptyManager = createPtyManager(mainWindow)
+  workflowEngine = createWorkflowEngine(ptyManager, mainWindow)
 
   mainWindow.once('ready-to-show', () => {
     mainWindow?.maximize()
@@ -365,6 +371,26 @@ function registerIpcHandlers(store: AppStore): void {
       properties: ['openDirectory'],
     })
     return result.filePaths[0] ?? null
+  })
+
+  /* ── Workflow CRUD ──────────────────────────────────────────────── */
+  ipcMain.handle('workflows:list', () => listWorkflows())
+  ipcMain.handle('workflows:load', (_, id: string) => loadWorkflow(id))
+  ipcMain.handle('workflows:save', (_, workflow: Workflow) => saveWorkflow(workflow))
+  ipcMain.handle('workflows:delete', (_, id: string) => deleteWorkflow(id))
+
+  /* ── Workflow Execution ────────────────────────────────────────── */
+  ipcMain.handle('workflow:run', (_, workflowId: string, projectPath?: string) => {
+    const workflow = loadWorkflow(workflowId)
+    if (!workflow) throw new Error(`Workflow not found: ${workflowId}`)
+    if (!workflowEngine) throw new Error('Workflow engine not initialized')
+    workflowEngine.run(workflow, projectPath)
+  })
+  ipcMain.handle('workflow:stop', (_, workflowId: string) => {
+    workflowEngine?.stop(workflowId)
+  })
+  ipcMain.handle('workflow:resume', (_, workflowId: string, nodeId: string) => {
+    workflowEngine?.resume(workflowId, nodeId)
   })
 }
 

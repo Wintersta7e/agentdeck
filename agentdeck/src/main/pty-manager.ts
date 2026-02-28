@@ -2,6 +2,7 @@ import type { BrowserWindow } from 'electron'
 import type { IPty } from 'node-pty'
 import * as pty from 'node-pty'
 import { createLogger } from './logger'
+import { ptyBus } from './workflow-engine'
 
 const log = createLogger('pty-manager')
 
@@ -178,6 +179,7 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
       if (!mainWindow.isDestroyed()) {
         mainWindow.webContents.send(`pty:data:${sessionId}`, data)
       }
+      ptyBus.emit(`data:${sessionId}`, data)
 
       // Line-based activity parsing
       let buffer = (lineBuffers.get(sessionId) ?? '') + data
@@ -214,6 +216,7 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
       if (!mainWindow.isDestroyed()) {
         mainWindow.webContents.send(`pty:exit:${sessionId}`, exitCode)
       }
+      ptyBus.emit(`exit:${sessionId}`, exitCode)
     })
   }
 
