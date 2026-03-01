@@ -73,6 +73,7 @@ interface AppState {
   // Workflows
   workflows: WorkflowMeta[]
   setWorkflows: (w: WorkflowMeta[]) => void
+  updateWorkflowMeta: (id: string, patch: Partial<WorkflowMeta>) => void
   editingWorkflowId: string | null
   openWorkflow: (id: string) => void
   closeWorkflow: () => void
@@ -348,6 +349,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Workflows
   workflows: [],
   setWorkflows: (w) => set({ workflows: w }),
+  updateWorkflowMeta: (id, patch) =>
+    set((state) => ({
+      workflows: state.workflows.map((w) => (w.id === id ? { ...w, ...patch } : w)),
+    })),
   editingWorkflowId: null,
 
   openWorkflow: (id) =>

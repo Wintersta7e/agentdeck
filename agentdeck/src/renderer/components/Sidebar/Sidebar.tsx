@@ -26,6 +26,7 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
   const setWorkflows = useAppStore((s) => s.setWorkflows)
   const editingWorkflowId = useAppStore((s) => s.editingWorkflowId)
   const openWorkflow = useAppStore((s) => s.openWorkflow)
+  const closeWorkflow = useAppStore((s) => s.closeWorkflow)
   const { deleteProject } = useProjects()
 
   const pinned = projects.filter((p) => p.pinned)
@@ -34,7 +35,8 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
   const [contextMenu, setContextMenu] = useState<{
     x: number
     y: number
-    projectId: string
+    projectId?: string | undefined
+    workflowId?: string | undefined
   } | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -75,9 +77,26 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
     setContextMenu({ x: e.clientX, y: e.clientY, projectId })
   }
 
+  function handleWorkflowContextMenu(e: React.MouseEvent, workflowId: string): void {
+    e.preventDefault()
+    e.stopPropagation()
+    setContextMenu({ x: e.clientX, y: e.clientY, workflowId })
+  }
+
   function handleRemoveProject(): void {
-    if (!contextMenu) return
+    if (!contextMenu?.projectId) return
     void deleteProject(contextMenu.projectId)
+    closeMenu()
+  }
+
+  function handleDeleteWorkflow(): void {
+    if (!contextMenu?.workflowId) return
+    const id = contextMenu.workflowId
+    // If we're currently editing this workflow, close the editor
+    if (editingWorkflowId === id) closeWorkflow()
+    window.agentDeck.workflows.delete(id).then(() => {
+      setWorkflows(workflows.filter((w) => w.id !== id))
+    })
     closeMenu()
   }
 
@@ -145,9 +164,16 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
           className="sidebar-context-menu"
           style={{ top: contextMenu.y, left: contextMenu.x }}
         >
-          <button className="sidebar-context-item danger" onClick={handleRemoveProject}>
-            Remove project
-          </button>
+          {contextMenu.projectId && (
+            <button className="sidebar-context-item danger" onClick={handleRemoveProject}>
+              Remove project
+            </button>
+          )}
+          {contextMenu.workflowId && (
+            <button className="sidebar-context-item danger" onClick={handleDeleteWorkflow}>
+              Delete workflow
+            </button>
+          )}
         </div>
       )}
 
@@ -187,6 +213,7 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
             key={w.id}
             className={`sidebar-item${editingWorkflowId === w.id ? ' sidebar-item-wf-active' : ''}`}
             onClick={() => openWorkflow(w.id)}
+            onContextMenu={(e) => handleWorkflowContextMenu(e, w.id)}
           >
             <div className="sidebar-dot sidebar-dot-wf" />
             <div className="sidebar-item-info">
