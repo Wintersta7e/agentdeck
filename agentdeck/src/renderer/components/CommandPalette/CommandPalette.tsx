@@ -4,7 +4,7 @@ import type { Project } from '../../../shared/types'
 import { createBlankWorkflow } from '../../utils/workflowUtils'
 import './CommandPalette.css'
 
-type ScopeTab = 'all' | 'projects' | 'templates' | 'sessions' | 'actions'
+type ScopeTab = 'projects' | 'templates' | 'sessions' | 'tools'
 
 type ResultType = 'session' | 'project' | 'template' | 'action'
 
@@ -27,18 +27,17 @@ interface CommandPaletteProps {
 }
 
 const SCOPE_TABS: { label: string; value: ScopeTab }[] = [
-  { label: 'All', value: 'all' },
+  { label: 'Tools', value: 'tools' },
   { label: 'Projects', value: 'projects' },
   { label: 'Templates', value: 'templates' },
   { label: 'Sessions', value: 'sessions' },
-  { label: 'Actions', value: 'actions' },
 ]
 
 const SECTION_ORDER: { type: ResultType; label: string }[] = [
   { type: 'session', label: 'Active sessions' },
   { type: 'project', label: 'Projects' },
   { type: 'template', label: 'Templates' },
-  { type: 'action', label: 'Actions' },
+  { type: 'action', label: 'Tools' },
 ]
 
 const ALL_AGENTS = [
@@ -145,7 +144,7 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
   const openWorkflow = useAppStore((s) => s.openWorkflow)
 
   const [query, setQuery] = useState('')
-  const [scope, setScope] = useState<ScopeTab>('all')
+  const [scope, setScope] = useState<ScopeTab>('tools')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const initialSubMenu = useAppStore((s) => s.commandPaletteInitialSubMenu)
   const [subMenu, setSubMenu] = useState<'theme' | 'agents' | null>(initialSubMenu)
@@ -304,19 +303,13 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
     let items = allItems
 
     // Filter by scope tab
-    if (scope !== 'all') {
-      const scopeTypeMap: Record<ScopeTab, ResultType | null> = {
-        all: null,
-        projects: 'project',
-        templates: 'template',
-        sessions: 'session',
-        actions: 'action',
-      }
-      const filterType = scopeTypeMap[scope]
-      if (filterType) {
-        items = items.filter((item) => item.type === filterType)
-      }
+    const scopeTypeMap: Record<ScopeTab, ResultType> = {
+      tools: 'action',
+      projects: 'project',
+      templates: 'template',
+      sessions: 'session',
     }
+    items = items.filter((item) => item.type === scopeTypeMap[scope])
 
     // Filter by fuzzy search (substring match)
     if (query.trim()) {

@@ -170,6 +170,9 @@ export function App(): React.JSX.Element {
           state.closeSettings()
         } else if (state.currentView === 'template-editor') {
           state.closeTemplateEditor()
+        } else {
+          // Toggle command palette open with Escape
+          state.openCommandPalette()
         }
       }
     }
