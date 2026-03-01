@@ -1,4 +1,6 @@
-export type AgentType = 'claude-code' | 'codex' | 'aider' | (string & {})
+import type { AgentId } from './agents'
+
+export type AgentType = AgentId
 export type StackBadge =
   | 'Java'
   | 'JS'
@@ -126,6 +128,9 @@ export interface WorkflowNode {
 
   // checkpoint nodes
   message?: string | undefined
+
+  // shell nodes: configurable timeout (ms), defaults to 60000
+  timeout?: number | undefined
 }
 
 export interface WorkflowEdge {
