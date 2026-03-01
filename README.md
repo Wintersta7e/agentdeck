@@ -112,7 +112,7 @@ npm run build
 ## Building for Distribution
 
 ```bash
-# Windows portable executable (~71 MB)
+# Windows portable executable (~89 MB)
 npm run dist
 ```
 
@@ -140,11 +140,13 @@ agentdeck/
 │   │   ├── workflow-engine.ts      # Workflow execution engine
 │   │   ├── detect-stack.ts         # File-based stack detection
 │   │   ├── wsl-utils.ts            # WSL path conversion utilities
+│   │   ├── pty-bus.ts              # PTY event bus (main-process IPC bridge)
 │   │   └── logger.ts               # Structured logging
 │   ├── preload/
 │   │   └── index.ts                # contextBridge: safe IPC surface
 │   ├── shared/
-│   │   └── types.ts                # Shared TypeScript interfaces
+│   │   ├── types.ts                # Shared TypeScript interfaces
+│   │   └── agents.ts               # Canonical agent registry (single source of truth)
 │   └── renderer/                   # React app (Vite)
 │       ├── App.tsx                  # Root layout, keybindings, IPC listeners
 │       ├── store/
@@ -225,6 +227,7 @@ The project includes HTML mockups (open in any browser) that serve as pixel-perf
 ## Security
 
 - Context isolation enabled (`contextIsolation: true`, `nodeIntegration: false`)
+- Content Security Policy via `<meta>` tag (restricts scripts, styles, and connections)
 - All Node.js access goes through the preload `contextBridge`
 - Environment variable secrets encrypted at rest via Electron `safeStorage`
 - No telemetry, no network requests (fonts bundled locally)
