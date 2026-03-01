@@ -5,6 +5,7 @@ import { StatusBar } from './components/StatusBar/StatusBar'
 import { HomeScreen } from './components/HomeScreen/HomeScreen'
 import { SplitView } from './components/SplitView/SplitView'
 import { RightPanel } from './components/RightPanel/RightPanel'
+import { PanelDivider } from './components/shared/PanelDivider'
 import { NewProjectWizard } from './components/NewProjectWizard/NewProjectWizard'
 import { ProjectSettings } from './components/ProjectSettings/ProjectSettings'
 import { CommandPalette } from './components/CommandPalette/CommandPalette'
@@ -23,7 +24,15 @@ export function App(): React.JSX.Element {
 
   const editingWorkflowId = useAppStore((s) => s.editingWorkflowId)
 
+  const sidebarOpen = useAppStore((s) => s.sidebarOpen)
+  const sidebarWidth = useAppStore((s) => s.sidebarWidth)
+  const setSidebarWidth = useAppStore((s) => s.setSidebarWidth)
   const rightPanelOpen = useAppStore((s) => s.rightPanelOpen)
+  const rightPanelWidth = useAppStore((s) => s.rightPanelWidth)
+  const setRightPanelWidth = useAppStore((s) => s.setRightPanelWidth)
+  const sidebarRef = useRef<HTMLDivElement>(null)
+  const rightPanelRef = useRef<HTMLDivElement>(null)
+
   const sessions = useAppStore((s) => s.sessions)
   const sessionIds = useMemo(() => Object.keys(sessions), [sessions])
 
@@ -130,6 +139,11 @@ export function App(): React.JSX.Element {
         useAppStore.getState().openWizard()
         return
       }
+      if (e.ctrlKey && e.key === 'b') {
+        e.preventDefault()
+        useAppStore.getState().toggleSidebar()
+        return
+      }
       if (e.ctrlKey && e.key === '\\') {
         e.preventDefault()
         useAppStore.getState().toggleRightPanel()
@@ -193,7 +207,24 @@ export function App(): React.JSX.Element {
       <div className="spotlight" ref={spotlightRef} />
       <Titlebar onCloseTab={handleCloseTab} onAddTab={handleAddTab} />
       <div className="app-body">
-        <Sidebar onOpenProject={handleOpenProject} />
+        {sidebarOpen && (
+          <>
+            <div
+              ref={sidebarRef}
+              className="sidebar-wrapper"
+              style={{ width: sidebarWidth, flexShrink: 0 }}
+            >
+              <Sidebar onOpenProject={handleOpenProject} />
+            </div>
+            <PanelDivider
+              side="left"
+              panelRef={sidebarRef}
+              minWidth={160}
+              maxWidth={400}
+              onResizeEnd={setSidebarWidth}
+            />
+          </>
+        )}
         <div className="app-main">
           {currentView === 'home' && <HomeScreen onOpenProject={handleOpenProject} />}
           {currentView === 'wizard' && <NewProjectWizard onCreateProject={handleOpenProject} />}
@@ -212,7 +243,20 @@ export function App(): React.JSX.Element {
             }}
           >
             <SplitView />
-            {rightPanelOpen && <RightPanel />}
+            {rightPanelOpen && (
+              <>
+                <PanelDivider
+                  side="right"
+                  panelRef={rightPanelRef}
+                  minWidth={180}
+                  maxWidth={500}
+                  onResizeEnd={setRightPanelWidth}
+                />
+                <div ref={rightPanelRef} style={{ width: rightPanelWidth, flexShrink: 0 }}>
+                  <RightPanel />
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

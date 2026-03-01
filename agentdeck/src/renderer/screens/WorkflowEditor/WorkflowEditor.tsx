@@ -10,6 +10,7 @@ import type {
 import { useAppStore } from '../../store/appStore'
 import { WorkflowCanvas } from './WorkflowCanvas'
 import WorkflowLogPanel from './WorkflowLogPanel'
+import { PanelDivider } from '../../components/shared/PanelDivider'
 import AddNodeMenu from './AddNodeMenu'
 import './WorkflowEditor.css'
 
@@ -28,6 +29,9 @@ const STATUS_TEXT: Record<WorkflowStatus, string> = {
 export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): React.JSX.Element {
   const updateWorkflowMeta = useAppStore((s) => s.updateWorkflowMeta)
   const projects = useAppStore((s) => s.projects)
+  const wfLogPanelWidth = useAppStore((s) => s.wfLogPanelWidth)
+  const setWfLogPanelWidth = useAppStore((s) => s.setWfLogPanelWidth)
+  const logPanelRef = useRef<HTMLDivElement>(null)
   const [workflow, setWorkflow] = useState<Workflow | null>(null)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [nodeStatuses, setNodeStatuses] = useState<Record<string, WorkflowNodeStatus>>({})
@@ -429,13 +433,22 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
           )}
         </div>
 
-        <WorkflowLogPanel
-          events={logs}
-          workflow={workflow}
-          nodeStatuses={nodeStatuses}
-          onResumeCheckpoint={handleResume}
-          onClear={handleClearLogs}
+        <PanelDivider
+          side="right"
+          panelRef={logPanelRef}
+          minWidth={200}
+          maxWidth={600}
+          onResizeEnd={setWfLogPanelWidth}
         />
+        <div ref={logPanelRef} style={{ width: wfLogPanelWidth, flexShrink: 0 }}>
+          <WorkflowLogPanel
+            events={logs}
+            workflow={workflow}
+            nodeStatuses={nodeStatuses}
+            onResumeCheckpoint={handleResume}
+            onClear={handleClearLogs}
+          />
+        </div>
       </div>
     </div>
   )

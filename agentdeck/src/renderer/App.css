@@ -16,3 +16,9 @@
   display: flex;
   overflow: hidden;
 }
+
+.sidebar-wrapper {
+  display: flex;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+}
