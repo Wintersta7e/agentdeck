@@ -40,8 +40,8 @@ export async function listWorkflows(): Promise<WorkflowMeta[]> {
       }
       if (raw.description !== undefined) meta.description = raw.description
       metas.push(meta)
-    } catch {
-      log.warn('Failed to parse workflow file', { file: f })
+    } catch (err) {
+      log.warn('Failed to parse workflow file', { file: f, err: String(err) })
     }
   }
   return metas
@@ -52,7 +52,11 @@ export async function loadWorkflow(id: string): Promise<Workflow | null> {
     const file = path.join(getWorkflowsDir(), `${safeId(id)}.json`)
     const data = await fs.promises.readFile(file, 'utf-8')
     return JSON.parse(data) as Workflow
-  } catch {
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code
+    if (code !== 'ENOENT') {
+      log.error('Failed to load workflow', { id, err: String(err) })
+    }
     return null
   }
 }

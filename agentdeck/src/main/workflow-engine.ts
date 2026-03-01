@@ -1,6 +1,5 @@
 import { BrowserWindow } from 'electron'
 import { spawn, execFile, type ChildProcess } from 'child_process'
-import { EventEmitter } from 'events'
 import { createLogger } from './logger'
 import type { PtyManager } from './pty-manager'
 import type {
@@ -10,23 +9,13 @@ import type {
   WorkflowEdge,
   WorkflowEvent,
 } from '../shared/types'
+import { AGENT_BINARY_MAP, KNOWN_AGENT_IDS, SAFE_FLAGS_RE } from '../shared/agents'
 
 const log = createLogger('workflow-engine')
 
-/** Known agent binary names — unknown agents are rejected (H2) */
-const KNOWN_AGENTS = new Set([
-  'claude-code',
-  'codex',
-  'aider',
-  'goose',
-  'gemini-cli',
-  'amazon-q',
-  'opencode',
-])
-
 const VALID_NODE_TYPES = new Set<WorkflowNodeType>(['agent', 'shell', 'checkpoint'])
 
-/** Max field lengths for workflow validation (M1) */
+/** Max field lengths for workflow validation */
 const MAX_NAME = 200
 const MAX_DESCRIPTION = 2000
 const MAX_COMMAND = 10000
@@ -34,18 +23,6 @@ const MAX_PROMPT = 10000
 const MAX_NODES = 100
 const MAX_EDGES = 500
 const SAFE_ID_RE = /^[a-zA-Z0-9_-]+$/
-const SAFE_FLAGS_RE = /^[A-Za-z0-9 \-_=./:@,]*$/
-
-/** Agent binary names — keep in sync with pty-manager.ts AGENT_BINARIES */
-const AGENT_BINARIES: Record<string, string> = {
-  'claude-code': 'claude',
-  codex: 'codex',
-  aider: 'aider',
-  goose: 'goose',
-  'gemini-cli': 'gemini',
-  'amazon-q': 'q',
-  opencode: 'opencode',
-}
 
 /** Non-interactive / print-mode CLI flags per agent (prompt follows as last arg) */
 const AGENT_PRINT_FLAGS: Record<string, string[]> = {
@@ -78,19 +55,8 @@ export interface WorkflowEngine {
   isRunning: (workflowId: string) => boolean
 }
 
-/**
- * Internal event bus for PTY data/exit events.
- *
- * pty-manager.ts sends data to the renderer via `webContents.send()`, which
- * is a one-way main->renderer IPC channel that does NOT fire events on the
- * main-process EventEmitter. To let the workflow engine (which lives in
- * the main process) capture PTY output, pty-manager also emits on this bus:
- *
- *   ptyBus.emit(`data:${sessionId}`, data)
- *   ptyBus.emit(`exit:${sessionId}`, exitCode)
- */
-export const ptyBus = new EventEmitter()
-ptyBus.setMaxListeners(200)
+// Re-export for any external importers (backward compat)
+export { ptyBus } from './pty-bus'
 
 /**
  * Runtime validation of a workflow loaded from disk (C2).
@@ -122,7 +88,7 @@ export function validateWorkflow(w: unknown): w is Workflow {
       throw new Error(`Node command exceeds ${MAX_COMMAND} chars`)
     if (n.prompt !== undefined && typeof n.prompt === 'string' && n.prompt.length > MAX_PROMPT)
       throw new Error(`Node prompt exceeds ${MAX_PROMPT} chars`)
-    if (n.agent !== undefined && typeof n.agent === 'string' && !KNOWN_AGENTS.has(n.agent))
+    if (n.agent !== undefined && typeof n.agent === 'string' && !KNOWN_AGENT_IDS.has(n.agent))
       throw new Error(`Unknown agent: ${n.agent}`)
   }
   return true
@@ -161,7 +127,7 @@ function topoSort(nodes: WorkflowNode[], edges: WorkflowEdge[]): WorkflowNode[][
 }
 
 export function createWorkflowEngine(
-  ptyManager: PtyManager,
+  _ptyManager: PtyManager,
   mainWindow: BrowserWindow,
 ): WorkflowEngine {
   const activeRuns = new Map<string, { stop: () => void; resume: (nodeId: string) => void }>()
@@ -190,7 +156,6 @@ export function createWorkflowEngine(
 
     let stopped = false
     const nodeOutputs = new Map<string, string>()
-    const activeSessions = new Set<string>()
     const activeChildProcesses = new Set<ChildProcess>()
     // H10: Key checkpoints by workflowId:nodeId (scoped to this run)
     const runCheckpoints = new Map<string, () => void>()
@@ -210,7 +175,7 @@ export function createWorkflowEngine(
         }
 
         const agentName = node.agent ?? 'claude-code'
-        const bin = AGENT_BINARIES[agentName] ?? agentName
+        const bin = AGENT_BINARY_MAP[agentName] ?? agentName
         const printFlags = AGENT_PRINT_FLAGS[agentName] ?? ['--print']
 
         let sanitizedFlags = ''
@@ -286,7 +251,7 @@ export function createWorkflowEngine(
         const child = execFile(
           'wsl.exe',
           ['--', 'bash', '-lc', fullCmd],
-          { timeout: 60000 },
+          { timeout: node.timeout ?? 60000 },
           (err, stdout, stderr) => {
             activeChildProcesses.delete(child)
             const out = stripAnsi(stdout + stderr)
@@ -367,6 +332,7 @@ export function createWorkflowEngine(
                   message: node.message ?? 'Waiting for user to continue...',
                 })
                 await onCheckpoint(node.id)
+                if (stopped) return
                 push(workflow.id, {
                   type: 'node:resumed',
                   workflowId: workflow.id,
@@ -413,13 +379,6 @@ export function createWorkflowEngine(
     const handle = {
       stop: () => {
         stopped = true
-        // C3: Clean up ptyBus listeners for all active sessions
-        for (const sid of activeSessions) {
-          ptyBus.removeAllListeners(`data:${sid}`)
-          ptyBus.removeAllListeners(`exit:${sid}`)
-          ptyManager.kill(sid)
-        }
-        activeSessions.clear()
         // C4: Kill all in-flight shell child processes
         for (const child of activeChildProcesses) {
           child.kill()

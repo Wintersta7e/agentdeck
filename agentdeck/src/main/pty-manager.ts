@@ -2,19 +2,10 @@ import type { BrowserWindow } from 'electron'
 import type { IPty } from 'node-pty'
 import * as pty from 'node-pty'
 import { createLogger } from './logger'
-import { ptyBus } from './workflow-engine'
+import { ptyBus } from './pty-bus'
+import { AGENT_BINARY_MAP, SAFE_FLAGS_RE } from '../shared/agents'
 
 const log = createLogger('pty-manager')
-
-const AGENT_BINARIES: Record<string, string> = {
-  'claude-code': 'claude',
-  codex: 'codex',
-  aider: 'aider',
-  goose: 'goose',
-  'gemini-cli': 'gemini',
-  'amazon-q': 'q',
-  opencode: 'opencode',
-}
 
 /**
  * Map of agent name → npm package info for agents installed via npm.
@@ -67,9 +58,6 @@ function parseActivityLine(line: string): { type: string; title: string; detail:
   if (/\b[Tt]hinking\b/.test(clean)) return { type: 'think', title: 'Thinking', detail: '' }
   return null
 }
-
-/* Fix 6 (SEC-2): agentFlags validation pattern */
-const SAFE_FLAGS_RE = /^[A-Za-z0-9 \-_=./:@,]*$/
 
 export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
   const sessions = new Map<string, IPty>()
@@ -126,7 +114,7 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
     if (startupCommands) {
       // Filter out cd and agent commands — those are handled by projectPath auto-cd
       // and the agent param. Legacy projects may still have them in stored config.
-      const agentBins = new Set(Object.values(AGENT_BINARIES))
+      const agentBins = new Set(Object.values(AGENT_BINARY_MAP))
       const filtered = startupCommands.filter((cmd) => {
         const trimmed = cmd.trim()
         if (/^cd\s+/.test(trimmed)) return false
@@ -146,21 +134,24 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
     }
 
     if (agent) {
-      const bin = AGENT_BINARIES[agent] ?? agent
+      const bin = AGENT_BINARY_MAP[agent]
+      if (!bin) {
+        log.warn(`Unknown agent "${agent}" for session ${sessionId}, skipping agent command`)
+      } else {
+        // Fix missing npm global bin symlinks for npm-installed agents.
+        // WSL sometimes loses these, causing the stale Windows-side binary to
+        // shadow the newer WSL-installed version (e.g. codex update loop).
+        const npmInfo = NPM_AGENT_PACKAGES[agent]
+        if (npmInfo) {
+          const { pkg, binEntry } = npmInfo
+          commands.push(
+            `NPM_G=$(npm prefix -g 2>/dev/null) && [ -d "$NPM_G/lib/node_modules/${pkg}" ] && [ ! -x "$NPM_G/bin/${bin}" ] && ln -sf "../lib/node_modules/${pkg}/${binEntry}" "$NPM_G/bin/${bin}" 2>/dev/null; true`,
+          )
+        }
 
-      // Fix missing npm global bin symlinks for npm-installed agents.
-      // WSL sometimes loses these, causing the stale Windows-side binary to
-      // shadow the newer WSL-installed version (e.g. codex update loop).
-      const npmInfo = NPM_AGENT_PACKAGES[agent]
-      if (npmInfo) {
-        const { pkg, binEntry } = npmInfo
-        commands.push(
-          `NPM_G=$(npm prefix -g 2>/dev/null) && [ -d "$NPM_G/lib/node_modules/${pkg}" ] && [ ! -x "$NPM_G/bin/${bin}" ] && ln -sf "../lib/node_modules/${pkg}/${binEntry}" "$NPM_G/bin/${bin}" 2>/dev/null; true`,
-        )
+        const agentCmd = sanitizedFlags ? `${bin} ${sanitizedFlags}` : bin
+        commands.push(agentCmd)
       }
-
-      const agentCmd = sanitizedFlags ? `${bin} ${sanitizedFlags}` : bin
-      commands.push(agentCmd)
     }
 
     if (commands.length > 0) {
