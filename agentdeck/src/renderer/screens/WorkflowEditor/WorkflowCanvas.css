@@ -97,8 +97,40 @@
   color: var(--text2);
 }
 
+/* ── Edge flow particles ── */
+
+.wf-edge-particle {
+  offset-rotate: 0deg;
+  animation: wf-particle-flow 2s linear infinite;
+}
+
+.wf-edge-particle-2 {
+  animation-delay: -0.7s;
+  opacity: 0.7;
+}
+
+@keyframes wf-particle-flow {
+  0% {
+    offset-distance: 0%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    offset-distance: 100%;
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .wf-edge-active {
     animation: none;
+  }
+  .wf-edge-particle {
+    display: none;
   }
 }

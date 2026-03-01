@@ -228,23 +228,21 @@ export function App(): React.JSX.Element {
         onAddTab={handleAddTab}
       />
       <div className="app-body">
+        <div
+          ref={sidebarRef}
+          className={`sidebar-wrapper${sidebarOpen ? '' : ' collapsed'}`}
+          style={{ width: sidebarOpen ? sidebarWidth : 0, flexShrink: 0 }}
+        >
+          <Sidebar onOpenProject={handleOpenProject} />
+        </div>
         {sidebarOpen && (
-          <>
-            <div
-              ref={sidebarRef}
-              className="sidebar-wrapper"
-              style={{ width: sidebarWidth, flexShrink: 0 }}
-            >
-              <Sidebar onOpenProject={handleOpenProject} />
-            </div>
-            <PanelDivider
-              side="left"
-              panelRef={sidebarRef}
-              minWidth={160}
-              maxWidth={400}
-              onResizeEnd={setSidebarWidth}
-            />
-          </>
+          <PanelDivider
+            side="left"
+            panelRef={sidebarRef}
+            minWidth={160}
+            maxWidth={400}
+            onResizeEnd={setSidebarWidth}
+          />
         )}
         <div className="app-main">
           {currentView === 'home' && <HomeScreen onOpenProject={handleOpenProject} />}

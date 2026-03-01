@@ -256,7 +256,15 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   currentView: 'home',
-  setCurrentView: (view) => set({ currentView: view }),
+  setCurrentView: (view) => {
+    if (typeof document.startViewTransition === 'function') {
+      document.startViewTransition(() => {
+        set({ currentView: view })
+      })
+    } else {
+      set({ currentView: view })
+    }
+  },
 
   settingsProjectId: null,
   viewStack: [] as ViewType[],

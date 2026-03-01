@@ -107,8 +107,15 @@ interface ViewTransition {
   updateCallbackDone: Promise<void>
 }
 
+interface StartViewTransitionOptions {
+  update: () => void
+  types?: string[]
+}
+
 interface Document {
-  startViewTransition?: (callback: () => void) => ViewTransition
+  startViewTransition?: (
+    callbackOrOptions: (() => void) | StartViewTransitionOptions,
+  ) => ViewTransition
 }
 
 declare module '*.css'

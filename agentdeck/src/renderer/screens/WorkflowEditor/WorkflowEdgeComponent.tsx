@@ -51,6 +51,22 @@ export function WorkflowEdgeComponent({
         strokeDasharray={dashArray}
         markerEnd={`url(#wf-arrowhead-${state})`}
       />
+      {state === 'active' && (
+        <>
+          <circle
+            r="3"
+            className="wf-edge-particle wf-edge-particle-1"
+            style={{ offsetPath: `path('${edgePath}')` }}
+            fill="var(--green)"
+          />
+          <circle
+            r="2"
+            className="wf-edge-particle wf-edge-particle-2"
+            style={{ offsetPath: `path('${edgePath}')` }}
+            fill="var(--green)"
+          />
+        </>
+      )}
     </>
   )
 }

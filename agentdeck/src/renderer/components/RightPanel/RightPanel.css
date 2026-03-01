@@ -44,6 +44,31 @@
   padding: 12px;
   scrollbar-width: thin;
   scrollbar-color: var(--bg4) transparent;
+  position: relative;
+}
+
+/* Scroll fade masks */
+.panel-body::before,
+.panel-body::after {
+  content: '';
+  position: sticky;
+  display: block;
+  width: 100%;
+  height: 20px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.panel-body::before {
+  top: 0;
+  background: linear-gradient(to bottom, var(--bg1), transparent);
+  margin-bottom: -20px;
+}
+
+.panel-body::after {
+  bottom: 0;
+  background: linear-gradient(to top, var(--bg1), transparent);
+  margin-top: -20px;
 }
 
 .panel-body::-webkit-scrollbar {

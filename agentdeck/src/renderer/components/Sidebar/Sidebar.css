@@ -14,6 +14,31 @@
 .sidebar-section.flex-fill {
   flex: 1;
   overflow-y: auto;
+  position: relative;
+}
+
+/* Scroll fade masks */
+.sidebar-section.flex-fill::before,
+.sidebar-section.flex-fill::after {
+  content: '';
+  position: sticky;
+  display: block;
+  width: 100%;
+  height: 20px;
+  pointer-events: none;
+  z-index: 1;
+  flex-shrink: 0;
+}
+
+.sidebar-section.flex-fill::before {
+  top: 0;
+  background: linear-gradient(to bottom, var(--bg1), transparent);
+}
+
+.sidebar-section.flex-fill::after {
+  bottom: 0;
+  background: linear-gradient(to top, var(--bg1), transparent);
+  margin-top: -20px;
 }
 
 .sidebar-label {

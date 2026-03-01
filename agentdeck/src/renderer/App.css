@@ -21,4 +21,16 @@
   display: flex;
   overflow: hidden;
   border-right: 1px solid var(--border);
+  transition: width 0.2s ease;
+}
+
+.sidebar-wrapper.collapsed {
+  width: 0 !important;
+  border-right-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-wrapper {
+    transition: none;
+  }
 }

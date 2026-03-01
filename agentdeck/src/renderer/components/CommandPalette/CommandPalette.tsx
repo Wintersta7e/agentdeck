@@ -86,7 +86,10 @@ function applyThemeWithTransition(themeId: string, x?: number, y?: number): void
   document.documentElement.style.setProperty('--reveal-x', `${x ?? window.innerWidth / 2}px`)
   document.documentElement.style.setProperty('--reveal-y', `${y ?? window.innerHeight / 2}px`)
 
-  const transition = document.startViewTransition(apply)
+  const transition = document.startViewTransition({
+    update: apply,
+    types: ['theme-reveal'],
+  })
   transition.finished.then(() => {
     document.documentElement.style.removeProperty('--reveal-x')
     document.documentElement.style.removeProperty('--reveal-y')

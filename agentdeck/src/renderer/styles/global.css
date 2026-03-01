@@ -125,20 +125,25 @@ body {
   }
 }
 
-/* ─── Circular theme reveal (View Transition API) ─── */
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation-duration: 0.4s;
-  animation-timing-function: ease-in-out;
-}
+/* ─── View transitions ─── */
 
-::view-transition-new(root) {
-  clip-path: circle(0% at var(--reveal-x, 50%) var(--reveal-y, 50%));
-  animation: circleReveal 0.4s ease-in-out forwards;
-}
-
+/* Default: quick crossfade for view changes */
 ::view-transition-old(root) {
-  animation: none;
+  animation: vt-fadeOut 0.12s ease forwards;
+}
+::view-transition-new(root) {
+  animation: vt-fadeIn 0.12s ease forwards;
+}
+
+/* Circular reveal override for theme transitions (typed) */
+:root:active-view-transition-type(theme-reveal) {
+  &::view-transition-old(root) {
+    animation: none;
+  }
+  &::view-transition-new(root) {
+    clip-path: circle(0% at var(--reveal-x, 50%) var(--reveal-y, 50%));
+    animation: circleReveal 0.4s ease-in-out forwards;
+  }
 }
 
 @keyframes circleReveal {
@@ -151,5 +156,41 @@ body {
   ::view-transition-old(root),
   ::view-transition-new(root) {
     animation: none !important;
+  }
+}
+
+/* ─── Button press scale ─── */
+button:active,
+.tab:active,
+.sidebar-item:active,
+.new-project-btn:active,
+.sidebar-new-wf:active {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button:active,
+  .tab:active,
+  .sidebar-item:active,
+  .new-project-btn:active,
+  .sidebar-new-wf:active {
+    transform: none;
+  }
+}
+
+@keyframes vt-fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }

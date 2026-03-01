@@ -93,11 +93,30 @@
   border-bottom: 2px solid transparent;
   font-size: 11px;
   color: var(--text2);
-  transition: all 0.12s;
+  transition:
+    all 0.12s,
+    max-width 0.25s ease,
+    opacity 0.2s ease,
+    padding 0.25s ease;
   white-space: nowrap;
   flex-shrink: 0;
   position: relative;
   -webkit-app-region: no-drag;
+  max-width: 300px;
+}
+
+.tab.closing {
+  max-width: 0;
+  opacity: 0;
+  padding: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab.closing {
+    transition: none;
+  }
 }
 .tab:hover {
   color: var(--text1);

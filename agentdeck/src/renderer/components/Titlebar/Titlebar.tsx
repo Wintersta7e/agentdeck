@@ -1,3 +1,4 @@
+import { useState, useCallback } from 'react'
 import { useAppStore } from '../../store/appStore'
 import type { Session } from '../../../shared/types'
 import './Titlebar.css'
@@ -13,6 +14,37 @@ export function Titlebar({
   onCloseWorkflowTab,
   onAddTab,
 }: TitlebarProps): React.JSX.Element {
+  const [closingTabs, setClosingTabs] = useState<Set<string>>(() => new Set())
+
+  const animateCloseSession = useCallback(
+    (sessionId: string) => {
+      setClosingTabs((prev) => new Set(prev).add(sessionId))
+      setTimeout(() => {
+        setClosingTabs((prev) => {
+          const next = new Set(prev)
+          next.delete(sessionId)
+          return next
+        })
+        onCloseTab(sessionId)
+      }, 250)
+    },
+    [onCloseTab],
+  )
+
+  const animateCloseWorkflow = useCallback(
+    (workflowId: string) => {
+      setClosingTabs((prev) => new Set(prev).add(workflowId))
+      setTimeout(() => {
+        setClosingTabs((prev) => {
+          const next = new Set(prev)
+          next.delete(workflowId)
+          return next
+        })
+        onCloseWorkflowTab(workflowId)
+      }, 250)
+    },
+    [onCloseWorkflowTab],
+  )
   const currentView = useAppStore((s) => s.currentView)
   const sessions = useAppStore((s) => s.sessions)
   const activeSessionId = useAppStore((s) => s.activeSessionId)
@@ -69,7 +101,7 @@ export function Titlebar({
           {sessionList.map((s) => (
             <div
               key={s.id}
-              className={`tab ${s.id === activeSessionId && currentView === 'session' ? 'active' : ''}`}
+              className={`tab${s.id === activeSessionId && currentView === 'session' ? ' active' : ''}${closingTabs.has(s.id) ? ' closing' : ''}`}
               onClick={() => {
                 setActiveSession(s.id)
                 setCurrentView('session')
@@ -81,7 +113,7 @@ export function Titlebar({
                 className="tab-close"
                 onClick={(e) => {
                   e.stopPropagation()
-                  onCloseTab(s.id)
+                  animateCloseSession(s.id)
                 }}
               >
                 {'\u00D7'}
@@ -91,7 +123,7 @@ export function Titlebar({
           {openWorkflowIds.map((wfId) => (
             <div
               key={wfId}
-              className={`tab tab-workflow${wfId === activeWorkflowId && currentView === 'workflow' ? ' active' : ''}`}
+              className={`tab tab-workflow${wfId === activeWorkflowId && currentView === 'workflow' ? ' active' : ''}${closingTabs.has(wfId) ? ' closing' : ''}`}
               onClick={() => openWorkflow(wfId)}
             >
               <span className="tab-wf-icon">{'\u2B21'}</span>
@@ -100,7 +132,7 @@ export function Titlebar({
                 className="tab-close"
                 onClick={(e) => {
                   e.stopPropagation()
-                  onCloseWorkflowTab(wfId)
+                  animateCloseWorkflow(wfId)
                 }}
               >
                 {'\u00D7'}
