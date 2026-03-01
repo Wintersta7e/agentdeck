@@ -8,7 +8,7 @@ import { detectStack } from './detect-stack'
 import { getDefaultDistro, wslPathToWindows } from './wsl-utils'
 import { initLogger, createLogger } from './logger'
 import { listWorkflows, loadWorkflow, saveWorkflow, deleteWorkflow } from './workflow-store'
-import { createWorkflowEngine } from './workflow-engine'
+import { createWorkflowEngine, validateWorkflow } from './workflow-engine'
 import type { WorkflowEngine } from './workflow-engine'
 import type { Workflow } from '../shared/types'
 
@@ -377,13 +377,23 @@ function registerIpcHandlers(store: AppStore): void {
   ipcMain.handle('workflows:list', () => listWorkflows())
   ipcMain.handle('workflows:load', (_, id: string) => loadWorkflow(id))
   ipcMain.handle('workflows:save', (_, workflow: Workflow) => saveWorkflow(workflow))
-  ipcMain.handle('workflows:delete', (_, id: string) => deleteWorkflow(id))
+  ipcMain.handle('workflows:delete', async (_, id: string) => {
+    // C6: Stop running workflow before deleting to avoid orphaned PTYs
+    workflowEngine?.stop(id)
+    await deleteWorkflow(id)
+  })
 
   /* ── Workflow Execution ────────────────────────────────────────── */
-  ipcMain.handle('workflow:run', (_, workflowId: string, projectPath?: string) => {
-    const workflow = loadWorkflow(workflowId)
+  ipcMain.handle('workflow:run', async (_, workflowId: string, projectPath?: string) => {
+    const workflow = await loadWorkflow(workflowId)
     if (!workflow) throw new Error(`Workflow not found: ${workflowId}`)
     if (!workflowEngine) throw new Error('Workflow engine not initialized')
+    // C2: Validate workflow structure before execution
+    validateWorkflow(workflow)
+    // H1: Validate projectPath if provided (WSL absolute path only)
+    if (projectPath !== undefined && !/^\/[a-zA-Z0-9_./-]+$/.test(projectPath)) {
+      throw new Error(`Invalid project path: ${projectPath}`)
+    }
     workflowEngine.run(workflow, projectPath)
   })
   ipcMain.handle('workflow:stop', (_, workflowId: string) => {

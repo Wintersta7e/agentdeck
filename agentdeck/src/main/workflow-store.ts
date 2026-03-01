@@ -11,45 +11,53 @@ function safeId(id: string): string {
   return id.replace(/[^a-zA-Z0-9_-]/g, '')
 }
 
+// M4: Cache workflows directory path
+let cachedWorkflowsDir: string | null = null
+
 function getWorkflowsDir(): string {
+  if (cachedWorkflowsDir) return cachedWorkflowsDir
   const dir = path.join(app.getPath('userData'), 'workflows')
   fs.mkdirSync(dir, { recursive: true })
+  cachedWorkflowsDir = dir
   return dir
 }
 
-export function listWorkflows(): WorkflowMeta[] {
+// H4: Async versions of all workflow operations
+
+export async function listWorkflows(): Promise<WorkflowMeta[]> {
   const dir = getWorkflowsDir()
-  return fs
-    .readdirSync(dir)
-    .filter((f) => f.endsWith('.json'))
-    .flatMap((f) => {
-      try {
-        const raw = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf-8')) as Workflow
-        const meta: WorkflowMeta = {
-          id: raw.id,
-          name: raw.name,
-          nodeCount: raw.nodes?.length ?? 0,
-          updatedAt: raw.updatedAt,
-        }
-        if (raw.description !== undefined) meta.description = raw.description
-        return [meta]
-      } catch {
-        log.warn('Failed to parse workflow file', { file: f })
-        return []
+  const files = await fs.promises.readdir(dir)
+  const metas: WorkflowMeta[] = []
+  for (const f of files) {
+    if (!f.endsWith('.json')) continue
+    try {
+      const raw = JSON.parse(await fs.promises.readFile(path.join(dir, f), 'utf-8')) as Workflow
+      const meta: WorkflowMeta = {
+        id: raw.id,
+        name: raw.name,
+        nodeCount: raw.nodes?.length ?? 0,
+        updatedAt: raw.updatedAt,
       }
-    })
+      if (raw.description !== undefined) meta.description = raw.description
+      metas.push(meta)
+    } catch {
+      log.warn('Failed to parse workflow file', { file: f })
+    }
+  }
+  return metas
 }
 
-export function loadWorkflow(id: string): Workflow | null {
+export async function loadWorkflow(id: string): Promise<Workflow | null> {
   try {
     const file = path.join(getWorkflowsDir(), `${safeId(id)}.json`)
-    return JSON.parse(fs.readFileSync(file, 'utf-8')) as Workflow
+    const data = await fs.promises.readFile(file, 'utf-8')
+    return JSON.parse(data) as Workflow
   } catch {
     return null
   }
 }
 
-export function saveWorkflow(workflow: Workflow): Workflow {
+export async function saveWorkflow(workflow: Workflow): Promise<Workflow> {
   const now = Date.now()
   const w: Workflow = {
     ...workflow,
@@ -58,13 +66,13 @@ export function saveWorkflow(workflow: Workflow): Workflow {
     id: workflow.id || crypto.randomUUID(),
   }
   const file = path.join(getWorkflowsDir(), `${safeId(w.id)}.json`)
-  fs.writeFileSync(file, JSON.stringify(w, null, 2), 'utf-8')
+  await fs.promises.writeFile(file, JSON.stringify(w, null, 2), 'utf-8')
   log.info('Workflow saved', { id: w.id, name: w.name })
   return w
 }
 
-export function deleteWorkflow(id: string): void {
+export async function deleteWorkflow(id: string): Promise<void> {
   const file = path.join(getWorkflowsDir(), `${safeId(id)}.json`)
-  fs.rmSync(file, { force: true })
+  await fs.promises.rm(file, { force: true })
   log.info('Workflow deleted', { id })
 }

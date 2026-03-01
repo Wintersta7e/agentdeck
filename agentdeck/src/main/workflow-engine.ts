@@ -1,35 +1,96 @@
 import { BrowserWindow } from 'electron'
-import { execFile } from 'child_process'
+import { execFile, type ChildProcess } from 'child_process'
 import { EventEmitter } from 'events'
 import { createLogger } from './logger'
 import type { PtyManager } from './pty-manager'
-import type { Workflow, WorkflowNode, WorkflowEdge, WorkflowEvent } from '../shared/types'
+import type {
+  Workflow,
+  WorkflowNode,
+  WorkflowNodeType,
+  WorkflowEdge,
+  WorkflowEvent,
+} from '../shared/types'
 
 const log = createLogger('workflow-engine')
 
+/** Known agent binary names — unknown agents are rejected (H2) */
+const KNOWN_AGENTS = new Set([
+  'claude-code',
+  'codex',
+  'aider',
+  'goose',
+  'gemini-cli',
+  'amazon-q',
+  'opencode',
+])
+
+const VALID_NODE_TYPES = new Set<WorkflowNodeType>(['agent', 'shell', 'checkpoint'])
+
+/** Max field lengths for workflow validation (M1) */
+const MAX_NAME = 200
+const MAX_DESCRIPTION = 2000
+const MAX_COMMAND = 10000
+const MAX_PROMPT = 10000
+const MAX_NODES = 100
+const MAX_EDGES = 500
+const SAFE_ID_RE = /^[a-zA-Z0-9_-]+$/
+
 export interface WorkflowEngine {
-  run: (workflow: Workflow, projectPath?: string) => void
+  run: (workflow: Workflow, projectPath?: string | undefined) => void
   stop: (workflowId: string) => void
   resume: (workflowId: string, nodeId: string) => void
+  isRunning: (workflowId: string) => boolean
 }
 
 /**
  * Internal event bus for PTY data/exit events.
  *
  * pty-manager.ts sends data to the renderer via `webContents.send()`, which
- * is a one-way main→renderer IPC channel that does NOT fire events on the
- * main-process EventEmitter.  To let the workflow engine (which lives in
- * the main process) capture PTY output, pty-manager should also emit on
- * this bus:
+ * is a one-way main->renderer IPC channel that does NOT fire events on the
+ * main-process EventEmitter. To let the workflow engine (which lives in
+ * the main process) capture PTY output, pty-manager also emits on this bus:
  *
  *   ptyBus.emit(`data:${sessionId}`, data)
  *   ptyBus.emit(`exit:${sessionId}`, exitCode)
- *
- * Until that integration is wired, agent nodes will resolve on PTY exit
- * without capturing intermediate output.
  */
 export const ptyBus = new EventEmitter()
-ptyBus.setMaxListeners(100)
+ptyBus.setMaxListeners(200)
+
+/**
+ * Runtime validation of a workflow loaded from disk (C2).
+ * Throws descriptive error if the structure is invalid or fields exceed limits.
+ */
+export function validateWorkflow(w: unknown): w is Workflow {
+  if (!w || typeof w !== 'object') throw new Error('Workflow is not an object')
+  const wf = w as Record<string, unknown>
+  if (typeof wf.id !== 'string' || !SAFE_ID_RE.test(wf.id))
+    throw new Error(`Invalid workflow id: ${String(wf.id)}`)
+  if (typeof wf.name !== 'string') throw new Error('Workflow name must be a string')
+  if (wf.name.length > MAX_NAME) throw new Error(`Workflow name exceeds ${MAX_NAME} chars`)
+  if (wf.description !== undefined && typeof wf.description !== 'string')
+    throw new Error('Workflow description must be a string')
+  if (typeof wf.description === 'string' && wf.description.length > MAX_DESCRIPTION)
+    throw new Error(`Workflow description exceeds ${MAX_DESCRIPTION} chars`)
+  if (!Array.isArray(wf.nodes)) throw new Error('Workflow nodes must be an array')
+  if (wf.nodes.length > MAX_NODES) throw new Error(`Workflow exceeds ${MAX_NODES} nodes`)
+  if (!Array.isArray(wf.edges)) throw new Error('Workflow edges must be an array')
+  if ((wf.edges as unknown[]).length > MAX_EDGES)
+    throw new Error(`Workflow exceeds ${MAX_EDGES} edges`)
+  for (const n of wf.nodes as Record<string, unknown>[]) {
+    if (typeof n.id !== 'string') throw new Error('Node id must be a string')
+    if (!VALID_NODE_TYPES.has(n.type as WorkflowNodeType))
+      throw new Error(`Invalid node type: ${String(n.type)}`)
+    if (typeof n.name !== 'string') throw new Error('Node name must be a string')
+    if (n.name.length > MAX_NAME) throw new Error(`Node name exceeds ${MAX_NAME} chars`)
+    if (n.command !== undefined && typeof n.command === 'string' && n.command.length > MAX_COMMAND)
+      throw new Error(`Node command exceeds ${MAX_COMMAND} chars`)
+    if (n.prompt !== undefined && typeof n.prompt === 'string' && n.prompt.length > MAX_PROMPT)
+      throw new Error(`Node prompt exceeds ${MAX_PROMPT} chars`)
+    if (n.agent !== undefined && typeof n.agent === 'string' && !KNOWN_AGENTS.has(n.agent))
+      throw new Error(`Unknown agent: ${n.agent}`)
+  }
+  return true
+}
 
 /** Topological sort -- returns array of tiers (each tier = parallel batch) */
 function topoSort(nodes: WorkflowNode[], edges: WorkflowEdge[]): WorkflowNode[][] {
@@ -67,22 +128,36 @@ export function createWorkflowEngine(
   ptyManager: PtyManager,
   mainWindow: BrowserWindow,
 ): WorkflowEngine {
-  const activeRuns = new Map<string, { stop: () => void }>()
-  const checkpoints = new Map<string, () => void>()
+  const activeRuns = new Map<string, { stop: () => void; resume: (nodeId: string) => void }>()
 
   function push(workflowId: string, event: Omit<WorkflowEvent, 'id' | 'timestamp'>): void {
     if (mainWindow.isDestroyed()) return
-    mainWindow.webContents.send(`workflow:event:${workflowId}`, {
+    const safeChannel = `workflow:event:${workflowId.replace(/[^a-zA-Z0-9_-]/g, '')}`
+    mainWindow.webContents.send(safeChannel, {
       ...event,
       id: crypto.randomUUID(),
       timestamp: Date.now(),
     })
   }
 
-  function runWorkflow(workflow: Workflow, projectPath?: string): void {
+  function runWorkflow(workflow: Workflow, projectPath?: string | undefined): void {
+    // C5: Guard against concurrent runs of the same workflow
+    if (activeRuns.has(workflow.id)) {
+      log.warn('Workflow already running, ignoring duplicate run', { id: workflow.id })
+      push(workflow.id, {
+        type: 'workflow:error',
+        workflowId: workflow.id,
+        message: 'Workflow is already running',
+      })
+      return
+    }
+
     let stopped = false
     const nodeOutputs = new Map<string, string>()
     const activeSessions = new Set<string>()
+    const activeChildProcesses = new Set<ChildProcess>()
+    // H10: Key checkpoints by workflowId:nodeId (scoped to this run)
+    const runCheckpoints = new Map<string, () => void>()
 
     function runAgentNode(node: WorkflowNode, contextSummary: string): Promise<void> {
       return new Promise<void>((resolve, reject) => {
@@ -99,9 +174,6 @@ export function createWorkflowEngine(
           ? [`echo "### Workflow context ###" && echo ${JSON.stringify(startupPrompt)}`]
           : []
 
-        // Listen on the internal ptyBus for data/exit from this session.
-        // pty-manager emits: ptyBus.emit(`data:${sessionId}`, data)
-        //                    ptyBus.emit(`exit:${sessionId}`, exitCode)
         const dataChannel = `data:${sessionId}`
         const exitChannel = `exit:${sessionId}`
 
@@ -116,10 +188,14 @@ export function createWorkflowEngine(
           })
         }
 
-        const onExit = (code: number): void => {
+        const cleanup = (): void => {
           ptyBus.removeListener(dataChannel, onData)
           ptyBus.removeListener(exitChannel, onExit)
           activeSessions.delete(sessionId)
+        }
+
+        const onExit = (code: number): void => {
+          cleanup()
           if (code === 0 || code === null) resolve()
           else reject(new Error(`Agent exited with code ${code}`))
         }
@@ -151,11 +227,15 @@ export function createWorkflowEngine(
           message: `$ ${cmd}\n`,
         })
 
-        execFile(
+        // M8: Use projectPath as cwd context for shell commands
+        const fullCmd = projectPath ? `cd "${projectPath}" && ${cmd}` : cmd
+
+        const child = execFile(
           'wsl.exe',
-          ['--', 'bash', '-c', cmd],
+          ['--', 'bash', '-c', fullCmd],
           { timeout: 60000 },
           (err, stdout, stderr) => {
+            activeChildProcesses.delete(child)
             const out = stdout + stderr
             nodeOutputs.set(node.id, out)
             push(workflow.id, {
@@ -168,12 +248,14 @@ export function createWorkflowEngine(
             else resolve()
           },
         )
+        // C4: Track child process so stop() can kill it
+        activeChildProcesses.add(child)
       })
     }
 
     function onCheckpoint(nodeId: string): Promise<void> {
       return new Promise<void>((resolve) => {
-        checkpoints.set(nodeId, resolve)
+        runCheckpoints.set(nodeId, resolve)
       })
     }
 
@@ -278,14 +360,30 @@ export function createWorkflowEngine(
     const handle = {
       stop: () => {
         stopped = true
+        // C3: Clean up ptyBus listeners for all active sessions
         for (const sid of activeSessions) {
+          ptyBus.removeAllListeners(`data:${sid}`)
+          ptyBus.removeAllListeners(`exit:${sid}`)
           ptyManager.kill(sid)
         }
         activeSessions.clear()
-        for (const [, resolve] of checkpoints) {
+        // C4: Kill all in-flight shell child processes
+        for (const child of activeChildProcesses) {
+          child.kill()
+        }
+        activeChildProcesses.clear()
+        // H10: Only clear this run's checkpoints
+        for (const [, resolve] of runCheckpoints) {
           resolve()
         }
-        checkpoints.clear()
+        runCheckpoints.clear()
+      },
+      resume: (nodeId: string) => {
+        const resolver = runCheckpoints.get(nodeId)
+        if (resolver) {
+          resolver()
+          runCheckpoints.delete(nodeId)
+        }
       },
     }
     activeRuns.set(workflow.id, handle)
@@ -310,12 +408,10 @@ export function createWorkflowEngine(
       const run = activeRuns.get(workflowId)
       if (run) run.stop()
     },
-    resume: (_workflowId: string, nodeId: string) => {
-      const resolve = checkpoints.get(nodeId)
-      if (resolve) {
-        checkpoints.delete(nodeId)
-        resolve()
-      }
+    resume: (workflowId: string, nodeId: string) => {
+      const run = activeRuns.get(workflowId)
+      if (run) run.resume(nodeId)
     },
+    isRunning: (workflowId: string) => activeRuns.has(workflowId),
   }
 }
