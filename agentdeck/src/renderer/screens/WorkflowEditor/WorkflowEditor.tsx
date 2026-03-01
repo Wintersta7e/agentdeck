@@ -97,7 +97,10 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
     window.agentDeck.workflows
       .load(workflowId)
       .then((w) => {
-        if (!cancelled && w) setWorkflow(w)
+        if (!cancelled && w) {
+          setWorkflow(w)
+          latestWorkflowRef.current = w
+        }
       })
       .catch((err: unknown) => {
         window.agentDeck.log.send('error', 'workflow-editor', 'Failed to load workflow', {
@@ -290,15 +293,13 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
     [autoSave],
   )
 
-  // M6: Use setter-function pattern to read latest workflow without dependency
+  // Read workflow from ref to avoid calling setState inside another setState's updater
+  // (React 19 requires state updater functions to be pure — no side effects).
   const handleSelectNode = useCallback((id: string | null) => {
     setSelectedNodeId(id)
     if (id) {
-      setWorkflow((prev) => {
-        const node = prev?.nodes.find((n) => n.id === id)
-        setDetailNode(node ?? null)
-        return prev
-      })
+      const node = latestWorkflowRef.current?.nodes.find((n) => n.id === id)
+      setDetailNode(node ?? null)
     } else {
       setDetailNode(null)
     }
