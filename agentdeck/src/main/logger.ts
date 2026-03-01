@@ -26,8 +26,11 @@ function rotate(logPath: string): void {
       // Overwrite any existing backup
       fs.renameSync(logPath, backup)
     }
-  } catch {
-    // File doesn't exist yet — nothing to rotate
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code
+    if (code !== 'ENOENT') {
+      console.error(`[logger] rotate error: ${String(err)}`)
+    }
   }
 }
 

@@ -1,5 +1,7 @@
 import Store from 'electron-store'
-import { ipcMain, safeStorage } from 'electron'
+import { app, ipcMain, safeStorage } from 'electron'
+import * as fs from 'fs'
+import * as path from 'path'
 import { randomUUID } from 'crypto'
 import type { EnvVar, Project, Template, TemplateCategory } from '../shared/types'
 import { createLogger } from './logger'
@@ -17,7 +19,7 @@ function encryptEnvVars(envVars: EnvVar[] | undefined): EnvVar[] | undefined {
     try {
       return { ...v, value: safeStorage.encryptString(v.value).toString('base64') }
     } catch (err) {
-      log.error('Failed to encrypt env var, storing as plaintext', { err: String(err) })
+      log.error(`Failed to encrypt env var "${v.key}", storing as plaintext`, { err: String(err) })
       return v
     }
   })
@@ -31,7 +33,7 @@ function decryptEnvVars(envVars: EnvVar[] | undefined): EnvVar[] | undefined {
     try {
       return { ...v, value: safeStorage.decryptString(Buffer.from(v.value, 'base64')) }
     } catch (err) {
-      log.error('Failed to decrypt env var, returning empty value', { err: String(err) })
+      log.error(`Failed to decrypt env var "${v.key}", returning empty value`, { err: String(err) })
       return { ...v, value: '' }
     }
   })
@@ -57,13 +59,25 @@ export interface StoreSchema {
 export type AppStore = Store<StoreSchema>
 
 export function createProjectStore(): Store<StoreSchema> {
-  const store = new Store<StoreSchema>({
-    defaults: {
-      projects: [],
-      templates: [],
-      appPrefs: { zoomFactor: 1.0, theme: '' },
-    },
-  })
+  const defaults: StoreSchema = {
+    projects: [],
+    templates: [],
+    appPrefs: { zoomFactor: 1.0, theme: '' },
+  }
+
+  let store: Store<StoreSchema>
+  try {
+    store = new Store<StoreSchema>({ defaults })
+  } catch (err) {
+    log.error('Store corrupted, deleting and recreating with defaults', { err: String(err) })
+    try {
+      const storePath = path.join(app.getPath('userData'), 'config.json')
+      fs.unlinkSync(storePath)
+    } catch {
+      // File may not exist or already deleted
+    }
+    store = new Store<StoreSchema>({ defaults })
+  }
 
   // One-time migration: fix project names that were set to the raw path
   const migrationProjects = store.get('projects')

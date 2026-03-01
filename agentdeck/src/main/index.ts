@@ -11,6 +11,7 @@ import { listWorkflows, loadWorkflow, saveWorkflow, deleteWorkflow } from './wor
 import { createWorkflowEngine, validateWorkflow } from './workflow-engine'
 import type { WorkflowEngine } from './workflow-engine'
 import type { Workflow } from '../shared/types'
+import { AGENT_BINARY_MAP, KNOWN_AGENT_IDS } from '../shared/agents'
 
 const log = createLogger('app')
 
@@ -18,16 +19,6 @@ let mainWindow: BrowserWindow | null = null
 let ptyManager: PtyManager | null = null
 let workflowEngine: WorkflowEngine | null = null
 let appStore: AppStore | null = null
-
-const agentBinaries: Record<string, string> = {
-  'claude-code': 'claude',
-  codex: 'codex',
-  aider: 'aider',
-  goose: 'goose',
-  'gemini-cli': 'gemini',
-  'amazon-q': 'q',
-  opencode: 'opencode',
-}
 
 const ALLOWED_FILES = new Set(['CLAUDE.md', 'AGENTS.md', 'README.md'])
 
@@ -289,7 +280,7 @@ function registerIpcHandlers(store: AppStore): void {
         )
       })
 
-    const entries = Object.entries(agentBinaries)
+    const entries = Object.entries(AGENT_BINARY_MAP)
     const results = await Promise.all(entries.map(([, bin]) => check(bin)))
     log.info(`Agent detection total: ${Date.now() - t0}ms`)
     return Object.fromEntries(entries.map(([name], i) => [name, results[i]]))
@@ -306,9 +297,20 @@ function registerIpcHandlers(store: AppStore): void {
       wfLogPanelWidth: p.wfLogPanelWidth,
     }
   })
+  const LAYOUT_KEYS = new Set([
+    'sidebarOpen',
+    'sidebarWidth',
+    'sidebarSections',
+    'rightPanelWidth',
+    'wfLogPanelWidth',
+  ])
   ipcMain.handle('layout:set', (_, patch: Record<string, unknown>) => {
     const current = store.get('appPrefs')
-    store.set('appPrefs', { ...current, ...patch })
+    const filtered: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(patch)) {
+      if (LAYOUT_KEYS.has(k)) filtered[k] = v
+    }
+    store.set('appPrefs', { ...current, ...filtered })
   })
 
   /* ── Agent visibility ─────────────────────────────────────────── */
@@ -316,8 +318,10 @@ function registerIpcHandlers(store: AppStore): void {
     return store.get('appPrefs').visibleAgents ?? null
   })
   ipcMain.handle('agents:setVisible', (_, agents: string[]) => {
-    store.set('appPrefs', { ...store.get('appPrefs'), visibleAgents: agents })
-    return agents
+    if (!Array.isArray(agents)) return store.get('appPrefs').visibleAgents ?? null
+    const safe = agents.filter((a) => typeof a === 'string' && KNOWN_AGENT_IDS.has(a))
+    store.set('appPrefs', { ...store.get('appPrefs'), visibleAgents: safe })
+    return safe
   })
 
   /* ── WSL username ─────────────────────────────────────────────── */
@@ -408,8 +412,11 @@ function registerIpcHandlers(store: AppStore): void {
     validateWorkflow(workflow)
     // Convert Windows path to WSL if needed (projects store Windows paths)
     const wslPath = projectPath ? toWslPathMain(projectPath) : undefined
-    // H1: Validate projectPath if provided (WSL absolute path only)
-    if (wslPath !== undefined && !/^\/[a-zA-Z0-9_./-]+$/.test(wslPath)) {
+    // H1: Validate projectPath if provided (WSL absolute path, allow spaces, reject ..)
+    if (
+      wslPath !== undefined &&
+      (!/^\/[a-zA-Z0-9 _./-]+$/.test(wslPath) || wslPath.includes('..'))
+    ) {
       throw new Error(`Invalid project path: ${wslPath}`)
     }
     workflowEngine.run(workflow, wslPath)
@@ -420,19 +427,9 @@ function registerIpcHandlers(store: AppStore): void {
   ipcMain.handle('workflow:resume', (_, workflowId: string, nodeId: string) => {
     workflowEngine?.resume(workflowId, nodeId)
   })
-}
-
-app.whenReady().then(() => {
-  initLogger()
-  log.info('App ready')
-  appStore = createProjectStore()
-  seedTemplates(appStore)
-  registerIpcHandlers(appStore)
 
   /* ── Clipboard: read file paths from copied files ────────────── */
   ipcMain.handle('clipboard:readFilePaths', async () => {
-    // Use PowerShell Get-Clipboard to read CF_HDROP (file drop list) —
-    // this is the reliable way to get copied file paths from Windows Explorer.
     const { execFile } = await import('child_process')
     return new Promise<string[]>((resolve) => {
       execFile(
@@ -462,10 +459,15 @@ app.whenReady().then(() => {
   })
 
   /* ── Renderer log relay ────────────────────────────────────────── */
+  const rendererLoggers = new Map<string, ReturnType<typeof createLogger>>()
   ipcMain.handle(
     'log:renderer',
     (_, level: string, mod: string, message: string, data?: unknown) => {
-      const rendererLog = createLogger(`renderer:${mod}`)
+      let rendererLog = rendererLoggers.get(mod)
+      if (!rendererLog) {
+        rendererLog = createLogger(`renderer:${mod}`)
+        rendererLoggers.set(mod, rendererLog)
+      }
       const methods: Record<string, (msg: string, d?: unknown) => void> = {
         info: rendererLog.info,
         warn: rendererLog.warn,
@@ -475,6 +477,14 @@ app.whenReady().then(() => {
       methods[level]?.(message, data)
     },
   )
+}
+
+app.whenReady().then(() => {
+  initLogger()
+  log.info('App ready')
+  appStore = createProjectStore()
+  seedTemplates(appStore)
+  registerIpcHandlers(appStore)
 
   createWindow()
   log.info('Window created')
