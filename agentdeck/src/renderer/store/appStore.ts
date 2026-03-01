@@ -500,9 +500,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   toggleSidebarSection: (key) => {
-    const sections = { ...get().sidebarSections, [key]: !get().sidebarSections[key] }
-    set({ sidebarSections: sections })
-    window.agentDeck.layout.set({ sidebarSections: sections })
+    set((state) => {
+      const sections = { ...state.sidebarSections, [key]: !state.sidebarSections[key] }
+      window.agentDeck.layout.set({ sidebarSections: sections })
+      return { sidebarSections: sections }
+    })
   },
 
   setRightPanelWidth: (w) => {

@@ -12,6 +12,7 @@ import { CommandPalette } from './components/CommandPalette/CommandPalette'
 import { TemplateEditor } from './components/TemplateEditor/TemplateEditor'
 import WorkflowEditor from './screens/WorkflowEditor/WorkflowEditor'
 import { AboutDialog } from './components/AboutDialog/AboutDialog'
+import { NotificationToast } from './components/NotificationToast/NotificationToast'
 import { useAppStore } from './store/appStore'
 import { useProjects } from './hooks/useProjects'
 import type { ActivityEvent, Project } from '../shared/types'
@@ -23,6 +24,7 @@ export function App(): React.JSX.Element {
   const removeSession = useAppStore((s) => s.removeSession)
 
   const activeWorkflowId = useAppStore((s) => s.activeWorkflowId)
+  const settingsProjectId = useAppStore((s) => s.settingsProjectId)
 
   const sidebarOpen = useAppStore((s) => s.sidebarOpen)
   const sidebarWidth = useAppStore((s) => s.sidebarWidth)
@@ -99,9 +101,14 @@ export function App(): React.JSX.Element {
 
   // Load saved zoom level on mount
   useEffect(() => {
-    window.agentDeck.zoom.get().then((factor) => {
-      useAppStore.getState().setZoomFactor(factor)
-    })
+    window.agentDeck.zoom
+      .get()
+      .then((factor) => {
+        useAppStore.getState().setZoomFactor(factor)
+      })
+      .catch((err: unknown) => {
+        window.agentDeck.log.send('warn', 'app', 'Failed to load zoom', { err: String(err) })
+      })
   }, [])
 
   useEffect(() => {
@@ -113,6 +120,7 @@ export function App(): React.JSX.Element {
         window.agentDeck.zoom
           .set(current + 0.1)
           .then((z) => useAppStore.getState().setZoomFactor(z))
+          .catch(() => {})
         return
       }
       if (e.ctrlKey && e.key === '-') {
@@ -121,11 +129,15 @@ export function App(): React.JSX.Element {
         window.agentDeck.zoom
           .set(current - 0.1)
           .then((z) => useAppStore.getState().setZoomFactor(z))
+          .catch(() => {})
         return
       }
       if (e.ctrlKey && e.key === '0') {
         e.preventDefault()
-        window.agentDeck.zoom.reset().then((z) => useAppStore.getState().setZoomFactor(z))
+        window.agentDeck.zoom
+          .reset()
+          .then((z) => useAppStore.getState().setZoomFactor(z))
+          .catch(() => {})
         return
       }
       if (e.ctrlKey && e.key === 'k') {
@@ -237,9 +249,7 @@ export function App(): React.JSX.Element {
         <div className="app-main">
           {currentView === 'home' && <HomeScreen onOpenProject={handleOpenProject} />}
           {currentView === 'wizard' && <NewProjectWizard onCreateProject={handleOpenProject} />}
-          {currentView === 'settings' && (
-            <ProjectSettings key={useAppStore.getState().settingsProjectId} />
-          )}
+          {currentView === 'settings' && <ProjectSettings key={settingsProjectId} />}
           {currentView === 'template-editor' && <TemplateEditor />}
           {currentView === 'workflow' && activeWorkflowId && (
             <WorkflowEditor key={activeWorkflowId} workflowId={activeWorkflowId} />
@@ -272,6 +282,7 @@ export function App(): React.JSX.Element {
       <StatusBar onAboutClick={openAbout} />
       <CommandPalette onOpenProject={handleOpenProject} onAbout={openAbout} />
       {aboutOpen && <AboutDialog onClose={closeAbout} />}
+      <NotificationToast />
     </div>
   )
 }

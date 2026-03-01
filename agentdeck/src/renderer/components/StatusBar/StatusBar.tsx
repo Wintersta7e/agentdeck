@@ -23,7 +23,14 @@ export function StatusBar({ onAboutClick }: StatusBarProps): React.JSX.Element {
   const [appVersion, setAppVersion] = useState('')
 
   useEffect(() => {
-    window.agentDeck.app.version().then(setAppVersion)
+    window.agentDeck.app
+      .version()
+      .then(setAppVersion)
+      .catch((err: unknown) => {
+        window.agentDeck.log.send('warn', 'statusbar', 'Failed to get app version', {
+          err: String(err),
+        })
+      })
   }, [])
 
   const activeCount = Object.values(sessions).filter((s) => s.status === 'running').length

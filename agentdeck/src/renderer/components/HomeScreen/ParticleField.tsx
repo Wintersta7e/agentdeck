@@ -70,11 +70,16 @@ export function ParticleField(): React.JSX.Element {
 
     draw()
 
-    const ro = new ResizeObserver(resize)
+    let resizeTimer: ReturnType<typeof setTimeout> | null = null
+    const ro = new ResizeObserver(() => {
+      if (resizeTimer) clearTimeout(resizeTimer)
+      resizeTimer = setTimeout(resize, 80)
+    })
     ro.observe(canvas)
 
     return () => {
       cancelAnimationFrame(animId)
+      if (resizeTimer) clearTimeout(resizeTimer)
       ro.disconnect()
     }
   }, [])

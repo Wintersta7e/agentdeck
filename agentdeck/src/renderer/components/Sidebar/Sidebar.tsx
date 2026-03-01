@@ -66,7 +66,14 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
 
   // Load workflows on mount
   useEffect(() => {
-    window.agentDeck.workflows.list().then(setWorkflows)
+    window.agentDeck.workflows
+      .list()
+      .then(setWorkflows)
+      .catch((err: unknown) => {
+        window.agentDeck.log.send('error', 'sidebar', 'Failed to load workflows', {
+          err: String(err),
+        })
+      })
   }, [setWorkflows])
 
   const createNewWorkflow = useCallback(
@@ -97,9 +104,17 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
     const id = contextMenu.workflowId
     // If we're currently editing this workflow, close the editor
     if (openWorkflowIds.includes(id)) closeWorkflow(id)
-    window.agentDeck.workflows.delete(id).then(() => {
-      setWorkflows(workflows.filter((w) => w.id !== id))
-    })
+    window.agentDeck.workflows
+      .delete(id)
+      .then(() => {
+        const current = useAppStore.getState().workflows
+        setWorkflows(current.filter((w) => w.id !== id))
+      })
+      .catch((err: unknown) => {
+        window.agentDeck.log.send('error', 'sidebar', 'Failed to delete workflow', {
+          err: String(err),
+        })
+      })
     closeMenu()
   }
 

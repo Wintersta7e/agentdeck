@@ -16,8 +16,14 @@ export function AboutDialog({ onClose }: AboutDialogProps): React.JSX.Element {
   const [versions, setVersions] = useState<VersionInfo | null>(null)
 
   useEffect(() => {
-    window.agentDeck.app.version().then(setAppVersion)
-    window.agentDeck.app.versions().then(setVersions)
+    window.agentDeck.app
+      .version()
+      .then(setAppVersion)
+      .catch(() => {})
+    window.agentDeck.app
+      .versions()
+      .then(setVersions)
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
