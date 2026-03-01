@@ -127,36 +127,38 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
 
   const handleAddNode = useCallback(
     (type: WorkflowNodeType) => {
-      if (!workflow) return
+      setWorkflow((prev) => {
+        if (!prev) return prev
 
-      nodeCounterRef.current += 1
-      const id = `node-${Date.now()}-${nodeCounterRef.current}`
-      const maxX = workflow.nodes.reduce((mx, n) => Math.max(mx, n.x), 0)
-      const maxY = workflow.nodes.reduce((mx, n) => Math.max(mx, n.y), 0)
+        nodeCounterRef.current += 1
+        const id = `node-${Date.now()}-${nodeCounterRef.current}`
+        const maxX = prev.nodes.reduce((mx, n) => Math.max(mx, n.x), 0)
+        const maxY = prev.nodes.reduce((mx, n) => Math.max(mx, n.y), 0)
 
-      const defaultNames: Record<WorkflowNodeType, string> = {
-        agent: 'New Agent',
-        shell: 'Shell Command',
-        checkpoint: 'Checkpoint',
-      }
+        const defaultNames: Record<WorkflowNodeType, string> = {
+          agent: 'New Agent',
+          shell: 'Shell Command',
+          checkpoint: 'Checkpoint',
+        }
 
-      const newNode: WorkflowNode = {
-        id,
-        type,
-        name: defaultNames[type],
-        x: maxX + 260,
-        y: maxY > 0 ? 100 : 140,
-      }
+        const newNode: WorkflowNode = {
+          id,
+          type,
+          name: defaultNames[type],
+          x: maxX + 260,
+          y: maxY > 0 ? 100 : 140,
+        }
 
-      const updated: Workflow = {
-        ...workflow,
-        nodes: [...workflow.nodes, newNode],
-        updatedAt: Date.now(),
-      }
-      setWorkflow(updated)
-      autoSave(updated)
+        const updated: Workflow = {
+          ...prev,
+          nodes: [...prev.nodes, newNode],
+          updatedAt: Date.now(),
+        }
+        autoSave(updated)
+        return updated
+      })
     },
-    [workflow, autoSave],
+    [autoSave],
   )
 
   const handleMoveNode = useCallback(
@@ -177,21 +179,23 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
 
   const handleConnect = useCallback(
     (fromId: string, toId: string) => {
-      if (!workflow) return
-      // Prevent duplicate edges
-      const exists = workflow.edges.some((e) => e.fromNodeId === fromId && e.toNodeId === toId)
-      if (exists) return
+      setWorkflow((prev) => {
+        if (!prev) return prev
+        // Prevent duplicate edges
+        const exists = prev.edges.some((e) => e.fromNodeId === fromId && e.toNodeId === toId)
+        if (exists) return prev
 
-      const edgeId = `edge-${Date.now()}`
-      const updated: Workflow = {
-        ...workflow,
-        edges: [...workflow.edges, { id: edgeId, fromNodeId: fromId, toNodeId: toId }],
-        updatedAt: Date.now(),
-      }
-      setWorkflow(updated)
-      autoSave(updated)
+        const edgeId = `edge-${Date.now()}`
+        const updated: Workflow = {
+          ...prev,
+          edges: [...prev.edges, { id: edgeId, fromNodeId: fromId, toNodeId: toId }],
+          updatedAt: Date.now(),
+        }
+        autoSave(updated)
+        return updated
+      })
     },
-    [workflow, autoSave],
+    [autoSave],
   )
 
   const handleUpdateNode = useCallback(
