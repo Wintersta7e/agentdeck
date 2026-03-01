@@ -233,7 +233,7 @@ export function App(): React.JSX.Element {
           )}
           {currentView === 'template-editor' && <TemplateEditor />}
           {currentView === 'workflow' && editingWorkflowId && (
-            <WorkflowEditor workflowId={editingWorkflowId} />
+            <WorkflowEditor key={editingWorkflowId} workflowId={editingWorkflowId} />
           )}
           <div
             style={{
