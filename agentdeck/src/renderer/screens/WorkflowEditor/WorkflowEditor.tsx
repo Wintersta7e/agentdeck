@@ -24,8 +24,6 @@ const STATUS_TEXT: Record<WorkflowStatus, string> = {
   stopped: 'Stopped',
 }
 
-let nextNodeCounter = 0
-
 export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): React.JSX.Element {
   const [workflow, setWorkflow] = useState<Workflow | null>(null)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
@@ -35,15 +33,32 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
   const [addMenuOpen, setAddMenuOpen] = useState(false)
   const [detailNode, setDetailNode] = useState<WorkflowNode | null>(null)
 
+  // M7: Instance-scoped counter instead of module-level
+  const nodeCounterRef = useRef(0)
+
   // ── Auto-save debounce ──
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // H8: Track latest workflow for flush-before-run
+  const latestWorkflowRef = useRef<Workflow | null>(null)
 
   const autoSave = useCallback((w: Workflow) => {
+    latestWorkflowRef.current = w
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(() => {
       window.agentDeck.workflows.save(w)
     }, 500)
+  }, [])
+
+  /** Flush any pending auto-save immediately */
+  const flushSave = useCallback(async () => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current)
+      saveTimerRef.current = null
+    }
+    if (latestWorkflowRef.current) {
+      await window.agentDeck.workflows.save(latestWorkflowRef.current)
+    }
   }, [])
 
   useEffect(() => {
@@ -52,12 +67,16 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
     }
   }, [])
 
-  // ── Load workflow on mount ──
+  // ── Load workflow on mount (H7: cancellation guard) ──
 
   useEffect(() => {
+    let cancelled = false
     window.agentDeck.workflows.load(workflowId).then((w) => {
-      if (w) setWorkflow(w)
+      if (!cancelled && w) setWorkflow(w)
     })
+    return () => {
+      cancelled = true
+    }
   }, [workflowId])
 
   // ── Subscribe to execution events ──
@@ -110,8 +129,8 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
     (type: WorkflowNodeType) => {
       if (!workflow) return
 
-      nextNodeCounter += 1
-      const id = `node-${Date.now()}-${nextNodeCounter}`
+      nodeCounterRef.current += 1
+      const id = `node-${Date.now()}-${nodeCounterRef.current}`
       const maxX = workflow.nodes.reduce((mx, n) => Math.max(mx, n.x), 0)
       const maxY = workflow.nodes.reduce((mx, n) => Math.max(mx, n.y), 0)
 
@@ -216,18 +235,19 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
     [autoSave, selectedNodeId],
   )
 
-  const handleSelectNode = useCallback(
-    (id: string | null) => {
-      setSelectedNodeId(id)
-      if (id && workflow) {
-        const node = workflow.nodes.find((n) => n.id === id)
+  // M6: Use setter-function pattern to read latest workflow without dependency
+  const handleSelectNode = useCallback((id: string | null) => {
+    setSelectedNodeId(id)
+    if (id) {
+      setWorkflow((prev) => {
+        const node = prev?.nodes.find((n) => n.id === id)
         setDetailNode(node ?? null)
-      } else {
-        setDetailNode(null)
-      }
-    },
-    [workflow],
-  )
+        return prev
+      })
+    } else {
+      setDetailNode(null)
+    }
+  }, [])
 
   // ── Workflow execution ──
 
@@ -235,8 +255,13 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
     setNodeStatuses({})
     setWorkflowStatus('running')
     setLogs([])
-    window.agentDeck.workflows.run(workflowId)
-  }, [workflowId])
+    // H8: Flush pending auto-save so engine reads latest, H9: catch errors
+    flushSave()
+      .then(() => window.agentDeck.workflows.run(workflowId))
+      .catch(() => {
+        setWorkflowStatus('error')
+      })
+  }, [workflowId, flushSave])
 
   const handleStop = useCallback(() => {
     window.agentDeck.workflows.stop(workflowId)

@@ -228,7 +228,7 @@ export function WorkflowNodeComponent({
       <div className="wf-node-header">
         <div className="wf-node-status-dot" />
         <div className="wf-node-name">{node.name}</div>
-        <button className="wf-node-menu" onClick={handleMenuClick}>
+        <button className="wf-node-menu" onClick={handleMenuClick} type="button">
           {'\u22EF'}
         </button>
       </div>
@@ -236,10 +236,10 @@ export function WorkflowNodeComponent({
       {/* Dropdown menu */}
       {menuOpen && (
         <div className="wf-node-dropdown" ref={menuRef}>
-          <button className="wf-node-dropdown-item" onClick={handleMenuEdit}>
+          <button className="wf-node-dropdown-item" onClick={handleMenuEdit} type="button">
             Edit
           </button>
-          <button className="wf-node-dropdown-item danger" onClick={handleMenuDelete}>
+          <button className="wf-node-dropdown-item danger" onClick={handleMenuDelete} type="button">
             Delete
           </button>
         </div>

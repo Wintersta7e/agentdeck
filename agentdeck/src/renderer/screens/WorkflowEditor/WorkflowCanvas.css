@@ -72,15 +72,6 @@ svg.wf-arrows {
   cursor: crosshair;
 }
 
-.wf-connect-line {
-  stroke: var(--accent);
-  stroke-width: 1.5;
-  stroke-dasharray: 4 4;
-  fill: none;
-  pointer-events: none;
-  opacity: 0.6;
-}
-
 /* ── Empty state ── */
 
 .wf-canvas-empty {

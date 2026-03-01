@@ -211,14 +211,6 @@
   }
 }
 
-/* ── Log divider ── */
-
-.wf-log-divider {
-  height: 1px;
-  background: var(--border);
-  margin: 8px 0;
-}
-
 /* ── Resume button ── */
 
 .wf-log-resume-row {

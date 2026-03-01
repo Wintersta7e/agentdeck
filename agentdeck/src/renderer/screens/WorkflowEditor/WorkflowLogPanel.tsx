@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo, Fragment } from 'react'
 import type {
   WorkflowEvent,
   Workflow,
@@ -58,13 +58,13 @@ export default function WorkflowLogPanel({
   nodeStatuses,
   onResumeCheckpoint,
   onClear,
-}: WorkflowLogPanelProps) {
+}: WorkflowLogPanelProps): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<string>('all')
   const bodyRef = useRef<HTMLDivElement>(null)
   const autoScrollRef = useRef(true)
 
-  // Collect unique node IDs that have events
-  const nodesWithEvents = (() => {
+  // H5: Memoize node tabs to avoid recomputation every render
+  const nodesWithEvents = useMemo(() => {
     const seen = new Set<string>()
     const ordered: { id: string; name: string }[] = []
     for (const ev of events) {
@@ -75,11 +75,13 @@ export default function WorkflowLogPanel({
       }
     }
     return ordered
-  })()
+  }, [events, workflow])
 
-  // Filter events by active tab
-  const filteredEvents =
-    activeTab === 'all' ? events : events.filter((ev) => ev.nodeId === activeTab)
+  // Memoize filtered events
+  const filteredEvents = useMemo(
+    () => (activeTab === 'all' ? events : events.filter((ev) => ev.nodeId === activeTab)),
+    [events, activeTab],
+  )
 
   // Scroll handler — detect if user scrolled up
   const handleScroll = useCallback(() => {
@@ -89,12 +91,14 @@ export default function WorkflowLogPanel({
     autoScrollRef.current = distFromBottom <= 20
   }, [])
 
-  // Auto-scroll on new events
+  // M5: Auto-scroll on new events using RAF to avoid forced reflow
   useEffect(() => {
-    const el = bodyRef.current
-    if (el && autoScrollRef.current) {
-      el.scrollTop = el.scrollHeight
-    }
+    if (!autoScrollRef.current) return
+    const raf = requestAnimationFrame(() => {
+      const el = bodyRef.current
+      if (el) el.scrollTop = el.scrollHeight
+    })
+    return () => cancelAnimationFrame(raf)
   }, [events])
 
   const lookupNode = (nodeId: string | undefined) => {
@@ -159,53 +163,45 @@ export default function WorkflowLogPanel({
         )}
 
         {filteredEvents.map((ev) => {
-          const elements: React.ReactNode[] = []
-
-          // Node section header for "All" tab when a node starts
-          if (activeTab === 'all' && ev.type === 'node:started' && ev.nodeId) {
-            elements.push(
-              <div className="wf-log-node-hdr" key={`hdr-${ev.id}`}>
-                <div className={getNodeHdrDotClass(ev.nodeId)} />
-                <div className="wf-log-node-hdr-name">{getSourceLabel(ev)}</div>
-                <div className="wf-log-node-hdr-time">{formatTime(ev.timestamp)}</div>
-              </div>,
-            )
-          }
-
-          // The actual log entry
           const nodeType = getNodeType(ev)
           const srcClass = getSourceClass(nodeType)
           const msgClass = getMessageClass(ev.type)
-
-          elements.push(
-            <div className="wf-log-entry" key={ev.id}>
-              <span className="wf-log-time">{formatTime(ev.timestamp)}</span>
-              <span className={`wf-log-source ${srcClass}`}>{getSourceLabel(ev)}</span>
-              <span className={`wf-log-msg${msgClass ? ` ${msgClass}` : ''}`}>{ev.message}</span>
-            </div>,
-          )
-
-          // Resume button for paused checkpoints
           const pausedNodeId = ev.nodeId
-          if (
-            ev.type === 'node:paused' &&
-            pausedNodeId &&
-            nodeStatuses[pausedNodeId] === 'paused'
-          ) {
-            elements.push(
-              <div className="wf-log-resume-row" key={`resume-${ev.id}`}>
-                <button
-                  className="wf-log-resume-btn"
-                  type="button"
-                  onClick={() => onResumeCheckpoint(ev.workflowId, pausedNodeId)}
-                >
-                  Resume
-                </button>
-              </div>,
-            )
-          }
 
-          return elements
+          return (
+            <Fragment key={ev.id}>
+              {/* Node section header for "All" tab when a node starts */}
+              {activeTab === 'all' && ev.type === 'node:started' && ev.nodeId && (
+                <div className="wf-log-node-hdr">
+                  <div className={getNodeHdrDotClass(ev.nodeId)} />
+                  <div className="wf-log-node-hdr-name">{getSourceLabel(ev)}</div>
+                  <div className="wf-log-node-hdr-time">{formatTime(ev.timestamp)}</div>
+                </div>
+              )}
+
+              {/* The actual log entry */}
+              <div className="wf-log-entry">
+                <span className="wf-log-time">{formatTime(ev.timestamp)}</span>
+                <span className={`wf-log-source ${srcClass}`}>{getSourceLabel(ev)}</span>
+                <span className={`wf-log-msg${msgClass ? ` ${msgClass}` : ''}`}>{ev.message}</span>
+              </div>
+
+              {/* Resume button for paused checkpoints */}
+              {ev.type === 'node:paused' &&
+                pausedNodeId &&
+                nodeStatuses[pausedNodeId] === 'paused' && (
+                  <div className="wf-log-resume-row">
+                    <button
+                      className="wf-log-resume-btn"
+                      type="button"
+                      onClick={() => onResumeCheckpoint(ev.workflowId, pausedNodeId)}
+                    >
+                      Resume
+                    </button>
+                  </div>
+                )}
+            </Fragment>
+          )
         })}
       </div>
     </div>

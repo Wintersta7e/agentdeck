@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import type {
   Workflow,
   WorkflowNode,
@@ -83,6 +83,15 @@ export function WorkflowCanvas({
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [connecting])
 
+  // H6: Track active drag listeners for cleanup on unmount
+  const dragCleanupRef = useRef<(() => void) | null>(null)
+
+  useEffect(() => {
+    return () => {
+      dragCleanupRef.current?.()
+    }
+  }, [])
+
   // ── Drag handlers ──
 
   const handleStartDrag = useCallback(
@@ -105,14 +114,16 @@ export function WorkflowCanvas({
         onMoveNode(dragRef.current.nodeId, x, y)
       }
 
-      function handleMouseUp(): void {
+      function cleanup(): void {
         dragRef.current = null
         document.removeEventListener('mousemove', handleMouseMove)
-        document.removeEventListener('mouseup', handleMouseUp)
+        document.removeEventListener('mouseup', cleanup)
+        dragCleanupRef.current = null
       }
 
+      dragCleanupRef.current = cleanup
       document.addEventListener('mousemove', handleMouseMove)
-      document.addEventListener('mouseup', handleMouseUp)
+      document.addEventListener('mouseup', cleanup)
     },
     [workflow, onMoveNode],
   )
@@ -150,6 +161,10 @@ export function WorkflowCanvas({
     [connecting, onSelectNode],
   )
 
+  // L2: Memoize nodeMap to avoid rebuilding every render (must be before early return)
+  const nodes = workflow?.nodes
+  const nodeMap = useMemo(() => new Map((nodes ?? []).map((n) => [n.id, n])), [nodes])
+
   // ── Render ──
 
   if (!workflow) {
@@ -164,8 +179,6 @@ export function WorkflowCanvas({
       </div>
     )
   }
-
-  const nodeMap = new Map(workflow.nodes.map((n) => [n.id, n]))
 
   return (
     <div
