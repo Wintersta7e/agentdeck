@@ -304,6 +304,19 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
     setLogs([])
   }, [])
 
+  const handleProjectChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const pid = e.target.value || undefined
+      setWorkflow((prev) => {
+        if (!prev) return prev
+        const updated: Workflow = { ...prev, projectId: pid, updatedAt: Date.now() }
+        autoSave(updated)
+        return updated
+      })
+    },
+    [autoSave],
+  )
+
   // ── Render ──
 
   const statusText = STATUS_TEXT[workflowStatus]
@@ -337,6 +350,19 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
             onClose={() => setAddMenuOpen(false)}
           />
         </div>
+        <div className="wf-sep" />
+        <select
+          className="wf-project-select"
+          value={workflow?.projectId ?? ''}
+          onChange={handleProjectChange}
+        >
+          <option value="">No project (cwd)</option>
+          {projects.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
         <div className="wf-spacer" />
         <div className="wf-status">
           <div className={`wf-status-dot ${workflowStatus}`} />

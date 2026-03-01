@@ -103,6 +103,32 @@
   font-size: 12px;
 }
 
+.wf-project-select {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  background: var(--bg1);
+  color: var(--text1);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 4px 8px;
+  outline: none;
+  cursor: pointer;
+  max-width: 180px;
+}
+
+.wf-project-select:hover {
+  border-color: var(--border-bright);
+}
+
+.wf-project-select:focus {
+  border-color: var(--purple);
+}
+
+.wf-project-select option {
+  background: var(--bg1);
+  color: var(--text1);
+}
+
 .wf-spacer {
   flex: 1;
 }
