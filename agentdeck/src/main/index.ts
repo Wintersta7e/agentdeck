@@ -390,11 +390,13 @@ function registerIpcHandlers(store: AppStore): void {
     if (!workflowEngine) throw new Error('Workflow engine not initialized')
     // C2: Validate workflow structure before execution
     validateWorkflow(workflow)
+    // Convert Windows path to WSL if needed (projects store Windows paths)
+    const wslPath = projectPath ? toWslPathMain(projectPath) : undefined
     // H1: Validate projectPath if provided (WSL absolute path only)
-    if (projectPath !== undefined && !/^\/[a-zA-Z0-9_./-]+$/.test(projectPath)) {
-      throw new Error(`Invalid project path: ${projectPath}`)
+    if (wslPath !== undefined && !/^\/[a-zA-Z0-9_./-]+$/.test(wslPath)) {
+      throw new Error(`Invalid project path: ${wslPath}`)
     }
-    workflowEngine.run(workflow, projectPath)
+    workflowEngine.run(workflow, wslPath)
   })
   ipcMain.handle('workflow:stop', (_, workflowId: string) => {
     workflowEngine?.stop(workflowId)
