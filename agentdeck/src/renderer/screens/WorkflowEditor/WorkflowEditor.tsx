@@ -3,6 +3,7 @@ import type {
   Workflow,
   WorkflowNode,
   WorkflowNodeType,
+  WorkflowNodeStatus,
   WorkflowStatus,
   WorkflowEvent,
 } from '../../../shared/types'
@@ -17,6 +18,11 @@ interface WorkflowEditorProps {
   workflowId: string
 }
 
+// Stable empty defaults — avoid `?? []` / `?? {}` in Zustand selectors
+// which create new references every render and cause infinite re-render loops.
+const EMPTY_LOGS: WorkflowEvent[] = []
+const EMPTY_NODE_STATUSES: Record<string, WorkflowNodeStatus> = {}
+
 const STATUS_TEXT: Record<WorkflowStatus, string> = {
   idle: 'Ready',
   running: 'Running\u2026',
@@ -30,8 +36,8 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
   const projects = useAppStore((s) => s.projects)
   const wfLogPanelWidth = useAppStore((s) => s.wfLogPanelWidth)
   const setWfLogPanelWidth = useAppStore((s) => s.setWfLogPanelWidth)
-  const logs = useAppStore((s) => s.workflowLogs[workflowId] ?? [])
-  const nodeStatuses = useAppStore((s) => s.workflowNodeStatuses[workflowId] ?? {})
+  const logs = useAppStore((s) => s.workflowLogs[workflowId] ?? EMPTY_LOGS)
+  const nodeStatuses = useAppStore((s) => s.workflowNodeStatuses[workflowId] ?? EMPTY_NODE_STATUSES)
   const workflowStatus = useAppStore((s) => s.workflowStatuses[workflowId] ?? 'idle')
   const logPanelRef = useRef<HTMLDivElement>(null)
   const [workflow, setWorkflow] = useState<Workflow | null>(null)
