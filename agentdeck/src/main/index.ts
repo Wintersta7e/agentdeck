@@ -295,6 +295,22 @@ function registerIpcHandlers(store: AppStore): void {
     return Object.fromEntries(entries.map(([name], i) => [name, results[i]]))
   })
 
+  /* ── Layout persistence ───────────────────────────────────────── */
+  ipcMain.handle('layout:get', () => {
+    const p = store.get('appPrefs')
+    return {
+      sidebarOpen: p.sidebarOpen,
+      sidebarWidth: p.sidebarWidth,
+      sidebarSections: p.sidebarSections,
+      rightPanelWidth: p.rightPanelWidth,
+      wfLogPanelWidth: p.wfLogPanelWidth,
+    }
+  })
+  ipcMain.handle('layout:set', (_, patch: Record<string, unknown>) => {
+    const current = store.get('appPrefs')
+    store.set('appPrefs', { ...current, ...patch })
+  })
+
   /* ── Agent visibility ─────────────────────────────────────────── */
   ipcMain.handle('agents:getVisible', () => {
     return store.get('appPrefs').visibleAgents ?? null

@@ -79,6 +79,17 @@ contextBridge.exposeInMainWorld('agentDeck', {
     get: () => ipcRenderer.invoke('theme:get') as Promise<string>,
     set: (name: string) => ipcRenderer.invoke('theme:set', name) as Promise<string>,
   },
+  layout: {
+    get: () =>
+      ipcRenderer.invoke('layout:get') as Promise<{
+        sidebarOpen?: boolean
+        sidebarWidth?: number
+        sidebarSections?: Record<string, boolean>
+        rightPanelWidth?: number
+        wfLogPanelWidth?: number
+      }>,
+    set: (patch: Record<string, unknown>) => ipcRenderer.invoke('layout:set', patch),
+  },
   store: {
     getProjects: () => ipcRenderer.invoke('store:getProjects'),
     saveProject: (project: unknown) => ipcRenderer.invoke('store:saveProject', project),

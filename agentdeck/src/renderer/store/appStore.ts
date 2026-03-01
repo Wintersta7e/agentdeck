@@ -78,6 +78,18 @@ interface AppState {
   openWorkflow: (id: string) => void
   closeWorkflow: () => void
 
+  // Layout (sidebar + panels)
+  sidebarOpen: boolean
+  sidebarWidth: number
+  sidebarSections: { pinned: boolean; templates: boolean; workflows: boolean }
+  rightPanelWidth: number
+  wfLogPanelWidth: number
+  toggleSidebar: () => void
+  setSidebarWidth: (w: number) => void
+  toggleSidebarSection: (key: 'pinned' | 'templates' | 'workflows') => void
+  setRightPanelWidth: (w: number) => void
+  setWfLogPanelWidth: (w: number) => void
+
   // Zoom
   zoomFactor: number
   setZoomFactor: (factor: number) => void
@@ -368,6 +380,40 @@ export const useAppStore = create<AppState>((set, get) => ({
       editingWorkflowId: null,
       viewStack: state.viewStack.slice(0, -1),
     })),
+
+  // Layout (sidebar + panels)
+  sidebarOpen: true,
+  sidebarWidth: 220,
+  sidebarSections: { pinned: true, templates: true, workflows: true },
+  rightPanelWidth: 260,
+  wfLogPanelWidth: 320,
+
+  toggleSidebar: () => {
+    const next = !get().sidebarOpen
+    set({ sidebarOpen: next })
+    window.agentDeck.layout.set({ sidebarOpen: next })
+  },
+
+  setSidebarWidth: (w) => {
+    set({ sidebarWidth: w })
+    window.agentDeck.layout.set({ sidebarWidth: w })
+  },
+
+  toggleSidebarSection: (key) => {
+    const sections = { ...get().sidebarSections, [key]: !get().sidebarSections[key] }
+    set({ sidebarSections: sections })
+    window.agentDeck.layout.set({ sidebarSections: sections })
+  },
+
+  setRightPanelWidth: (w) => {
+    set({ rightPanelWidth: w })
+    window.agentDeck.layout.set({ rightPanelWidth: w })
+  },
+
+  setWfLogPanelWidth: (w) => {
+    set({ wfLogPanelWidth: w })
+    window.agentDeck.layout.set({ wfLogPanelWidth: w })
+  },
 
   // Zoom
   zoomFactor: 1.0,

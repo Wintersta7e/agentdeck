@@ -40,6 +40,16 @@ declare global {
         get: () => Promise<string>
         set: (name: string) => Promise<string>
       }
+      layout: {
+        get: () => Promise<{
+          sidebarOpen?: boolean
+          sidebarWidth?: number
+          sidebarSections?: Record<string, boolean>
+          rightPanelWidth?: number
+          wfLogPanelWidth?: number
+        }>
+        set: (patch: Record<string, unknown>) => Promise<void>
+      }
       store: {
         getProjects: () => Promise<Project[]>
         saveProject: (project: Partial<Project>) => Promise<Project>

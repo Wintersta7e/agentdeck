@@ -46,6 +46,11 @@ export interface StoreSchema {
     theme?: string
     visibleAgents?: string[]
     seeded?: boolean
+    sidebarOpen?: boolean | undefined
+    sidebarWidth?: number | undefined
+    sidebarSections?: Record<string, boolean> | undefined
+    rightPanelWidth?: number | undefined
+    wfLogPanelWidth?: number | undefined
   }
 }
 

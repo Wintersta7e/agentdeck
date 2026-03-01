@@ -19,6 +19,22 @@ async function initAndRender(): Promise<void> {
     useAppStore.setState({ visibleAgents })
   }
 
+  // Load persisted layout prefs
+  const layout = await window.agentDeck.layout.get()
+  useAppStore.setState({
+    ...(layout.sidebarOpen !== undefined && { sidebarOpen: layout.sidebarOpen }),
+    ...(layout.sidebarWidth !== undefined && { sidebarWidth: layout.sidebarWidth }),
+    ...(layout.sidebarSections !== undefined && {
+      sidebarSections: {
+        pinned: layout.sidebarSections.pinned ?? true,
+        templates: layout.sidebarSections.templates ?? true,
+        workflows: layout.sidebarSections.workflows ?? true,
+      },
+    }),
+    ...(layout.rightPanelWidth !== undefined && { rightPanelWidth: layout.rightPanelWidth }),
+    ...(layout.wfLogPanelWidth !== undefined && { wfLogPanelWidth: layout.wfLogPanelWidth }),
+  })
+
   const root = document.getElementById('root')
   if (!root) throw new Error('Root element #root not found')
 
