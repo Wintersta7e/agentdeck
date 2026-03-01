@@ -1,4 +1,5 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect, memo } from 'react'
+import { Handle, Position, type NodeProps, type Node } from '@xyflow/react'
 import type {
   WorkflowNode as WorkflowNodeType,
   WorkflowNodeStatus,
@@ -7,17 +8,15 @@ import type {
 } from '../../../shared/types'
 import './WorkflowNode.css'
 
-interface WorkflowNodeProps {
+export interface WorkflowNodeData {
   node: WorkflowNodeType
   status: WorkflowNodeStatus
-  selected: boolean
-  connectTarget: boolean
-  onSelect: (nodeId: string) => void
-  onStartDrag: (e: React.MouseEvent, nodeId: string) => void
-  onPortClick: (nodeId: string, port: 'in' | 'out') => void
   onUpdateNode: (node: WorkflowNodeType) => void
   onDeleteNode: (nodeId: string) => void
+  [key: string]: unknown
 }
+
+export type WfNode = Node<WorkflowNodeData, 'workflowNode'>
 
 const KNOWN_AGENTS: AgentType[] = [
   'claude-code',
@@ -56,17 +55,9 @@ function getRoleLabel(type: NodeType): string {
   return 'Message'
 }
 
-export function WorkflowNodeComponent({
-  node,
-  status,
-  selected,
-  connectTarget,
-  onSelect,
-  onStartDrag,
-  onPortClick,
-  onUpdateNode,
-  onDeleteNode,
-}: WorkflowNodeProps): React.JSX.Element {
+function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Element {
+  const { node, status, onUpdateNode, onDeleteNode } = data
+
   const [editing, setEditing] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [editName, setEditName] = useState(node.name)
@@ -75,11 +66,10 @@ export function WorkflowNodeComponent({
   const nameInputRef = useRef<HTMLInputElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
-  // Close dropdown on outside click
   useEffect(() => {
     if (!menuOpen) return
     function handleClick(e: MouseEvent): void {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      if (menuRef.current && !menuRef.current.contains(e.target as globalThis.Node)) {
         setMenuOpen(false)
       }
     }
@@ -87,7 +77,6 @@ export function WorkflowNodeComponent({
     return () => document.removeEventListener('mousedown', handleClick)
   }, [menuOpen])
 
-  // Focus name input when entering edit mode
   useEffect(() => {
     if (editing && nameInputRef.current) {
       nameInputRef.current.focus()
@@ -144,47 +133,6 @@ export function WorkflowNodeComponent({
     [enterEditMode],
   )
 
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      const target = e.target as HTMLElement
-      // Don't start drag from interactive elements
-      if (
-        target.closest('.wf-node-menu') ||
-        target.closest('.wf-port') ||
-        target.closest('.wf-node-edit-form') ||
-        target.closest('.wf-node-dropdown')
-      ) {
-        return
-      }
-      onStartDrag(e, node.id)
-    },
-    [onStartDrag, node.id],
-  )
-
-  const handleNodeClick = useCallback(
-    (e: React.MouseEvent) => {
-      const target = e.target as HTMLElement
-      if (
-        target.closest('.wf-port') ||
-        target.closest('.wf-node-menu') ||
-        target.closest('.wf-node-edit-form') ||
-        target.closest('.wf-node-dropdown')
-      ) {
-        return
-      }
-      onSelect(node.id)
-    },
-    [onSelect, node.id],
-  )
-
-  const handlePortClick = useCallback(
-    (e: React.MouseEvent, port: 'in' | 'out') => {
-      e.stopPropagation()
-      onPortClick(node.id, port)
-    },
-    [onPortClick, node.id],
-  )
-
   const handleMenuClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
     setMenuOpen((prev) => !prev)
@@ -200,52 +148,35 @@ export function WorkflowNodeComponent({
     onDeleteNode(node.id)
   }, [onDeleteNode, node.id])
 
-  const className = [
-    'wf-node',
-    status,
-    selected ? 'selected' : '',
-    connectTarget ? 'connect-target' : '',
-  ]
-    .filter(Boolean)
-    .join(' ')
+  const className = ['wf-node-inner', status, selected ? 'selected' : ''].filter(Boolean).join(' ')
 
   return (
-    <div
-      className={className}
-      style={{ left: node.x, top: node.y }}
-      onMouseDown={handleMouseDown}
-      onClick={handleNodeClick}
-      onDoubleClick={handleDoubleClick}
-    >
-      {/* Input port */}
-      <div
-        className="wf-port in"
-        onClick={(e) => handlePortClick(e, 'in')}
-        onMouseDown={(e) => e.stopPropagation()}
-      />
+    <div className={className} onDoubleClick={handleDoubleClick}>
+      <Handle type="target" position={Position.Left} className="wf-handle" />
 
-      {/* Header */}
       <div className="wf-node-header">
         <div className="wf-node-status-dot" />
         <div className="wf-node-name">{node.name}</div>
-        <button className="wf-node-menu" onClick={handleMenuClick} type="button">
+        <button className="wf-node-menu nodrag" onClick={handleMenuClick} type="button">
           {'\u22EF'}
         </button>
       </div>
 
-      {/* Dropdown menu */}
       {menuOpen && (
         <div className="wf-node-dropdown" ref={menuRef}>
-          <button className="wf-node-dropdown-item" onClick={handleMenuEdit} type="button">
+          <button className="wf-node-dropdown-item nodrag" onClick={handleMenuEdit} type="button">
             Edit
           </button>
-          <button className="wf-node-dropdown-item danger" onClick={handleMenuDelete} type="button">
+          <button
+            className="wf-node-dropdown-item danger nodrag"
+            onClick={handleMenuDelete}
+            type="button"
+          >
             Delete
           </button>
         </div>
       )}
 
-      {/* Body */}
       <div className="wf-node-body">
         <div className="wf-node-role">{getRoleText(node)}</div>
         <div className="wf-node-footer">
@@ -256,12 +187,11 @@ export function WorkflowNodeComponent({
         </div>
       </div>
 
-      {/* Inline edit form */}
       {editing && (
-        <div className="wf-node-edit-form" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="wf-node-edit-form nodrag" onMouseDown={(e) => e.stopPropagation()}>
           <input
             ref={nameInputRef}
-            className="wf-node-edit-input"
+            className="wf-node-edit-input nodrag"
             type="text"
             value={editName}
             placeholder="Node name"
@@ -269,7 +199,7 @@ export function WorkflowNodeComponent({
             onKeyDown={handleEditKeyDown}
           />
           <textarea
-            className="wf-node-edit-textarea"
+            className="wf-node-edit-textarea nodrag"
             value={editRole}
             placeholder={getRoleLabel(node.type)}
             onChange={(e) => setEditRole(e.target.value)}
@@ -277,7 +207,7 @@ export function WorkflowNodeComponent({
           />
           {node.type === 'agent' && (
             <select
-              className="wf-node-edit-select"
+              className="wf-node-edit-select nodrag"
               value={editAgent}
               onChange={(e) => setEditAgent(e.target.value as AgentType)}
             >
@@ -288,15 +218,20 @@ export function WorkflowNodeComponent({
               ))}
             </select>
           )}
+          <div className="wf-node-edit-actions">
+            <button className="wf-node-edit-btn save nodrag" type="button" onClick={handleSave}>
+              Save
+            </button>
+            <button className="wf-node-edit-btn cancel nodrag" type="button" onClick={handleCancel}>
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 
-      {/* Output port */}
-      <div
-        className="wf-port out"
-        onClick={(e) => handlePortClick(e, 'out')}
-        onMouseDown={(e) => e.stopPropagation()}
-      />
+      <Handle type="source" position={Position.Right} className="wf-handle" />
     </div>
   )
 }
+
+export const WorkflowNodeComponent = memo(WorkflowNodeInner)

@@ -1,75 +1,75 @@
-/* ── Workflow Canvas ── */
+/* ── Workflow Canvas (React Flow wrapper) ── */
 
 .wf-canvas-wrap {
-  flex: 1;
   position: relative;
-  overflow: hidden;
-  background: var(--bg0);
-  cursor: default;
-}
-
-.wf-canvas-grid {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(var(--bg2) 1px, transparent 1px),
-    linear-gradient(90deg, var(--bg2) 1px, transparent 1px);
-  background-size: 32px 32px;
-  opacity: 0.6;
-  pointer-events: none;
-}
-
-.wf-canvas-dots {
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
-  background-size: 32px 32px;
-  background-position: 16px 16px;
-  opacity: 0.4;
-  pointer-events: none;
-}
-
-svg.wf-arrows {
-  position: absolute;
-  inset: 0;
   width: 100%;
   height: 100%;
-  pointer-events: none;
-  overflow: visible;
+  background: var(--bg0);
 }
 
-/* ── Arrow styles ── */
-
-.wf-arrow-idle {
-  stroke: var(--border-bright);
-  stroke-width: 1.5;
-  fill: none;
+/* Hidden SVG for arrowhead marker definitions */
+.wf-arrow-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
 }
 
-.wf-arrow-active {
-  stroke: var(--green);
-  stroke-width: 1.5;
-  fill: none;
+/* ── React Flow overrides to match design system ── */
+
+.wf-reactflow {
+  width: 100%;
+  height: 100%;
+}
+
+.wf-reactflow .react-flow__background {
+  opacity: 0.4;
+}
+
+/* Controls panel */
+.wf-reactflow .react-flow__controls {
+  bottom: 12px;
+  left: 12px;
+}
+
+.wf-reactflow .react-flow__controls-button {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  color: var(--text1);
+  width: 24px;
+  height: 24px;
+}
+
+.wf-reactflow .react-flow__controls-button:hover {
+  background: var(--bg3);
+  border-color: var(--border-bright);
+}
+
+.wf-reactflow .react-flow__controls-button svg {
+  fill: var(--text1);
+}
+
+/* Connection line (while dragging to create edge) */
+.wf-reactflow .react-flow__connection-path {
+  stroke: var(--accent);
+  stroke-width: 2;
   stroke-dasharray: 6 4;
-  animation: wf-dash 0.5s linear infinite;
 }
 
-.wf-arrow-done {
-  stroke: var(--green);
-  stroke-width: 1.5;
-  fill: none;
+/* Edge hover */
+.wf-reactflow .react-flow__edge:hover .react-flow__edge-path {
+  stroke-width: 2.5;
+}
+
+/* Edge active animation */
+.wf-edge-active {
+  animation: wf-dash 0.5s linear infinite;
 }
 
 @keyframes wf-dash {
   to {
     stroke-dashoffset: -20;
   }
-}
-
-/* ── Connecting mode: temporary line ── */
-
-.wf-canvas-wrap.connecting {
-  cursor: crosshair;
 }
 
 /* ── Empty state ── */
@@ -83,6 +83,7 @@ svg.wf-arrows {
   justify-content: center;
   gap: 8px;
   pointer-events: none;
+  z-index: 1;
 }
 
 .wf-canvas-empty-icon {
@@ -97,7 +98,7 @@ svg.wf-arrows {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .wf-arrow-active {
+  .wf-edge-active {
     animation: none;
   }
 }

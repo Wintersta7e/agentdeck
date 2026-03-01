@@ -1,7 +1,6 @@
-/* ── Workflow Node ── */
+/* ── Workflow Node (React Flow custom node inner) ── */
 
-.wf-node {
-  position: absolute;
+.wf-node-inner {
   width: 200px;
   background: var(--bg2);
   border: 1px solid var(--border-bright);
@@ -14,45 +13,45 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
-.wf-node:hover {
+.wf-node-inner:hover {
   border-color: var(--border-bright);
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
 }
 
-.wf-node.selected {
+.wf-node-inner.selected {
   border-color: var(--accent-border);
   box-shadow:
     0 0 0 1px rgba(var(--accent-rgb), 0.2),
     0 6px 24px rgba(0, 0, 0, 0.5);
 }
 
-.wf-node.running {
+.wf-node-inner.running {
   border-color: var(--green-border);
   box-shadow:
-    0 0 0 1px rgba(var(--green-rgb), 0.15),
-    0 0 20px rgba(var(--green-rgb), 0.1);
+    0 0 0 1px rgba(76, 175, 125, 0.15),
+    0 0 20px rgba(76, 175, 125, 0.1);
   animation: wf-node-pulse 2s infinite;
 }
 
-.wf-node.done {
+.wf-node-inner.done {
   border-color: var(--green-border);
 }
 
-.wf-node.error {
-  border-color: rgba(var(--red-rgb), 0.5);
+.wf-node-inner.error {
+  border-color: rgba(224, 92, 92, 0.5);
 }
 
 @keyframes wf-node-pulse {
   0%,
   100% {
     box-shadow:
-      0 0 0 1px rgba(var(--green-rgb), 0.15),
-      0 0 20px rgba(var(--green-rgb), 0.1);
+      0 0 0 1px rgba(76, 175, 125, 0.15),
+      0 0 20px rgba(76, 175, 125, 0.1);
   }
   50% {
     box-shadow:
-      0 0 0 1px rgba(var(--green-rgb), 0.3),
-      0 0 30px rgba(var(--green-rgb), 0.2);
+      0 0 0 1px rgba(76, 175, 125, 0.3),
+      0 0 30px rgba(76, 175, 125, 0.2);
   }
 }
 
@@ -75,17 +74,17 @@
   transition: background 0.3s;
 }
 
-.wf-node.running .wf-node-status-dot {
+.wf-node-inner.running .wf-node-status-dot {
   background: var(--green);
   box-shadow: 0 0 6px var(--green);
   animation: wf-node-dot-pulse 1.2s infinite;
 }
 
-.wf-node.done .wf-node-status-dot {
+.wf-node-inner.done .wf-node-status-dot {
   background: var(--green);
 }
 
-.wf-node.error .wf-node-status-dot {
+.wf-node-inner.error .wf-node-status-dot {
   background: var(--red);
 }
 
@@ -192,55 +191,22 @@
   color: var(--text3);
 }
 
-/* ── Ports ── */
+/* ── React Flow Handles (ports) ── */
 
-.wf-port {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--bg3);
-  border: 2px solid var(--border-bright);
-  cursor: crosshair;
-  transition: all 0.12s;
-  z-index: 10;
+.wf-handle {
+  width: 10px !important;
+  height: 10px !important;
+  border-radius: 50% !important;
+  background: var(--bg3) !important;
+  border: 2px solid var(--border-bright) !important;
+  transition: all 0.12s !important;
 }
 
-.wf-port:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.5);
-}
-
-.wf-port.out {
-  right: -5px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-.wf-port.in {
-  left: -5px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-/* ── Connect target: pulsing ring on input port ── */
-
-.wf-node.connect-target .wf-port.in {
-  background: var(--accent);
-  border-color: var(--accent);
-  box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.5);
-  animation: wf-port-pulse 1s infinite;
-}
-
-@keyframes wf-port-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0.4);
-  }
-  50% {
-    box-shadow: 0 0 0 5px rgba(var(--accent-rgb), 0);
-  }
+.wf-handle:hover {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.5) !important;
+  transform: scale(1.3) !important;
 }
 
 /* ── Inline edit form ── */
@@ -309,11 +275,38 @@
   border-color: var(--accent-border);
 }
 
-/* ── Dragging state ── */
+.wf-node-edit-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
 
-.wf-node.dragging {
-  cursor: grabbing;
-  z-index: 100;
+.wf-node-edit-btn {
+  padding: 3px 10px;
+  border-radius: var(--r);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  cursor: pointer;
+  border: 1px solid var(--border-bright);
+  background: none;
+  color: var(--text1);
+  transition: all 0.12s;
+}
+
+.wf-node-edit-btn.save {
+  border-color: rgba(var(--green-rgb), 0.5);
+  color: var(--green);
+  background: var(--green-dim);
+}
+
+.wf-node-edit-btn.save:hover {
+  border-color: var(--green);
+  background: rgba(var(--green-rgb), 0.2);
+}
+
+.wf-node-edit-btn.cancel:hover {
+  border-color: var(--border-bright);
+  color: var(--text0);
 }
 
 /* ── Node dropdown menu ── */
@@ -362,10 +355,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .wf-node,
-  .wf-node.running,
-  .wf-node.running .wf-node-status-dot,
-  .wf-node.connect-target .wf-port.in {
+  .wf-node-inner,
+  .wf-node-inner.running,
+  .wf-node-inner.running .wf-node-status-dot {
     animation: none;
   }
 }

@@ -7,6 +7,7 @@ import type {
   WorkflowStatus,
   WorkflowEvent,
 } from '../../../shared/types'
+import { useAppStore } from '../../store/appStore'
 import { WorkflowCanvas } from './WorkflowCanvas'
 import WorkflowLogPanel from './WorkflowLogPanel'
 import AddNodeMenu from './AddNodeMenu'
@@ -25,6 +26,7 @@ const STATUS_TEXT: Record<WorkflowStatus, string> = {
 }
 
 export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): React.JSX.Element {
+  const updateWorkflowMeta = useAppStore((s) => s.updateWorkflowMeta)
   const [workflow, setWorkflow] = useState<Workflow | null>(null)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [nodeStatuses, setNodeStatuses] = useState<Record<string, WorkflowNodeStatus>>({})
@@ -155,10 +157,11 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
           updatedAt: Date.now(),
         }
         autoSave(updated)
+        updateWorkflowMeta(workflowId, { nodeCount: updated.nodes.length })
         return updated
       })
     },
-    [autoSave],
+    [autoSave, workflowId, updateWorkflowMeta],
   )
 
   const handleMoveNode = useCallback(
@@ -229,6 +232,7 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
           updatedAt: Date.now(),
         }
         autoSave(updated)
+        updateWorkflowMeta(workflowId, { nodeCount: updated.nodes.length })
         return updated
       })
       if (selectedNodeId === nodeId) {
@@ -236,7 +240,23 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
         setDetailNode(null)
       }
     },
-    [autoSave, selectedNodeId],
+    [autoSave, selectedNodeId, workflowId, updateWorkflowMeta],
+  )
+
+  const handleDeleteEdge = useCallback(
+    (edgeId: string) => {
+      setWorkflow((prev) => {
+        if (!prev) return prev
+        const updated: Workflow = {
+          ...prev,
+          edges: prev.edges.filter((e) => e.id !== edgeId),
+          updatedAt: Date.now(),
+        }
+        autoSave(updated)
+        return updated
+      })
+    },
+    [autoSave],
   )
 
   // M6: Use setter-function pattern to read latest workflow without dependency
@@ -331,6 +351,7 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
             onConnect={handleConnect}
             onUpdateNode={handleUpdateNode}
             onDeleteNode={handleDeleteNode}
+            onDeleteEdge={handleDeleteEdge}
           />
 
           {/* Detail panel — absolute-positioned at bottom of canvas area */}

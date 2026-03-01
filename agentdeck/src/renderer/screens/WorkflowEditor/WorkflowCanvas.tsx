@@ -1,11 +1,25 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback } from 'react'
+import {
+  ReactFlow,
+  Background,
+  Controls,
+  applyNodeChanges,
+  applyEdgeChanges,
+  type Edge,
+  type NodeChange,
+  type EdgeChange,
+  type Connection,
+  BackgroundVariant,
+} from '@xyflow/react'
+import '@xyflow/react/dist/style.css'
 import type {
   Workflow,
   WorkflowNode,
-  WorkflowEdge,
+  WorkflowEdge as WfEdge,
   WorkflowNodeStatus,
 } from '../../../shared/types'
-import { WorkflowNodeComponent } from './WorkflowNode'
+import { WorkflowNodeComponent, type WorkflowNodeData, type WfNode } from './WorkflowNode'
+import { WorkflowEdgeComponent, type WorkflowEdgeData } from './WorkflowEdgeComponent'
 import './WorkflowCanvas.css'
 
 interface WorkflowCanvasProps {
@@ -17,15 +31,14 @@ interface WorkflowCanvasProps {
   onConnect: (fromNodeId: string, toNodeId: string) => void
   onUpdateNode: (node: WorkflowNode) => void
   onDeleteNode: (nodeId: string) => void
+  onDeleteEdge: (edgeId: string) => void
 }
 
-/** Estimated node height for arrow center calculation */
-const NODE_HEIGHT = 100
-const NODE_WIDTH = 200
+const nodeTypes = { workflowNode: WorkflowNodeComponent }
+const edgeTypes = { workflowEdge: WorkflowEdgeComponent }
 
-/** Determine arrow visual state from source/target node statuses */
 function getEdgeState(
-  edge: WorkflowEdge,
+  edge: WfEdge,
   statuses: Record<string, WorkflowNodeStatus>,
 ): 'idle' | 'active' | 'done' {
   const fromStatus = statuses[edge.fromNodeId] ?? 'idle'
@@ -36,17 +49,39 @@ function getEdgeState(
   return 'idle'
 }
 
-/** Build cubic bezier path between two node positions */
-function buildArrowPath(from: WorkflowNode, to: WorkflowNode): string {
-  const fromX = from.x + NODE_WIDTH
-  const fromY = from.y + NODE_HEIGHT / 2
-  const toX = to.x
-  const toY = to.y + NODE_HEIGHT / 2
-  const cx1 = fromX + (toX - fromX) * 0.5
-  const cy1 = fromY
-  const cx2 = fromX + (toX - fromX) * 0.5
-  const cy2 = toY
-  return `M${fromX},${fromY} C${cx1},${cy1} ${cx2},${cy2} ${toX},${toY}`
+/** Build React Flow nodes from our Workflow data */
+function toFlowNodes(
+  wf: Workflow,
+  statuses: Record<string, WorkflowNodeStatus>,
+  selectedId: string | null,
+  onUpdate: (node: WorkflowNode) => void,
+  onDelete: (nodeId: string) => void,
+): WfNode[] {
+  return wf.nodes.map((n) => ({
+    id: n.id,
+    type: 'workflowNode' as const,
+    position: { x: n.x, y: n.y },
+    selected: n.id === selectedId,
+    data: {
+      node: n,
+      status: statuses[n.id] ?? 'idle',
+      onUpdateNode: onUpdate,
+      onDeleteNode: onDelete,
+    } satisfies WorkflowNodeData,
+  }))
+}
+
+/** Build React Flow edges from our Workflow data */
+function toFlowEdges(wf: Workflow, statuses: Record<string, WorkflowNodeStatus>): Edge[] {
+  return wf.edges.map((e) => ({
+    id: e.id,
+    source: e.fromNodeId,
+    target: e.toNodeId,
+    type: 'workflowEdge' as const,
+    data: {
+      state: getEdgeState(e, statuses),
+    } satisfies WorkflowEdgeData,
+  }))
 }
 
 export function WorkflowCanvas({
@@ -58,120 +93,102 @@ export function WorkflowCanvas({
   onConnect,
   onUpdateNode,
   onDeleteNode,
+  onDeleteEdge,
 }: WorkflowCanvasProps): React.JSX.Element {
-  const wrapRef = useRef<HTMLDivElement>(null)
+  // ── Local state for React Flow ──
+  // React Flow needs to freely update positions during drag (smooth movement).
+  // We maintain local state that React Flow can mutate via applyNodeChanges,
+  // and re-derive from parent props when they change.
+  const [localNodes, setLocalNodes] = useState<WfNode[]>([])
+  const [localEdges, setLocalEdges] = useState<Edge[]>([])
 
-  // Drag state
-  const dragRef = useRef<{
-    nodeId: string
-    offsetX: number
-    offsetY: number
-  } | null>(null)
+  // Track previous prop values to detect changes during render.
+  // This is the React-recommended pattern for deriving state from props:
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  const [prevWorkflow, setPrevWorkflow] = useState<Workflow | null>(null)
+  const [prevStatuses, setPrevStatuses] = useState(nodeStatuses)
+  const [prevSelectedId, setPrevSelectedId] = useState(selectedNodeId)
 
-  // Connecting state
-  const [connecting, setConnecting] = useState<{ fromNodeId: string } | null>(null)
-
-  // Cancel connecting on Escape
-  useEffect(() => {
-    if (!connecting) return
-    function handleKeyDown(e: KeyboardEvent): void {
-      if (e.key === 'Escape') {
-        setConnecting(null)
-      }
+  if (
+    workflow !== prevWorkflow ||
+    nodeStatuses !== prevStatuses ||
+    selectedNodeId !== prevSelectedId
+  ) {
+    setPrevWorkflow(workflow)
+    setPrevStatuses(nodeStatuses)
+    setPrevSelectedId(selectedNodeId)
+    if (workflow) {
+      setLocalNodes(toFlowNodes(workflow, nodeStatuses, selectedNodeId, onUpdateNode, onDeleteNode))
+      setLocalEdges(toFlowEdges(workflow, nodeStatuses))
+    } else {
+      setLocalNodes([])
+      setLocalEdges([])
     }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [connecting])
+  }
 
-  // H6: Track active drag listeners for cleanup on unmount
-  const dragCleanupRef = useRef<(() => void) | null>(null)
+  // Apply ALL node changes to local state (smooth drag).
+  // Only notify parent on significant events (drag end, select, remove).
+  const handleNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      setLocalNodes((nds) => applyNodeChanges(changes, nds) as WfNode[])
 
-  useEffect(() => {
-    return () => {
-      dragCleanupRef.current?.()
-    }
-  }, [])
-
-  // ── Drag handlers ──
-
-  const handleStartDrag = useCallback(
-    (e: React.MouseEvent, nodeId: string) => {
-      if (!wrapRef.current || !workflow) return
-      const node = workflow.nodes.find((n) => n.id === nodeId)
-      if (!node) return
-
-      e.preventDefault()
-      const wrapRect = wrapRef.current.getBoundingClientRect()
-      const offsetX = e.clientX - wrapRect.left - node.x
-      const offsetY = e.clientY - wrapRect.top - node.y
-      dragRef.current = { nodeId, offsetX, offsetY }
-
-      function handleMouseMove(ev: MouseEvent): void {
-        if (!dragRef.current || !wrapRef.current) return
-        const rect = wrapRef.current.getBoundingClientRect()
-        const x = Math.max(0, ev.clientX - rect.left - dragRef.current.offsetX)
-        const y = Math.max(0, ev.clientY - rect.top - dragRef.current.offsetY)
-        onMoveNode(dragRef.current.nodeId, x, y)
-      }
-
-      function cleanup(): void {
-        dragRef.current = null
-        document.removeEventListener('mousemove', handleMouseMove)
-        document.removeEventListener('mouseup', cleanup)
-        dragCleanupRef.current = null
-      }
-
-      dragCleanupRef.current = cleanup
-      document.addEventListener('mousemove', handleMouseMove)
-      document.addEventListener('mouseup', cleanup)
-    },
-    [workflow, onMoveNode],
-  )
-
-  // ── Port click (connect) ──
-
-  const handlePortClick = useCallback(
-    (nodeId: string, port: 'in' | 'out') => {
-      if (port === 'out') {
-        // Start connection from this node
-        setConnecting({ fromNodeId: nodeId })
-      } else if (port === 'in' && connecting) {
-        // Complete connection
-        if (connecting.fromNodeId !== nodeId) {
-          onConnect(connecting.fromNodeId, nodeId)
+      for (const change of changes) {
+        // Sync position to parent only on drag end (avoids full re-render during drag)
+        if (change.type === 'position' && !change.dragging && change.position) {
+          onMoveNode(change.id, change.position.x, change.position.y)
         }
-        setConnecting(null)
+        if (change.type === 'select' && change.selected) {
+          onSelectNode(change.id)
+        }
+        if (change.type === 'remove') {
+          onDeleteNode(change.id)
+        }
       }
     },
-    [connecting, onConnect],
+    [onMoveNode, onSelectNode, onDeleteNode],
   )
 
-  // ── Canvas click: deselect or cancel connecting ──
+  // Apply edge changes locally, sync removals to parent
+  const handleEdgesChange = useCallback(
+    (changes: EdgeChange[]) => {
+      setLocalEdges((eds) => applyEdgeChanges(changes, eds))
 
-  const handleCanvasClick = useCallback(
-    (e: React.MouseEvent) => {
-      const target = e.target as HTMLElement
-      if (target.closest('.wf-node') || target.closest('.wf-port')) return
-      if (connecting) {
-        setConnecting(null)
-        return
+      for (const change of changes) {
+        if (change.type === 'remove') {
+          onDeleteEdge(change.id)
+        }
       }
-      onSelectNode(null)
     },
-    [connecting, onSelectNode],
+    [onDeleteEdge],
   )
 
-  // L2: Memoize nodeMap to avoid rebuilding every render (must be before early return)
-  const nodes = workflow?.nodes
-  const nodeMap = useMemo(() => new Map((nodes ?? []).map((n) => [n.id, n])), [nodes])
+  const handleConnect = useCallback(
+    (connection: Connection) => {
+      if (connection.source && connection.target) {
+        onConnect(connection.source, connection.target)
+      }
+    },
+    [onConnect],
+  )
 
-  // ── Render ──
+  const isValidConnection = useCallback(
+    (connection: Connection | Edge) => {
+      if (connection.source === connection.target) return false
+      if (!workflow) return true
+      return !workflow.edges.some(
+        (e) => e.fromNodeId === connection.source && e.toNodeId === connection.target,
+      )
+    },
+    [workflow],
+  )
+
+  const handlePaneClick = useCallback(() => {
+    onSelectNode(null)
+  }, [onSelectNode])
 
   if (!workflow) {
     return (
       <div className="wf-canvas-wrap">
-        <div className="wf-canvas-grid" />
-        <div className="wf-canvas-dots" />
         <div className="wf-canvas-empty">
           <div className="wf-canvas-empty-icon">{'\u2B21'}</div>
           <div className="wf-canvas-empty-text">No workflow selected</div>
@@ -181,16 +198,8 @@ export function WorkflowCanvas({
   }
 
   return (
-    <div
-      ref={wrapRef}
-      className={`wf-canvas-wrap ${connecting ? 'connecting' : ''}`}
-      onClick={handleCanvasClick}
-    >
-      <div className="wf-canvas-grid" />
-      <div className="wf-canvas-dots" />
-
-      {/* SVG arrows */}
-      <svg className="wf-arrows">
+    <div className="wf-canvas-wrap">
+      <svg className="wf-arrow-defs">
         <defs>
           <marker
             id="wf-arrowhead-idle"
@@ -223,43 +232,31 @@ export function WorkflowCanvas({
             <polygon points="0 0, 8 3, 0 6" fill="var(--green)" />
           </marker>
         </defs>
-
-        {workflow.edges.map((edge) => {
-          const fromNode = nodeMap.get(edge.fromNodeId)
-          const toNode = nodeMap.get(edge.toNodeId)
-          if (!fromNode || !toNode) return null
-
-          const state = getEdgeState(edge, nodeStatuses)
-          const pathD = buildArrowPath(fromNode, toNode)
-          const arrowClass =
-            state === 'active'
-              ? 'wf-arrow-active'
-              : state === 'done'
-                ? 'wf-arrow-done'
-                : 'wf-arrow-idle'
-          const markerId = `wf-arrowhead-${state}`
-
-          return (
-            <path key={edge.id} className={arrowClass} d={pathD} markerEnd={`url(#${markerId})`} />
-          )
-        })}
       </svg>
 
-      {/* Nodes */}
-      {workflow.nodes.map((node) => (
-        <WorkflowNodeComponent
-          key={node.id}
-          node={node}
-          status={nodeStatuses[node.id] ?? 'idle'}
-          selected={selectedNodeId === node.id}
-          connectTarget={connecting !== null && connecting.fromNodeId !== node.id}
-          onSelect={onSelectNode}
-          onStartDrag={handleStartDrag}
-          onPortClick={handlePortClick}
-          onUpdateNode={onUpdateNode}
-          onDeleteNode={onDeleteNode}
-        />
-      ))}
+      <ReactFlow
+        nodes={localNodes}
+        edges={localEdges}
+        onNodesChange={handleNodesChange}
+        onEdgesChange={handleEdgesChange}
+        onConnect={handleConnect}
+        isValidConnection={isValidConnection}
+        onPaneClick={handlePaneClick}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
+        deleteKeyCode={['Delete', 'Backspace']}
+        fitView
+        minZoom={0.25}
+        maxZoom={2}
+        defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+        elementsSelectable
+        edgesFocusable
+        proOptions={{ hideAttribution: true }}
+        className="wf-reactflow"
+      >
+        <Background variant={BackgroundVariant.Dots} gap={32} size={1} color="var(--border)" />
+        <Controls showInteractive={false} />
+      </ReactFlow>
     </div>
   )
 }
