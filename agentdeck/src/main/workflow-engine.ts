@@ -47,11 +47,15 @@ const AGENT_BINARIES: Record<string, string> = {
   opencode: 'opencode',
 }
 
-/** Non-interactive / print-mode CLI flags per agent */
+/** Non-interactive / print-mode CLI flags per agent (prompt follows as last arg) */
 const AGENT_PRINT_FLAGS: Record<string, string[]> = {
   'claude-code': ['--print'],
-  codex: ['--quiet'],
+  codex: ['exec'],
   aider: ['--message'],
+  goose: ['run', '-t'],
+  'gemini-cli': ['-p'],
+  'amazon-q': ['chat', '--no-interactive', '--trust-all-tools'],
+  opencode: ['run'],
 }
 
 /** Strip ANSI escape sequences and terminal control codes */
@@ -217,14 +221,15 @@ export function createWorkflowEngine(
         // Build non-interactive command: cd to project, then run agent in print mode
         const parts: string[] = []
         if (projectPath) parts.push(`cd ${shellQuote(projectPath)}`)
-        parts.push(`${bin} ${printFlags.join(' ')} ${shellQuote(prompt)}${sanitizedFlags}`)
+        const flagStr = printFlags.length > 0 ? printFlags.join(' ') + ' ' : ''
+        parts.push(`${bin} ${flagStr}${shellQuote(prompt)}${sanitizedFlags}`)
         const fullCmd = parts.join(' && ')
 
         push(workflow.id, {
           type: 'node:output',
           workflowId: workflow.id,
           nodeId: node.id,
-          message: `$ ${bin} ${printFlags.join(' ')} <prompt>\n`,
+          message: `$ ${bin} ${flagStr}<prompt>\n`,
         })
 
         // Use spawn (not PTY) for non-interactive agent execution — no TUI escape codes

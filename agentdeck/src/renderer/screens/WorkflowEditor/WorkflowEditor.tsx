@@ -27,6 +27,7 @@ const STATUS_TEXT: Record<WorkflowStatus, string> = {
 
 export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): React.JSX.Element {
   const updateWorkflowMeta = useAppStore((s) => s.updateWorkflowMeta)
+  const projects = useAppStore((s) => s.projects)
   const [workflow, setWorkflow] = useState<Workflow | null>(null)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [nodeStatuses, setNodeStatuses] = useState<Record<string, WorkflowNodeStatus>>({})
@@ -279,13 +280,17 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
     setNodeStatuses({})
     setWorkflowStatus('running')
     setLogs([])
+    // Resolve project path from workflow's projectId (if any)
+    const projectPath = workflow?.projectId
+      ? projects.find((p) => p.id === workflow.projectId)?.path
+      : undefined
     // H8: Flush pending auto-save so engine reads latest, H9: catch errors
     flushSave()
-      .then(() => window.agentDeck.workflows.run(workflowId))
+      .then(() => window.agentDeck.workflows.run(workflowId, projectPath))
       .catch(() => {
         setWorkflowStatus('error')
       })
-  }, [workflowId, flushSave])
+  }, [workflowId, flushSave, workflow, projects])
 
   const handleStop = useCallback(() => {
     window.agentDeck.workflows.stop(workflowId)
