@@ -21,11 +21,14 @@
   display: flex;
   overflow: hidden;
   border-right: 1px solid var(--border);
-  transition: width 0.2s ease;
+  transition:
+    width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    border-right-color 0.3s ease;
+  min-width: 0;
+  will-change: width;
 }
 
 .sidebar-wrapper.collapsed {
-  width: 0 !important;
   border-right-color: transparent;
 }
 

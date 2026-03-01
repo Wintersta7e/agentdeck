@@ -125,17 +125,7 @@ body {
   }
 }
 
-/* ─── View transitions ─── */
-
-/* Default: quick crossfade for view changes */
-::view-transition-old(root) {
-  animation: vt-fadeOut 0.12s ease forwards;
-}
-::view-transition-new(root) {
-  animation: vt-fadeIn 0.12s ease forwards;
-}
-
-/* Circular reveal override for theme transitions (typed) */
+/* ─── Circular theme reveal (View Transition API — typed) ─── */
 :root:active-view-transition-type(theme-reveal) {
   &::view-transition-old(root) {
     animation: none;
@@ -165,7 +155,8 @@ button:active,
 .sidebar-item:active,
 .new-project-btn:active,
 .sidebar-new-wf:active {
-  transform: scale(0.97);
+  transform: scale(0.95);
+  transition: transform 0.06s ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -178,19 +169,32 @@ button:active,
   }
 }
 
-@keyframes vt-fadeOut {
+/* ─── View mount fade-in ─── */
+.home-main,
+.wizard-shell,
+.settings-main,
+.template-editor,
+.wf-editor {
+  animation: viewFadeIn 0.18s ease;
+}
+
+@keyframes viewFadeIn {
   from {
-    opacity: 1;
+    opacity: 0;
+    transform: translateY(4px);
   }
   to {
-    opacity: 0;
+    opacity: 1;
+    transform: translateY(0);
   }
 }
-@keyframes vt-fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
+
+@media (prefers-reduced-motion: reduce) {
+  .home-main,
+  .wizard-shell,
+  .settings-main,
+  .template-editor,
+  .wf-editor {
+    animation: none;
   }
 }
