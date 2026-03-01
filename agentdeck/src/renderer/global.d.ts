@@ -44,11 +44,19 @@ declare global {
         get: () => Promise<{
           sidebarOpen?: boolean
           sidebarWidth?: number
-          sidebarSections?: Record<string, boolean>
+          sidebarSections?: { pinned?: boolean; templates?: boolean; workflows?: boolean }
           rightPanelWidth?: number
           wfLogPanelWidth?: number
         }>
-        set: (patch: Record<string, unknown>) => Promise<void>
+        set: (
+          patch: Partial<{
+            sidebarOpen: boolean
+            sidebarWidth: number
+            sidebarSections: { pinned?: boolean; templates?: boolean; workflows?: boolean }
+            rightPanelWidth: number
+            wfLogPanelWidth: number
+          }>,
+        ) => Promise<void>
       }
       store: {
         getProjects: () => Promise<Project[]>

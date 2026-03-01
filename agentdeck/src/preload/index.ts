@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { Workflow, WorkflowMeta, WorkflowEvent } from '../shared/types'
+import type { ActivityEvent, Workflow, WorkflowMeta, WorkflowEvent } from '../shared/types'
 
 // File drag-and-drop: accept drops visually (dragover), but let the default
 // drop behavior trigger navigation to file:// URL. The main process intercepts
@@ -48,9 +48,9 @@ contextBridge.exposeInMainWorld('agentDeck', {
       ipcRenderer.on(channel, listener)
       return () => ipcRenderer.removeListener(channel, listener)
     },
-    onActivity: (sessionId: string, cb: (event: unknown) => void) => {
+    onActivity: (sessionId: string, cb: (event: ActivityEvent) => void) => {
       const channel = `pty:activity:${sessionId}`
-      const handler = (_event: Electron.IpcRendererEvent, data: unknown): void => cb(data)
+      const handler = (_event: Electron.IpcRendererEvent, data: ActivityEvent): void => cb(data)
       ipcRenderer.on(channel, handler)
       return () => ipcRenderer.removeListener(channel, handler)
     },
@@ -84,11 +84,19 @@ contextBridge.exposeInMainWorld('agentDeck', {
       ipcRenderer.invoke('layout:get') as Promise<{
         sidebarOpen?: boolean
         sidebarWidth?: number
-        sidebarSections?: Record<string, boolean>
+        sidebarSections?: { pinned?: boolean; templates?: boolean; workflows?: boolean }
         rightPanelWidth?: number
         wfLogPanelWidth?: number
       }>,
-    set: (patch: Record<string, unknown>) => ipcRenderer.invoke('layout:set', patch),
+    set: (
+      patch: Partial<{
+        sidebarOpen: boolean
+        sidebarWidth: number
+        sidebarSections: { pinned?: boolean; templates?: boolean; workflows?: boolean }
+        rightPanelWidth: number
+        wfLogPanelWidth: number
+      }>,
+    ) => ipcRenderer.invoke('layout:set', patch),
   },
   store: {
     getProjects: () => ipcRenderer.invoke('store:getProjects'),
