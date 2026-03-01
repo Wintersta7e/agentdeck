@@ -1,5 +1,5 @@
 import { BrowserWindow } from 'electron'
-import { execFile, type ChildProcess } from 'child_process'
+import { spawn, execFile, type ChildProcess } from 'child_process'
 import { EventEmitter } from 'events'
 import { createLogger } from './logger'
 import type { PtyManager } from './pty-manager'
@@ -34,6 +34,38 @@ const MAX_PROMPT = 10000
 const MAX_NODES = 100
 const MAX_EDGES = 500
 const SAFE_ID_RE = /^[a-zA-Z0-9_-]+$/
+const SAFE_FLAGS_RE = /^[A-Za-z0-9 \-_=./:@,]*$/
+
+/** Agent binary names — keep in sync with pty-manager.ts AGENT_BINARIES */
+const AGENT_BINARIES: Record<string, string> = {
+  'claude-code': 'claude',
+  codex: 'codex',
+  aider: 'aider',
+  goose: 'goose',
+  'gemini-cli': 'gemini',
+  'amazon-q': 'q',
+  opencode: 'opencode',
+}
+
+/** Non-interactive / print-mode CLI flags per agent */
+const AGENT_PRINT_FLAGS: Record<string, string[]> = {
+  'claude-code': ['--print'],
+  codex: ['--quiet'],
+  aider: ['--message'],
+}
+
+/** Strip ANSI escape sequences and terminal control codes */
+const ANSI_STRIP_RE =
+  /\x1b\[[0-9;?]*[a-zA-Z~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[()#][A-Z0-9]|\x1b[=>NOMDEHc78]|\r/g
+
+function stripAnsi(s: string): string {
+  return s.replace(ANSI_STRIP_RE, '')
+}
+
+/** Shell-safe single-quote escaping */
+function shellQuote(s: string): string {
+  return "'" + s.replace(/'/g, "'\\''") + "'"
+}
 
 export interface WorkflowEngine {
   run: (workflow: Workflow, projectPath?: string | undefined) => void
@@ -161,59 +193,73 @@ export function createWorkflowEngine(
 
     function runAgentNode(node: WorkflowNode, contextSummary: string): Promise<void> {
       return new Promise<void>((resolve, reject) => {
-        const sessionId = `wf-${workflow.id}-${node.id}-${Date.now()}`
-
-        const startupPrompt = [
+        const prompt = [
           node.prompt,
           contextSummary ? `\n\nContext from previous steps:\n${contextSummary}` : '',
         ]
           .filter(Boolean)
           .join('')
 
-        const startupCommands = startupPrompt
-          ? [`echo "### Workflow context ###" && echo ${JSON.stringify(startupPrompt)}`]
-          : []
+        if (!prompt) {
+          resolve()
+          return
+        }
 
-        const dataChannel = `data:${sessionId}`
-        const exitChannel = `exit:${sessionId}`
+        const agentName = node.agent ?? 'claude-code'
+        const bin = AGENT_BINARIES[agentName] ?? agentName
+        const printFlags = AGENT_PRINT_FLAGS[agentName] ?? ['--print']
 
-        const onData = (data: string): void => {
-          const current = nodeOutputs.get(node.id) ?? ''
-          nodeOutputs.set(node.id, (current + data).slice(-8192))
+        let sanitizedFlags = ''
+        if (node.agentFlags && SAFE_FLAGS_RE.test(node.agentFlags)) {
+          sanitizedFlags = ` ${node.agentFlags}`
+        }
+
+        // Build non-interactive command: cd to project, then run agent in print mode
+        const parts: string[] = []
+        if (projectPath) parts.push(`cd ${shellQuote(projectPath)}`)
+        parts.push(`${bin} ${printFlags.join(' ')} ${shellQuote(prompt)}${sanitizedFlags}`)
+        const fullCmd = parts.join(' && ')
+
+        push(workflow.id, {
+          type: 'node:output',
+          workflowId: workflow.id,
+          nodeId: node.id,
+          message: `$ ${bin} ${printFlags.join(' ')} <prompt>\n`,
+        })
+
+        // Use spawn (not PTY) for non-interactive agent execution — no TUI escape codes
+        const child = spawn('wsl.exe', ['--', 'bash', '-lc', fullCmd], {
+          stdio: ['ignore', 'pipe', 'pipe'],
+        })
+        activeChildProcesses.add(child)
+
+        let output = ''
+        const handleData = (chunk: Buffer): void => {
+          const text = stripAnsi(chunk.toString())
+          if (!text) return
+          output = (output + text).slice(-8192)
+          nodeOutputs.set(node.id, output)
           push(workflow.id, {
             type: 'node:output',
             workflowId: workflow.id,
             nodeId: node.id,
-            message: data,
+            message: text,
           })
         }
 
-        const cleanup = (): void => {
-          ptyBus.removeListener(dataChannel, onData)
-          ptyBus.removeListener(exitChannel, onExit)
-          activeSessions.delete(sessionId)
-        }
+        child.stdout?.on('data', handleData)
+        child.stderr?.on('data', handleData)
 
-        const onExit = (code: number): void => {
-          cleanup()
+        child.on('close', (code) => {
+          activeChildProcesses.delete(child)
           if (code === 0 || code === null) resolve()
-          else reject(new Error(`Agent exited with code ${code}`))
-        }
+          else reject(new Error(`Agent ${bin} exited with code ${code}`))
+        })
 
-        ptyBus.on(dataChannel, onData)
-        ptyBus.on(exitChannel, onExit)
-        activeSessions.add(sessionId)
-
-        ptyManager.spawn(
-          sessionId,
-          220,
-          50,
-          projectPath,
-          startupCommands,
-          {},
-          node.agent,
-          node.agentFlags,
-        )
+        child.on('error', (err: Error) => {
+          activeChildProcesses.delete(child)
+          reject(err)
+        })
       })
     }
 
@@ -236,7 +282,7 @@ export function createWorkflowEngine(
           { timeout: 60000 },
           (err, stdout, stderr) => {
             activeChildProcesses.delete(child)
-            const out = stdout + stderr
+            const out = stripAnsi(stdout + stderr)
             nodeOutputs.set(node.id, out)
             push(workflow.id, {
               type: 'node:output',
