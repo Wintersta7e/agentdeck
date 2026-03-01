@@ -270,20 +270,22 @@ export function createWorkflowEngine(
 
     function runShellNode(node: WorkflowNode): Promise<void> {
       return new Promise<void>((resolve, reject) => {
-        const cmd = node.command ?? ''
+        // Convert literal \n sequences to real newlines so multi-line commands
+        // (e.g. python3 -c "def f():\n  return 1") execute correctly in bash.
+        const cmd = (node.command ?? '').replace(/\\n/g, '\n')
         push(workflow.id, {
           type: 'node:output',
           workflowId: workflow.id,
           nodeId: node.id,
-          message: `$ ${cmd}\n`,
+          message: `$ ${node.command ?? ''}\n`,
         })
 
         // M8: Use projectPath as cwd context for shell commands
-        const fullCmd = projectPath ? `cd "${projectPath}" && ${cmd}` : cmd
+        const fullCmd = projectPath ? `cd ${shellQuote(projectPath)} && ${cmd}` : cmd
 
         const child = execFile(
           'wsl.exe',
-          ['--', 'bash', '-c', fullCmd],
+          ['--', 'bash', '-lc', fullCmd],
           { timeout: 60000 },
           (err, stdout, stderr) => {
             activeChildProcesses.delete(child)
