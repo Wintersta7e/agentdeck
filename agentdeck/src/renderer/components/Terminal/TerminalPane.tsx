@@ -182,6 +182,9 @@ export function TerminalPane({
       attributeFilter: ['data-theme'],
     })
 
+    // M12: StrictMode double-spawn protection
+    let cancelled = false
+
     const { cols, rows } = term
     window.agentDeck.pty
       .spawn(
@@ -194,8 +197,11 @@ export function TerminalPane({
         agentRef.current,
         agentFlagsRef.current,
       )
-      .then(() => setSessionStatus(sessionId, 'running'))
+      .then(() => {
+        if (!cancelled) setSessionStatus(sessionId, 'running')
+      })
       .catch((err: unknown) => {
+        if (cancelled) return
         window.agentDeck.log.send('error', 'terminal', `PTY spawn failed for ${sessionId}`, {
           err: String(err),
         })
@@ -233,6 +239,7 @@ export function TerminalPane({
     ro.observe(containerRef.current)
 
     return () => {
+      cancelled = true
       themeObserver.disconnect()
       clearTimeout(exitTimeout)
       clearTimeout(resizeTimeout)
@@ -241,10 +248,8 @@ export function TerminalPane({
       onDataDisposable.dispose()
       ro.disconnect()
       term.dispose()
-      const state = useAppStore.getState()
-      if (!state.sessions[sessionId]) {
-        window.agentDeck.pty.kill(sessionId)
-      }
+      // H1: Always kill — pty-manager deduplicates kills
+      window.agentDeck.pty.kill(sessionId).catch(() => {})
     }
   }, [sessionId, setSessionStatus, removeSession])
 

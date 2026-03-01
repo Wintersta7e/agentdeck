@@ -63,6 +63,9 @@ export default function WorkflowLogPanel({
   const bodyRef = useRef<HTMLDivElement>(null)
   const autoScrollRef = useRef(true)
 
+  // M9: Memoize node lookup map for O(1) access instead of repeated .find()
+  const nodeMap = useMemo(() => new Map(workflow?.nodes.map((n) => [n.id, n]) ?? []), [workflow])
+
   // H5: Memoize node tabs to avoid recomputation every render
   const nodesWithEvents = useMemo(() => {
     const seen = new Set<string>()
@@ -70,12 +73,12 @@ export default function WorkflowLogPanel({
     for (const ev of events) {
       if (ev.nodeId && !seen.has(ev.nodeId)) {
         seen.add(ev.nodeId)
-        const node = workflow?.nodes.find((n) => n.id === ev.nodeId)
+        const node = nodeMap.get(ev.nodeId)
         ordered.push({ id: ev.nodeId, name: node?.name ?? ev.nodeId })
       }
     }
     return ordered
-  }, [events, workflow])
+  }, [events, nodeMap])
 
   // Memoize filtered events
   const filteredEvents = useMemo(
@@ -102,8 +105,8 @@ export default function WorkflowLogPanel({
   }, [events])
 
   const lookupNode = (nodeId: string | undefined) => {
-    if (!nodeId || !workflow) return undefined
-    return workflow.nodes.find((n) => n.id === nodeId)
+    if (!nodeId) return undefined
+    return nodeMap.get(nodeId)
   }
 
   const getNodeType = (ev: WorkflowEvent): WorkflowNodeType | 'system' => {

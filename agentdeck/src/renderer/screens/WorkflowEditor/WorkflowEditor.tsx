@@ -48,6 +48,12 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
   // M7: Instance-scoped counter instead of module-level
   const nodeCounterRef = useRef(0)
 
+  // H4: Ref to avoid stale selectedNodeId in handleUpdateNode closure
+  const selectedNodeIdRef = useRef(selectedNodeId)
+  useEffect(() => {
+    selectedNodeIdRef.current = selectedNodeId
+  }, [selectedNodeId])
+
   // ── Auto-save debounce ──
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -58,7 +64,12 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
     latestWorkflowRef.current = w
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(() => {
-      window.agentDeck.workflows.save(w)
+      // H2: Catch save failures
+      window.agentDeck.workflows.save(w).catch((err: unknown) => {
+        window.agentDeck.log.send('error', 'workflow-editor', 'Auto-save failed', {
+          err: String(err),
+        })
+      })
     }, 500)
   }, [])
 
@@ -83,9 +94,17 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
 
   useEffect(() => {
     let cancelled = false
-    window.agentDeck.workflows.load(workflowId).then((w) => {
-      if (!cancelled && w) setWorkflow(w)
-    })
+    window.agentDeck.workflows
+      .load(workflowId)
+      .then((w) => {
+        if (!cancelled && w) setWorkflow(w)
+      })
+      .catch((err: unknown) => {
+        window.agentDeck.log.send('error', 'workflow-editor', 'Failed to load workflow', {
+          err: String(err),
+          workflowId,
+        })
+      })
     return () => {
       cancelled = true
     }
@@ -212,6 +231,7 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
     [autoSave],
   )
 
+  // H4: Use selectedNodeIdRef to avoid stale closure capture
   const handleUpdateNode = useCallback(
     (updatedNode: WorkflowNode) => {
       setWorkflow((prev) => {
@@ -223,13 +243,13 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
         }
         autoSave(updated)
         // Keep detail panel in sync
-        if (updatedNode.id === selectedNodeId) {
+        if (updatedNode.id === selectedNodeIdRef.current) {
           setDetailNode(updatedNode)
         }
         return updated
       })
     },
-    [autoSave, selectedNodeId],
+    [autoSave],
   )
 
   const handleDeleteNode = useCallback(
@@ -296,8 +316,20 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
     // H8: Flush pending auto-save so engine reads latest, H9: catch errors
     flushSave()
       .then(() => window.agentDeck.workflows.run(workflowId, projectPath))
-      .catch(() => {
-        useAppStore.getState().setWorkflowStatus(workflowId, 'error')
+      .catch((err: unknown) => {
+        window.agentDeck.log.send('error', 'workflow-editor', 'Workflow run failed', {
+          err: String(err),
+          workflowId,
+        })
+        const s = useAppStore.getState()
+        s.setWorkflowStatus(workflowId, 'error')
+        s.addWorkflowLog(workflowId, {
+          id: `err-${Date.now()}`,
+          workflowId,
+          type: 'workflow:error',
+          message: `Run failed: ${String(err)}`,
+          timestamp: Date.now(),
+        })
       })
   }, [workflowId, flushSave, workflow, projects])
 

@@ -105,18 +105,19 @@ export function WorkflowCanvas({
   // Track previous prop values to detect changes during render.
   // This is the React-recommended pattern for deriving state from props:
   // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
-  const [prevWorkflow, setPrevWorkflow] = useState<Workflow | null>(null)
-  const [prevStatuses, setPrevStatuses] = useState(nodeStatuses)
-  const [prevSelectedId, setPrevSelectedId] = useState(selectedNodeId)
+  // M4: Combined into a single useState to reduce render-time setState calls (3 instead of 5).
+  const [prev, setPrev] = useState<{
+    workflow: Workflow | null
+    statuses: Record<string, WorkflowNodeStatus>
+    selectedId: string | null
+  }>({ workflow: null, statuses: {}, selectedId: null })
 
   if (
-    workflow !== prevWorkflow ||
-    nodeStatuses !== prevStatuses ||
-    selectedNodeId !== prevSelectedId
+    workflow !== prev.workflow ||
+    nodeStatuses !== prev.statuses ||
+    selectedNodeId !== prev.selectedId
   ) {
-    setPrevWorkflow(workflow)
-    setPrevStatuses(nodeStatuses)
-    setPrevSelectedId(selectedNodeId)
+    setPrev({ workflow, statuses: nodeStatuses, selectedId: selectedNodeId })
     if (workflow) {
       setLocalNodes(toFlowNodes(workflow, nodeStatuses, selectedNodeId, onUpdateNode, onDeleteNode))
       setLocalEdges(toFlowEdges(workflow, nodeStatuses))
