@@ -17,17 +17,24 @@ Thumbs.db
 .idea/
 *.swp
 
-# Env
+# Env / Secrets
 .env
-.env.local
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+.npmrc
+credentials.json
+
+# Logs
+*.log
 
 # Claude Code local instructions
 CLAUDE.md
+.claude/
 
-# Plans and design docs (local only)
-docs/plans/
-.claude
-agentdeck/docs/plans
-agentdeck-phase6-theming-prompt.md
-agentdeck-phase7-templates-prompt.md
-agentdeck-phase8-light-themes-prompt.md
+# Plans, design docs, and mockups (local only)
+docs/
+agentdeck-*-prompt.md
