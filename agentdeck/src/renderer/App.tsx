@@ -22,7 +22,7 @@ export function App(): React.JSX.Element {
   const addSession = useAppStore((s) => s.addSession)
   const removeSession = useAppStore((s) => s.removeSession)
 
-  const editingWorkflowId = useAppStore((s) => s.editingWorkflowId)
+  const activeWorkflowId = useAppStore((s) => s.activeWorkflowId)
 
   const sidebarOpen = useAppStore((s) => s.sidebarOpen)
   const sidebarWidth = useAppStore((s) => s.sidebarWidth)
@@ -63,6 +63,10 @@ export function App(): React.JSX.Element {
 
   const handleAddTab = useCallback(() => {
     useAppStore.getState().openCommandPalette()
+  }, [])
+
+  const handleCloseWorkflowTab = useCallback((workflowId: string) => {
+    useAppStore.getState().closeWorkflow(workflowId)
   }, [])
 
   // Spotlight cursor effect
@@ -166,8 +170,6 @@ export function App(): React.JSX.Element {
           state.closeSettings()
         } else if (state.currentView === 'template-editor') {
           state.closeTemplateEditor()
-        } else if (state.currentView === 'workflow') {
-          state.closeWorkflow()
         }
       }
     }
@@ -205,7 +207,11 @@ export function App(): React.JSX.Element {
   return (
     <div className="app">
       <div className="spotlight" ref={spotlightRef} />
-      <Titlebar onCloseTab={handleCloseTab} onAddTab={handleAddTab} />
+      <Titlebar
+        onCloseTab={handleCloseTab}
+        onCloseWorkflowTab={handleCloseWorkflowTab}
+        onAddTab={handleAddTab}
+      />
       <div className="app-body">
         {sidebarOpen && (
           <>
@@ -232,8 +238,8 @@ export function App(): React.JSX.Element {
             <ProjectSettings key={useAppStore.getState().settingsProjectId} />
           )}
           {currentView === 'template-editor' && <TemplateEditor />}
-          {currentView === 'workflow' && editingWorkflowId && (
-            <WorkflowEditor key={editingWorkflowId} workflowId={editingWorkflowId} />
+          {currentView === 'workflow' && activeWorkflowId && (
+            <WorkflowEditor key={activeWorkflowId} workflowId={activeWorkflowId} />
           )}
           <div
             style={{

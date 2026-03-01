@@ -77,9 +77,10 @@ interface AppState {
   workflows: WorkflowMeta[]
   setWorkflows: (w: WorkflowMeta[]) => void
   updateWorkflowMeta: (id: string, patch: Partial<WorkflowMeta>) => void
-  editingWorkflowId: string | null
+  openWorkflowIds: string[]
+  activeWorkflowId: string | null
   openWorkflow: (id: string) => void
-  closeWorkflow: () => void
+  closeWorkflow: (id?: string) => void
 
   // Workflow execution state (keyed by workflowId, survives editor remount)
   workflowLogs: Record<string, WorkflowEvent[]>
@@ -197,7 +198,16 @@ export const useAppStore = create<AppState>((set, get) => ({
         sessions: rest,
         activityFeeds: remainingFeeds,
         activeSessionId: state.activeSessionId === sessionId ? newActive : state.activeSessionId,
-        currentView: remainingIds.length === 0 ? ('home' as const) : state.currentView,
+        currentView:
+          remainingIds.length === 0
+            ? state.openWorkflowIds.length > 0
+              ? ('workflow' as const)
+              : ('home' as const)
+            : state.currentView,
+        activeWorkflowId:
+          remainingIds.length === 0 && state.openWorkflowIds.length > 0
+            ? (state.activeWorkflowId ?? state.openWorkflowIds[0] ?? null)
+            : state.activeWorkflowId,
         paneSessions,
       }
     }),
@@ -378,21 +388,57 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((state) => ({
       workflows: state.workflows.map((w) => (w.id === id ? { ...w, ...patch } : w)),
     })),
-  editingWorkflowId: null,
+  openWorkflowIds: [],
+  activeWorkflowId: null,
 
   openWorkflow: (id) =>
     set((state) => ({
       currentView: 'workflow' as ViewType,
-      editingWorkflowId: id,
-      viewStack: [...state.viewStack, state.currentView],
+      activeWorkflowId: id,
+      openWorkflowIds: state.openWorkflowIds.includes(id)
+        ? state.openWorkflowIds
+        : [...state.openWorkflowIds, id],
     })),
 
-  closeWorkflow: () =>
-    set((state) => ({
-      currentView: state.viewStack[state.viewStack.length - 1] ?? 'home',
-      editingWorkflowId: null,
-      viewStack: state.viewStack.slice(0, -1),
-    })),
+  closeWorkflow: (id?) =>
+    set((state) => {
+      const targetId = id ?? state.activeWorkflowId
+      if (!targetId) return state
+
+      const remaining = state.openWorkflowIds.filter((wid) => wid !== targetId)
+
+      // Closing a non-active tab — just remove from list
+      if (targetId !== state.activeWorkflowId) {
+        return { openWorkflowIds: remaining }
+      }
+
+      // Closing the active tab — pick new focus
+      if (remaining.length > 0) {
+        const oldIdx = state.openWorkflowIds.indexOf(targetId)
+        const newIdx = Math.min(oldIdx, remaining.length - 1)
+        return {
+          openWorkflowIds: remaining,
+          activeWorkflowId: remaining[newIdx] ?? null,
+        }
+      }
+
+      // No workflows left — fall to session or home
+      const sessionIds = Object.keys(state.sessions)
+      if (sessionIds.length > 0) {
+        return {
+          openWorkflowIds: [],
+          activeWorkflowId: null,
+          currentView: 'session' as const,
+          activeSessionId: state.activeSessionId ?? sessionIds[0] ?? null,
+        }
+      }
+
+      return {
+        openWorkflowIds: [],
+        activeWorkflowId: null,
+        currentView: 'home' as const,
+      }
+    }),
 
   // Workflow execution state (keyed by workflowId)
   workflowLogs: {},

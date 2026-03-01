@@ -4,10 +4,15 @@ import './Titlebar.css'
 
 interface TitlebarProps {
   onCloseTab: (sessionId: string) => void
+  onCloseWorkflowTab: (workflowId: string) => void
   onAddTab: () => void
 }
 
-export function Titlebar({ onCloseTab, onAddTab }: TitlebarProps): React.JSX.Element {
+export function Titlebar({
+  onCloseTab,
+  onCloseWorkflowTab,
+  onAddTab,
+}: TitlebarProps): React.JSX.Element {
   const currentView = useAppStore((s) => s.currentView)
   const sessions = useAppStore((s) => s.sessions)
   const activeSessionId = useAppStore((s) => s.activeSessionId)
@@ -23,9 +28,10 @@ export function Titlebar({ onCloseTab, onAddTab }: TitlebarProps): React.JSX.Ele
   const cyclePaneLayout = useAppStore((s) => s.cyclePaneLayout)
   const toggleRightPanel = useAppStore((s) => s.toggleRightPanel)
   const closeTemplateEditor = useAppStore((s) => s.closeTemplateEditor)
-  const editingWorkflowId = useAppStore((s) => s.editingWorkflowId)
+  const openWorkflowIds = useAppStore((s) => s.openWorkflowIds)
+  const activeWorkflowId = useAppStore((s) => s.activeWorkflowId)
+  const openWorkflow = useAppStore((s) => s.openWorkflow)
   const workflows = useAppStore((s) => s.workflows)
-  const closeWorkflow = useAppStore((s) => s.closeWorkflow)
 
   function getProjectName(session: Session): string {
     const project = projects.find((p) => p.id === session.projectId)
@@ -58,13 +64,7 @@ export function Titlebar({ onCloseTab, onAddTab }: TitlebarProps): React.JSX.Ele
         </div>
       )}
       {currentView === 'template-editor' && <div className="titlebar-center">Templates</div>}
-      {currentView === 'workflow' && (
-        <div className="titlebar-center titlebar-wf-label">
-          {'\u2B21'} {workflows.find((w) => w.id === editingWorkflowId)?.name ?? 'Workflow'}
-        </div>
-      )}
-
-      {sessionList.length > 0 && (
+      {(sessionList.length > 0 || openWorkflowIds.length > 0) && (
         <div className="tab-bar">
           {sessionList.map((s) => (
             <div
@@ -88,6 +88,25 @@ export function Titlebar({ onCloseTab, onAddTab }: TitlebarProps): React.JSX.Ele
               </button>
             </div>
           ))}
+          {openWorkflowIds.map((wfId) => (
+            <div
+              key={wfId}
+              className={`tab tab-workflow${wfId === activeWorkflowId && currentView === 'workflow' ? ' active' : ''}`}
+              onClick={() => openWorkflow(wfId)}
+            >
+              <span className="tab-wf-icon">{'\u2B21'}</span>
+              {workflows.find((w) => w.id === wfId)?.name ?? 'Workflow'}
+              <button
+                className="tab-close"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onCloseWorkflowTab(wfId)
+                }}
+              >
+                {'\u00D7'}
+              </button>
+            </div>
+          ))}
           <div className="tab-add" onClick={onAddTab}>
             +
           </div>
@@ -95,7 +114,7 @@ export function Titlebar({ onCloseTab, onAddTab }: TitlebarProps): React.JSX.Ele
       )}
 
       <div className="titlebar-right">
-        {sessionList.length > 0 && (
+        {currentView === 'session' && sessionList.length > 0 && (
           <>
             <button className="titlebar-btn" onClick={cyclePaneLayout}>
               Split{paneLayout > 1 ? ` (${String(paneLayout)})` : ''}
@@ -117,11 +136,6 @@ export function Titlebar({ onCloseTab, onAddTab }: TitlebarProps): React.JSX.Ele
         )}
         {currentView === 'template-editor' && (
           <button className="titlebar-btn" onClick={closeTemplateEditor}>
-            {'\u2190'} Back
-          </button>
-        )}
-        {currentView === 'workflow' && (
-          <button className="titlebar-btn" onClick={closeWorkflow}>
             {'\u2190'} Back
           </button>
         )}

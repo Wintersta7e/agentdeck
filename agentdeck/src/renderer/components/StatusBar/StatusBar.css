@@ -23,6 +23,9 @@
 .status-item.amber {
   color: var(--amber);
 }
+.status-item.purple {
+  color: var(--purple);
+}
 
 .status-right {
   margin-left: auto;

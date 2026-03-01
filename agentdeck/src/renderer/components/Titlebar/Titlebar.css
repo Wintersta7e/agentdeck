@@ -198,6 +198,11 @@
   background: var(--amber-glow);
 }
 
-.titlebar-wf-label {
+.tab-workflow.active {
+  border-bottom-color: var(--purple);
+}
+.tab-wf-icon {
   color: var(--purple);
+  font-size: 9px;
+  flex-shrink: 0;
 }

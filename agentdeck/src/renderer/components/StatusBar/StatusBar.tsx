@@ -11,6 +11,9 @@ export function StatusBar({ onAboutClick }: StatusBarProps): React.JSX.Element {
   const activeSessionId = useAppStore((s) => s.activeSessionId)
   const projects = useAppStore((s) => s.projects)
   const currentView = useAppStore((s) => s.currentView)
+  const workflows = useAppStore((s) => s.workflows)
+  const activeWorkflowId = useAppStore((s) => s.activeWorkflowId)
+  const workflowStatuses = useAppStore((s) => s.workflowStatuses)
 
   const paneLayout = useAppStore((s) => s.paneLayout)
   const rightPanelOpen = useAppStore((s) => s.rightPanelOpen)
@@ -35,6 +38,12 @@ export function StatusBar({ onAboutClick }: StatusBarProps): React.JSX.Element {
     }
   }
 
+  let activeWorkflowName: string | null = null
+  if (currentView === 'workflow' && activeWorkflowId) {
+    const wf = workflows.find((w) => w.id === activeWorkflowId)
+    activeWorkflowName = wf ? wf.name : null
+  }
+
   return (
     <div className="statusbar">
       <div className={`status-item ${activeCount > 0 ? 'green' : ''}`}>
@@ -57,6 +66,18 @@ export function StatusBar({ onAboutClick }: StatusBarProps): React.JSX.Element {
           <div className="status-item">{layoutLabel}</div>
           <span className="status-sep">|</span>
           <div className="status-item">{rightPanelOpen ? 'Panel open' : 'Panel closed'}</div>
+        </>
+      )}
+      {activeWorkflowName && (
+        <>
+          <span className="status-sep">|</span>
+          <div className="status-item purple">{activeWorkflowName}</div>
+        </>
+      )}
+      {currentView === 'workflow' && activeWorkflowId && workflowStatuses[activeWorkflowId] && (
+        <>
+          <span className="status-sep">|</span>
+          <div className="status-item">{workflowStatuses[activeWorkflowId]}</div>
         </>
       )}
       <div className="status-right">

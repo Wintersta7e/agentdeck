@@ -24,7 +24,8 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
   const openTemplateEditor = useAppStore((s) => s.openTemplateEditor)
   const workflows = useAppStore((s) => s.workflows)
   const setWorkflows = useAppStore((s) => s.setWorkflows)
-  const editingWorkflowId = useAppStore((s) => s.editingWorkflowId)
+  const openWorkflowIds = useAppStore((s) => s.openWorkflowIds)
+  const activeWorkflowId = useAppStore((s) => s.activeWorkflowId)
   const openWorkflow = useAppStore((s) => s.openWorkflow)
   const closeWorkflow = useAppStore((s) => s.closeWorkflow)
   const sidebarSections = useAppStore((s) => s.sidebarSections)
@@ -95,7 +96,7 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
     if (!contextMenu?.workflowId) return
     const id = contextMenu.workflowId
     // If we're currently editing this workflow, close the editor
-    if (editingWorkflowId === id) closeWorkflow()
+    if (openWorkflowIds.includes(id)) closeWorkflow(id)
     window.agentDeck.workflows.delete(id).then(() => {
       setWorkflows(workflows.filter((w) => w.id !== id))
     })
@@ -258,7 +259,7 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
           workflows.map((w) => (
             <div
               key={w.id}
-              className={`sidebar-item${editingWorkflowId === w.id ? ' sidebar-item-wf-active' : ''}`}
+              className={`sidebar-item${activeWorkflowId === w.id ? ' sidebar-item-wf-active' : ''}`}
               onClick={() => openWorkflow(w.id)}
               onContextMenu={(e) => handleWorkflowContextMenu(e, w.id)}
             >
