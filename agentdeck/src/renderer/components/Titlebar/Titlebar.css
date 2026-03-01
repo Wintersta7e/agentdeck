@@ -19,14 +19,29 @@
   margin-left: 8px;
   cursor: pointer;
   -webkit-app-region: no-drag;
+  padding: 2px 6px;
+  border-radius: var(--r);
+  transition: background 0.15s;
+}
+
+.titlebar-logo:hover {
+  background: var(--accent-glow);
 }
 
 .logo-mark {
   width: 18px;
   height: 18px;
-  background: var(--amber);
+  background: var(--accent);
   clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
   flex-shrink: 0;
+  transition:
+    transform 0.2s ease,
+    filter 0.2s ease;
+}
+
+.titlebar-logo:hover .logo-mark {
+  transform: scale(1.15);
+  filter: drop-shadow(0 0 4px var(--accent));
 }
 
 .logo-text {
@@ -35,9 +50,18 @@
   font-size: 13px;
   color: var(--text0);
   letter-spacing: 0.05em;
+  transition: color 0.15s;
 }
 .logo-text span {
-  color: var(--amber);
+  color: var(--accent);
+  transition: color 0.15s;
+}
+
+.titlebar-logo:hover .logo-text {
+  color: var(--accent);
+}
+.titlebar-logo:hover .logo-text span {
+  filter: brightness(1.2);
 }
 
 .titlebar-center {

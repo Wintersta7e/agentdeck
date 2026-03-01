@@ -49,7 +49,7 @@ export function Titlebar({
 
   return (
     <div className="titlebar">
-      <div className="titlebar-logo" onClick={() => setCurrentView('home')}>
+      <div className="titlebar-logo" onClick={() => setCurrentView('home')} title="Home">
         <div className="logo-mark" />
         <div className="logo-text">
           Agent<span>Deck</span>

@@ -95,7 +95,9 @@ export function StatusBar({ onAboutClick }: StatusBarProps): React.JSX.Element {
           </>
         )}
         <button className="status-cmd" onClick={() => openCommandPalette()}>
-          Esc
+          <span className="status-cmd-icon">{'\u2261'}</span>
+          <span>Menu</span>
+          <kbd className="status-cmd-kbd">Esc</kbd>
         </button>
         <span className="status-sep">|</span>
         <button className="status-version" onClick={onAboutClick}>
