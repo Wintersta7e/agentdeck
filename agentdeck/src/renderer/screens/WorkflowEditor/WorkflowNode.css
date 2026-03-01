@@ -28,9 +28,23 @@
 .wf-node-inner.running {
   border-color: var(--green-border);
   box-shadow:
-    0 0 0 1px rgba(76, 175, 125, 0.15),
-    0 0 20px rgba(76, 175, 125, 0.1);
+    0 0 0 1px rgba(var(--green-rgb), 0.15),
+    0 0 20px rgba(var(--green-rgb), 0.1);
+  position: relative;
+}
+
+/* GPU-composited pulse: animate opacity on ::after instead of box-shadow directly */
+.wf-node-inner.running::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  box-shadow:
+    0 0 0 1px rgba(var(--green-rgb), 0.3),
+    0 0 30px rgba(var(--green-rgb), 0.2);
+  opacity: 0;
   animation: wf-node-pulse 2s infinite;
+  pointer-events: none;
 }
 
 .wf-node-inner.done {
@@ -38,20 +52,16 @@
 }
 
 .wf-node-inner.error {
-  border-color: rgba(224, 92, 92, 0.5);
+  border-color: rgba(var(--red-rgb), 0.5);
 }
 
 @keyframes wf-node-pulse {
   0%,
   100% {
-    box-shadow:
-      0 0 0 1px rgba(76, 175, 125, 0.15),
-      0 0 20px rgba(76, 175, 125, 0.1);
+    opacity: 0;
   }
   50% {
-    box-shadow:
-      0 0 0 1px rgba(76, 175, 125, 0.3),
-      0 0 30px rgba(76, 175, 125, 0.2);
+    opacity: 1;
   }
 }
 

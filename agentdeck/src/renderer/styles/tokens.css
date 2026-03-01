@@ -308,14 +308,23 @@
   --badge-python-bg: rgba(176, 136, 0, 0.15);
 }
 
-/* ─── Theme transition ─── */
-*,
-*::before,
-*::after {
+/* ─── Theme transition — scoped to UI containers ─── */
+.app-body,
+.sidebar,
+.titlebar,
+.cmd-palette,
+.home-main,
+.statusbar,
+.right-panel,
+.wf-editor,
+.about-overlay,
+.settings-main,
+.wizard-shell,
+.wf-log-panel {
   transition: var(--theme-transition);
 }
 
-/* Except terminal — xterm.js manages its own canvas, transitions break it */
+/* Terminal manages its own canvas — no CSS transitions */
 .terminal-container,
 .terminal-container * {
   transition: none !important;

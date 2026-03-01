@@ -173,7 +173,7 @@
 }
 .window-btn-close:hover {
   background: var(--red);
-  color: #fff;
+  color: var(--text0);
 }
 
 .titlebar-btn {

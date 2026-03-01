@@ -79,7 +79,7 @@
   transition: border-color 0.15s;
 }
 .quick-open:hover {
-  border-color: rgba(245, 166, 35, 0.4);
+  border-color: var(--accent-border);
 }
 .quick-open-icon {
   color: var(--text2);
@@ -459,7 +459,7 @@
   background: var(--bg3);
 }
 .agent-card.active {
-  border-color: rgba(245, 166, 35, 0.3);
+  border-color: var(--accent-border);
   background: var(--amber-glow2);
 }
 .agent-card-icon {

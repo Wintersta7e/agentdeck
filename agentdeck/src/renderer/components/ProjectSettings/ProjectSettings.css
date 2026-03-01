@@ -54,7 +54,7 @@
   margin-bottom: 3px;
 }
 .project-title {
-  font-family: 'Syne', sans-serif;
+  font-family: var(--font-display);
   font-size: 18px;
   font-weight: 800;
   color: var(--text0);
@@ -114,7 +114,7 @@
   color: var(--text1);
 }
 .header-action-btn.primary {
-  border-color: rgba(245, 166, 35, 0.4);
+  border-color: var(--accent-border);
   color: var(--amber);
 }
 .header-action-btn.primary:hover {
@@ -253,14 +253,14 @@
   border-radius: var(--r);
   padding: 8px 10px;
   color: var(--text0);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
   outline: none;
   transition: border-color 0.15s;
   caret-color: var(--amber);
 }
 .settings-input:focus {
-  border-color: rgba(245, 166, 35, 0.4);
+  border-color: var(--accent-border);
 }
 .settings-input::placeholder {
   color: var(--text3);
@@ -274,7 +274,7 @@
   border-radius: var(--r);
   padding: 8px 10px;
   color: var(--text0);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
   outline: none;
   cursor: pointer;
@@ -285,7 +285,7 @@
   padding-right: 28px;
 }
 .select-input:focus {
-  border-color: rgba(245, 166, 35, 0.4);
+  border-color: var(--accent-border);
 }
 
 /* Agent rows (compact — settings style, different from wizard grid) */
@@ -305,7 +305,7 @@
   border-color: var(--border-bright);
 }
 .agent-row.selected {
-  border-color: rgba(245, 166, 35, 0.4);
+  border-color: var(--accent-border);
   background: var(--amber-glow);
 }
 .agent-row-icon {
@@ -370,7 +370,7 @@
   color: var(--text1);
 }
 .template-chip-item.active {
-  border-color: rgba(245, 166, 35, 0.4);
+  border-color: var(--accent-border);
   color: var(--amber);
   background: var(--amber-glow);
 }
@@ -441,14 +441,14 @@
   border-color: var(--border-bright);
 }
 .icon-opt.selected {
-  border-color: rgba(245, 166, 35, 0.5);
+  border-color: var(--accent-hover);
   background: var(--amber-glow);
 }
 
 /* Danger zone */
 .danger-section {
   background: var(--red-dim);
-  border: 1px solid rgba(224, 92, 92, 0.2);
+  border: 1px solid var(--red-border);
   border-radius: 6px;
   padding: 16px;
   margin-bottom: 16px;
@@ -466,7 +466,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 0;
-  border-bottom: 1px solid rgba(224, 92, 92, 0.15);
+  border-bottom: 1px solid rgba(var(--red-rgb), 0.15);
 }
 .danger-row:last-child {
   border-bottom: none;
@@ -486,7 +486,7 @@
 }
 .danger-btn {
   background: none;
-  border: 1px solid rgba(224, 92, 92, 0.4);
+  border: 1px solid rgba(var(--red-rgb), 0.4);
   color: var(--red);
   padding: 5px 12px;
   border-radius: var(--r);
@@ -508,7 +508,7 @@
   background: transparent;
   border: none;
   color: var(--text1);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   outline: none;
 }
@@ -590,7 +590,7 @@
   font-weight: 600;
 }
 .footer-btn.primary:hover {
-  background: #f0b84a;
+  background: var(--accent-hover);
 }
 .unsaved-indicator {
   font-size: 10px;
@@ -609,7 +609,7 @@
 /* Unsaved warning strip */
 .unsaved-warning {
   background: var(--amber-glow);
-  border-bottom: 1px solid rgba(245, 166, 35, 0.2);
+  border-bottom: 1px solid var(--accent-glow);
   padding: 8px 28px;
   font-size: 11px;
   color: var(--amber);
@@ -637,7 +637,7 @@
 /* Remove project confirm input */
 .danger-confirm-input {
   background: var(--bg3);
-  border: 1px solid rgba(224, 92, 92, 0.3);
+  border: 1px solid rgba(var(--red-rgb), 0.3);
   border-radius: var(--r);
   padding: 6px 10px;
   color: var(--text0);

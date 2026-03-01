@@ -76,7 +76,7 @@
 
 /* Titles */
 .step-title {
-  font-family: 'Syne', sans-serif;
+  font-family: var(--font-display);
   font-size: 20px;
   font-weight: 800;
   color: var(--text0);
@@ -123,14 +123,14 @@
   border-radius: var(--r);
   padding: 9px 12px;
   color: var(--text0);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
   outline: none;
   transition: border-color 0.15s;
   caret-color: var(--amber);
 }
 .wizard-input:focus {
-  border-color: rgba(245, 166, 35, 0.4);
+  border-color: var(--accent-border);
   background: var(--bg3);
 }
 .wizard-input::placeholder {
@@ -140,7 +140,7 @@
 /* Detection banner */
 .detection-banner {
   background: var(--green-dim);
-  border: 1px solid rgba(76, 175, 125, 0.25);
+  border: 1px solid var(--green-border);
   border-radius: var(--r);
   padding: 12px 14px;
   margin-bottom: 20px;
@@ -171,8 +171,8 @@
 .detection-chip {
   font-size: 10px;
   padding: 2px 8px;
-  background: rgba(76, 175, 125, 0.12);
-  border: 1px solid rgba(76, 175, 125, 0.2);
+  background: var(--green-dim);
+  border: 1px solid var(--green-border);
   border-radius: 20px;
   color: var(--green);
 }
@@ -241,7 +241,7 @@
   border-color: var(--border-bright);
 }
 .template-opt.selected {
-  border-color: rgba(245, 166, 35, 0.35);
+  border-color: var(--accent-border);
   background: var(--amber-glow2);
 }
 .template-checkbox {
@@ -304,7 +304,7 @@
   background: var(--amber-glow);
 }
 .summary-project-name {
-  font-family: 'Syne', sans-serif;
+  font-family: var(--font-display);
   font-size: 16px;
   font-weight: 800;
   color: var(--text0);
@@ -397,7 +397,7 @@
   font-weight: 600;
 }
 .wizard-btn.primary:hover {
-  background: #f0b84a;
+  background: var(--accent-hover);
 }
 .wizard-btn:disabled {
   opacity: 0.35;
@@ -410,7 +410,7 @@
   background: transparent;
   border: none;
   color: var(--text1);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   outline: none;
 }
@@ -418,7 +418,7 @@
 /* Info banner at bottom of confirm step */
 .wizard-info-banner {
   background: var(--amber-glow2);
-  border: 1px solid rgba(245, 166, 35, 0.15);
+  border: 1px solid var(--accent-glow);
   border-radius: var(--r);
   padding: 10px 14px;
   font-size: 11px;

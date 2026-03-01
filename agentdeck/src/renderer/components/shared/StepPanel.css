@@ -5,7 +5,7 @@
 }
 
 .step-panel-header {
-  font-family: 'Syne', sans-serif;
+  font-family: var(--font-display);
   font-size: 15px;
   font-weight: 800;
   color: var(--text0);

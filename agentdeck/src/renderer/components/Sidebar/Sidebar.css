@@ -81,7 +81,7 @@
 }
 .sidebar-item.active {
   background: var(--amber-glow);
-  border-color: rgba(245, 166, 35, 0.2);
+  border-color: var(--accent-glow);
   box-shadow:
     inset 2px 0 0 var(--accent),
     0 0 12px rgba(var(--accent-rgb, 245, 166, 35), 0.1);
@@ -100,7 +100,7 @@
   background: var(--green);
   box-shadow:
     0 0 6px var(--green),
-    0 0 12px rgba(74, 222, 128, 0.3);
+    0 0 12px rgba(var(--green-rgb), 0.3);
   animation: pulse-dot 2s ease-in-out infinite;
 }
 .dot-idle {
