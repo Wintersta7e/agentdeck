@@ -3,7 +3,6 @@ import type {
   Workflow,
   WorkflowNode,
   WorkflowNodeType,
-  WorkflowNodeStatus,
   WorkflowStatus,
   WorkflowEvent,
 } from '../../../shared/types'
@@ -31,12 +30,12 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
   const projects = useAppStore((s) => s.projects)
   const wfLogPanelWidth = useAppStore((s) => s.wfLogPanelWidth)
   const setWfLogPanelWidth = useAppStore((s) => s.setWfLogPanelWidth)
+  const logs = useAppStore((s) => s.workflowLogs[workflowId] ?? [])
+  const nodeStatuses = useAppStore((s) => s.workflowNodeStatuses[workflowId] ?? {})
+  const workflowStatus = useAppStore((s) => s.workflowStatuses[workflowId] ?? 'idle')
   const logPanelRef = useRef<HTMLDivElement>(null)
   const [workflow, setWorkflow] = useState<Workflow | null>(null)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
-  const [nodeStatuses, setNodeStatuses] = useState<Record<string, WorkflowNodeStatus>>({})
-  const [workflowStatus, setWorkflowStatus] = useState<WorkflowStatus>('idle')
-  const [logs, setLogs] = useState<WorkflowEvent[]>([])
   const [addMenuOpen, setAddMenuOpen] = useState(false)
   const [detailNode, setDetailNode] = useState<WorkflowNode | null>(null)
 
@@ -92,37 +91,38 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
     if (!workflowId) return
 
     const unsub = window.agentDeck.workflows.onEvent(workflowId, (event: WorkflowEvent) => {
-      setLogs((prev) => [...prev, event].slice(-1000))
+      const s = useAppStore.getState()
+      s.addWorkflowLog(workflowId, event)
 
       const nid = event.nodeId
 
       switch (event.type) {
         case 'workflow:started':
-          setWorkflowStatus('running')
+          s.setWorkflowStatus(workflowId, 'running')
           break
         case 'workflow:done':
-          setWorkflowStatus('done')
+          s.setWorkflowStatus(workflowId, 'done')
           break
         case 'workflow:error':
-          setWorkflowStatus('error')
+          s.setWorkflowStatus(workflowId, 'error')
           break
         case 'workflow:stopped':
-          setWorkflowStatus('stopped')
+          s.setWorkflowStatus(workflowId, 'stopped')
           break
         case 'node:started':
-          if (nid) setNodeStatuses((prev) => ({ ...prev, [nid]: 'running' }))
+          if (nid) s.setWorkflowNodeStatus(workflowId, nid, 'running')
           break
         case 'node:done':
-          if (nid) setNodeStatuses((prev) => ({ ...prev, [nid]: 'done' }))
+          if (nid) s.setWorkflowNodeStatus(workflowId, nid, 'done')
           break
         case 'node:error':
-          if (nid) setNodeStatuses((prev) => ({ ...prev, [nid]: 'error' }))
+          if (nid) s.setWorkflowNodeStatus(workflowId, nid, 'error')
           break
         case 'node:paused':
-          if (nid) setNodeStatuses((prev) => ({ ...prev, [nid]: 'paused' }))
+          if (nid) s.setWorkflowNodeStatus(workflowId, nid, 'paused')
           break
         case 'node:resumed':
-          if (nid) setNodeStatuses((prev) => ({ ...prev, [nid]: 'running' }))
+          if (nid) s.setWorkflowNodeStatus(workflowId, nid, 'running')
           break
       }
     })
@@ -281,9 +281,8 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
   // ── Workflow execution ──
 
   const handleRun = useCallback(() => {
-    setNodeStatuses({})
-    setWorkflowStatus('running')
-    setLogs([])
+    useAppStore.getState().resetWorkflowExecution(workflowId)
+    useAppStore.getState().setWorkflowStatus(workflowId, 'running')
     // Resolve project path from workflow's projectId (if any)
     const projectPath = workflow?.projectId
       ? projects.find((p) => p.id === workflow.projectId)?.path
@@ -292,7 +291,7 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
     flushSave()
       .then(() => window.agentDeck.workflows.run(workflowId, projectPath))
       .catch(() => {
-        setWorkflowStatus('error')
+        useAppStore.getState().setWorkflowStatus(workflowId, 'error')
       })
   }, [workflowId, flushSave, workflow, projects])
 
@@ -305,8 +304,8 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
   }, [])
 
   const handleClearLogs = useCallback(() => {
-    setLogs([])
-  }, [])
+    useAppStore.getState().clearWorkflowLogs(workflowId)
+  }, [workflowId])
 
   const handleProjectChange = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {

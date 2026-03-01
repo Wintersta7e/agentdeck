@@ -9,6 +9,9 @@ import type {
   RightPanelTab,
   ActivityEvent,
   WorkflowMeta,
+  WorkflowEvent,
+  WorkflowNodeStatus,
+  WorkflowStatus,
 } from '../../shared/types'
 
 interface AppState {
@@ -77,6 +80,16 @@ interface AppState {
   editingWorkflowId: string | null
   openWorkflow: (id: string) => void
   closeWorkflow: () => void
+
+  // Workflow execution state (keyed by workflowId, survives editor remount)
+  workflowLogs: Record<string, WorkflowEvent[]>
+  workflowNodeStatuses: Record<string, Record<string, WorkflowNodeStatus>>
+  workflowStatuses: Record<string, WorkflowStatus>
+  addWorkflowLog: (workflowId: string, event: WorkflowEvent) => void
+  setWorkflowNodeStatus: (workflowId: string, nodeId: string, status: WorkflowNodeStatus) => void
+  setWorkflowStatus: (workflowId: string, status: WorkflowStatus) => void
+  clearWorkflowLogs: (workflowId: string) => void
+  resetWorkflowExecution: (workflowId: string) => void
 
   // Layout (sidebar + panels)
   sidebarOpen: boolean
@@ -379,6 +392,47 @@ export const useAppStore = create<AppState>((set, get) => ({
       currentView: state.viewStack[state.viewStack.length - 1] ?? 'home',
       editingWorkflowId: null,
       viewStack: state.viewStack.slice(0, -1),
+    })),
+
+  // Workflow execution state (keyed by workflowId)
+  workflowLogs: {},
+  workflowNodeStatuses: {},
+  workflowStatuses: {},
+
+  addWorkflowLog: (workflowId, event) =>
+    set((state) => {
+      const existing = state.workflowLogs[workflowId] ?? []
+      return {
+        workflowLogs: {
+          ...state.workflowLogs,
+          [workflowId]: [...existing, event].slice(-1000),
+        },
+      }
+    }),
+
+  setWorkflowNodeStatus: (workflowId, nodeId, status) =>
+    set((state) => ({
+      workflowNodeStatuses: {
+        ...state.workflowNodeStatuses,
+        [workflowId]: { ...(state.workflowNodeStatuses[workflowId] ?? {}), [nodeId]: status },
+      },
+    })),
+
+  setWorkflowStatus: (workflowId, status) =>
+    set((state) => ({
+      workflowStatuses: { ...state.workflowStatuses, [workflowId]: status },
+    })),
+
+  clearWorkflowLogs: (workflowId) =>
+    set((state) => ({
+      workflowLogs: { ...state.workflowLogs, [workflowId]: [] },
+    })),
+
+  resetWorkflowExecution: (workflowId) =>
+    set((state) => ({
+      workflowLogs: { ...state.workflowLogs, [workflowId]: [] },
+      workflowNodeStatuses: { ...state.workflowNodeStatuses, [workflowId]: {} },
+      workflowStatuses: { ...state.workflowStatuses, [workflowId]: 'idle' },
     })),
 
   // Layout (sidebar + panels)
