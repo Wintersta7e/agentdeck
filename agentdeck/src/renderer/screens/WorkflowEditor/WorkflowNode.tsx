@@ -6,6 +6,7 @@ import type {
   WorkflowNodeType as NodeType,
   AgentType,
 } from '../../../shared/types'
+import { AGENTS } from '../../../shared/agents'
 import './WorkflowNode.css'
 
 export interface WorkflowNodeData {
@@ -18,15 +19,7 @@ export interface WorkflowNodeData {
 
 export type WfNode = Node<WorkflowNodeData, 'workflowNode'>
 
-const KNOWN_AGENTS: AgentType[] = [
-  'claude-code',
-  'codex',
-  'aider',
-  'goose',
-  'gemini-cli',
-  'amazon-q',
-  'opencode',
-]
+const KNOWN_AGENTS: AgentType[] = AGENTS.map((a) => a.id)
 
 function getAgentBadgeClass(node: WorkflowNodeType): string {
   if (node.type === 'shell') return 'wf-badge-shell'

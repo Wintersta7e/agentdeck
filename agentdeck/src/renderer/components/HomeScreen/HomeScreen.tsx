@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { ParticleField } from './ParticleField'
+import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
 import type { Project, Template, StackBadge } from '../../../shared/types'
 import './HomeScreen.css'
 
@@ -71,21 +72,7 @@ const BADGE_ICON_CLASS: Record<StackBadge, string> = {
   Other: 'card-icon-other',
 }
 
-interface AgentInfo {
-  name: string
-  icon: string
-  desc: string
-}
-
-const AGENTS: AgentInfo[] = [
-  { name: 'claude-code', icon: '\u2B21', desc: 'Anthropic CLI' },
-  { name: 'codex', icon: '\u25C8', desc: 'OpenAI CLI' },
-  { name: 'aider', icon: '\u25B8', desc: 'Git-aware agent' },
-  { name: 'goose', icon: '\u25C6', desc: 'Open-source AI agent' },
-  { name: 'gemini-cli', icon: '\u2726', desc: 'Google AI agent' },
-  { name: 'amazon-q', icon: '\u25C9', desc: 'AWS CLI agent' },
-  { name: 'opencode', icon: '\u25CB', desc: 'Multi-model agent' },
-]
+const AGENTS = SHARED_AGENTS.map((a) => ({ name: a.id, icon: a.icon, desc: a.description }))
 
 interface HomeScreenProps {
   onOpenProject: (project: Project) => void
@@ -106,7 +93,11 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
     window.agentDeck.app
       .wslUsername()
       .then(setUsername)
-      .catch(() => {})
+      .catch((err: unknown) => {
+        window.agentDeck.log.send('warn', 'home', 'WSL username fetch failed', {
+          err: String(err),
+        })
+      })
     // Errors are logged to console; useProjects handles user-facing notifications
     window.agentDeck.agents
       .check()

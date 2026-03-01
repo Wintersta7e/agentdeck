@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
+import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
 import type { Project } from '../../../shared/types'
 import { createBlankWorkflow } from '../../utils/workflowUtils'
 import './CommandPalette.css'
@@ -40,15 +41,7 @@ const SECTION_ORDER: { type: ResultType; label: string }[] = [
   { type: 'action', label: 'Tools' },
 ]
 
-const ALL_AGENTS = [
-  { id: 'claude-code', label: 'Claude Code', desc: 'Anthropic CLI' },
-  { id: 'codex', label: 'Codex', desc: 'OpenAI CLI' },
-  { id: 'aider', label: 'Aider', desc: 'Git-aware agent' },
-  { id: 'goose', label: 'Goose', desc: 'Block open-source agent' },
-  { id: 'gemini-cli', label: 'Gemini CLI', desc: 'Google AI agent' },
-  { id: 'amazon-q', label: 'Amazon Q', desc: 'AWS CLI agent' },
-  { id: 'opencode', label: 'OpenCode', desc: 'Multi-model agent' },
-] as const
+const ALL_AGENTS = SHARED_AGENTS.map((a) => ({ id: a.id, label: a.name, desc: a.description }))
 
 interface ThemeOption {
   id: string
