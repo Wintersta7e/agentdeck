@@ -248,8 +248,14 @@ export function TerminalPane({
       onDataDisposable.dispose()
       ro.disconnect()
       term.dispose()
-      // H1: Always kill — pty-manager deduplicates kills
-      window.agentDeck.pty.kill(sessionId).catch(() => {})
+      // Only kill PTY if the session was removed from the store.
+      // When a session merely moves between pane slots (e.g. opening a second tab
+      // in single-pane layout), its TerminalPane unmounts/remounts but the PTY
+      // must stay alive. The pty-manager's spawn() is a no-op for existing sessions.
+      const state = useAppStore.getState()
+      if (!state.sessions[sessionId]) {
+        window.agentDeck.pty.kill(sessionId).catch(() => {})
+      }
     }
   }, [sessionId, setSessionStatus, removeSession])
 
