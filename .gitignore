@@ -31,6 +31,9 @@ credentials.json
 # Logs
 *.log
 
+# Test coverage
+coverage/
+
 # Claude Code local instructions
 CLAUDE.md
 .claude/

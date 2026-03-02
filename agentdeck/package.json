@@ -15,6 +15,11 @@
     "lint": "node node_modules/eslint/bin/eslint.js src/",
     "lint:fix": "node node_modules/eslint/bin/eslint.js src/ --fix",
     "format": "node node_modules/prettier/bin/prettier.cjs --write 'src/**/*.{ts,tsx,css}'",
+    "test": "node node_modules/vitest/vitest.mjs run",
+    "test:watch": "node node_modules/vitest/vitest.mjs watch",
+    "test:coverage": "node node_modules/vitest/vitest.mjs run --coverage",
+    "test:main": "node node_modules/vitest/vitest.mjs run --project main",
+    "test:renderer": "node node_modules/vitest/vitest.mjs run --project renderer",
     "typecheck": "node node_modules/typescript/bin/tsc -p tsconfig.node.json --noEmit && node node_modules/typescript/bin/tsc -p tsconfig.web.json --noEmit",
     "prepare": "cd .. && node agentdeck/node_modules/husky/bin.js"
   },
@@ -45,10 +50,14 @@
   },
   "devDependencies": {
     "@electron/rebuild": "^4.0.3",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^25.3.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.4",
+    "@vitest/coverage-v8": "^4.0.18",
     "electron": "^40.6.1",
     "electron-builder": "^26.8.1",
     "electron-vite": "^5.0.0",
@@ -57,9 +66,11 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "husky": "^9.1.7",
+    "jsdom": "^28.1.0",
     "lint-staged": "^16.2.7",
     "prettier": "^3.8.1",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.56.1"
+    "typescript-eslint": "^8.56.1",
+    "vitest": "^4.0.18"
   }
 }

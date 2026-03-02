@@ -75,12 +75,12 @@ function forceKillTree(child: ChildProcess): void {
 const ANSI_STRIP_RE =
   /\x1b\[[0-9;?]*[a-zA-Z~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[()#][A-Z0-9]|\x1b[=>NOMDEHc78]|\r/g
 
-function stripAnsi(s: string): string {
+export function stripAnsi(s: string): string {
   return s.replace(ANSI_STRIP_RE, '')
 }
 
 /** Shell-safe single-quote escaping */
-function shellQuote(s: string): string {
+export function shellQuote(s: string): string {
   return "'" + s.replace(/'/g, "'\\''") + "'"
 }
 
@@ -136,7 +136,7 @@ export function validateWorkflow(w: unknown): w is Workflow {
 }
 
 /** Topological sort -- returns array of tiers (each tier = parallel batch) */
-function topoSort(nodes: WorkflowNode[], edges: WorkflowEdge[]): WorkflowNode[][] {
+export function topoSort(nodes: WorkflowNode[], edges: WorkflowEdge[]): WorkflowNode[][] {
   const inDegree = new Map<string, number>()
   const downstream = new Map<string, string[]>()
 

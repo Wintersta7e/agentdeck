@@ -4,7 +4,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "target": "ESNext",
-    "types": ["node"],
+    "types": ["node", "vitest/globals"],
     "outDir": "out"
   },
   "include": ["src/main/**/*", "src/preload/**/*", "src/shared/**/*"]
