@@ -8,6 +8,7 @@ import type {
   WorkflowNodeType,
   WorkflowEdge,
   WorkflowEvent,
+  Role,
 } from '../shared/types'
 import { AGENT_BINARY_MAP, KNOWN_AGENT_IDS, SAFE_FLAGS_RE } from '../shared/agents'
 
@@ -129,6 +130,7 @@ function topoSort(nodes: WorkflowNode[], edges: WorkflowEdge[]): WorkflowNode[][
 export function createWorkflowEngine(
   _ptyManager: PtyManager,
   mainWindow: BrowserWindow,
+  getRoles?: (() => Role[]) | undefined,
 ): WorkflowEngine {
   const activeRuns = new Map<string, { stop: () => void; resume: (nodeId: string) => void }>()
 
@@ -160,14 +162,26 @@ export function createWorkflowEngine(
     // H10: Key checkpoints by workflowId:nodeId (scoped to this run)
     const runCheckpoints = new Map<string, () => void>()
 
-    function runAgentNode(node: WorkflowNode, contextSummary: string): Promise<void> {
+    // Resolve roles for persona injection
+    const rolesMap = new Map<string, Role>()
+    if (getRoles) {
+      for (const r of getRoles()) rolesMap.set(r.id, r)
+    }
+
+    function runAgentNode(
+      node: WorkflowNode,
+      contextSummary: string,
+      roles: Map<string, Role>,
+    ): Promise<void> {
       return new Promise<void>((resolve, reject) => {
-        const prompt = [
-          node.prompt,
-          contextSummary ? `\n\nContext from previous steps:\n${contextSummary}` : '',
-        ]
-          .filter(Boolean)
-          .join('')
+        // Build prompt: [role persona] + [task prompt] + [output format] + [context]
+        const role = node.roleId ? roles.get(node.roleId) : undefined
+        const promptParts: string[] = []
+        if (role?.persona) promptParts.push(role.persona)
+        if (node.prompt) promptParts.push(node.prompt)
+        if (role?.outputFormat) promptParts.push(`Output format:\n${role.outputFormat}`)
+        if (contextSummary) promptParts.push(`Context from previous steps:\n${contextSummary}`)
+        const prompt = promptParts.join('\n\n')
 
         if (!prompt) {
           resolve()
@@ -321,7 +335,7 @@ export function createWorkflowEngine(
 
             try {
               if (node.type === 'agent') {
-                await runAgentNode(node, contextSummary)
+                await runAgentNode(node, contextSummary, rolesMap)
               } else if (node.type === 'shell') {
                 await runShellNode(node)
               } else if (node.type === 'checkpoint') {

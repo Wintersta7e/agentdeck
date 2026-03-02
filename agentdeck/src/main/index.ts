@@ -50,7 +50,7 @@ function createWindow(): void {
   })
 
   ptyManager = createPtyManager(mainWindow)
-  workflowEngine = createWorkflowEngine(ptyManager, mainWindow)
+  workflowEngine = createWorkflowEngine(ptyManager, mainWindow, () => appStore?.get('roles') ?? [])
 
   mainWindow.once('ready-to-show', () => {
     mainWindow?.maximize()

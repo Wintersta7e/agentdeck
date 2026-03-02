@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type {
   Project,
+  Role,
   Template,
   Session,
   SessionStatus,
@@ -39,6 +40,9 @@ interface AppState {
 
   templates: Template[]
   setTemplates: (templates: Template[]) => void
+
+  roles: Role[]
+  setRoles: (roles: Role[]) => void
 
   getSessionForProject: (projectId: string) => Session | undefined
 
@@ -290,6 +294,9 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   templates: [],
   setTemplates: (templates) => set({ templates }),
+
+  roles: [],
+  setRoles: (roles) => set({ roles }),
 
   getSessionForProject: (projectId) => {
     const { sessions } = get()
