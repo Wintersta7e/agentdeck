@@ -17,6 +17,17 @@
   overflow: hidden;
 }
 
+.view-panel {
+  flex: 1;
+  overflow: hidden;
+}
+.view-panel--hidden {
+  display: none;
+}
+.view-panel--visible {
+  display: flex;
+}
+
 .sidebar-wrapper {
   display: flex;
   overflow: hidden;

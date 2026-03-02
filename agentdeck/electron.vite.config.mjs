@@ -26,11 +26,19 @@ export default defineConfig({
     root: resolve(__dirname, 'src/renderer'),
     plugins: [react()],
     build: {
+      target: 'chrome134',
       rollupOptions: {
         input: {
           index: resolve(__dirname, 'src/renderer/index.html')
-        }
-      }
-    }
+        },
+        output: {
+          manualChunks: {
+            'vendor-xyflow': ['@xyflow/react'],
+            'vendor-dndkit': ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
+            'vendor-xterm': ['@xterm/xterm', '@xterm/addon-fit'],
+          },
+        },
+      },
+    },
   }
 })

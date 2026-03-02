@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Titlebar } from './components/Titlebar/Titlebar'
 import { Sidebar } from './components/Sidebar/Sidebar'
 import { StatusBar } from './components/StatusBar/StatusBar'
@@ -6,17 +6,30 @@ import { HomeScreen } from './components/HomeScreen/HomeScreen'
 import { SplitView } from './components/SplitView/SplitView'
 import { RightPanel } from './components/RightPanel/RightPanel'
 import { PanelDivider } from './components/shared/PanelDivider'
-import { NewProjectWizard } from './components/NewProjectWizard/NewProjectWizard'
-import { ProjectSettings } from './components/ProjectSettings/ProjectSettings'
 import { CommandPalette } from './components/CommandPalette/CommandPalette'
-import { TemplateEditor } from './components/TemplateEditor/TemplateEditor'
-import WorkflowEditor from './screens/WorkflowEditor/WorkflowEditor'
 import { AboutDialog } from './components/AboutDialog/AboutDialog'
 import { NotificationToast } from './components/NotificationToast/NotificationToast'
 import { useAppStore } from './store/appStore'
 import { useProjects } from './hooks/useProjects'
 import type { ActivityEvent, Project } from '../shared/types'
 import './App.css'
+
+const WorkflowEditor = lazy(() => import('./screens/WorkflowEditor/WorkflowEditor'))
+const ProjectSettings = lazy(() =>
+  import('./components/ProjectSettings/ProjectSettings').then((m) => ({
+    default: m.ProjectSettings,
+  })),
+)
+const NewProjectWizard = lazy(() =>
+  import('./components/NewProjectWizard/NewProjectWizard').then((m) => ({
+    default: m.NewProjectWizard,
+  })),
+)
+const TemplateEditor = lazy(() =>
+  import('./components/TemplateEditor/TemplateEditor').then((m) => ({
+    default: m.TemplateEditor,
+  })),
+)
 
 export function App(): React.JSX.Element {
   const currentView = useAppStore((s) => s.currentView)
@@ -246,18 +259,16 @@ export function App(): React.JSX.Element {
         )}
         <div className="app-main">
           {currentView === 'home' && <HomeScreen onOpenProject={handleOpenProject} />}
-          {currentView === 'wizard' && <NewProjectWizard onCreateProject={handleOpenProject} />}
-          {currentView === 'settings' && <ProjectSettings key={settingsProjectId} />}
-          {currentView === 'template-editor' && <TemplateEditor />}
-          {currentView === 'workflow' && activeWorkflowId && (
-            <WorkflowEditor key={activeWorkflowId} workflowId={activeWorkflowId} />
-          )}
+          <Suspense fallback={null}>
+            {currentView === 'wizard' && <NewProjectWizard onCreateProject={handleOpenProject} />}
+            {currentView === 'settings' && <ProjectSettings key={settingsProjectId} />}
+            {currentView === 'template-editor' && <TemplateEditor />}
+            {currentView === 'workflow' && activeWorkflowId && (
+              <WorkflowEditor key={activeWorkflowId} workflowId={activeWorkflowId} />
+            )}
+          </Suspense>
           <div
-            style={{
-              display: currentView === 'session' ? 'flex' : 'none',
-              flex: 1,
-              overflow: 'hidden',
-            }}
+            className={`view-panel ${currentView === 'session' ? 'view-panel--visible' : 'view-panel--hidden'}`}
           >
             <SplitView />
             {rightPanelOpen && (
