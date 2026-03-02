@@ -1,6 +1,6 @@
 # AgentDeck User Guide
 
-> **Version**: 3.3.0
+> **Version**: 3.6.0
 
 AgentDeck is a desktop command center for managing AI coding agents through WSL2 terminals. This guide covers every feature from first launch to advanced workflow automation.
 
@@ -34,7 +34,7 @@ AgentDeck is a desktop command center for managing AI coding agents through WSL2
 
 ### Launching
 
-Run the portable executable (`AgentDeck-3.3.0-portable.exe`) or start from source:
+Run the portable executable (`AgentDeck-3.6.0-portable.exe`) or start from source:
 
 ```bash
 cd agentdeck
@@ -112,8 +112,10 @@ Review your settings and create the project. It appears in the sidebar under "Pr
 Click a pinned project on the home screen or sidebar to open a session. Each session:
 
 - Opens a real WSL terminal (pseudo-terminal via node-pty)
+- Renders with GPU-accelerated WebGL (falls back to canvas 2D if unavailable)
 - Runs your startup commands in order
 - Launches in your configured agent (or your default shell)
+- Preserves full terminal state (scrollback, cursor position, colors) when switching tabs
 
 ### Opening a Session
 
@@ -154,7 +156,7 @@ AgentDeck supports 1, 2, or 3 terminal panes side-by-side:
 
 - **Resize** — Drag the divider between panes
 - **Independent sessions** — Each pane runs its own PTY session
-- **Preserved state** — Switching layouts uses `display: none` to preserve terminal state (no re-rendering)
+- **Preserved state** — Terminal instances are cached across tab switches, preserving scrollback history, cursor position, alternate buffer state, and colors. Hidden panes buffer incoming data and flush it when shown again.
 
 ---
 
@@ -505,6 +507,13 @@ The username lookup (`wsl.exe -- whoami`) can be intermittent. Restart AgentDeck
 - Check the Execution Log tab for error messages
 - Ensure your project path is a valid WSL path
 - Shell nodes have a 60-second default timeout — increase it in the Node Editor if needed
+
+### Terminal scrolling doesn't work
+
+If the scrollbar is missing or content is cut off:
+1. Switch to another tab and switch back — this triggers a viewport resync
+2. Try resizing the window or split pane divider
+3. If the issue persists, close and reopen the session
 
 ### Fonts look wrong
 

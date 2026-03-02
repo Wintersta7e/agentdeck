@@ -26,6 +26,8 @@ AgentDeck provides a unified workspace for running AI coding agents through WSL2
 | Feature | Description |
 |---------|-------------|
 | Split view | 1, 2, or 3 terminal panes side-by-side (Ctrl+1/2/3) |
+| GPU rendering | WebGL-accelerated terminal via @xterm/addon-webgl (canvas 2D fallback) |
+| Session persistence | Terminal state (scrollback, cursor, colors) preserved across tab switches |
 | Tab bar | Session + workflow tabs with polymorphic styling |
 | Right panel | Context, Activity, and Memory tabs per session |
 | Activity tracking | Real-time parsing of agent tool use from PTY stdout |
@@ -108,6 +110,9 @@ npm run lint
 
 # Format
 npm run format
+
+# Run tests (171 tests across 11 files)
+npm test
 
 # Production build
 npm run build
@@ -244,7 +249,7 @@ Contributions are welcome! Please:
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Run `npm run lint` and `npm run typecheck`
+4. Run `npm run lint`, `npm run typecheck`, and `npm test`
 5. Submit a pull request
 
 ## License
