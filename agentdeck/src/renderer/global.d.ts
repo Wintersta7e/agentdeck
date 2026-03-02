@@ -19,8 +19,8 @@ declare global {
           agent?: string,
           agentFlags?: string,
         ) => Promise<void>
-        write: (sessionId: string, data: string) => Promise<void>
-        resize: (sessionId: string, cols: number, rows: number) => Promise<void>
+        write: (sessionId: string, data: string) => void
+        resize: (sessionId: string, cols: number, rows: number) => void
         kill: (sessionId: string) => Promise<void>
         onData: (sessionId: string, cb: (data: string) => void) => () => void
         onExit: (sessionId: string, cb: (exitCode: number) => void) => () => void

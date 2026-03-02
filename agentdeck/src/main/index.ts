@@ -138,10 +138,10 @@ function registerIpcHandlers(store: AppStore): void {
       ptyManager?.spawn(sessionId, cols, rows, projectPath, startupCommands, env, agent, agentFlags)
     },
   )
-  ipcMain.handle('pty:write', (_, sessionId: string, data: string) => {
+  ipcMain.on('pty:write', (_, sessionId: string, data: string) => {
     ptyManager?.write(sessionId, data)
   })
-  ipcMain.handle('pty:resize', (_, sessionId: string, cols: number, rows: number) => {
+  ipcMain.on('pty:resize', (_, sessionId: string, cols: number, rows: number) => {
     ptyManager?.resize(sessionId, cols, rows)
   })
   ipcMain.handle('pty:kill', (_, sessionId: string) => {
