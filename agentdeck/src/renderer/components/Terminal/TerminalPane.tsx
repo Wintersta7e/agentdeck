@@ -293,7 +293,6 @@ export function TerminalPane({
 
     return () => {
       cancelled = true
-      webglAddon?.dispose()
       unsubTheme()
       clearTimeout(exitTimeoutRef.current)
       clearTimeout(resizeTimeout)
@@ -302,7 +301,21 @@ export function TerminalPane({
       onDataDisposable.dispose()
       ro.disconnect()
       window.removeEventListener('agentdeck:pane-resize-end', handlePaneResizeEnd)
-      term.dispose()
+      // Dispose terminal + addons inside try/catch — React 19 runs useEffect
+      // cleanup after DOM removal, so xterm's internal refs may already be stale.
+      try {
+        webglAddon?.dispose()
+      } catch {
+        /* WebGL context already lost */
+      }
+      try {
+        term.dispose()
+      } catch {
+        /* host element already detached */
+      }
+      // Null out refs so stale async callbacks (rAF, setTimeout) can't use them
+      termRef.current = null
+      fitRef.current = null
       // Only kill PTY if the session was removed from the store.
       // When a session merely moves between pane slots (e.g. opening a second tab
       // in single-pane layout), its TerminalPane unmounts/remounts but the PTY
