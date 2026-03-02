@@ -37,4 +37,5 @@ CLAUDE.md
 
 # Plans, design docs, and mockups (local only)
 docs/
+!docs/USER-GUIDE.md
 agentdeck-*-prompt.md

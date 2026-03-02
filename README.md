@@ -14,8 +14,9 @@ AgentDeck provides a unified workspace for running AI coding agents through WSL2
 - **Multi-Agent Support** — 7 agents: Claude Code, Aider, Codex, Goose, Gemini CLI, Amazon Q, OpenCode
 - **Project Management** — Pin projects, configure startup commands, auto-detect stack
 - **Split Terminal Views** — 1/2/3-pane layouts with drag-to-resize dividers
-- **Prompt Templates** — 10 built-in templates across 8 categories with a full template editor
+- **Prompt Templates** — 16 built-in templates across 8 categories with a full template editor
 - **Visual Workflows** — Node-graph pipeline editor for chaining agents, shell commands, and checkpoints
+- **Workflow Roles** — 8 reusable agent personas (Reviewer, Developer, Tester, Architect, etc.) with output format presets
 - **8 Themes** — 4 dark (Amber, Cyan, Violet, Ice) + 4 light (Parchment, Fog, Lavender, Stone)
 
 ## Features
@@ -48,8 +49,8 @@ AgentDeck provides a unified workspace for running AI coding agents through WSL2
 |---------|-------------|
 | 8 categories | Orient, Review, Fix, Test, Refactor, Debug, Docs, Git |
 | Template editor | Full editor with name, category, body, and live preview |
-| Seeded library | 10 built-in templates created on first launch |
-| Per-project binding | Assign templates to projects in settings |
+| Seeded library | 16 built-in templates created on first launch |
+| Per-project binding | Assign templates to projects via settings or sidebar context menu |
 
 ### Agentic Workflows
 
@@ -57,6 +58,9 @@ AgentDeck provides a unified workspace for running AI coding agents through WSL2
 |---------|-------------|
 | Node types | Agent, Shell, and Checkpoint nodes on a visual canvas |
 | Visual editor | Drag-and-drop node graph with click-to-connect edges |
+| Rich node cards | Labeled sections (Role badge, Agent, Task preview) with emoji type icons |
+| Workflow roles | 8 built-in personas: Reviewer, Developer, Tester, Architect, Security Auditor, Docs Writer, Refactorer, Debugger |
+| Node Editor panel | Tabbed right panel with detailed node editing + role selection |
 | Execution engine | Topological sort into parallel tiers, `Promise.all` per tier |
 | Workflow tabs | Open multiple workflows as first-class tabs alongside sessions |
 | Log panel | Per-node execution logs with auto-scroll and scroll-lock |
@@ -68,7 +72,7 @@ AgentDeck provides a unified workspace for running AI coding agents through WSL2
 |---------|-------------|
 | 8 themes | Dark: Amber, Cyan, Violet, Ice — Light: Parchment, Fog, Lavender, Stone |
 | Circular reveal | View Transition API animation on theme switch |
-| Visual effects | 11 effects: spotlight cursor, card shimmer, glassmorphism, particles, aurora, neon glow |
+| Visual effects | 19 effects: spotlight cursor, card shimmer, glassmorphism, particles, aurora, neon glow, button press, tab close, scroll fades, node flash, edge particles, and more |
 | Reduced motion | All effects respect `prefers-reduced-motion` |
 | Zoom control | Ctrl+/- zoom (50%-250%), persisted across sessions |
 | Command palette | Fuzzy search across projects, sessions, templates, and tools (Esc to toggle) |
@@ -211,6 +215,7 @@ The project includes HTML mockups (open in any browser) that serve as pixel-perf
 | `agentdeck-template-editor.html` | Template editor with preview |
 | `agentdeck-workflows-mockup.html` | Workflow editor canvas |
 | `agentdeck-workflow-tabs-mockup.html` | Polymorphic tab bar |
+| `agentdeck-roles-mockup.html` | Workflow roles concept (Approach A/B) |
 
 ## Keyboard Shortcuts
 
