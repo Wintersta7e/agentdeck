@@ -30,7 +30,7 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
   const closeWorkflow = useAppStore((s) => s.closeWorkflow)
   const sidebarSections = useAppStore((s) => s.sidebarSections)
   const toggleSidebarSection = useAppStore((s) => s.toggleSidebarSection)
-  const { deleteProject } = useProjects()
+  const { updateProject, deleteProject } = useProjects()
 
   const pinned = projects.filter((p) => p.pinned)
 
@@ -40,10 +40,11 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
     y: number
     projectId?: string | undefined
     workflowId?: string | undefined
+    subMenu?: 'templates' | undefined
   } | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
-  const closeMenu = useCallback(() => setContextMenu(null), [])
+  const closeMenu = useCallback(() => setContextMenu(null), [setContextMenu])
 
   // Close on outside click or Escape
   useEffect(() => {
@@ -97,6 +98,17 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
     if (!contextMenu?.projectId) return
     void deleteProject(contextMenu.projectId)
     closeMenu()
+  }
+
+  function handleToggleTemplate(templateId: string): void {
+    if (!contextMenu?.projectId) return
+    const project = projects.find((p) => p.id === contextMenu.projectId)
+    if (!project) return
+    const attached = project.attachedTemplates ?? []
+    const next = attached.includes(templateId)
+      ? attached.filter((id) => id !== templateId)
+      : [...attached, templateId]
+    void updateProject({ id: project.id, attachedTemplates: next })
   }
 
   function handleDeleteWorkflow(): void {
@@ -197,10 +209,58 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
           className="sidebar-context-menu"
           style={{ top: contextMenu.y, left: contextMenu.x }}
         >
-          {contextMenu.projectId && (
-            <button className="sidebar-context-item danger" onClick={handleRemoveProject}>
-              Remove project
-            </button>
+          {contextMenu.projectId && !contextMenu.subMenu && (
+            <>
+              <button
+                className="sidebar-context-item"
+                onClick={() => setContextMenu({ ...contextMenu, subMenu: 'templates' })}
+              >
+                Attach Templates
+              </button>
+              <div className="sidebar-context-divider" />
+              <button className="sidebar-context-item danger" onClick={handleRemoveProject}>
+                Remove project
+              </button>
+            </>
+          )}
+          {contextMenu.projectId && contextMenu.subMenu === 'templates' && (
+            <div className="sidebar-ctx-tpl-panel">
+              <div className="sidebar-ctx-tpl-header">
+                <button
+                  className="sidebar-ctx-back"
+                  onClick={() => setContextMenu({ ...contextMenu, subMenu: undefined })}
+                >
+                  {'\u2190'}
+                </button>
+                <span>Attach Templates</span>
+              </div>
+              <div className="sidebar-ctx-tpl-body">
+                {groupTemplates(templates).map((group) => {
+                  const project = projects.find((p) => p.id === contextMenu.projectId)
+                  const attached = project?.attachedTemplates ?? []
+                  return (
+                    <div key={group.category}>
+                      <div className="sidebar-ctx-tpl-cat">{group.category}</div>
+                      {group.templates.map((t) => {
+                        const checked = attached.includes(t.id)
+                        return (
+                          <button
+                            key={t.id}
+                            className={`sidebar-ctx-tpl-item${checked ? ' checked' : ''}`}
+                            onClick={() => handleToggleTemplate(t.id)}
+                          >
+                            <span className={`sidebar-ctx-tpl-check${checked ? ' on' : ''}`}>
+                              {checked ? '\u2611' : '\u2610'}
+                            </span>
+                            <span className="sidebar-ctx-tpl-name">{t.name}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
           )}
           {contextMenu.workflowId && (
             <button className="sidebar-context-item danger" onClick={handleDeleteWorkflow}>

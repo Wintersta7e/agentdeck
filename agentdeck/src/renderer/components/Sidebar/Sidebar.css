@@ -219,6 +219,110 @@
   background: var(--red-dim);
 }
 
+.sidebar-context-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 6px;
+}
+
+/* ─── Template attach sub-panel ─── */
+.sidebar-ctx-tpl-panel {
+  width: 220px;
+}
+
+.sidebar-ctx-tpl-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text1);
+  font-weight: 500;
+}
+
+.sidebar-ctx-back {
+  background: none;
+  border: none;
+  color: var(--text2);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  line-height: 1;
+}
+
+.sidebar-ctx-back:hover {
+  color: var(--accent);
+}
+
+.sidebar-ctx-tpl-body {
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 4px 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bg4) transparent;
+}
+
+.sidebar-ctx-tpl-body::-webkit-scrollbar {
+  width: 3px;
+}
+
+.sidebar-ctx-tpl-body::-webkit-scrollbar-thumb {
+  background: var(--bg4);
+}
+
+.sidebar-ctx-tpl-cat {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text3);
+  font-weight: 600;
+  padding: 6px 10px 2px;
+}
+
+.sidebar-ctx-tpl-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--text1);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.sidebar-ctx-tpl-item:hover {
+  background: var(--bg3);
+}
+
+.sidebar-ctx-tpl-item.checked {
+  color: var(--accent);
+}
+
+.sidebar-ctx-tpl-check {
+  font-size: 13px;
+  color: var(--text3);
+  flex-shrink: 0;
+  width: 16px;
+  text-align: center;
+}
+
+.sidebar-ctx-tpl-check.on {
+  color: var(--accent);
+}
+
+.sidebar-ctx-tpl-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ─── Template category groups ─── */
 .sidebar-group-label {
   font-size: 9px;
