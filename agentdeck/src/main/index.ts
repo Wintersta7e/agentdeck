@@ -358,28 +358,36 @@ function registerIpcHandlers(store: AppStore): void {
         const distro = getDefaultDistro()
         windowsPath = wslPathToWindows(projectPath, distro)
       }
-      const filePath = path.join(windowsPath, filename)
-      try {
-        const content = await fs.promises.readFile(filePath, 'utf-8')
-        return content
-      } catch (firstErr) {
-        // If UNC path via wsl.localhost failed, try wsl$ fallback
-        if (windowsPath.startsWith('\\\\wsl.localhost\\')) {
-          const fallbackPath = windowsPath.replace('\\\\wsl.localhost\\', '\\\\wsl$\\')
-          const fallbackFile = path.join(fallbackPath, filename)
-          const content = await fs.promises.readFile(fallbackFile, 'utf-8')
+
+      // Try root path first, then .claude/ subdirectory (Claude Code convention)
+      const candidates = [
+        path.join(windowsPath, filename),
+        path.join(windowsPath, '.claude', filename),
+      ]
+
+      for (const filePath of candidates) {
+        try {
+          const content = await fs.promises.readFile(filePath, 'utf-8')
           return content
+        } catch {
+          // If UNC path via wsl.localhost failed, try wsl$ fallback
+          if (filePath.startsWith('\\\\wsl.localhost\\')) {
+            try {
+              const fallbackFile = filePath.replace('\\\\wsl.localhost\\', '\\\\wsl$\\')
+              const content = await fs.promises.readFile(fallbackFile, 'utf-8')
+              return content
+            } catch {
+              // continue to next candidate
+            }
+          }
+          // continue to next candidate
         }
-        throw firstErr
       }
+
+      log.debug(`${filename} not found in ${projectPath}`)
+      return null
     } catch (err) {
-      // ENOENT is expected for optional files like AGENTS.md — don't log as error
-      const errStr = String(err)
-      if (errStr.includes('ENOENT')) {
-        log.debug(`${filename} not found in ${projectPath}`)
-      } else {
-        log.error(`Failed to read ${filename} from ${projectPath}`, { err: errStr })
-      }
+      log.error(`Failed to read ${filename} from ${projectPath}`, { err: String(err) })
       return null
     }
   })

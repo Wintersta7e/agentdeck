@@ -1,4 +1,6 @@
+import { useCallback } from 'react'
 import { useAppStore } from '../../store/appStore'
+import type { Template } from '../../../shared/types'
 
 export function ContextTab(): React.JSX.Element {
   const sessions = useAppStore((s) => s.sessions)
@@ -9,6 +11,14 @@ export function ContextTab(): React.JSX.Element {
 
   const activeSession = activeSessionId ? sessions[activeSessionId] : undefined
   const project = activeSession ? projects.find((p) => p.id === activeSession.projectId) : undefined
+
+  const handleTemplateClick = useCallback(
+    (template: Template) => {
+      if (!activeSessionId || !template.content) return
+      void window.agentDeck.pty.write(activeSessionId, template.content + '\n')
+    },
+    [activeSessionId],
+  )
 
   if (!project) {
     return <div className="panel-placeholder">No active session</div>
@@ -24,9 +34,7 @@ export function ContextTab(): React.JSX.Element {
 
   const attachedTemplates = (project.attachedTemplates ?? [])
     .map((tid) => templates.find((t) => t.id === tid))
-    .filter(Boolean)
-
-  const activeTemplate = attachedTemplates[0]
+    .filter((t): t is Template => t != null)
 
   return (
     <>
@@ -42,19 +50,31 @@ export function ContextTab(): React.JSX.Element {
         </div>
       ))}
 
-      <div className="panel-section-header">Active template</div>
-      {activeTemplate ? (
-        <div className="context-item" style={{ borderColor: 'var(--amber-border)' }}>
-          <div className="context-item-header">
-            <span className="context-icon">{'\uD83D\uDCCB'}</span>
-            <span className="context-name" style={{ color: 'var(--amber)' }}>
-              {activeTemplate.name}
-            </span>
+      <div className="panel-section-header">
+        Attached templates
+        {attachedTemplates.length > 0 ? ` (${String(attachedTemplates.length)})` : ''}
+      </div>
+      {attachedTemplates.length > 0 ? (
+        attachedTemplates.map((t) => (
+          <div
+            key={t.id}
+            className="context-item"
+            style={{ borderColor: 'var(--amber-border)' }}
+            onClick={() => handleTemplateClick(t)}
+            title="Click to send to agent"
+          >
+            <div className="context-item-header">
+              <span className="context-icon">{'\uD83D\uDCCB'}</span>
+              <span className="context-name" style={{ color: 'var(--amber)' }}>
+                {t.name}
+              </span>
+              {t.category && <span className="context-tag">{t.category}</span>}
+            </div>
+            <div className="context-path">{t.description}</div>
           </div>
-          <div className="context-path">{activeTemplate.description}</div>
-        </div>
+        ))
       ) : (
-        <div className="panel-placeholder">No template attached</div>
+        <div className="panel-placeholder">No templates attached</div>
       )}
 
       <div className="panel-section-header">Project notes</div>
