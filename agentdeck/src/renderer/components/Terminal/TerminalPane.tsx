@@ -227,8 +227,11 @@ export function TerminalPane({
       clearTimeout(resizeTimeout)
       resizeTimeout = setTimeout(() => {
         try {
-          if (fitRef.current && containerRef.current) {
-            fitRef.current.fit()
+          if (!fitRef.current || !containerRef.current) return
+          if (containerRef.current.offsetWidth === 0 || containerRef.current.offsetHeight === 0)
+            return
+          fitRef.current.fit()
+          if (term.cols > 0 && term.rows > 0) {
             window.agentDeck.pty.resize(sessionId, term.cols, term.rows)
           }
         } catch {

@@ -218,7 +218,10 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
 
   function resize(sessionId: string, cols: number, rows: number): void {
     const proc = sessions.get(sessionId)
-    if (proc) proc.resize(cols, rows)
+    if (!proc) return
+    const safeCols = Math.max(1, cols)
+    const safeRows = Math.max(1, rows)
+    proc.resize(safeCols, safeRows)
   }
 
   function kill(sessionId: string): void {
