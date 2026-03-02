@@ -27,6 +27,21 @@
   font-weight: 700;
   color: var(--text0);
   margin-right: 8px;
+  cursor: default;
+}
+
+.wf-name-input {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text0);
+  background: var(--bg0);
+  border: 1px solid var(--purple-border);
+  border-radius: var(--r);
+  padding: 1px 6px;
+  margin-right: 8px;
+  outline: none;
+  width: 180px;
 }
 
 .wf-name-badge {

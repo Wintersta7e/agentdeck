@@ -44,6 +44,11 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
   } | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
+  // Inline rename state for workflows
+  const [renamingWorkflowId, setRenamingWorkflowId] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState('')
+  const renameInputRef = useRef<HTMLInputElement>(null)
+
   const closeMenu = useCallback(() => setContextMenu(null), [setContextMenu])
 
   // Close on outside click or Escape
@@ -128,6 +133,46 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
         })
       })
     closeMenu()
+  }
+
+  function handleRenameWorkflow(): void {
+    if (!contextMenu?.workflowId) return
+    const wf = workflows.find((w) => w.id === contextMenu.workflowId)
+    if (!wf) return
+    setRenamingWorkflowId(wf.id)
+    setRenameValue(wf.name)
+    closeMenu()
+    // Focus input after render
+    setTimeout(() => renameInputRef.current?.select(), 0)
+  }
+
+  function commitRename(): void {
+    if (!renamingWorkflowId) return
+    const trimmed = renameValue.trim()
+    const wf = workflows.find((w) => w.id === renamingWorkflowId)
+    if (!trimmed || !wf || trimmed === wf.name) {
+      setRenamingWorkflowId(null)
+      return
+    }
+    // Persist to disk
+    window.agentDeck.workflows.rename(renamingWorkflowId, trimmed).catch((err: unknown) => {
+      window.agentDeck.log.send('error', 'sidebar', 'Failed to rename workflow', {
+        err: String(err),
+      })
+    })
+    // Update Zustand store
+    setWorkflows(workflows.map((w) => (w.id === renamingWorkflowId ? { ...w, name: trimmed } : w)))
+    useAppStore.getState().updateWorkflowMeta(renamingWorkflowId, { name: trimmed })
+    setRenamingWorkflowId(null)
+  }
+
+  function handleRenameKeyDown(e: React.KeyboardEvent): void {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      commitRename()
+    } else if (e.key === 'Escape') {
+      setRenamingWorkflowId(null)
+    }
   }
 
   function getProjectStatus(projectId: string): string {
@@ -263,9 +308,15 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
             </div>
           )}
           {contextMenu.workflowId && (
-            <button className="sidebar-context-item danger" onClick={handleDeleteWorkflow}>
-              Delete workflow
-            </button>
+            <>
+              <button className="sidebar-context-item" onClick={handleRenameWorkflow}>
+                Rename workflow
+              </button>
+              <div className="sidebar-context-divider" />
+              <button className="sidebar-context-item danger" onClick={handleDeleteWorkflow}>
+                Delete workflow
+              </button>
+            </>
           )}
         </div>
       )}
@@ -340,7 +391,30 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
             >
               <div className="sidebar-dot sidebar-dot-wf" />
               <div className="sidebar-item-info">
-                <div className="sidebar-item-name">{w.name}</div>
+                {renamingWorkflowId === w.id ? (
+                  <input
+                    ref={renameInputRef}
+                    className="sidebar-rename-input"
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onBlur={commitRename}
+                    onKeyDown={handleRenameKeyDown}
+                    onClick={(e) => e.stopPropagation()}
+                    maxLength={60}
+                  />
+                ) : (
+                  <div
+                    className="sidebar-item-name"
+                    onDoubleClick={(e) => {
+                      e.stopPropagation()
+                      setRenamingWorkflowId(w.id)
+                      setRenameValue(w.name)
+                      setTimeout(() => renameInputRef.current?.select(), 0)
+                    }}
+                  >
+                    {w.name}
+                  </div>
+                )}
                 <div className="sidebar-item-sub">{w.nodeCount} nodes</div>
               </div>
             </div>

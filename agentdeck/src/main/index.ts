@@ -7,7 +7,13 @@ import { createProjectStore, seedRoles, seedTemplates, type AppStore } from './p
 import { detectStack } from './detect-stack'
 import { getDefaultDistro, wslPathToWindows } from './wsl-utils'
 import { initLogger, createLogger } from './logger'
-import { listWorkflows, loadWorkflow, saveWorkflow, deleteWorkflow } from './workflow-store'
+import {
+  listWorkflows,
+  loadWorkflow,
+  saveWorkflow,
+  renameWorkflow,
+  deleteWorkflow,
+} from './workflow-store'
 import { createWorkflowEngine, validateWorkflow } from './workflow-engine'
 import type { WorkflowEngine } from './workflow-engine'
 import type { Workflow } from '../shared/types'
@@ -405,6 +411,7 @@ function registerIpcHandlers(store: AppStore): void {
   ipcMain.handle('workflows:list', () => listWorkflows())
   ipcMain.handle('workflows:load', (_, id: string) => loadWorkflow(id))
   ipcMain.handle('workflows:save', (_, workflow: Workflow) => saveWorkflow(workflow))
+  ipcMain.handle('workflows:rename', (_, id: string, name: string) => renameWorkflow(id, name))
   ipcMain.handle('workflows:delete', async (_, id: string) => {
     // C6: Stop running workflow before deleting to avoid orphaned PTYs
     workflowEngine?.stop(id)

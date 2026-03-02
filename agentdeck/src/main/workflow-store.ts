@@ -75,6 +75,18 @@ export async function saveWorkflow(workflow: Workflow): Promise<Workflow> {
   return w
 }
 
+export async function renameWorkflow(id: string, name: string): Promise<void> {
+  const wf = await loadWorkflow(id)
+  if (!wf) {
+    log.warn('Cannot rename — workflow not found', { id })
+    return
+  }
+  wf.name = name
+  wf.updatedAt = Date.now()
+  await saveWorkflow(wf)
+  log.info('Workflow renamed', { id, name })
+}
+
 export async function deleteWorkflow(id: string): Promise<void> {
   const file = path.join(getWorkflowsDir(), `${safeId(id)}.json`)
   await fs.promises.rm(file, { force: true })

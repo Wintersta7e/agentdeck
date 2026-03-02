@@ -46,6 +46,9 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
   const [addMenuOpen, setAddMenuOpen] = useState(false)
   const [detailNode, setDetailNode] = useState<WorkflowNode | null>(null)
   const [rightTab, setRightTab] = useState<'editor' | 'log'>('editor')
+  const [isEditingName, setIsEditingName] = useState(false)
+  const [editName, setEditName] = useState('')
+  const nameInputRef = useRef<HTMLInputElement>(null)
 
   // M7: Instance-scoped counter instead of module-level
   const nodeCounterRef = useRef(0)
@@ -368,6 +371,43 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
     [autoSave],
   )
 
+  // ── Workflow name editing ──
+
+  const startEditingName = useCallback(() => {
+    setEditName(workflow?.name ?? 'Workflow')
+    setIsEditingName(true)
+    // Focus input on next tick after render
+    setTimeout(() => nameInputRef.current?.select(), 0)
+  }, [workflow?.name])
+
+  const commitName = useCallback(() => {
+    const trimmed = editName.trim()
+    if (!trimmed || trimmed === workflow?.name) {
+      setIsEditingName(false)
+      return
+    }
+    setWorkflow((prev) => {
+      if (!prev) return prev
+      const updated: Workflow = { ...prev, name: trimmed, updatedAt: Date.now() }
+      autoSave(updated)
+      return updated
+    })
+    updateWorkflowMeta(workflowId, { name: trimmed })
+    setIsEditingName(false)
+  }, [editName, workflow?.name, autoSave, workflowId, updateWorkflowMeta])
+
+  const handleNameKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        commitName()
+      } else if (e.key === 'Escape') {
+        setIsEditingName(false)
+      }
+    },
+    [commitName],
+  )
+
   // ── Render ──
 
   const statusText = STATUS_TEXT[workflowStatus]
@@ -376,7 +416,21 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
     <div className="wf-editor">
       {/* Toolbar */}
       <div className="wf-toolbar">
-        <span className="wf-name">{workflow?.name ?? 'Workflow'}</span>
+        {isEditingName ? (
+          <input
+            ref={nameInputRef}
+            className="wf-name-input"
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            onBlur={commitName}
+            onKeyDown={handleNameKeyDown}
+            maxLength={60}
+          />
+        ) : (
+          <span className="wf-name" onDoubleClick={startEditingName} title="Double-click to rename">
+            {workflow?.name ?? 'Workflow'}
+          </span>
+        )}
         <span className="wf-name-badge">workflow</span>
         <div className="wf-sep" />
         <button

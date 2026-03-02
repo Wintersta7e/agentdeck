@@ -91,6 +91,7 @@ declare global {
         list(): Promise<import('../shared/types').WorkflowMeta[]>
         load(id: string): Promise<import('../shared/types').Workflow | null>
         save(w: import('../shared/types').Workflow): Promise<import('../shared/types').Workflow>
+        rename(id: string, name: string): Promise<void>
         delete(id: string): Promise<void>
         run(id: string, path?: string): Promise<void>
         stop(id: string): Promise<void>
