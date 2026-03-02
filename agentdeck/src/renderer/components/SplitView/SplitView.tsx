@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useStoreWithEqualityFn } from 'zustand/traditional'
 import { useAppStore } from '../../store/appStore'
 import { PaneTopbar } from './PaneTopbar'
 import { TerminalPane } from '../Terminal/TerminalPane'
@@ -8,17 +9,33 @@ import './SplitView.css'
 const PANE_INDICES = [0, 1, 2] as const
 const MIN_PANE_WIDTH = 200
 
-/** Static style objects hoisted to module scope to avoid allocating on every render */
+/** Static style object hoisted to module scope to avoid allocating on every render */
 const STYLE_DISPLAY_CONTENTS: React.CSSProperties = { display: 'contents' }
-const STYLE_DIVIDER_VISIBLE: React.CSSProperties = { display: 'block' }
-const STYLE_DIVIDER_HIDDEN: React.CSSProperties = { display: 'none' }
-const STYLE_HIDDEN_SESSION: React.CSSProperties = { display: 'none' }
 
 export function SplitView(): React.JSX.Element {
   const paneLayout = useAppStore((s) => s.paneLayout)
   const focusedPane = useAppStore((s) => s.focusedPane)
   const paneSessions = useAppStore((s) => s.paneSessions)
-  const sessions = useAppStore((s) => s.sessions)
+  // Narrow selector: only re-render when session IDs or projectIds change
+  const sessions = useStoreWithEqualityFn(
+    useAppStore,
+    (s) => {
+      const result: Record<string, { id: string; projectId: string }> = {}
+      for (const [id, session] of Object.entries(s.sessions)) {
+        result[id] = { id: session.id, projectId: session.projectId }
+      }
+      return result
+    },
+    (a, b) => {
+      const aKeys = Object.keys(a)
+      const bKeys = Object.keys(b)
+      if (aKeys.length !== bKeys.length) return false
+      for (const key of aKeys) {
+        if (a[key]?.projectId !== b[key]?.projectId) return false
+      }
+      return true
+    },
+  )
   const projects = useAppStore((s) => s.projects)
   const setPaneLayout = useAppStore((s) => s.setPaneLayout)
   const setFocusedPane = useAppStore((s) => s.setFocusedPane)
@@ -68,12 +85,14 @@ export function SplitView(): React.JSX.Element {
     document.body.style.cursor = 'col-resize'
     document.body.style.userSelect = 'none'
 
-    function onMouseMove(moveEvent: MouseEvent): void {
-      const delta = moveEvent.clientX - startX
-      let newLeftWidth = startLeftWidth + delta
-      let newRightWidth = startRightWidth - delta
+    let rafId = 0
+    let latestDelta = 0
 
-      // Clamp to minimum width
+    function applyResize(): void {
+      rafId = 0
+      let newLeftWidth = startLeftWidth + latestDelta
+      let newRightWidth = startRightWidth - latestDelta
+
       if (newLeftWidth < MIN_PANE_WIDTH) {
         newLeftWidth = MIN_PANE_WIDTH
         newRightWidth = startLeftWidth + startRightWidth - MIN_PANE_WIDTH
@@ -93,18 +112,30 @@ export function SplitView(): React.JSX.Element {
       }
     }
 
+    function onMouseMove(moveEvent: MouseEvent): void {
+      latestDelta = moveEvent.clientX - startX
+      if (!rafId) {
+        rafId = requestAnimationFrame(applyResize)
+      }
+    }
+
     function onMouseUp(): void {
+      if (rafId) cancelAnimationFrame(rafId)
       dragCleanupRef.current = null
       document.body.style.cursor = savedCursor
       document.body.style.userSelect = savedUserSelect
       document.removeEventListener('mousemove', onMouseMove)
       document.removeEventListener('mouseup', onMouseUp)
+
+      // Trigger fit on all visible panes after drag ends
+      window.dispatchEvent(new CustomEvent('agentdeck:pane-resize-end'))
     }
 
     document.addEventListener('mousemove', onMouseMove)
     document.addEventListener('mouseup', onMouseUp)
 
     dragCleanupRef.current = () => {
+      if (rafId) cancelAnimationFrame(rafId)
       document.body.style.cursor = savedCursor
       document.body.style.userSelect = savedUserSelect
       document.removeEventListener('mousemove', onMouseMove)
@@ -157,8 +188,7 @@ export function SplitView(): React.JSX.Element {
             {/* Divider before pane (except pane 0) */}
             {paneIndex > 0 && (
               <div
-                className="split-divider"
-                style={isVisible ? STYLE_DIVIDER_VISIBLE : STYLE_DIVIDER_HIDDEN}
+                className={`split-divider${isVisible ? '' : ' split-pane--hidden'}`}
                 onMouseDown={(e) => handleDividerMouseDown(paneIndex - 1, e)}
               />
             )}
@@ -167,11 +197,7 @@ export function SplitView(): React.JSX.Element {
               ref={(el) => {
                 paneRefs.current[paneIndex] = el
               }}
-              className={`split-pane${isFocused ? ' focused' : ''}`}
-              style={{
-                display: isVisible ? 'flex' : 'none',
-                flex: 1,
-              }}
+              className={`split-pane ${isVisible ? 'split-pane--visible' : 'split-pane--hidden'}${isFocused ? ' focused' : ''}`}
               onClick={() => setFocusedPane(paneIndex)}
             >
               {session ? (
@@ -181,6 +207,7 @@ export function SplitView(): React.JSX.Element {
                     key={sessionId}
                     sessionId={sessionId}
                     focused={isFocused}
+                    visible={isVisible}
                     projectPath={project?.path}
                     startupCommands={project ? startupCommandsMap[project.id] : undefined}
                     env={project ? envMap[project.id] : undefined}
@@ -204,10 +231,11 @@ export function SplitView(): React.JSX.Element {
         if (!session) return null
         const project = projects.find((p) => p.id === session.projectId)
         return (
-          <div key={sid} style={STYLE_HIDDEN_SESSION}>
+          <div key={sid} className="split-pane--hidden">
             <TerminalPane
               sessionId={sid}
               focused={false}
+              visible={false}
               projectPath={project?.path}
               startupCommands={project ? startupCommandsMap[project.id] : undefined}
               env={project ? envMap[project.id] : undefined}

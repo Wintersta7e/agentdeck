@@ -4,6 +4,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import { WebglAddon } from '@xterm/addon-webgl'
 import '@xterm/xterm/css/xterm.css'
 import { useAppStore } from '../../store/appStore'
+import { subscribeTheme } from '../../utils/themeObserver'
 import './TerminalPane.css'
 
 const BASE_XTERM_THEME: ITheme = {
@@ -90,6 +91,7 @@ function getXtermTheme(themeId: string): ITheme {
 interface TerminalPaneProps {
   sessionId: string
   focused?: boolean | undefined
+  visible?: boolean | undefined
   projectPath?: string | undefined
   startupCommands?: string[] | undefined
   env?: Record<string, string> | undefined
@@ -100,6 +102,7 @@ interface TerminalPaneProps {
 export function TerminalPane({
   sessionId,
   focused,
+  visible = true,
   projectPath,
   startupCommands,
   env,
@@ -115,6 +118,7 @@ export function TerminalPane({
   const envRef = useRef(env)
   const agentRef = useRef(agent)
   const agentFlagsRef = useRef(agentFlags)
+  const visibleRef = useRef(visible)
   const setSessionStatus = useAppStore((s) => s.setSessionStatus)
   const removeSession = useAppStore((s) => s.removeSession)
 
@@ -188,14 +192,9 @@ export function TerminalPane({
     termRef.current = term
     fitRef.current = fit
 
-    // Sync xterm theme when data-theme attribute changes
-    const themeObserver = new MutationObserver(() => {
-      const t = document.documentElement.dataset.theme ?? ''
+    // Sync xterm theme when data-theme attribute changes (single global observer)
+    const unsubTheme = subscribeTheme((t) => {
       term.options.theme = getXtermTheme(t)
-    })
-    themeObserver.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['data-theme'],
     })
 
     // M12: StrictMode double-spawn protection
@@ -224,8 +223,21 @@ export function TerminalPane({
         setSessionStatus(sessionId, 'exited')
       })
 
+    // Buffer data received while hidden, flush when visible
+    const hiddenBuffer: string[] = []
     const unsubData = window.agentDeck.pty.onData(sessionId, (data) => {
-      term.write(data)
+      if (visibleRef.current) {
+        if (hiddenBuffer.length > 0) {
+          term.write(hiddenBuffer.join(''))
+          hiddenBuffer.length = 0
+        }
+        term.write(data)
+      } else {
+        hiddenBuffer.push(data)
+        if (hiddenBuffer.length > 1000) {
+          hiddenBuffer.splice(0, hiddenBuffer.length - 500)
+        }
+      }
     })
 
     const onDataDisposable = term.onData((data) => {
@@ -256,16 +268,36 @@ export function TerminalPane({
     })
     ro.observe(containerRef.current)
 
+    // Re-fit terminal when pane resize ends (divider drag / panel resize)
+    const handlePaneResizeEnd = (): void => {
+      requestAnimationFrame(() => {
+        try {
+          if (!fitRef.current || !containerRef.current || !termRef.current) return
+          if (containerRef.current.offsetWidth === 0 || containerRef.current.offsetHeight === 0)
+            return
+          fitRef.current.fit()
+          const t = termRef.current
+          if (t.cols > 0 && t.rows > 0) {
+            window.agentDeck.pty.resize(sessionId, t.cols, t.rows)
+          }
+        } catch {
+          // terminal disposed
+        }
+      })
+    }
+    window.addEventListener('agentdeck:pane-resize-end', handlePaneResizeEnd)
+
     return () => {
       cancelled = true
       webglAddon?.dispose()
-      themeObserver.disconnect()
+      unsubTheme()
       clearTimeout(exitTimeoutRef.current)
       clearTimeout(resizeTimeout)
       unsubData()
       unsubExit()
       onDataDisposable.dispose()
       ro.disconnect()
+      window.removeEventListener('agentdeck:pane-resize-end', handlePaneResizeEnd)
       term.dispose()
       // Only kill PTY if the session was removed from the store.
       // When a session merely moves between pane slots (e.g. opening a second tab
@@ -278,6 +310,11 @@ export function TerminalPane({
     }
   }, [sessionId, setSessionStatus, removeSession])
 
+  // Keep visibleRef in sync
+  useEffect(() => {
+    visibleRef.current = visible
+  }, [visible])
+
   // Sync xterm internal focus with pane focus state
   useEffect(() => {
     const term = termRef.current
@@ -288,6 +325,38 @@ export function TerminalPane({
       term.blur()
     }
   }, [focused])
+
+  // Re-fit terminal when container becomes visible (display:none → flex)
+  // ResizeObserver won't fire if dimensions haven't changed.
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0]
+        if (entry?.isIntersecting && fitRef.current && containerRef.current) {
+          requestAnimationFrame(() => {
+            try {
+              if (!containerRef.current || !fitRef.current || !termRef.current) return
+              if (containerRef.current.offsetWidth === 0 || containerRef.current.offsetHeight === 0)
+                return
+              fitRef.current.fit()
+              const t = termRef.current
+              if (t.cols > 0 && t.rows > 0) {
+                window.agentDeck.pty.resize(sessionId, t.cols, t.rows)
+              }
+            } catch {
+              // terminal disposed
+            }
+          })
+        }
+      },
+      { threshold: 0.01 },
+    )
+    io.observe(container)
+    return () => io.disconnect()
+  }, [sessionId])
 
   return <div ref={containerRef} className="terminal-container" />
 }

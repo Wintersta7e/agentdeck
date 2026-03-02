@@ -99,3 +99,12 @@
   border-color: var(--amber-border);
   color: var(--amber);
 }
+
+.split-pane--visible {
+  display: flex;
+  flex: 1;
+}
+
+.split-pane--hidden {
+  display: none;
+}

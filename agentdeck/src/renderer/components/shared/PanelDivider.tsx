@@ -42,16 +42,27 @@ export function PanelDivider({
       startWidthRef.current = panel.offsetWidth
       setDragging(true)
 
-      const handleMouseMove = (ev: MouseEvent): void => {
-        const delta = ev.clientX - startXRef.current
-        // If panel is on the left, dragging right = wider; if on right, dragging left = wider
+      let rafId = 0
+      let latestClientX = e.clientX
+
+      const applyResize = (): void => {
+        rafId = 0
+        const delta = latestClientX - startXRef.current
         const newWidth =
           side === 'left' ? startWidthRef.current + delta : startWidthRef.current - delta
         const clamped = Math.max(minWidth, Math.min(maxWidth, newWidth))
         panel.style.width = `${clamped}px`
       }
 
+      const handleMouseMove = (ev: MouseEvent): void => {
+        latestClientX = ev.clientX
+        if (!rafId) {
+          rafId = requestAnimationFrame(applyResize)
+        }
+      }
+
       const handleMouseUp = (): void => {
+        if (rafId) cancelAnimationFrame(rafId)
         document.removeEventListener('mousemove', handleMouseMove)
         document.removeEventListener('mouseup', handleMouseUp)
         document.body.style.cursor = ''
@@ -62,6 +73,9 @@ export function PanelDivider({
         if (panel) {
           onResizeEnd(panel.offsetWidth)
         }
+
+        // Signal terminals to re-fit after panel resize
+        window.dispatchEvent(new CustomEvent('agentdeck:pane-resize-end'))
       }
 
       document.addEventListener('mousemove', handleMouseMove)
@@ -70,6 +84,7 @@ export function PanelDivider({
       document.body.style.userSelect = 'none'
 
       cleanupRef.current = () => {
+        if (rafId) cancelAnimationFrame(rafId)
         document.removeEventListener('mousemove', handleMouseMove)
         document.removeEventListener('mouseup', handleMouseUp)
         document.body.style.cursor = ''
