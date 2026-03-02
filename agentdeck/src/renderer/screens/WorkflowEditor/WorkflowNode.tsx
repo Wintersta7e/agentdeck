@@ -46,6 +46,12 @@ function getTextLabel(type: NodeType): string {
   return 'Message'
 }
 
+function getTypeIcon(type: NodeType): string {
+  if (type === 'agent') return '\uD83E\uDD16' // 🤖
+  if (type === 'shell') return '\uD83D\uDCBB' // 💻
+  return '\u2705' // ✅
+}
+
 function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Element {
   const { node, status, onUpdateNode, onDeleteNode } = data
   const roles = useAppStore((s) => s.roles)
@@ -151,7 +157,7 @@ function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Ele
       <Handle type="target" position={Position.Left} className="wf-handle" />
 
       <div className="wf-node-header">
-        <div className="wf-node-status-dot" />
+        <span className="wf-node-type-icon">{getTypeIcon(node.type)}</span>
         <div className="wf-node-name">{node.name}</div>
         <span className={`wf-node-type-badge ${getTypeBadgeClass(node.type)}`}>
           {getTypeBadgeLabel(node.type)}

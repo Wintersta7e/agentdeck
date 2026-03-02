@@ -101,30 +101,27 @@
   gap: 8px;
 }
 
-.wf-node-status-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
+.wf-node-type-icon {
+  font-size: 12px;
   flex-shrink: 0;
-  background: var(--text3);
-  transition: background 0.3s;
+  color: var(--text3);
+  transition: color 0.3s;
 }
 
-.wf-node-inner.running .wf-node-status-dot {
-  background: var(--green);
-  box-shadow: 0 0 6px var(--green);
-  animation: wf-node-dot-pulse 1.2s infinite;
+.wf-node-inner.running .wf-node-type-icon {
+  color: var(--green);
+  animation: wf-node-icon-pulse 1.2s infinite;
 }
 
-.wf-node-inner.done .wf-node-status-dot {
-  background: var(--green);
+.wf-node-inner.done .wf-node-type-icon {
+  color: var(--green);
 }
 
-.wf-node-inner.error .wf-node-status-dot {
-  background: var(--red);
+.wf-node-inner.error .wf-node-type-icon {
+  color: var(--red);
 }
 
-@keyframes wf-node-dot-pulse {
+@keyframes wf-node-icon-pulse {
   0%,
   100% {
     opacity: 1;
