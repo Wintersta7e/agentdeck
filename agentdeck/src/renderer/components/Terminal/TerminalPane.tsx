@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Terminal, type ITheme } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
+import { WebglAddon } from '@xterm/addon-webgl'
 import '@xterm/xterm/css/xterm.css'
 import { useAppStore } from '../../store/appStore'
 import './TerminalPane.css'
@@ -169,6 +170,20 @@ export function TerminalPane({
     const fit = new FitAddon()
     term.loadAddon(fit)
     term.open(containerRef.current)
+
+    // Load WebGL renderer for GPU-accelerated painting (fallback: canvas 2D)
+    let webglAddon: WebglAddon | null = null
+    try {
+      webglAddon = new WebglAddon()
+      webglAddon.onContextLoss(() => {
+        webglAddon?.dispose()
+        webglAddon = null
+      })
+      term.loadAddon(webglAddon)
+    } catch {
+      webglAddon = null
+    }
+
     fit.fit()
     termRef.current = term
     fitRef.current = fit
@@ -243,6 +258,7 @@ export function TerminalPane({
 
     return () => {
       cancelled = true
+      webglAddon?.dispose()
       themeObserver.disconnect()
       clearTimeout(exitTimeoutRef.current)
       clearTimeout(resizeTimeout)

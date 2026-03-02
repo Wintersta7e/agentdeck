@@ -39,6 +39,7 @@
     "@fontsource-variable/syne": "^5.1.0",
     "@fontsource/jetbrains-mono": "^5.1.1",
     "@xterm/addon-fit": "^0.10.0",
+    "@xterm/addon-webgl": "^0.19.0",
     "@xterm/xterm": "^5.5.0",
     "@xyflow/react": "^12.10.1",
     "electron-store": "^11.0.2",
