@@ -356,8 +356,12 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   addActivityEvent: (sessionId, event) =>
     set((state) => {
-      const existing = state.activityFeeds[sessionId] ?? []
-      const updated = [...existing, event].slice(-500)
+      const existing = state.activityFeeds[sessionId]
+      if (!existing) {
+        return { activityFeeds: { ...state.activityFeeds, [sessionId]: [event] } }
+      }
+      const updated =
+        existing.length >= 500 ? [...existing.slice(-(500 - 1)), event] : [...existing, event]
       return {
         activityFeeds: { ...state.activityFeeds, [sessionId]: updated },
       }
