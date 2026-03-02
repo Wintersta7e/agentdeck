@@ -160,71 +160,90 @@
   color: var(--text1);
 }
 
-/* ── Body ── */
+/* ── Type badge (header) ── */
 
-.wf-node-body {
-  padding: 10px 12px;
-}
-
-.wf-node-role {
-  font-size: 10px;
-  color: var(--text1);
-  line-height: 1.5;
-  margin-bottom: 10px;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-/* ── Footer ── */
-
-.wf-node-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.wf-node-agent-badge {
-  font-size: 9px;
-  padding: 2px 7px;
-  border-radius: 20px;
+.wf-node-type-badge {
+  font-size: 8px;
+  padding: 1px 5px;
+  border-radius: 10px;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
 }
 
-.wf-badge-claude {
-  background: rgba(var(--accent-rgb), 0.12);
-  color: var(--accent);
-  border: 1px solid rgba(var(--accent-rgb), 0.25);
-}
-
-.wf-badge-codex {
-  background: var(--blue-dim);
-  color: var(--blue);
-  border: 1px solid var(--blue-border);
-}
-
-.wf-badge-aider {
-  background: var(--green-dim);
-  color: var(--green);
-  border: 1px solid var(--green-border);
-}
-
-.wf-badge-shell {
-  background: var(--green-dim);
-  color: var(--green);
-  border: 1px solid var(--green-border);
-}
-
-.wf-badge-checkpoint {
+.wf-type-badge-agent {
   background: var(--purple-dim);
   color: var(--purple);
   border: 1px solid var(--purple-border);
 }
 
-.wf-node-timing {
+.wf-type-badge-shell {
+  background: rgba(var(--accent-rgb), 0.12);
+  color: var(--accent);
+  border: 1px solid rgba(var(--accent-rgb), 0.25);
+}
+
+.wf-type-badge-checkpoint {
+  background: var(--blue-dim);
+  color: var(--blue);
+  border: 1px solid var(--blue-border);
+}
+
+/* ── Body: labeled fields ── */
+
+.wf-node-body {
+  padding: 8px 10px;
+}
+
+.wf-node-field {
+  margin-bottom: 5px;
+}
+
+.wf-node-field:last-child {
+  margin-bottom: 0;
+}
+
+.wf-node-field-label {
   font-size: 9px;
-  color: var(--text3);
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 2px;
+}
+
+.wf-node-field-value {
+  font-size: 10px;
+  color: var(--text1);
+  line-height: 1.4;
+}
+
+.wf-node-field-truncated {
+  max-height: 32px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* ── Role badge (cyan pill inside node body) ── */
+
+.wf-node-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 9px;
+  font-weight: 600;
+  background: rgba(78, 201, 176, 0.12);
+  color: rgb(78, 201, 176);
+  border: 1px solid rgba(78, 201, 176, 0.3);
+}
+
+.wf-node-role-badge-icon {
+  font-size: 10px;
 }
 
 /* ── React Flow Handles (ports) ── */

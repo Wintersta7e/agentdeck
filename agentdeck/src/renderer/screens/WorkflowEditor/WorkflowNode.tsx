@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, memo } from 'react'
+import { useState, useCallback, useRef, useEffect, memo, useMemo } from 'react'
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react'
 import type {
   WorkflowNode as WorkflowNodeType,
@@ -7,6 +7,7 @@ import type {
   AgentType,
 } from '../../../shared/types'
 import { AGENTS } from '../../../shared/agents'
+import { useAppStore } from '../../store/appStore'
 import './WorkflowNode.css'
 
 export interface WorkflowNodeData {
@@ -21,40 +22,40 @@ export type WfNode = Node<WorkflowNodeData, 'workflowNode'>
 
 const KNOWN_AGENTS: AgentType[] = AGENTS.map((a) => a.id)
 
-function getAgentBadgeClass(node: WorkflowNodeType): string {
-  if (node.type === 'shell') return 'wf-badge-shell'
-  if (node.type === 'checkpoint') return 'wf-badge-checkpoint'
-  const agent = node.agent ?? 'claude-code'
-  if (agent === 'codex') return 'wf-badge-codex'
-  if (agent === 'aider') return 'wf-badge-aider'
-  return 'wf-badge-claude'
+function getTypeBadgeClass(type: NodeType): string {
+  if (type === 'agent') return 'wf-type-badge-agent'
+  if (type === 'shell') return 'wf-type-badge-shell'
+  return 'wf-type-badge-checkpoint'
 }
 
-function getAgentBadgeLabel(node: WorkflowNodeType): string {
-  if (node.type === 'shell') return 'shell'
-  if (node.type === 'checkpoint') return 'checkpoint'
-  return node.agent ?? 'claude-code'
+function getTypeBadgeLabel(type: NodeType): string {
+  if (type === 'agent') return 'Agent'
+  if (type === 'shell') return 'Shell'
+  return 'Check'
 }
 
-function getRoleText(node: WorkflowNodeType): string {
+function getNodeText(node: WorkflowNodeType): string {
   if (node.type === 'agent') return node.prompt ?? ''
   if (node.type === 'shell') return node.command ?? ''
   return node.message ?? ''
 }
 
-function getRoleLabel(type: NodeType): string {
-  if (type === 'agent') return 'Prompt'
+function getTextLabel(type: NodeType): string {
+  if (type === 'agent') return 'Task'
   if (type === 'shell') return 'Command'
   return 'Message'
 }
 
 function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Element {
   const { node, status, onUpdateNode, onDeleteNode } = data
+  const roles = useAppStore((s) => s.roles)
+  const rolesMap = useMemo(() => new Map(roles.map((r) => [r.id, r])), [roles])
+  const role = node.roleId ? rolesMap.get(node.roleId) : undefined
 
   const [editing, setEditing] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [editName, setEditName] = useState(node.name)
-  const [editRole, setEditRole] = useState(getRoleText(node))
+  const [editRole, setEditRole] = useState(getNodeText(node))
   const [editAgent, setEditAgent] = useState<AgentType>(node.agent ?? 'claude-code')
   const nameInputRef = useRef<HTMLInputElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -93,7 +94,7 @@ function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Ele
 
   const handleCancel = useCallback(() => {
     setEditName(node.name)
-    setEditRole(getRoleText(node))
+    setEditRole(getNodeText(node))
     setEditAgent(node.agent ?? 'claude-code')
     setEditing(false)
   }, [node])
@@ -113,7 +114,7 @@ function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Ele
 
   const enterEditMode = useCallback(() => {
     setEditName(node.name)
-    setEditRole(getRoleText(node))
+    setEditRole(getNodeText(node))
     setEditAgent(node.agent ?? 'claude-code')
     setEditing(true)
   }, [node])
@@ -143,6 +144,8 @@ function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Ele
 
   const className = ['wf-node-inner', status, selected ? 'selected' : ''].filter(Boolean).join(' ')
 
+  const nodeText = getNodeText(node)
+
   return (
     <div className={className} onDoubleClick={handleDoubleClick}>
       <Handle type="target" position={Position.Left} className="wf-handle" />
@@ -150,6 +153,9 @@ function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Ele
       <div className="wf-node-header">
         <div className="wf-node-status-dot" />
         <div className="wf-node-name">{node.name}</div>
+        <span className={`wf-node-type-badge ${getTypeBadgeClass(node.type)}`}>
+          {getTypeBadgeLabel(node.type)}
+        </span>
         <button className="wf-node-menu nodrag" onClick={handleMenuClick} type="button">
           {'\u22EF'}
         </button>
@@ -171,13 +177,31 @@ function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Ele
       )}
 
       <div className="wf-node-body">
-        <div className="wf-node-role">{getRoleText(node)}</div>
-        <div className="wf-node-footer">
-          <span className={`wf-node-agent-badge ${getAgentBadgeClass(node)}`}>
-            {getAgentBadgeLabel(node)}
-          </span>
-          <span className="wf-node-timing">{'\u2014'}</span>
-        </div>
+        {/* Role badge (agent nodes with a role assigned) */}
+        {node.type === 'agent' && role && (
+          <div className="wf-node-field">
+            <div className="wf-node-field-label">Role</div>
+            <div className="wf-node-role-badge">
+              <span className="wf-node-role-badge-icon">{role.icon}</span> {role.name}
+            </div>
+          </div>
+        )}
+
+        {/* Agent name (agent nodes) */}
+        {node.type === 'agent' && (
+          <div className="wf-node-field">
+            <div className="wf-node-field-label">Agent</div>
+            <div className="wf-node-field-value">{node.agent ?? 'claude-code'}</div>
+          </div>
+        )}
+
+        {/* Task / Command / Message */}
+        {nodeText && (
+          <div className="wf-node-field">
+            <div className="wf-node-field-label">{getTextLabel(node.type)}</div>
+            <div className="wf-node-field-value wf-node-field-truncated">{nodeText}</div>
+          </div>
+        )}
       </div>
 
       {editing && (
@@ -194,7 +218,7 @@ function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Ele
           <textarea
             className="wf-node-edit-textarea nodrag"
             value={editRole}
-            placeholder={getRoleLabel(node.type)}
+            placeholder={getTextLabel(node.type)}
             onChange={(e) => setEditRole(e.target.value)}
             onKeyDown={handleEditKeyDown}
           />
