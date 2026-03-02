@@ -157,7 +157,7 @@ describe('createPtyManager', () => {
       )
     })
 
-    it('sends data to renderer via webContents', () => {
+    it('sends data to renderer via webContents (batched per tick)', () => {
       const win = makeMockWindow()
       const mgr = createPtyManager(win)
 
@@ -166,6 +166,9 @@ describe('createPtyManager', () => {
       // Simulate data from PTY
       const cb = ptyInstances[0]?.onData[0]
       cb?.('hello world\n')
+
+      // Data is batched via setImmediate — flush it
+      vi.runAllTimers()
 
       expect(win.webContents.send).toHaveBeenCalledWith('pty:data:s1', 'hello world\n')
     })
@@ -266,6 +269,7 @@ describe('createPtyManager', () => {
       mgr.spawn('s1', 80, 24)
       const cb = ptyInstances[0]?.onData[0]
       cb?.('Read src/main.ts\n')
+      vi.runAllTimers()
 
       expect(win.webContents.send).toHaveBeenCalledWith(
         'pty:activity:s1',
@@ -280,6 +284,7 @@ describe('createPtyManager', () => {
       mgr.spawn('s1', 80, 24)
       const cb = ptyInstances[0]?.onData[0]
       cb?.('Write output.txt\n')
+      vi.runAllTimers()
 
       expect(win.webContents.send).toHaveBeenCalledWith(
         'pty:activity:s1',
@@ -294,6 +299,7 @@ describe('createPtyManager', () => {
       mgr.spawn('s1', 80, 24)
       const cb = ptyInstances[0]?.onData[0]
       cb?.('Running npm test\n')
+      vi.runAllTimers()
 
       expect(win.webContents.send).toHaveBeenCalledWith(
         'pty:activity:s1',
@@ -309,6 +315,7 @@ describe('createPtyManager', () => {
       const cb = ptyInstances[0]?.onData[0]
       // Use "Tool use: Grep" — contains "Tool" but not "Bash"/"Running"/"Execute"
       cb?.('Tool use: Grep\n')
+      vi.runAllTimers()
 
       expect(win.webContents.send).toHaveBeenCalledWith(
         'pty:activity:s1',
@@ -323,6 +330,7 @@ describe('createPtyManager', () => {
       mgr.spawn('s1', 80, 24)
       const cb = ptyInstances[0]?.onData[0]
       cb?.('Thinking about the problem\n')
+      vi.runAllTimers()
 
       expect(win.webContents.send).toHaveBeenCalledWith(
         'pty:activity:s1',
@@ -342,9 +350,11 @@ describe('createPtyManager', () => {
       // Send a massive chunk without newlines (should be capped at 8192)
       const huge = 'x'.repeat(16000)
       cb?.(huge)
+      vi.runAllTimers()
 
       // Should not throw and should still function
       cb?.('Reading file test.ts\n')
+      vi.runAllTimers()
       // The activity should still be detected after buffer cap
       const activityCalls = vi
         .mocked(win.webContents.send)

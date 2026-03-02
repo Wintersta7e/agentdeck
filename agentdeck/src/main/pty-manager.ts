@@ -64,6 +64,9 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
   const lineBuffers = new Map<string, string>()
   /* Fix 4 (PTY-3): Track spawn timers so we can cancel on kill */
   const spawnTimers = new Map<string, ReturnType<typeof setTimeout>>()
+  /* Perf: Batch PTY data IPC sends — accumulate per tick, flush via setImmediate */
+  const dataBuffers = new Map<string, string>()
+  const flushScheduled = new Map<string, boolean>()
 
   function spawn(
     sessionId: string,
@@ -167,35 +170,50 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
     lineBuffers.set(sessionId, '')
 
     proc.onData((data) => {
-      if (!mainWindow.isDestroyed()) {
-        mainWindow.webContents.send(`pty:data:${sessionId}`, data)
-      }
       ptyBus.emit(`data:${sessionId}`, data)
 
-      // Line-based activity parsing
-      let buffer = (lineBuffers.get(sessionId) ?? '') + data
-      /* Fix 3 (LEAK-4): Cap line buffer at 8KB */
-      if (buffer.length > 8192) {
-        buffer = buffer.slice(-8192)
-      }
-      const parts = buffer.split('\n')
-      // Keep the incomplete last segment as the new buffer
-      lineBuffers.set(sessionId, parts[parts.length - 1] ?? '')
+      // Accumulate data for batched IPC send
+      const existing = dataBuffers.get(sessionId) ?? ''
+      dataBuffers.set(sessionId, existing + data)
 
-      // Process all complete lines (everything except the last element)
-      for (let i = 0; i < parts.length - 1; i++) {
-        const line = parts[i] ?? ''
-        const parsed = parseActivityLine(line)
-        if (parsed && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send(`pty:activity:${sessionId}`, {
-            id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-            type: parsed.type,
-            title: parsed.title,
-            detail: parsed.detail,
-            status: 'done',
-            timestamp: Date.now(),
-          })
-        }
+      // Schedule flush once per event loop tick
+      if (!flushScheduled.get(sessionId)) {
+        flushScheduled.set(sessionId, true)
+        setImmediate(() => {
+          flushScheduled.delete(sessionId)
+          const buffered = dataBuffers.get(sessionId)
+          if (!buffered) return
+          dataBuffers.delete(sessionId)
+
+          // Send batched data to renderer
+          if (!mainWindow.isDestroyed()) {
+            mainWindow.webContents.send(`pty:data:${sessionId}`, buffered)
+          }
+
+          // Parse activity from the batched buffer (off the per-chunk hot path)
+          let lineBuffer = lineBuffers.get(sessionId) ?? ''
+          lineBuffer += buffered
+          if (lineBuffer.length > 8192) {
+            lineBuffer = lineBuffer.slice(-8192)
+          }
+          const parts = lineBuffer.split('\n')
+          lineBuffers.set(sessionId, parts[parts.length - 1] ?? '')
+
+          for (let i = 0; i < parts.length - 1; i++) {
+            const line = parts[i] ?? ''
+            const parsed = parseActivityLine(line)
+            if (parsed && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send(`pty:activity:${sessionId}`, {
+                id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                type: parsed.type,
+                title: parsed.title,
+                detail: parsed.detail,
+                status: 'done',
+                timestamp: Date.now(),
+              })
+            }
+          }
+        })
       }
     })
 
@@ -204,6 +222,8 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
       sessions.delete(sessionId)
       /* Fix 2 (LEAK-1): Clean up lineBuffers on natural exit */
       lineBuffers.delete(sessionId)
+      dataBuffers.delete(sessionId)
+      flushScheduled.delete(sessionId)
       if (!mainWindow.isDestroyed()) {
         mainWindow.webContents.send(`pty:exit:${sessionId}`, exitCode)
       }
@@ -236,6 +256,8 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
       // Remove from maps BEFORE killing to prevent re-entrant callbacks
       sessions.delete(sessionId)
       lineBuffers.delete(sessionId)
+      dataBuffers.delete(sessionId)
+      flushScheduled.delete(sessionId)
       try {
         proc.kill()
         log.info(`Killed session ${sessionId}`)
