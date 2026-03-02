@@ -109,7 +109,7 @@
 }
 
 .wf-ne-field-role {
-  background: rgba(78, 201, 176, 0.03);
+  background: var(--cyan-dim);
   padding: 8px;
   margin-left: -8px;
   margin-right: -8px;
@@ -117,11 +117,11 @@
 }
 
 .wf-ne-role-select {
-  border-color: rgba(78, 201, 176, 0.3);
+  border-color: var(--cyan-border);
 }
 
 .wf-ne-role-select:focus {
-  border-color: rgba(78, 201, 176, 0.6);
+  border-color: var(--cyan-focus);
 }
 
 .wf-ne-persona-preview {
@@ -131,9 +131,258 @@
   padding: 8px;
   background: var(--bg3);
   border: 1px solid var(--border);
-  border-left: 2px solid rgba(78, 201, 176, 0.4);
+  border-left: 2px solid var(--cyan-accent);
   border-radius: var(--r);
   max-height: 100px;
   overflow-y: auto;
   white-space: pre-wrap;
+}
+
+/* ─── Role row: dropdown + edit button ─── */
+.wf-ne-role-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.wf-ne-role-row .wf-ne-select {
+  flex: 1;
+}
+
+.wf-ne-role-edit-btn {
+  padding: 5px 8px;
+  background: var(--bg3);
+  border: 1px solid var(--cyan-border);
+  border-radius: var(--r);
+  color: var(--text1);
+  font-size: 10px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+
+.wf-ne-role-edit-btn:hover {
+  background: var(--bg4);
+  color: var(--text0);
+}
+
+.wf-ne-role-edit-btn.active {
+  background: var(--bg4);
+  color: var(--text0);
+}
+
+.wf-ne-role-edit-btn.new {
+  border-color: var(--green-border);
+  color: var(--green);
+}
+
+.wf-ne-role-edit-btn.new:hover {
+  background: var(--green-dim);
+}
+
+/* ─── Inline Role Form ─── */
+.wf-ne-role-form {
+  margin-top: 8px;
+  padding: 10px;
+  background: var(--bg1);
+  border: 1px solid var(--cyan-border);
+  border-radius: var(--r);
+  animation: roleFormSlide 0.15s ease-out;
+}
+
+@keyframes roleFormSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.wf-ne-role-form-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.wf-ne-role-form-title {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text0);
+  flex: 1;
+}
+
+.wf-ne-role-form-badge {
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: var(--r);
+  font-weight: 600;
+}
+
+.wf-ne-role-form-badge.builtin {
+  background: var(--purple-dim);
+  color: var(--purple);
+  border: 1px solid var(--purple-border);
+}
+
+.wf-ne-role-form-badge.custom {
+  background: var(--green-dim);
+  color: var(--green);
+  border: 1px solid var(--green-border);
+}
+
+.wf-ne-role-icon-name {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.wf-ne-role-icon-input {
+  width: 42px;
+  text-align: center;
+  padding: 6px 4px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  color: var(--text0);
+  font-size: 14px;
+  outline: none;
+}
+
+.wf-ne-role-icon-input:focus {
+  border-color: var(--cyan-focus);
+}
+
+.wf-ne-role-name-input {
+  flex: 1;
+  padding: 6px 8px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  color: var(--text0);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  outline: none;
+}
+
+.wf-ne-role-name-input:focus {
+  border-color: var(--cyan-focus);
+}
+
+.wf-ne-role-form-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.wf-ne-btn {
+  padding: 5px 10px;
+  border-radius: var(--r);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+
+.wf-ne-btn-save {
+  background: var(--green-dim);
+  color: var(--green);
+  border-color: var(--green-border);
+}
+
+.wf-ne-btn-save:hover {
+  background: rgba(var(--green-rgb), 0.2);
+}
+
+.wf-ne-btn-save:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.wf-ne-btn-cancel {
+  background: var(--bg3);
+  color: var(--text1);
+  border-color: var(--border);
+}
+
+.wf-ne-btn-cancel:hover {
+  background: var(--bg4);
+  color: var(--text0);
+}
+
+.wf-ne-btn-delete {
+  background: var(--red-dim);
+  color: var(--red);
+  border-color: var(--red-border);
+  margin-left: auto;
+}
+
+.wf-ne-btn-delete:hover {
+  background: rgba(var(--red-rgb), 0.2);
+}
+
+.wf-ne-btn-delete:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.wf-ne-builtin-notice {
+  font-size: 9px;
+  color: var(--text2);
+  margin-top: 6px;
+  margin-bottom: 10px;
+  padding: 4px 6px;
+  background: var(--purple-dim);
+  border: 1px solid var(--purple-border);
+  border-radius: var(--r);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.wf-ne-dup-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: inherit;
+  color: var(--text1);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+}
+
+.wf-ne-dup-link:hover {
+  color: var(--text0);
+}
+
+.wf-ne-role-form .wf-ne-field:last-of-type {
+  margin-bottom: 0;
+}
+
+.wf-ne-role-form .wf-ne-textarea:disabled,
+.wf-ne-role-form .wf-ne-role-icon-input:disabled,
+.wf-ne-role-form .wf-ne-role-name-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.wf-ne-role-form.creating {
+  border-color: var(--green-border);
 }

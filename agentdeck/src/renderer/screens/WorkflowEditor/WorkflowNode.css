@@ -234,9 +234,9 @@
   border-radius: 10px;
   font-size: 9px;
   font-weight: 600;
-  background: rgba(78, 201, 176, 0.12);
-  color: rgb(78, 201, 176);
-  border: 1px solid rgba(78, 201, 176, 0.3);
+  background: var(--cyan-dim2);
+  color: var(--cyan);
+  border: 1px solid var(--cyan-border);
 }
 
 .wf-node-role-badge-icon {

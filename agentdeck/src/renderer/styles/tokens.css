@@ -48,6 +48,13 @@
   --purple-dim: rgba(155, 114, 207, 0.1);
   --purple-border: rgba(155, 114, 207, 0.2);
 
+  --cyan: #4ec9b0;
+  --cyan-dim: rgba(78, 201, 176, 0.03);
+  --cyan-dim2: rgba(78, 201, 176, 0.12);
+  --cyan-border: rgba(78, 201, 176, 0.3);
+  --cyan-focus: rgba(78, 201, 176, 0.6);
+  --cyan-accent: rgba(78, 201, 176, 0.4);
+
   /* Badge overrides for light-theme contrast */
   --badge-python: #ffd43b;
   --badge-python-bg: rgba(255, 212, 59, 0.2);

@@ -1,8 +1,10 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import type { WorkflowNode, WorkflowNodeStatus, AgentType } from '../../../shared/types'
 import { AGENTS } from '../../../shared/agents'
 import { useAppStore } from '../../store/appStore'
 import { useRolesMap } from '../../hooks/useRolesMap'
+import { useProjects } from '../../hooks/useProjects'
+import RoleInlineForm from './RoleInlineForm'
 import './WorkflowNodeEditorPanel.css'
 
 interface Props {
@@ -13,6 +15,7 @@ interface Props {
 }
 
 const KNOWN_AGENTS: AgentType[] = AGENTS.map((a) => a.id)
+const NEW_ROLE_SENTINEL = '__new__'
 
 export default function WorkflowNodeEditorPanel({
   node,
@@ -22,7 +25,10 @@ export default function WorkflowNodeEditorPanel({
 }: Props): React.JSX.Element {
   const roles = useAppStore((s) => s.roles)
   const rolesMap = useRolesMap()
+  const { addRole, updateRole, deleteRole } = useProjects()
   const role = node.roleId ? rolesMap.get(node.roleId) : undefined
+
+  const [roleFormMode, setRoleFormMode] = useState<'edit' | 'create' | null>(null)
 
   const update = useCallback(
     (patch: Partial<WorkflowNode>) => {
@@ -30,6 +36,74 @@ export default function WorkflowNodeEditorPanel({
     },
     [node, onUpdateNode],
   )
+
+  const handleRoleDropdownChange = useCallback(
+    (value: string) => {
+      if (value === NEW_ROLE_SENTINEL) {
+        setRoleFormMode('create')
+        return
+      }
+      update({ roleId: value || undefined })
+      setRoleFormMode(null)
+    },
+    [update],
+  )
+
+  const handleEditClick = useCallback(() => {
+    setRoleFormMode((prev) => (prev === 'edit' ? null : 'edit'))
+  }, [])
+
+  const handleRoleSave = useCallback(
+    async (draft: { icon: string; name: string; persona: string; outputFormat: string }) => {
+      const outputFormat = draft.outputFormat.trim() || undefined
+      if (roleFormMode === 'create') {
+        const saved = await addRole({
+          name: draft.name.trim(),
+          icon: draft.icon,
+          persona: draft.persona.trim(),
+          outputFormat,
+          builtin: false,
+        })
+        update({ roleId: saved.id })
+      } else if (role) {
+        await updateRole({
+          ...role,
+          name: draft.name.trim(),
+          icon: draft.icon,
+          persona: draft.persona.trim(),
+          outputFormat,
+        })
+      }
+      setRoleFormMode(null)
+    },
+    [roleFormMode, role, addRole, updateRole, update],
+  )
+
+  const handleRoleDelete = useCallback(async () => {
+    if (!role || role.builtin) return
+    await deleteRole(role.id)
+    update({ roleId: undefined })
+    setRoleFormMode(null)
+  }, [role, deleteRole, update])
+
+  const handleRoleDuplicate = useCallback(async () => {
+    if (!role) return
+    const saved = await addRole({
+      name: `${role.name} (copy)`,
+      icon: role.icon,
+      persona: role.persona,
+      outputFormat: role.outputFormat,
+      builtin: false,
+    })
+    update({ roleId: saved.id })
+    setRoleFormMode('edit')
+  }, [role, addRole, update])
+
+  const handleRoleCancel = useCallback(() => {
+    setRoleFormMode(null)
+  }, [])
+
+  const showRolePreviews = node.type === 'agent' && role && roleFormMode === null
 
   return (
     <div className="wf-node-editor">
@@ -81,27 +155,58 @@ export default function WorkflowNodeEditorPanel({
           </div>
         )}
 
-        {/* Role dropdown (agent nodes only) */}
+        {/* Role dropdown + Edit/New buttons (agent nodes only) */}
         {node.type === 'agent' && (
           <div className="wf-ne-field wf-ne-field-role">
             <label className="wf-ne-label">Role</label>
-            <select
-              className="wf-ne-select wf-ne-role-select"
-              value={node.roleId ?? ''}
-              onChange={(e) => update({ roleId: e.target.value || undefined })}
-            >
-              <option value="">No role</option>
-              {roles.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.icon} {r.name}
-                </option>
-              ))}
-            </select>
+            <div className="wf-ne-role-row">
+              <select
+                className="wf-ne-select wf-ne-role-select"
+                value={roleFormMode === 'create' ? NEW_ROLE_SENTINEL : (node.roleId ?? '')}
+                onChange={(e) => handleRoleDropdownChange(e.target.value)}
+              >
+                <option value="">No role</option>
+                {roles.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.icon} {r.name}
+                  </option>
+                ))}
+                <option disabled>{'\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500'}</option>
+                <option value={NEW_ROLE_SENTINEL}>+ New Role</option>
+              </select>
+              {role && roleFormMode !== 'create' && (
+                <button
+                  className={`wf-ne-role-edit-btn${roleFormMode === 'edit' ? ' active' : ''}`}
+                  onClick={handleEditClick}
+                  type="button"
+                >
+                  {roleFormMode === 'edit' ? 'Editing' : 'Edit'}
+                </button>
+              )}
+              {roleFormMode === 'create' && (
+                <button className="wf-ne-role-edit-btn new" type="button" disabled>
+                  + New
+                </button>
+              )}
+            </div>
+
+            {/* Inline role form */}
+            {roleFormMode !== null && (
+              <RoleInlineForm
+                key={roleFormMode === 'edit' ? role?.id : 'new'}
+                role={roleFormMode === 'edit' ? role : undefined}
+                mode={roleFormMode}
+                onSave={(d) => void handleRoleSave(d)}
+                onDelete={() => void handleRoleDelete()}
+                onDuplicate={() => void handleRoleDuplicate()}
+                onCancel={handleRoleCancel}
+              />
+            )}
           </div>
         )}
 
-        {/* Persona preview (when role selected) */}
-        {node.type === 'agent' && role && (
+        {/* Persona preview (when role selected and form closed) */}
+        {showRolePreviews && (
           <div className="wf-ne-field">
             <label className="wf-ne-label">Persona (from role)</label>
             <div className="wf-ne-persona-preview">{role.persona}</div>
@@ -125,8 +230,8 @@ export default function WorkflowNodeEditorPanel({
           />
         </div>
 
-        {/* Output format preview (when role selected) */}
-        {node.type === 'agent' && role?.outputFormat && (
+        {/* Output format preview (when role selected and form closed) */}
+        {showRolePreviews && role.outputFormat && (
           <div className="wf-ne-field">
             <label className="wf-ne-label">Output Format (from role)</label>
             <div className="wf-ne-persona-preview">{role.outputFormat}</div>
