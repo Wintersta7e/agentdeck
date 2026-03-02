@@ -88,6 +88,14 @@ function getXtermTheme(themeId: string): ITheme {
   return { ...BASE_XTERM_THEME, ...(XTERM_THEME_OVERRIDES[themeId] ?? {}) }
 }
 
+// ─── Viewport sync helper ─────────────────────────────────────────────
+type XtermCore = { viewport?: { syncScrollArea: () => void } }
+
+function syncViewport(term: Terminal): void {
+  const core = (term as unknown as { _core: XtermCore })._core
+  core.viewport?.syncScrollArea()
+}
+
 /** Shared fit-and-resize logic — guards against zero dimensions and disposed terminals. */
 function safeFitAndResize(
   container: HTMLDivElement | null,
@@ -100,12 +108,23 @@ function safeFitAndResize(
   fit.fit()
   // Force viewport scroll-area sync after fit — column-only changes can leave
   // the viewport stale, hiding the scrollbar (xterm.js #3504).
-  const core = (term as unknown as { _core: { viewport?: { syncScrollArea: () => void } } })._core
-  core.viewport?.syncScrollArea()
+  syncViewport(term)
   if (term.cols > 0 && term.rows > 0) {
     window.agentDeck.pty.resize(sessionId, term.cols, term.rows)
   }
 }
+
+// ─── Terminal cache ───────────────────────────────────────────────────
+// When a TerminalPane unmounts because its session moved between pane slots
+// (tab switch), the Terminal instance is cached here instead of being disposed.
+// The next mount for the same sessionId reclaims it, preserving scrollback
+// and full terminal state (cursor position, alternate buffer, colors, etc.).
+interface CachedTerminal {
+  term: Terminal
+  fit: FitAddon
+  webgl: WebglAddon | null
+}
+const terminalCache = new Map<string, CachedTerminal>()
 
 interface TerminalPaneProps {
   sessionId: string
@@ -145,70 +164,90 @@ export function TerminalPane({
   useEffect(() => {
     if (!containerRef.current) return
 
-    const term = new Terminal({
-      fontFamily: "'JetBrains Mono', monospace",
-      fontSize: 12,
-      lineHeight: 1.5,
-      cursorBlink: true,
-      cursorInactiveStyle: 'none',
-      theme: getXtermTheme(document.documentElement.dataset.theme ?? ''),
-      scrollback: 5000,
-    })
-
-    // Copy/paste: Ctrl+Shift+C/V or Ctrl+C (with selection) / Ctrl+V
-    term.attachCustomKeyEventHandler((e: KeyboardEvent) => {
-      if (e.type !== 'keydown') return true
-      // Ctrl+Shift+C or Ctrl+C with selection → copy
-      if (e.ctrlKey && e.key === 'c' && (e.shiftKey || term.hasSelection())) {
-        navigator.clipboard.writeText(term.getSelection()).catch(() => {})
-        term.clearSelection()
-        return false
-      }
-      // Ctrl+Shift+V or Ctrl+V → paste text or file paths
-      if (e.ctrlKey && (e.key === 'v' || e.key === 'V')) {
-        e.preventDefault() // block native paste so onData doesn't fire a second time
-        ;(async () => {
-          // Try plain text first
-          let text = ''
-          try {
-            text = await navigator.clipboard.readText()
-          } catch {
-            // Permission denied or no text — fall through to file paths
-          }
-          if (text) {
-            window.agentDeck.pty.write(sessionId, text)
-            return
-          }
-          // No text on clipboard — check for copied files
-          const paths = await window.agentDeck.clipboard.readFilePaths()
-          if (paths.length > 0) {
-            const escaped = paths.map((p) => (p.includes(' ') ? `"${p}"` : p)).join(' ')
-            window.agentDeck.pty.write(sessionId, escaped)
-          }
-        })().catch(() => {})
-        return false
-      }
-      return true
-    })
-
-    const fit = new FitAddon()
-    term.loadAddon(fit)
-    term.open(containerRef.current)
-
-    // Load WebGL renderer for GPU-accelerated painting (fallback: canvas 2D)
+    let term: Terminal
+    let fit: FitAddon
     let webglAddon: WebglAddon | null = null
-    try {
-      webglAddon = new WebglAddon()
-      webglAddon.onContextLoss(() => {
-        webglAddon?.dispose()
-        webglAddon = null
+    let isReattached = false
+
+    // ── Try to reclaim a cached terminal (tab switch back) ──
+    const cached = terminalCache.get(sessionId)
+    if (cached) {
+      terminalCache.delete(sessionId)
+      term = cached.term
+      fit = cached.fit
+      webglAddon = cached.webgl
+      isReattached = true
+      // Move the xterm DOM tree into the new container
+      if (term.element) {
+        containerRef.current.appendChild(term.element)
+      }
+    } else {
+      // ── Create fresh terminal ──
+      term = new Terminal({
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: 12,
+        lineHeight: 1.5,
+        cursorBlink: true,
+        cursorInactiveStyle: 'none',
+        theme: getXtermTheme(document.documentElement.dataset.theme ?? ''),
+        scrollback: 5000,
       })
-      term.loadAddon(webglAddon)
-    } catch {
-      webglAddon = null
+
+      // Copy/paste: Ctrl+Shift+C/V or Ctrl+C (with selection) / Ctrl+V
+      term.attachCustomKeyEventHandler((e: KeyboardEvent) => {
+        if (e.type !== 'keydown') return true
+        // Ctrl+Shift+C or Ctrl+C with selection → copy
+        if (e.ctrlKey && e.key === 'c' && (e.shiftKey || term.hasSelection())) {
+          navigator.clipboard.writeText(term.getSelection()).catch(() => {})
+          term.clearSelection()
+          return false
+        }
+        // Ctrl+Shift+V or Ctrl+V → paste text or file paths
+        if (e.ctrlKey && (e.key === 'v' || e.key === 'V')) {
+          e.preventDefault() // block native paste so onData doesn't fire a second time
+          ;(async () => {
+            // Try plain text first
+            let text = ''
+            try {
+              text = await navigator.clipboard.readText()
+            } catch {
+              // Permission denied or no text — fall through to file paths
+            }
+            if (text) {
+              window.agentDeck.pty.write(sessionId, text)
+              return
+            }
+            // No text on clipboard — check for copied files
+            const paths = await window.agentDeck.clipboard.readFilePaths()
+            if (paths.length > 0) {
+              const escaped = paths.map((p) => (p.includes(' ') ? `"${p}"` : p)).join(' ')
+              window.agentDeck.pty.write(sessionId, escaped)
+            }
+          })().catch(() => {})
+          return false
+        }
+        return true
+      })
+
+      fit = new FitAddon()
+      term.loadAddon(fit)
+      term.open(containerRef.current)
+
+      // Load WebGL renderer for GPU-accelerated painting (fallback: canvas 2D)
+      try {
+        webglAddon = new WebglAddon()
+        webglAddon.onContextLoss(() => {
+          webglAddon?.dispose()
+          webglAddon = null
+        })
+        term.loadAddon(webglAddon)
+      } catch {
+        webglAddon = null
+      }
     }
 
     fit.fit()
+    syncViewport(term)
     termRef.current = term
     fitRef.current = fit
 
@@ -220,28 +259,31 @@ export function TerminalPane({
     // M12: StrictMode double-spawn protection
     let cancelled = false
 
-    const { cols, rows } = term
-    window.agentDeck.pty
-      .spawn(
-        sessionId,
-        cols,
-        rows,
-        projectPathRef.current,
-        startupRef.current,
-        envRef.current,
-        agentRef.current,
-        agentFlagsRef.current,
-      )
-      .then(() => {
-        if (!cancelled) setSessionStatus(sessionId, 'running')
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return
-        window.agentDeck.log.send('error', 'terminal', `PTY spawn failed for ${sessionId}`, {
-          err: String(err),
+    // Only spawn on first mount — reattached terminals already have a live PTY
+    if (!isReattached) {
+      const { cols, rows } = term
+      window.agentDeck.pty
+        .spawn(
+          sessionId,
+          cols,
+          rows,
+          projectPathRef.current,
+          startupRef.current,
+          envRef.current,
+          agentRef.current,
+          agentFlagsRef.current,
+        )
+        .then(() => {
+          if (!cancelled) setSessionStatus(sessionId, 'running')
         })
-        setSessionStatus(sessionId, 'exited')
-      })
+        .catch((err: unknown) => {
+          if (cancelled) return
+          window.agentDeck.log.send('error', 'terminal', `PTY spawn failed for ${sessionId}`, {
+            err: String(err),
+          })
+          setSessionStatus(sessionId, 'exited')
+        })
+    }
 
     // Buffer data received while hidden, flush when visible
     const unsubData = window.agentDeck.pty.onData(sessionId, (data) => {
@@ -305,27 +347,31 @@ export function TerminalPane({
       onDataDisposable.dispose()
       ro.disconnect()
       window.removeEventListener('agentdeck:pane-resize-end', handlePaneResizeEnd)
-      // Dispose terminal + addons inside try/catch — React 19 runs useEffect
-      // cleanup after DOM removal, so xterm's internal refs may already be stale.
-      try {
-        webglAddon?.dispose()
-      } catch {
-        /* WebGL context already lost */
-      }
-      try {
-        term.dispose()
-      } catch {
-        /* host element already detached */
-      }
+
       // Null out refs so stale async callbacks (rAF, setTimeout) can't use them
       termRef.current = null
       fitRef.current = null
-      // Only kill PTY if the session was removed from the store.
-      // When a session merely moves between pane slots (e.g. opening a second tab
-      // in single-pane layout), its TerminalPane unmounts/remounts but the PTY
-      // must stay alive. The pty-manager's spawn() is a no-op for existing sessions.
+
       const state = useAppStore.getState()
-      if (!state.sessions[sessionId]) {
+      if (state.sessions[sessionId]) {
+        // Session still alive (tab switch) → cache terminal for reattachment.
+        // Detach the xterm DOM tree so React doesn't destroy it with the container.
+        if (term.element?.parentElement) {
+          term.element.parentElement.removeChild(term.element)
+        }
+        terminalCache.set(sessionId, { term, fit, webgl: webglAddon })
+      } else {
+        // Session removed → dispose everything
+        try {
+          webglAddon?.dispose()
+        } catch {
+          /* WebGL context already lost */
+        }
+        try {
+          term.dispose()
+        } catch {
+          /* host element already detached */
+        }
         window.agentDeck.pty.kill(sessionId).catch(() => {})
       }
     }
@@ -340,9 +386,7 @@ export function TerminalPane({
         termRef.current.write(hiddenBufferRef.current.join(''))
         hiddenBufferRef.current.length = 0
       }
-      // Re-fit + viewport sync after the pane is visible again — the viewport
-      // goes stale while display:none (offsetParent is null, scroll events are
-      // ignored, scroll-area height is not updated).
+      // Re-fit + viewport sync after the pane is visible again
       requestAnimationFrame(() => {
         try {
           safeFitAndResize(containerRef.current, fitRef.current, termRef.current, sessionId)
