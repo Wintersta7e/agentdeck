@@ -2,4 +2,26 @@
   flex: 1;
   overflow: hidden;
   background: var(--bg0);
+  /* Ensure .xterm fills the full container height (xterm is content-sized by default) */
+  display: flex;
+  flex-direction: column;
+}
+
+.terminal-container .xterm {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Scrollbar: wider and brighter than the global 4px default so it's visible against
+   the dark terminal background. */
+.terminal-container .xterm .xterm-viewport::-webkit-scrollbar {
+  width: 8px;
+}
+
+.terminal-container .xterm .xterm-viewport::-webkit-scrollbar-thumb {
+  background: var(--text3);
+}
+
+.terminal-container .xterm .xterm-viewport::-webkit-scrollbar-track {
+  background: transparent;
 }

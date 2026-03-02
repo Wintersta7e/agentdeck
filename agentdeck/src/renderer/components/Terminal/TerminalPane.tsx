@@ -98,6 +98,10 @@ function safeFitAndResize(
   if (!container || !fit || !term) return
   if (container.offsetWidth === 0 || container.offsetHeight === 0) return
   fit.fit()
+  // Force viewport scroll-area sync after fit — column-only changes can leave
+  // the viewport stale, hiding the scrollbar (xterm.js #3504).
+  const core = (term as unknown as { _core: { viewport?: { syncScrollArea: () => void } } })._core
+  core.viewport?.syncScrollArea()
   if (term.cols > 0 && term.rows > 0) {
     window.agentDeck.pty.resize(sessionId, term.cols, term.rows)
   }
