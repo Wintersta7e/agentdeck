@@ -508,6 +508,7 @@ app.whenReady().then(() => {
 
 app.on('before-quit', () => {
   log.info('App quitting')
+  workflowEngine?.stopAll()
   ptyManager?.killAll()
 })
 

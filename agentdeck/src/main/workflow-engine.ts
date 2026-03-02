@@ -36,6 +36,18 @@ const AGENT_PRINT_FLAGS: Record<string, string[]> = {
   opencode: ['run'],
 }
 
+/**
+ * Prefix sourced before every workflow command in bash -lc (non-interactive).
+ * Login shells don't source .bashrc, so nvm/fnm/volta aren't on PATH.
+ * This explicitly initialises the most common node version managers.
+ */
+const NODE_INIT =
+  [
+    '[ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh" 2>/dev/null',
+    'type fnm &>/dev/null && eval "$(fnm env --shell bash)" 2>/dev/null',
+    'true',
+  ].join('; ') + '; '
+
 /** Strip ANSI escape sequences and terminal control codes */
 const ANSI_STRIP_RE =
   /\x1b\[[0-9;?]*[a-zA-Z~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[()#][A-Z0-9]|\x1b[=>NOMDEHc78]|\r/g
@@ -54,6 +66,7 @@ export interface WorkflowEngine {
   stop: (workflowId: string) => void
   resume: (workflowId: string, nodeId: string) => void
   isRunning: (workflowId: string) => boolean
+  stopAll: () => void
 }
 
 // Re-export for any external importers (backward compat)
@@ -215,24 +228,41 @@ export function createWorkflowEngine(
           message: `$ ${bin} ${flagStr}<prompt>\n`,
         })
 
-        // Use spawn (not PTY) for non-interactive agent execution — no TUI escape codes
-        const child = spawn('wsl.exe', ['--', 'bash', '-lc', fullCmd], {
-          stdio: ['ignore', 'pipe', 'pipe'],
+        // Use spawn (not PTY) for non-interactive agent execution — no TUI escape codes.
+        // bash -lc (login, non-interactive) with explicit nvm/fnm init so WSL node
+        // binaries are found instead of broken Windows npm wrappers. We can't use
+        // -lic (interactive) because it dumps shell init noise into the output.
+        // stdin must be 'pipe' (not 'ignore') — WSL rejects /dev/null stdin with
+        // E_UNEXPECTED. We close the pipe immediately after spawn.
+        const child = spawn('wsl.exe', ['--', 'bash', '-lc', NODE_INIT + fullCmd], {
+          stdio: ['pipe', 'pipe', 'pipe'],
         })
+        child.stdin?.end()
         activeChildProcesses.add(child)
 
         let output = ''
+        let lineBuf = ''
+        const flushLines = (text: string): void => {
+          lineBuf += text
+          const parts = lineBuf.split('\n')
+          lineBuf = parts.pop() ?? ''
+          for (const line of parts) {
+            const trimmed = line.trim()
+            if (!trimmed) continue
+            push(workflow.id, {
+              type: 'node:output',
+              workflowId: workflow.id,
+              nodeId: node.id,
+              message: trimmed,
+            })
+          }
+        }
         const handleData = (chunk: Buffer): void => {
           const text = stripAnsi(chunk.toString())
           if (!text) return
           output = (output + text).slice(-8192)
           nodeOutputs.set(node.id, output)
-          push(workflow.id, {
-            type: 'node:output',
-            workflowId: workflow.id,
-            nodeId: node.id,
-            message: text,
-          })
+          flushLines(text)
         }
 
         child.stdout?.on('data', handleData)
@@ -240,6 +270,16 @@ export function createWorkflowEngine(
 
         child.on('close', (code) => {
           activeChildProcesses.delete(child)
+          // Flush any remaining partial line
+          const remaining = lineBuf.trim()
+          if (remaining) {
+            push(workflow.id, {
+              type: 'node:output',
+              workflowId: workflow.id,
+              nodeId: node.id,
+              message: remaining,
+            })
+          }
           if (code === 0 || code === null) resolve()
           else reject(new Error(`Agent ${bin} exited with code ${code}`))
         })
@@ -268,7 +308,7 @@ export function createWorkflowEngine(
 
         const child = execFile(
           'wsl.exe',
-          ['--', 'bash', '-lc', fullCmd],
+          ['--', 'bash', '-lc', NODE_INIT + fullCmd],
           { timeout: node.timeout ?? 60000 },
           (err, stdout, stderr) => {
             activeChildProcesses.delete(child)
@@ -443,5 +483,11 @@ export function createWorkflowEngine(
       if (run) run.resume(nodeId)
     },
     isRunning: (workflowId: string) => activeRuns.has(workflowId),
+    stopAll: (): void => {
+      for (const [id, run] of activeRuns) {
+        log.info('Stopping workflow on quit', { id })
+        run.stop()
+      }
+    },
   }
 }
