@@ -12,6 +12,7 @@ import { WorkflowCanvas } from './WorkflowCanvas'
 import WorkflowLogPanel from './WorkflowLogPanel'
 import { PanelDivider } from '../../components/shared/PanelDivider'
 import AddNodeMenu from './AddNodeMenu'
+import WorkflowNodeEditorPanel from './WorkflowNodeEditorPanel'
 import './WorkflowEditor.css'
 
 interface WorkflowEditorProps {
@@ -44,6 +45,7 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [addMenuOpen, setAddMenuOpen] = useState(false)
   const [detailNode, setDetailNode] = useState<WorkflowNode | null>(null)
+  const [rightTab, setRightTab] = useState<'editor' | 'log'>('editor')
 
   // M7: Instance-scoped counter instead of module-level
   const nodeCounterRef = useRef(0)
@@ -127,6 +129,7 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
       switch (event.type) {
         case 'workflow:started':
           s.setWorkflowStatus(workflowId, 'running')
+          setRightTab('log')
           break
         case 'workflow:done':
           s.setWorkflowStatus(workflowId, 'done')
@@ -295,15 +298,21 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
 
   // Read workflow from ref to avoid calling setState inside another setState's updater
   // (React 19 requires state updater functions to be pure — no side effects).
-  const handleSelectNode = useCallback((id: string | null) => {
-    setSelectedNodeId(id)
-    if (id) {
-      const node = latestWorkflowRef.current?.nodes.find((n) => n.id === id)
-      setDetailNode(node ?? null)
-    } else {
-      setDetailNode(null)
-    }
-  }, [])
+  const handleSelectNode = useCallback(
+    (id: string | null) => {
+      setSelectedNodeId(id)
+      if (id) {
+        const node = latestWorkflowRef.current?.nodes.find((n) => n.id === id)
+        setDetailNode(node ?? null)
+        if (useAppStore.getState().workflowStatuses[workflowId] !== 'running') {
+          setRightTab('editor')
+        }
+      } else {
+        setDetailNode(null)
+      }
+    },
+    [workflowId],
+  )
 
   // ── Workflow execution ──
 
@@ -412,7 +421,7 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
         </div>
       </div>
 
-      {/* Content: canvas + log panel */}
+      {/* Content: canvas + right panel */}
       <div className="wf-content">
         <div className="wf-canvas-area">
           <WorkflowCanvas
@@ -426,49 +435,6 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
             onDeleteNode={handleDeleteNode}
             onDeleteEdge={handleDeleteEdge}
           />
-
-          {/* Detail panel — absolute-positioned at bottom of canvas area */}
-          {detailNode && (
-            <div className="wf-detail-panel">
-              <div className="wf-detail-header">
-                <span className="wf-detail-title">{detailNode.name}</span>
-                <button
-                  className="wf-detail-close"
-                  onClick={() => {
-                    setDetailNode(null)
-                    setSelectedNodeId(null)
-                  }}
-                  type="button"
-                >
-                  {'\u00D7'}
-                </button>
-              </div>
-              <div className="wf-detail-body">
-                <div className="wf-detail-fields">
-                  <div className="wf-detail-field">
-                    <div className="wf-detail-label">Type</div>
-                    <div className="wf-detail-value">{detailNode.type}</div>
-                  </div>
-                  {detailNode.agent && (
-                    <div className="wf-detail-field">
-                      <div className="wf-detail-label">Agent</div>
-                      <div className="wf-detail-value">{detailNode.agent}</div>
-                    </div>
-                  )}
-                  <div className="wf-detail-field">
-                    <div className="wf-detail-label">Status</div>
-                    <div className="wf-detail-value">{nodeStatuses[detailNode.id] ?? 'idle'}</div>
-                  </div>
-                </div>
-                <div className="wf-detail-prompt">
-                  <div className="wf-detail-label">Prompt / Role</div>
-                  <div className="wf-detail-prompt-text">
-                    {detailNode.prompt ?? detailNode.command ?? detailNode.message ?? '\u2014'}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         <PanelDivider
@@ -478,14 +444,57 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
           maxWidth={600}
           onResizeEnd={setWfLogPanelWidth}
         />
-        <div ref={logPanelRef} style={{ width: wfLogPanelWidth, flexShrink: 0 }}>
-          <WorkflowLogPanel
-            events={logs}
-            workflow={workflow}
-            nodeStatuses={nodeStatuses}
-            onResumeCheckpoint={handleResume}
-            onClear={handleClearLogs}
-          />
+        <div
+          ref={logPanelRef}
+          className="wf-right-panel"
+          style={{ width: wfLogPanelWidth, flexShrink: 0 }}
+        >
+          {/* Tab bar */}
+          <div className="wf-right-tabs">
+            <button
+              className={`wf-right-tab${rightTab === 'editor' ? ' active' : ''}`}
+              onClick={() => setRightTab('editor')}
+              type="button"
+            >
+              Node Editor
+            </button>
+            <button
+              className={`wf-right-tab${rightTab === 'log' ? ' active' : ''}`}
+              onClick={() => setRightTab('log')}
+              type="button"
+            >
+              Execution Log
+            </button>
+          </div>
+
+          {/* Tab content */}
+          <div
+            className="wf-right-content"
+            style={{ display: rightTab === 'editor' ? 'flex' : 'none' }}
+          >
+            {detailNode ? (
+              <WorkflowNodeEditorPanel
+                node={detailNode}
+                nodeStatuses={nodeStatuses}
+                onUpdateNode={handleUpdateNode}
+                onClose={() => {
+                  setDetailNode(null)
+                  setSelectedNodeId(null)
+                }}
+              />
+            ) : (
+              <div className="wf-right-empty">Select a node to edit</div>
+            )}
+          </div>
+          <div style={{ display: rightTab === 'log' ? 'flex' : 'none', flex: 1, minHeight: 0 }}>
+            <WorkflowLogPanel
+              events={logs}
+              workflow={workflow}
+              nodeStatuses={nodeStatuses}
+              onResumeCheckpoint={handleResume}
+              onClear={handleClearLogs}
+            />
+          </div>
         </div>
       </div>
     </div>
