@@ -3,7 +3,7 @@ import { app, ipcMain, safeStorage } from 'electron'
 import * as fs from 'fs'
 import * as path from 'path'
 import { randomUUID } from 'crypto'
-import type { EnvVar, Project, Template, TemplateCategory } from '../shared/types'
+import type { EnvVar, Project, Role, Template, TemplateCategory } from '../shared/types'
 import { createLogger } from './logger'
 
 const log = createLogger('project-store')
@@ -42,6 +42,7 @@ function decryptEnvVars(envVars: EnvVar[] | undefined): EnvVar[] | undefined {
 export interface StoreSchema {
   projects: Project[]
   templates: Template[]
+  roles: Role[]
   appPrefs: {
     zoomFactor: number
     zoomAutoDetected?: boolean | number
@@ -54,6 +55,7 @@ export interface StoreSchema {
     sidebarSections?: Record<string, boolean> | undefined
     rightPanelWidth?: number | undefined
     wfLogPanelWidth?: number | undefined
+    rolesSeedVersion?: number | undefined
   }
 }
 
@@ -63,6 +65,7 @@ export function createProjectStore(): Store<StoreSchema> {
   const defaults: StoreSchema = {
     projects: [],
     templates: [],
+    roles: [],
     appPrefs: { zoomFactor: 1.0, theme: '' },
   }
 
@@ -160,10 +163,114 @@ export function createProjectStore(): Store<StoreSchema> {
     store.set('templates', templates)
   })
 
+  ipcMain.handle('store:getRoles', () => {
+    return store.get('roles')
+  })
+
+  ipcMain.handle('store:saveRole', (_, role: unknown) => {
+    if (!role || typeof role !== 'object') {
+      throw new Error('store:saveRole requires a non-null object')
+    }
+    const r = role as Partial<Role>
+    const roles = store.get('roles')
+    const id = r.id ?? randomUUID()
+    const withId = { ...r, id } as Role
+    const idx = roles.findIndex((existing) => existing.id === id)
+    const existingRole = idx >= 0 ? roles[idx] : undefined
+    if (existingRole != null) {
+      roles[idx] = { ...existingRole, ...withId }
+    } else {
+      roles.push(withId)
+    }
+    store.set('roles', roles)
+    return roles[idx >= 0 ? idx : roles.length - 1]
+  })
+
+  ipcMain.handle('store:deleteRole', (_, id: string) => {
+    const roles = store.get('roles').filter((r) => r.id !== id)
+    store.set('roles', roles)
+  })
+
   return store
 }
 
 const SEED_VERSION = 2
+
+const ROLES_SEED_VERSION = 1
+
+const SEED_ROLES: Omit<Role, 'id'>[] = [
+  {
+    name: 'Reviewer',
+    icon: '\uD83D\uDCCB',
+    persona:
+      'You are a senior code reviewer. Analyze the code for bugs, security vulnerabilities, performance issues, and adherence to best practices. Rate each finding as HIGH, MEDIUM, or LOW severity. Be direct and actionable.',
+    outputFormat:
+      '## Review Report\n### Findings\n- [HIGH/MEDIUM/LOW] Description with file and line references\n### Summary\nOverall assessment and recommendation',
+    builtin: true,
+  },
+  {
+    name: 'Developer',
+    icon: '\uD83D\uDD27',
+    persona:
+      'You are a senior developer. Implement features and fixes precisely per spec. Write clean, tested, production-ready code. Explain your changes clearly and note any side effects.',
+    outputFormat:
+      '## Implementation Summary\n### Changes Made\n- File: description of change\n### Notes\nAny caveats, trade-offs, or follow-up work needed',
+    builtin: true,
+  },
+  {
+    name: 'Tester',
+    icon: '\uD83E\uDDEA',
+    persona:
+      'You are a QA engineer. Write comprehensive tests covering happy paths, edge cases, and error paths. Use the test framework already established in the project. Aim for meaningful coverage, not just line count.',
+    outputFormat:
+      '## Test Report\n### Tests Written\n- test name: what it covers\n### Coverage\nAreas covered and any gaps\n### Results\nPass/fail summary',
+    builtin: true,
+  },
+  {
+    name: 'Architect',
+    icon: '\uD83C\uDFD7\uFE0F',
+    persona:
+      'You are a software architect. Evaluate design trade-offs, architectural fit, scalability, and maintainability. Consider the existing codebase patterns and conventions.',
+    outputFormat:
+      '## Architecture Assessment\n### Analysis\nHow the proposed changes fit the existing architecture\n### Recommendations\nSuggested improvements or alternatives\n### Risks\nPotential issues and mitigations',
+    builtin: true,
+  },
+  {
+    name: 'Security Auditor',
+    icon: '\uD83D\uDD12',
+    persona:
+      'You are a security specialist. Audit code for OWASP Top 10 vulnerabilities, injection flaws, authentication gaps, data exposure, and misconfigurations. For each finding, describe how an attacker could exploit it.',
+    outputFormat:
+      '## Security Audit\n### Vulnerabilities\n- [CRITICAL/HIGH/MEDIUM/LOW] Description + exploitation path\n### Remediation\nExact fixes for each finding',
+    builtin: true,
+  },
+  {
+    name: 'Documentation Writer',
+    icon: '\uD83D\uDCD6',
+    persona:
+      'You are a technical writer. Generate clear, accurate documentation from code. Match the existing doc style and conventions. Keep it concise — document the why, not just the what.',
+    outputFormat: undefined,
+    builtin: true,
+  },
+  {
+    name: 'Refactorer',
+    icon: '\u267B\uFE0F',
+    persona:
+      'You are a refactoring specialist. Improve code structure without changing behavior. Focus on readability, DRY principles, and SOLID. Verify behavior is preserved after each change.',
+    outputFormat:
+      '## Refactoring Summary\n### Changes\n- What was refactored and why\n### Behavior Verification\nHow to confirm nothing broke',
+    builtin: true,
+  },
+  {
+    name: 'Debugger',
+    icon: '\uD83D\uDC1B',
+    persona:
+      'You are a debugging specialist. Investigate root causes systematically: reproduce the issue, form hypotheses, trace execution paths, isolate the fault, and verify the fix.',
+    outputFormat:
+      '## Debug Report\n### Root Cause\nWhat went wrong and why\n### Investigation\nSteps taken to isolate the issue\n### Fix\nExact changes made\n### Verification\nHow to confirm the fix works',
+    builtin: true,
+  },
+]
 
 const SEED_TEMPLATES: Omit<Template, 'id'>[] = [
   // ── Orient ──
@@ -325,5 +432,38 @@ export function seedTemplates(store: AppStore): void {
   store.set('appPrefs', { ...prefs, seeded: true, seedVersion: SEED_VERSION })
   log.info(
     `Upgraded seed templates to v${String(SEED_VERSION)}: ${String(freshSeeds.length)} seeds + ${String(userTemplates.length)} user templates`,
+  )
+}
+
+export function seedRoles(store: AppStore): void {
+  const prefs = store.get('appPrefs')
+  const currentVersion = prefs.rolesSeedVersion ?? 0
+
+  if (currentVersion >= ROLES_SEED_VERSION) return
+
+  const existing = store.get('roles')
+
+  // Fresh install — no existing roles
+  if (existing.length === 0) {
+    const seeded: Role[] = SEED_ROLES.map((r) => ({
+      ...r,
+      id: `seed-role-${randomUUID()}`,
+    }))
+    store.set('roles', seeded)
+    store.set('appPrefs', { ...prefs, rolesSeedVersion: ROLES_SEED_VERSION })
+    log.info(`Seeded ${seeded.length} built-in roles (v${String(ROLES_SEED_VERSION)})`)
+    return
+  }
+
+  // Upgrade — replace old seed roles, preserve user-created ones
+  const userRoles = existing.filter((r) => !r.id.startsWith('seed-role-'))
+  const freshSeeds: Role[] = SEED_ROLES.map((r) => ({
+    ...r,
+    id: `seed-role-${randomUUID()}`,
+  }))
+  store.set('roles', [...freshSeeds, ...userRoles])
+  store.set('appPrefs', { ...prefs, rolesSeedVersion: ROLES_SEED_VERSION })
+  log.info(
+    `Upgraded seed roles to v${String(ROLES_SEED_VERSION)}: ${String(freshSeeds.length)} seeds + ${String(userRoles.length)} user roles`,
   )
 }
