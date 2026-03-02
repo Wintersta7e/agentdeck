@@ -48,6 +48,29 @@ const NODE_INIT =
     'true',
   ].join('; ') + '; '
 
+/** How often to flush the line buffer even without a newline (ms) */
+const LINE_FLUSH_MS = 3000
+
+/**
+ * Force-kill a child process tree on Windows.
+ * `child.kill()` only terminates wsl.exe — the Linux process inside WSL
+ * survives as an orphan. Use taskkill /F /T to kill the entire tree.
+ */
+function forceKillTree(child: ChildProcess): void {
+  const pid = child.pid
+  if (pid == null) {
+    child.kill('SIGKILL')
+    return
+  }
+  // pid is a numeric constant from the OS — safe for execFile args
+  execFile('taskkill', ['/F', '/T', '/PID', String(pid)], { timeout: 5000 }, (err) => {
+    if (err) {
+      // Fallback: process may already be dead
+      child.kill('SIGKILL')
+    }
+  })
+}
+
 /** Strip ANSI escape sequences and terminal control codes */
 const ANSI_STRIP_RE =
   /\x1b\[[0-9;?]*[a-zA-Z~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[()#][A-Z0-9]|\x1b[=>NOMDEHc78]|\r/g
@@ -176,6 +199,7 @@ export function createWorkflowEngine(
     let stopped = false
     const nodeOutputs = new Map<string, string>()
     const activeChildProcesses = new Set<ChildProcess>()
+    const runningNodeIds = new Set<string>()
     // H10: Key checkpoints by workflowId:nodeId (scoped to this run)
     const runCheckpoints = new Map<string, () => void>()
 
@@ -242,6 +266,14 @@ export function createWorkflowEngine(
 
         let output = ''
         let lineBuf = ''
+        const emitLine = (text: string): void => {
+          push(workflow.id, {
+            type: 'node:output',
+            workflowId: workflow.id,
+            nodeId: node.id,
+            message: text,
+          })
+        }
         const flushLines = (text: string): void => {
           lineBuf += text
           const parts = lineBuf.split('\n')
@@ -249,14 +281,19 @@ export function createWorkflowEngine(
           for (const line of parts) {
             const trimmed = line.trim()
             if (!trimmed) continue
-            push(workflow.id, {
-              type: 'node:output',
-              workflowId: workflow.id,
-              nodeId: node.id,
-              message: trimmed,
-            })
+            emitLine(trimmed)
           }
         }
+        // Periodic flush: emit accumulated partial content even without newlines.
+        // Agents can stream long markdown/thinking without trailing newlines.
+        const flushTimer = setInterval(() => {
+          const pending = lineBuf.trim()
+          if (pending) {
+            emitLine(pending)
+            lineBuf = ''
+          }
+        }, LINE_FLUSH_MS)
+
         const handleData = (chunk: Buffer): void => {
           const text = stripAnsi(chunk.toString())
           if (!text) return
@@ -269,22 +306,17 @@ export function createWorkflowEngine(
         child.stderr?.on('data', handleData)
 
         child.on('close', (code) => {
+          clearInterval(flushTimer)
           activeChildProcesses.delete(child)
           // Flush any remaining partial line
           const remaining = lineBuf.trim()
-          if (remaining) {
-            push(workflow.id, {
-              type: 'node:output',
-              workflowId: workflow.id,
-              nodeId: node.id,
-              message: remaining,
-            })
-          }
+          if (remaining) emitLine(remaining)
           if (code === 0 || code === null) resolve()
           else reject(new Error(`Agent ${bin} exited with code ${code}`))
         })
 
         child.on('error', (err: Error) => {
+          clearInterval(flushTimer)
           activeChildProcesses.delete(child)
           reject(err)
         })
@@ -354,69 +386,76 @@ export function createWorkflowEngine(
         return
       }
 
-      for (const tier of tiers) {
-        if (stopped) break
+      try {
+        for (const tier of tiers) {
+          if (stopped) break
 
-        const contextSummary = workflow.edges
-          .filter((e) => tier.some((n) => n.id === e.toNodeId))
-          .map((e) => {
-            const out = nodeOutputs.get(e.fromNodeId)
-            return out ? `[${e.fromNodeId}]: ${out.slice(-2000)}` : ''
-          })
-          .filter(Boolean)
-          .join('\n\n')
-
-        await Promise.all(
-          tier.map(async (node) => {
-            if (stopped) return
-
-            push(workflow.id, {
-              type: 'node:started',
-              workflowId: workflow.id,
-              nodeId: node.id,
-              message: `Starting ${node.name}`,
+          const contextSummary = workflow.edges
+            .filter((e) => tier.some((n) => n.id === e.toNodeId))
+            .map((e) => {
+              const out = nodeOutputs.get(e.fromNodeId)
+              return out ? `[${e.fromNodeId}]: ${out.slice(-2000)}` : ''
             })
+            .filter(Boolean)
+            .join('\n\n')
 
-            try {
-              if (node.type === 'agent') {
-                await runAgentNode(node, contextSummary, rolesMap)
-              } else if (node.type === 'shell') {
-                await runShellNode(node)
-              } else if (node.type === 'checkpoint') {
+          await Promise.all(
+            tier.map(async (node) => {
+              if (stopped) return
+
+              runningNodeIds.add(node.id)
+              push(workflow.id, {
+                type: 'node:started',
+                workflowId: workflow.id,
+                nodeId: node.id,
+                message: `Starting ${node.name}`,
+              })
+
+              try {
+                if (node.type === 'agent') {
+                  await runAgentNode(node, contextSummary, rolesMap)
+                } else if (node.type === 'shell') {
+                  await runShellNode(node)
+                } else if (node.type === 'checkpoint') {
+                  push(workflow.id, {
+                    type: 'node:paused',
+                    workflowId: workflow.id,
+                    nodeId: node.id,
+                    message: node.message ?? 'Waiting for user to continue...',
+                  })
+                  await onCheckpoint(node.id)
+                  if (stopped) return
+                  push(workflow.id, {
+                    type: 'node:resumed',
+                    workflowId: workflow.id,
+                    nodeId: node.id,
+                    message: 'Resumed',
+                  })
+                }
+
+                runningNodeIds.delete(node.id)
                 push(workflow.id, {
-                  type: 'node:paused',
+                  type: 'node:done',
                   workflowId: workflow.id,
                   nodeId: node.id,
-                  message: node.message ?? 'Waiting for user to continue...',
+                  message: `${node.name} completed`,
                 })
-                await onCheckpoint(node.id)
-                if (stopped) return
+              } catch (err) {
+                runningNodeIds.delete(node.id)
                 push(workflow.id, {
-                  type: 'node:resumed',
+                  type: 'node:error',
                   workflowId: workflow.id,
                   nodeId: node.id,
-                  message: 'Resumed',
+                  message: String(err),
                 })
+                stopped = true
+                throw err
               }
-
-              push(workflow.id, {
-                type: 'node:done',
-                workflowId: workflow.id,
-                nodeId: node.id,
-                message: `${node.name} completed`,
-              })
-            } catch (err) {
-              push(workflow.id, {
-                type: 'node:error',
-                workflowId: workflow.id,
-                nodeId: node.id,
-                message: String(err),
-              })
-              stopped = true
-              throw err
-            }
-          }),
-        )
+            }),
+          )
+        }
+      } catch {
+        // Node errors propagate here via throw — already emitted as node:error above
       }
 
       if (!stopped) {
@@ -437,9 +476,20 @@ export function createWorkflowEngine(
     const handle = {
       stop: () => {
         stopped = true
-        // C4: Kill all in-flight shell child processes
+        // Immediately mark all running nodes as stopped so the UI updates
+        // even if the close event is delayed or never fires (WSL edge case)
+        for (const nid of runningNodeIds) {
+          push(workflow.id, {
+            type: 'node:error',
+            workflowId: workflow.id,
+            nodeId: nid,
+            message: 'Stopped by user',
+          })
+        }
+        runningNodeIds.clear()
+        // C4: Force-kill all in-flight child processes (entire process tree)
         for (const child of activeChildProcesses) {
-          child.kill()
+          forceKillTree(child)
         }
         activeChildProcesses.clear()
         // H10: Only clear this run's checkpoints
@@ -460,12 +510,16 @@ export function createWorkflowEngine(
 
     execute()
       .catch((err: unknown) => {
+        // Safety net — the inner try/catch should handle all node errors,
+        // but if something unexpected escapes, log and notify.
         log.error('Workflow execution error', { err: String(err) })
-        push(workflow.id, {
-          type: 'workflow:error',
-          workflowId: workflow.id,
-          message: String(err),
-        })
+        if (!stopped) {
+          push(workflow.id, {
+            type: 'workflow:error',
+            workflowId: workflow.id,
+            message: String(err),
+          })
+        }
       })
       .finally(() => {
         activeRuns.delete(workflow.id)
