@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import './StatusBar.css'
 
@@ -7,14 +7,25 @@ interface StatusBarProps {
 }
 
 export function StatusBar({ onAboutClick }: StatusBarProps): React.JSX.Element {
-  const sessions = useAppStore((s) => s.sessions)
-  const activeSessionId = useAppStore((s) => s.activeSessionId)
-  const projects = useAppStore((s) => s.projects)
+  // Granular scalar selectors — only re-render when the derived value changes
+  const activeCount = useAppStore(
+    (s) => Object.values(s.sessions).filter((sess) => sess.status === 'running').length,
+  )
+  const activeProjectName = useAppStore((s) => {
+    if (s.currentView !== 'session' || !s.activeSessionId) return null
+    const session = s.sessions[s.activeSessionId]
+    if (!session) return null
+    return s.projects.find((p) => p.id === session.projectId)?.name ?? null
+  })
+  const activeWorkflowName = useAppStore((s) => {
+    if (s.currentView !== 'workflow' || !s.activeWorkflowId) return null
+    return s.workflows.find((w) => w.id === s.activeWorkflowId)?.name ?? null
+  })
+  const activeWorkflowStatus = useAppStore((s) => {
+    if (s.currentView !== 'workflow' || !s.activeWorkflowId) return null
+    return s.workflowStatuses[s.activeWorkflowId] ?? null
+  })
   const currentView = useAppStore((s) => s.currentView)
-  const workflows = useAppStore((s) => s.workflows)
-  const activeWorkflowId = useAppStore((s) => s.activeWorkflowId)
-  const workflowStatuses = useAppStore((s) => s.workflowStatuses)
-
   const paneLayout = useAppStore((s) => s.paneLayout)
   const rightPanelOpen = useAppStore((s) => s.rightPanelOpen)
   const openCommandPalette = useAppStore((s) => s.openCommandPalette)
@@ -33,26 +44,7 @@ export function StatusBar({ onAboutClick }: StatusBarProps): React.JSX.Element {
       })
   }, [])
 
-  const activeCount = useMemo(
-    () => Object.values(sessions).filter((s) => s.status === 'running').length,
-    [sessions],
-  )
   const layoutLabel = paneLayout === 1 ? 'single pane' : `${String(paneLayout)}-pane split`
-
-  let activeProjectName: string | null = null
-  if (currentView === 'session' && activeSessionId) {
-    const session = sessions[activeSessionId]
-    if (session) {
-      const project = projects.find((p) => p.id === session.projectId)
-      activeProjectName = project ? project.name : null
-    }
-  }
-
-  let activeWorkflowName: string | null = null
-  if (currentView === 'workflow' && activeWorkflowId) {
-    const wf = workflows.find((w) => w.id === activeWorkflowId)
-    activeWorkflowName = wf ? wf.name : null
-  }
 
   return (
     <div className="statusbar">
@@ -84,10 +76,10 @@ export function StatusBar({ onAboutClick }: StatusBarProps): React.JSX.Element {
           <div className="status-item purple">{activeWorkflowName}</div>
         </>
       )}
-      {currentView === 'workflow' && activeWorkflowId && workflowStatuses[activeWorkflowId] && (
+      {activeWorkflowStatus && (
         <>
           <span className="status-sep">|</span>
-          <div className="status-item">{workflowStatuses[activeWorkflowId]}</div>
+          <div className="status-item">{activeWorkflowStatus}</div>
         </>
       )}
       <div className="status-right">

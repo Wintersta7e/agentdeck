@@ -96,23 +96,30 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
   const [showAllRecent, setShowAllRecent] = useState(false)
 
   useEffect(() => {
+    let cancelled = false
     window.agentDeck.app
       .wslUsername()
-      .then(setUsername)
+      .then((name) => {
+        if (!cancelled) setUsername(name)
+      })
       .catch((err: unknown) => {
         window.agentDeck.log.send('warn', 'home', 'WSL username fetch failed', {
           err: String(err),
         })
       })
-    // Errors are logged to console; useProjects handles user-facing notifications
     window.agentDeck.agents
       .check()
-      .then(setAgentStatus)
+      .then((status) => {
+        if (!cancelled) setAgentStatus(status)
+      })
       .catch((err: unknown) => {
         window.agentDeck.log.send('error', 'home', 'Agent detection failed', {
           err: String(err),
         })
       })
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const pinned = useMemo(() => projects.filter((p) => p.pinned), [projects])

@@ -79,6 +79,9 @@ export function TemplateEditor(): React.JSX.Element {
     setEditingCategory(first.category)
   }
 
+  // Memoize grouped templates to avoid re-computing on every render
+  const groupedTemplates = useMemo(() => groupTemplates(templates), [templates])
+
   // Refs for scroll sync
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const lineNumsRef = useRef<HTMLDivElement>(null)
@@ -228,7 +231,6 @@ export function TemplateEditor(): React.JSX.Element {
         void handleSave()
       }
       if (e.key === 'Delete' && selectedId) {
-        // Don't trigger when typing in an input/textarea
         const tag = (e.target as HTMLElement)?.tagName
         if (tag === 'INPUT' || tag === 'TEXTAREA') return
         e.preventDefault()
@@ -250,7 +252,7 @@ export function TemplateEditor(): React.JSX.Element {
           </button>
         </div>
         <div className="te-list-body">
-          {groupTemplates(templates).map((group) => (
+          {groupedTemplates.map((group) => (
             <div key={group.category} className="te-group">
               <div className="te-group-label">{group.category}</div>
               {group.templates.map((t) => (

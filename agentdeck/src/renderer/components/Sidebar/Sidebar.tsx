@@ -184,15 +184,27 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
     }
   }
 
+  // Memoize project status map — avoids O(n) find per project per render
+  const projectStatusMap = useMemo(() => {
+    const map: Record<string, string> = {}
+    for (const s of Object.values(sessions)) {
+      if (s.projectId) map[s.projectId] = s.status
+    }
+    return map
+  }, [sessions])
+
+  // Memoize active project ID for the current session
+  const activeProjectId = useMemo(
+    () => (activeSessionId ? sessions[activeSessionId]?.projectId : undefined),
+    [sessions, activeSessionId],
+  )
+
   function getProjectStatus(projectId: string): string {
-    const session = Object.values(sessions).find((s) => s.projectId === projectId)
-    return session ? session.status : 'idle'
+    return projectStatusMap[projectId] ?? 'idle'
   }
 
   function isActive(projectId: string): boolean {
-    if (!activeSessionId) return false
-    const session = sessions[activeSessionId]
-    return session !== undefined && session.projectId === projectId
+    return activeProjectId === projectId
   }
 
   function dotClass(status: string): string {

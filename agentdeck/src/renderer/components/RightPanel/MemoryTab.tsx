@@ -22,13 +22,15 @@ function memoryReducer(_state: MemoryState, action: MemoryAction): MemoryState {
 }
 
 export function MemoryTab(): React.JSX.Element {
-  const sessions = useAppStore((s) => s.sessions)
-  const activeSessionId = useAppStore((s) => s.activeSessionId)
-  const projects = useAppStore((s) => s.projects)
-
-  const activeSession = activeSessionId ? sessions[activeSessionId] : undefined
-  const project = activeSession ? projects.find((p) => p.id === activeSession.projectId) : undefined
-  const projectPath = project?.path ?? null
+  // Granular selector — only re-render when the derived path actually changes
+  const projectPath = useAppStore((s) => {
+    const sid = s.activeSessionId
+    if (!sid) return null
+    const session = s.sessions[sid]
+    if (!session) return null
+    return s.projects.find((p) => p.id === session.projectId)?.path ?? null
+  })
+  const project = projectPath !== null
 
   const [state, dispatch] = useReducer(memoryReducer, {
     claudeMd: null,

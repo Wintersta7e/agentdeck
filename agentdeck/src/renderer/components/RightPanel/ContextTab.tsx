@@ -1,17 +1,20 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useAppStore } from '../../store/appStore'
 import type { Template } from '../../../shared/types'
 import './ContextTab.css'
 
 export function ContextTab(): React.JSX.Element {
-  const sessions = useAppStore((s) => s.sessions)
-  const activeSessionId = useAppStore((s) => s.activeSessionId)
-  const projects = useAppStore((s) => s.projects)
+  // Granular selectors — only re-render when the derived value changes
+  const activeProjectId = useAppStore((s) => {
+    const sid = s.activeSessionId
+    return sid ? (s.sessions[sid]?.projectId ?? null) : null
+  })
+  const project = useAppStore((s) =>
+    activeProjectId ? (s.projects.find((p) => p.id === activeProjectId) ?? null) : null,
+  )
   const templates = useAppStore((s) => s.templates)
+  const activeSessionId = useAppStore((s) => s.activeSessionId)
   const setRightPanelTab = useAppStore((s) => s.setRightPanelTab)
-
-  const activeSession = activeSessionId ? sessions[activeSessionId] : undefined
-  const project = activeSession ? projects.find((p) => p.id === activeSession.projectId) : undefined
 
   const handleTemplateClick = useCallback(
     (template: Template) => {
@@ -19,6 +22,16 @@ export function ContextTab(): React.JSX.Element {
       void window.agentDeck.pty.write(activeSessionId, template.content + '\n')
     },
     [activeSessionId],
+  )
+
+  const attachedTemplates = useMemo(
+    () =>
+      project
+        ? (project.attachedTemplates ?? [])
+            .map((tid) => templates.find((t) => t.id === tid))
+            .filter((t): t is Template => t != null)
+        : [],
+    [project, templates],
   )
 
   if (!project) {
@@ -32,10 +45,6 @@ export function ContextTab(): React.JSX.Element {
       { name: 'AGENTS.md', path: `${project.path}/AGENTS.md`, tag: 'auto' },
     )
   }
-
-  const attachedTemplates = (project.attachedTemplates ?? [])
-    .map((tid) => templates.find((t) => t.id === tid))
-    .filter((t): t is Template => t != null)
 
   return (
     <>

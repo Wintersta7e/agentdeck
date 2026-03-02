@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react'
+import { useState, useCallback, useMemo, useRef } from 'react'
 import type { Project } from '../../../shared/types'
 import { useAppStore } from '../../store/appStore'
 import { useProjects } from '../../hooks/useProjects'
@@ -36,16 +36,16 @@ export function ProjectSettings(): React.JSX.Element | null {
 
   const hasUserEdited = useRef(false)
 
+  const handleChange = useCallback((updates: Partial<Project>): void => {
+    hasUserEdited.current = true
+    setDraft((prev) => ({ ...prev, ...updates }))
+  }, [])
+
   if (!storedProject) return null
 
   const session = getSessionForProject(storedProject.id)
   const isRunning = session?.status === 'running'
   const isDirty = JSON.stringify(draft) !== JSON.stringify(storedProject)
-
-  function handleChange(updates: Partial<Project>): void {
-    hasUserEdited.current = true
-    setDraft((prev) => ({ ...prev, ...updates }))
-  }
 
   async function handleSave(): Promise<void> {
     try {

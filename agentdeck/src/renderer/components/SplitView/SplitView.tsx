@@ -8,6 +8,12 @@ import './SplitView.css'
 const PANE_INDICES = [0, 1, 2] as const
 const MIN_PANE_WIDTH = 200
 
+/** Static style objects hoisted to module scope to avoid allocating on every render */
+const STYLE_DISPLAY_CONTENTS: React.CSSProperties = { display: 'contents' }
+const STYLE_DIVIDER_VISIBLE: React.CSSProperties = { display: 'block' }
+const STYLE_DIVIDER_HIDDEN: React.CSSProperties = { display: 'none' }
+const STYLE_HIDDEN_SESSION: React.CSSProperties = { display: 'none' }
+
 export function SplitView(): React.JSX.Element {
   const paneLayout = useAppStore((s) => s.paneLayout)
   const focusedPane = useAppStore((s) => s.focusedPane)
@@ -147,12 +153,12 @@ export function SplitView(): React.JSX.Element {
         const isFocused = paneIndex === focusedPane && isVisible
 
         return (
-          <div key={`pane-group-${String(paneIndex)}`} style={{ display: 'contents' }}>
+          <div key={`pane-group-${String(paneIndex)}`} style={STYLE_DISPLAY_CONTENTS}>
             {/* Divider before pane (except pane 0) */}
             {paneIndex > 0 && (
               <div
                 className="split-divider"
-                style={{ display: isVisible ? 'block' : 'none' }}
+                style={isVisible ? STYLE_DIVIDER_VISIBLE : STYLE_DIVIDER_HIDDEN}
                 onMouseDown={(e) => handleDividerMouseDown(paneIndex - 1, e)}
               />
             )}
@@ -198,7 +204,7 @@ export function SplitView(): React.JSX.Element {
         if (!session) return null
         const project = projects.find((p) => p.id === session.projectId)
         return (
-          <div key={sid} style={{ display: 'none' }}>
+          <div key={sid} style={STYLE_HIDDEN_SESSION}>
             <TerminalPane
               sessionId={sid}
               focused={false}

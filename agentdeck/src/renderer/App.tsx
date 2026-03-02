@@ -48,8 +48,13 @@ export function App(): React.JSX.Element {
   const sidebarRef = useRef<HTMLDivElement>(null)
   const rightPanelRef = useRef<HTMLDivElement>(null)
 
-  const sessions = useAppStore((s) => s.sessions)
-  const sessionIds = useMemo(() => Object.keys(sessions), [sessions])
+  // Derive a stable session ID list — only changes when sessions are added/removed,
+  // not when session status updates (which create a new sessions object)
+  const sessionIds = useAppStore((s) => {
+    const ids = Object.keys(s.sessions)
+    return ids.join(',')
+  })
+  const sessionIdList = useMemo(() => (sessionIds ? sessionIds.split(',') : []), [sessionIds])
 
   const [aboutOpen, setAboutOpen] = useState(false)
   const openAbout = useCallback(() => setAboutOpen(true), [])
@@ -211,7 +216,7 @@ export function App(): React.JSX.Element {
   useEffect(() => {
     const subscriptions = subscribedRef.current
     // Subscribe to new sessions only
-    for (const sid of sessionIds) {
+    for (const sid of sessionIdList) {
       if (!subscriptions.has(sid)) {
         const unsub = window.agentDeck.pty.onActivity(sid, (event: ActivityEvent) => {
           useAppStore.getState().addActivityEvent(sid, event)
@@ -221,7 +226,7 @@ export function App(): React.JSX.Element {
     }
     // Unsubscribe from removed sessions
     for (const [sid, unsub] of subscriptions) {
-      if (!sessionIds.includes(sid)) {
+      if (!sessionIdList.includes(sid)) {
         unsub()
         subscriptions.delete(sid)
       }
@@ -230,7 +235,7 @@ export function App(): React.JSX.Element {
       for (const unsub of subscriptions.values()) unsub()
       subscriptions.clear()
     }
-  }, [sessionIds])
+  }, [sessionIdList])
 
   return (
     <div className="app">

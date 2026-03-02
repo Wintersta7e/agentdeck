@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { memo, useCallback, useMemo, useRef, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import './InputBar.css'
 
@@ -8,18 +8,28 @@ interface InputBarProps {
   projectId?: string
 }
 
-export function InputBar({ sessionId, focused, projectId }: InputBarProps): React.JSX.Element {
+export const InputBar = memo(function InputBar({
+  sessionId,
+  focused,
+  projectId,
+}: InputBarProps): React.JSX.Element {
   const [value, setValue] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const projects = useAppStore((s) => s.projects)
+  // Granular selector — only the attached template IDs for this project
+  const attachedTemplateIds = useAppStore(
+    (s) =>
+      (projectId ? s.projects.find((p) => p.id === projectId)?.attachedTemplates : undefined) ?? [],
+  )
   const templates = useAppStore((s) => s.templates)
 
-  const project = projectId ? projects.find((p) => p.id === projectId) : undefined
-  const attachedTemplateIds = project?.attachedTemplates ?? []
-  const attachedTemplates = attachedTemplateIds
-    .map((tid) => templates.find((t) => t.id === tid))
-    .filter((t): t is NonNullable<typeof t> => t != null)
+  const attachedTemplates = useMemo(
+    () =>
+      attachedTemplateIds
+        .map((tid) => templates.find((t) => t.id === tid))
+        .filter((t): t is NonNullable<typeof t> => t != null),
+    [attachedTemplateIds, templates],
+  )
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -66,4 +76,4 @@ export function InputBar({ sessionId, focused, projectId }: InputBarProps): Reac
       )}
     </div>
   )
-}
+})

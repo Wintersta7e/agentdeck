@@ -414,9 +414,20 @@ export const useAppStore = create<AppState>((set, get) => ({
 
       const remaining = state.openWorkflowIds.filter((wid) => wid !== targetId)
 
+      // Prune execution state for closed workflow to prevent unbounded memory growth
+      const { [targetId]: _logs, ...remainingLogs } = state.workflowLogs
+      const { [targetId]: _nodeStatuses, ...remainingNodeStatuses } = state.workflowNodeStatuses
+      const { [targetId]: _status, ...remainingStatuses } = state.workflowStatuses
+
+      const pruned = {
+        workflowLogs: remainingLogs,
+        workflowNodeStatuses: remainingNodeStatuses,
+        workflowStatuses: remainingStatuses,
+      }
+
       // Closing a non-active tab — just remove from list
       if (targetId !== state.activeWorkflowId) {
-        return { openWorkflowIds: remaining }
+        return { openWorkflowIds: remaining, ...pruned }
       }
 
       // Closing the active tab — pick new focus
@@ -426,6 +437,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         return {
           openWorkflowIds: remaining,
           activeWorkflowId: remaining[newIdx] ?? null,
+          ...pruned,
         }
       }
 
@@ -437,6 +449,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           activeWorkflowId: null,
           currentView: 'session' as const,
           activeSessionId: state.activeSessionId ?? sessionIds[0] ?? null,
+          ...pruned,
         }
       }
 
@@ -444,6 +457,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         openWorkflowIds: [],
         activeWorkflowId: null,
         currentView: 'home' as const,
+        ...pruned,
       }
     }),
 

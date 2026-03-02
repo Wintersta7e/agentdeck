@@ -84,10 +84,24 @@ export function Titlebar({
   const openWorkflow = useAppStore((s) => s.openWorkflow)
   const workflows = useAppStore((s) => s.workflows)
 
-  function getProjectName(session: Session): string {
-    const project = projects.find((p) => p.id === session.projectId)
-    return project ? project.name : session.id
-  }
+  // Memoize project name lookup map — avoids O(n) find per tab on every render
+  const projectNameMap = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const p of projects) map.set(p.id, p.name)
+    return map
+  }, [projects])
+
+  // Memoize workflow name lookup map
+  const workflowNameMap = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const w of workflows) map.set(w.id, w.name)
+    return map
+  }, [workflows])
+
+  const getProjectName = useCallback(
+    (session: Session): string => projectNameMap.get(session.projectId) ?? session.id,
+    [projectNameMap],
+  )
 
   function dotStyle(status: string): React.CSSProperties {
     if (status === 'running') return DOT_STYLE_RUNNING
@@ -110,7 +124,8 @@ export function Titlebar({
       {currentView === 'wizard' && <div className="titlebar-center">New Project</div>}
       {currentView === 'settings' && (
         <div className="titlebar-center">
-          Project Settings — {projects.find((p) => p.id === settingsProjectId)?.name}
+          Project Settings —{' '}
+          {settingsProjectId ? (projectNameMap.get(settingsProjectId) ?? '') : ''}
         </div>
       )}
       {currentView === 'template-editor' && <div className="titlebar-center">Templates</div>}
@@ -145,7 +160,7 @@ export function Titlebar({
               onClick={() => openWorkflow(wfId)}
             >
               <span className="tab-wf-icon">{'\u2B21'}</span>
-              {workflows.find((w) => w.id === wfId)?.name ?? 'Workflow'}
+              {workflowNameMap.get(wfId) ?? 'Workflow'}
               <button
                 className="tab-close"
                 onClick={(e) => {

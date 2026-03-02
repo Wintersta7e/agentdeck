@@ -68,11 +68,5 @@ export const AGENT_BINARY_MAP: Record<string, string> = Object.fromEntries(
   AGENTS.map((a) => [a.id, a.binary]),
 )
 
-/** Agent ID → display metadata for UI components */
-export const AGENT_DISPLAY: Record<string, { icon: string; name: string; description: string }> =
-  Object.fromEntries(
-    AGENTS.map((a) => [a.id, { icon: a.icon, name: a.name, description: a.description }]),
-  )
-
 /** Validation pattern for agent CLI flags — rejects shell metacharacters */
 export const SAFE_FLAGS_RE = /^[A-Za-z0-9 \-_=./:@,]*$/

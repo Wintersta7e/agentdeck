@@ -9,7 +9,6 @@ directories:
 files:
   - out/**/*
   - "!out/**/*.map"
-  - node_modules/**/*
   - package.json
 
 win:

@@ -33,7 +33,7 @@ export default defineConfig({
         },
         output: {
           manualChunks: {
-            'vendor-xyflow': ['@xyflow/react'],
+            'vendor-react': ['react', 'react-dom', 'zustand', 'react-window', '@xyflow/react'],
             'vendor-dndkit': ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
             'vendor-xterm': ['@xterm/xterm', '@xterm/addon-fit'],
           },

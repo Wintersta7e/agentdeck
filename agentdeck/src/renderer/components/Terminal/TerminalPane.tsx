@@ -108,6 +108,7 @@ export function TerminalPane({
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
+  const exitTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const projectPathRef = useRef(projectPath)
   const startupRef = useRef(startupCommands)
   const envRef = useRef(env)
@@ -216,10 +217,9 @@ export function TerminalPane({
       window.agentDeck.pty.write(sessionId, data)
     })
 
-    let exitTimeout: ReturnType<typeof setTimeout> | undefined
     const unsubExit = window.agentDeck.pty.onExit(sessionId, () => {
       setSessionStatus(sessionId, 'exited')
-      exitTimeout = setTimeout(() => removeSession(sessionId), 800)
+      exitTimeoutRef.current = setTimeout(() => removeSession(sessionId), 800)
     })
 
     let resizeTimeout: ReturnType<typeof setTimeout> | undefined
@@ -241,7 +241,7 @@ export function TerminalPane({
     return () => {
       cancelled = true
       themeObserver.disconnect()
-      clearTimeout(exitTimeout)
+      clearTimeout(exitTimeoutRef.current)
       clearTimeout(resizeTimeout)
       unsubData()
       unsubExit()

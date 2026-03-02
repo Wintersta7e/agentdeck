@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { memo, useCallback } from 'react'
 import { useAppStore } from '../../store/appStore'
 import './PaneTopbar.css'
 
@@ -7,7 +7,10 @@ interface PaneTopbarProps {
   focused: boolean
 }
 
-export function PaneTopbar({ sessionId, focused }: PaneTopbarProps): React.JSX.Element {
+export const PaneTopbar = memo(function PaneTopbar({
+  sessionId,
+  focused,
+}: PaneTopbarProps): React.JSX.Element {
   const status = useAppStore((s) => s.sessions[sessionId]?.status ?? 'exited')
   const projectId = useAppStore((s) => s.sessions[sessionId]?.projectId)
   const projects = useAppStore((s) => s.projects)
@@ -56,4 +59,4 @@ export function PaneTopbar({ sessionId, focused }: PaneTopbarProps): React.JSX.E
       </div>
     </div>
   )
-}
+})
