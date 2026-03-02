@@ -91,6 +91,10 @@ export function validateWorkflow(w: unknown): w is Workflow {
       throw new Error(`Node prompt exceeds ${MAX_PROMPT} chars`)
     if (n.agent !== undefined && typeof n.agent === 'string' && !KNOWN_AGENT_IDS.has(n.agent))
       throw new Error(`Unknown agent: ${n.agent}`)
+    if (n.roleId !== undefined && n.roleId !== null && typeof n.roleId !== 'string')
+      throw new Error('Node roleId must be a string')
+    if (typeof n.roleId === 'string' && n.roleId.length > MAX_NAME)
+      throw new Error(`Node roleId exceeds ${MAX_NAME} chars`)
   }
   return true
 }
