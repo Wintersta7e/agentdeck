@@ -11,6 +11,15 @@ interface Particle {
 
 const COUNT = 40
 
+const CANVAS_STYLE: React.CSSProperties = {
+  position: 'absolute',
+  inset: 0,
+  width: '100%',
+  height: '100%',
+  pointerEvents: 'none',
+  zIndex: 0,
+}
+
 export function ParticleField(): React.JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -84,17 +93,5 @@ export function ParticleField(): React.JSX.Element {
     }
   }, [])
 
-  return (
-    <canvas
-      ref={canvasRef}
-      style={{
-        position: 'absolute',
-        inset: 0,
-        width: '100%',
-        height: '100%',
-        pointerEvents: 'none',
-        zIndex: 0,
-      }}
-    />
-  )
+  return <canvas ref={canvasRef} style={CANVAS_STYLE} />
 }

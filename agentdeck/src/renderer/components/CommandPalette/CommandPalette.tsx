@@ -128,7 +128,6 @@ export function CommandPalette({
 
 function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JSX.Element {
   const closePalette = useAppStore((s) => s.closeCommandPalette)
-  const sessions = useAppStore((s) => s.sessions)
   const projects = useAppStore((s) => s.projects)
   const templates = useAppStore((s) => s.templates)
 
@@ -177,12 +176,25 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
     })
   }, [])
 
+  // Stable session snapshot — only changes when session list or statuses change,
+  // serialized to a string so Zustand skips re-renders on unrelated store updates.
+  const sessionSnapshot = useAppStore((s) => {
+    const entries = Object.values(s.sessions)
+    return entries.map((sess) => `${sess.id}|${sess.projectId}|${sess.status}`).join(',')
+  })
+
   // Build the full list of palette items from store data
   const allItems: PaletteItem[] = useMemo(() => {
     const items: PaletteItem[] = []
 
-    // Active sessions
-    const sessionEntries = Object.values(sessions)
+    // Parse session snapshot
+    const sessionEntries = sessionSnapshot
+      ? sessionSnapshot.split(',').map((e) => {
+          const parts = e.split('|')
+          return { id: parts[0] ?? '', projectId: parts[1] ?? '', status: parts[2] ?? '' }
+        })
+      : []
+
     for (const session of sessionEntries) {
       const project = projects.find((p) => p.id === session.projectId)
       if (!project) continue
@@ -292,7 +304,7 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
     })
 
     return items
-  }, [sessions, projects, templates])
+  }, [sessionSnapshot, projects, templates])
 
   // Filter items by scope and query
   const filteredItems: PaletteItem[] = useMemo(() => {

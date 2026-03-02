@@ -6,7 +6,7 @@ import { createPtyManager, type PtyManager } from './pty-manager'
 import { createProjectStore, seedRoles, seedTemplates, type AppStore } from './project-store'
 import { detectStack } from './detect-stack'
 import { getDefaultDistro, wslPathToWindows } from './wsl-utils'
-import { initLogger, createLogger } from './logger'
+import { initLogger, createLogger, closeLogger } from './logger'
 import {
   listWorkflows,
   loadWorkflow,
@@ -510,6 +510,7 @@ app.on('before-quit', () => {
   log.info('App quitting')
   workflowEngine?.stopAll()
   ptyManager?.killAll()
+  closeLogger()
 })
 
 app.on('window-all-closed', () => {

@@ -41,11 +41,15 @@ export function ProjectSettings(): React.JSX.Element | null {
     setDraft((prev) => ({ ...prev, ...updates }))
   }, [])
 
+  const isDirty = useMemo(
+    () => (storedProject ? JSON.stringify(draft) !== JSON.stringify(storedProject) : false),
+    [draft, storedProject],
+  )
+
   if (!storedProject) return null
 
   const session = getSessionForProject(storedProject.id)
   const isRunning = session?.status === 'running'
-  const isDirty = JSON.stringify(draft) !== JSON.stringify(storedProject)
 
   async function handleSave(): Promise<void> {
     try {

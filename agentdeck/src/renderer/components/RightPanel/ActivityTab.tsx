@@ -55,14 +55,16 @@ export function ActivityTab(): React.JSX.Element {
   const listRef = useListRef(null)
   const autoScrollRef = useRef(true)
 
-  // Row height function — check if detail exists to determine height
-  const getRowHeight = useCallback(
-    (index: number): number => {
-      const ev = events[index]
-      return ev?.detail ? ROW_HEIGHT_WITH_DETAIL : ROW_HEIGHT_TITLE_ONLY
-    },
-    [events],
-  )
+  // Row height function — needs events ref for current data but we use a ref
+  // to avoid invalidating react-window's height cache on every new event.
+  const eventsRef = useRef(events)
+  useEffect(() => {
+    eventsRef.current = events
+  }, [events])
+  const getRowHeight = useCallback((index: number): number => {
+    const ev = eventsRef.current[index]
+    return ev?.detail ? ROW_HEIGHT_WITH_DETAIL : ROW_HEIGHT_TITLE_ONLY
+  }, [])
 
   // Auto-scroll to bottom when new events arrive
   useEffect(() => {

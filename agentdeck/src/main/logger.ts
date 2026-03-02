@@ -84,6 +84,13 @@ export function createLogger(mod: string): Logger {
   }
 }
 
+export function closeLogger(): void {
+  if (stream) {
+    stream.end()
+    stream = null
+  }
+}
+
 export function getLogPath(): string {
   return path.join(logDir, LOG_FILE)
 }

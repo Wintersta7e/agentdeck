@@ -87,10 +87,37 @@ interface HomeScreenProps {
 export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Element {
   const projects = useAppStore((s) => s.projects)
   const templates = useAppStore((s) => s.templates)
-  const sessions = useAppStore((s) => s.sessions)
   const openWizard = useAppStore((s) => s.openWizard)
   const openCommandPalette = useAppStore((s) => s.openCommandPalette)
   const visibleAgents = useAppStore((s) => s.visibleAgents)
+
+  // Granular session-derived selectors — return primitives so HomeScreen
+  // doesn't re-render unless the actual count changes.
+  const activeSessions = useAppStore(
+    (s) => Object.values(s.sessions).filter((sess) => sess.status === 'running').length,
+  )
+  const erroredSessions = useAppStore(
+    (s) => Object.values(s.sessions).filter((sess) => sess.status === 'error').length,
+  )
+  // Serialized project→status map — returns a stable string so Zustand
+  // only triggers re-renders when the mapping actually changes.
+  const projectStatusStr = useAppStore((s) => {
+    const entries: string[] = []
+    for (const sess of Object.values(s.sessions)) {
+      if (sess.projectId) entries.push(`${sess.projectId}:${sess.status}`)
+    }
+    return entries.sort().join(',')
+  })
+  const projectStatusMap = useMemo(() => {
+    const map: Record<string, string> = {}
+    for (const entry of projectStatusStr.split(',')) {
+      if (!entry) continue
+      const [pid, status] = entry.split(':')
+      if (pid && status) map[pid] = status
+    }
+    return map
+  }, [projectStatusStr])
+
   const [agentStatus, setAgentStatus] = useState<Record<string, boolean>>({})
   const [username, setUsername] = useState('')
   const [showAllRecent, setShowAllRecent] = useState(false)
@@ -132,22 +159,12 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
   )
   const recent = showAllRecent ? allRecent : allRecent.slice(0, 5)
 
-  const activeSessions = useMemo(
-    () => Object.values(sessions).filter((s) => s.status === 'running').length,
-    [sessions],
-  )
-  const erroredSessions = useMemo(
-    () => Object.values(sessions).filter((s) => s.status === 'error').length,
-    [sessions],
-  )
-
-  const projectStatusMap = useMemo(() => {
-    const map: Record<string, string> = {}
-    for (const s of Object.values(sessions)) {
-      if (s.projectId) map[s.projectId] = s.status
-    }
+  // O(1) template lookup map — avoids O(n) find() per pinned card
+  const templateMap = useMemo(() => {
+    const map = new Map<string, Template>()
+    for (const t of templates) map.set(t.id, t)
     return map
-  }, [sessions])
+  }, [templates])
 
   function getProjectStatus(projectId: string): string {
     return projectStatusMap[projectId] ?? 'idle'
@@ -221,7 +238,7 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
               {pinned.map((p, index) => {
                 const status = getProjectStatus(p.id)
                 const tNames = (p.attachedTemplates ?? [])
-                  .map((tid) => templates.find((t) => t.id === tid))
+                  .map((tid) => templateMap.get(tid))
                   .filter((t): t is Template => t !== undefined)
                 return (
                   <div

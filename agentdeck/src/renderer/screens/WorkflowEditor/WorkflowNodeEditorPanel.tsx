@@ -1,7 +1,8 @@
-import { useCallback, useMemo } from 'react'
-import type { WorkflowNode, WorkflowNodeStatus, AgentType, Role } from '../../../shared/types'
+import { useCallback } from 'react'
+import type { WorkflowNode, WorkflowNodeStatus, AgentType } from '../../../shared/types'
 import { AGENTS } from '../../../shared/agents'
 import { useAppStore } from '../../store/appStore'
+import { useRolesMap } from '../../hooks/useRolesMap'
 import './WorkflowNodeEditorPanel.css'
 
 interface Props {
@@ -20,7 +21,7 @@ export default function WorkflowNodeEditorPanel({
   onClose,
 }: Props): React.JSX.Element {
   const roles = useAppStore((s) => s.roles)
-  const rolesMap = useMemo(() => new Map<string, Role>(roles.map((r) => [r.id, r])), [roles])
+  const rolesMap = useRolesMap()
   const role = node.roleId ? rolesMap.get(node.roleId) : undefined
 
   const update = useCallback(

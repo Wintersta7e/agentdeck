@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, memo, useMemo } from 'react'
+import { useState, useCallback, useRef, useEffect, memo } from 'react'
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react'
 import type {
   WorkflowNode as WorkflowNodeType,
@@ -7,7 +7,7 @@ import type {
   AgentType,
 } from '../../../shared/types'
 import { AGENTS } from '../../../shared/agents'
-import { useAppStore } from '../../store/appStore'
+import { useRolesMap } from '../../hooks/useRolesMap'
 import './WorkflowNode.css'
 
 export interface WorkflowNodeData {
@@ -54,8 +54,7 @@ function getTypeIcon(type: NodeType): string {
 
 function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Element {
   const { node, status, onUpdateNode, onDeleteNode } = data
-  const roles = useAppStore((s) => s.roles)
-  const rolesMap = useMemo(() => new Map(roles.map((r) => [r.id, r])), [roles])
+  const rolesMap = useRolesMap()
   const role = node.roleId ? rolesMap.get(node.roleId) : undefined
 
   const [editing, setEditing] = useState(false)

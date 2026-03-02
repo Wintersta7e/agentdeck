@@ -48,6 +48,16 @@ export function App(): React.JSX.Element {
   const sidebarRef = useRef<HTMLDivElement>(null)
   const rightPanelRef = useRef<HTMLDivElement>(null)
 
+  // Memoize dynamic panel styles to avoid new objects every render
+  const sidebarStyle = useMemo<React.CSSProperties>(
+    () => (sidebarOpen ? { width: sidebarWidth, flexShrink: 0 } : { width: 0, flexShrink: 0 }),
+    [sidebarOpen, sidebarWidth],
+  )
+  const rightPanelStyle = useMemo<React.CSSProperties>(
+    () => ({ width: rightPanelWidth, flexShrink: 0 }),
+    [rightPanelWidth],
+  )
+
   // Derive a stable session ID list — only changes when sessions are added/removed,
   // not when session status updates (which create a new sessions object)
   const sessionIds = useAppStore((s) => {
@@ -249,7 +259,7 @@ export function App(): React.JSX.Element {
         <div
           ref={sidebarRef}
           className={`sidebar-wrapper${sidebarOpen ? '' : ' collapsed'}`}
-          style={{ width: sidebarOpen ? sidebarWidth : 0, flexShrink: 0 }}
+          style={sidebarStyle}
         >
           <Sidebar onOpenProject={handleOpenProject} />
         </div>
@@ -285,7 +295,7 @@ export function App(): React.JSX.Element {
                   maxWidth={500}
                   onResizeEnd={setRightPanelWidth}
                 />
-                <div ref={rightPanelRef} style={{ width: rightPanelWidth, flexShrink: 0 }}>
+                <div ref={rightPanelRef} style={rightPanelStyle}>
                   <RightPanel />
                 </div>
               </>
