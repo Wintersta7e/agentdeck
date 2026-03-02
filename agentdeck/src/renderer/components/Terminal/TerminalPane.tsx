@@ -331,14 +331,27 @@ export function TerminalPane({
     }
   }, [sessionId, setSessionStatus, removeSession])
 
-  // Keep visibleRef in sync and eagerly flush buffered data on show
+  // Keep visibleRef in sync, flush buffered data, and re-fit on show
   useEffect(() => {
     visibleRef.current = visible
-    if (visible && termRef.current && hiddenBufferRef.current.length > 0) {
-      termRef.current.write(hiddenBufferRef.current.join(''))
-      hiddenBufferRef.current.length = 0
+    if (visible && termRef.current) {
+      // Flush data that arrived while this pane was hidden
+      if (hiddenBufferRef.current.length > 0) {
+        termRef.current.write(hiddenBufferRef.current.join(''))
+        hiddenBufferRef.current.length = 0
+      }
+      // Re-fit + viewport sync after the pane is visible again — the viewport
+      // goes stale while display:none (offsetParent is null, scroll events are
+      // ignored, scroll-area height is not updated).
+      requestAnimationFrame(() => {
+        try {
+          safeFitAndResize(containerRef.current, fitRef.current, termRef.current, sessionId)
+        } catch {
+          // terminal disposed
+        }
+      })
     }
-  }, [visible])
+  }, [visible, sessionId])
 
   // Sync xterm internal focus with pane focus state
   useEffect(() => {
