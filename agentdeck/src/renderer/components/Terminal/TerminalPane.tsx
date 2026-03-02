@@ -88,6 +88,21 @@ function getXtermTheme(themeId: string): ITheme {
   return { ...BASE_XTERM_THEME, ...(XTERM_THEME_OVERRIDES[themeId] ?? {}) }
 }
 
+/** Shared fit-and-resize logic — guards against zero dimensions and disposed terminals. */
+function safeFitAndResize(
+  container: HTMLDivElement | null,
+  fit: FitAddon | null,
+  term: Terminal | null,
+  sessionId: string,
+): void {
+  if (!container || !fit || !term) return
+  if (container.offsetWidth === 0 || container.offsetHeight === 0) return
+  fit.fit()
+  if (term.cols > 0 && term.rows > 0) {
+    window.agentDeck.pty.resize(sessionId, term.cols, term.rows)
+  }
+}
+
 interface TerminalPaneProps {
   sessionId: string
   focused?: boolean | undefined
@@ -119,6 +134,7 @@ export function TerminalPane({
   const agentRef = useRef(agent)
   const agentFlagsRef = useRef(agentFlags)
   const visibleRef = useRef(visible)
+  const hiddenBufferRef = useRef<string[]>([])
   const setSessionStatus = useAppStore((s) => s.setSessionStatus)
   const removeSession = useAppStore((s) => s.removeSession)
 
@@ -224,18 +240,19 @@ export function TerminalPane({
       })
 
     // Buffer data received while hidden, flush when visible
-    const hiddenBuffer: string[] = []
     const unsubData = window.agentDeck.pty.onData(sessionId, (data) => {
       if (visibleRef.current) {
-        if (hiddenBuffer.length > 0) {
-          term.write(hiddenBuffer.join(''))
-          hiddenBuffer.length = 0
+        const buf = hiddenBufferRef.current
+        if (buf.length > 0) {
+          term.write(buf.join(''))
+          buf.length = 0
         }
         term.write(data)
       } else {
-        hiddenBuffer.push(data)
-        if (hiddenBuffer.length > 1000) {
-          hiddenBuffer.splice(0, hiddenBuffer.length - 500)
+        const buf = hiddenBufferRef.current
+        buf.push(data)
+        if (buf.length > 1000) {
+          buf.splice(0, buf.length - 500)
         }
       }
     })
@@ -254,13 +271,7 @@ export function TerminalPane({
       clearTimeout(resizeTimeout)
       resizeTimeout = setTimeout(() => {
         try {
-          if (!fitRef.current || !containerRef.current) return
-          if (containerRef.current.offsetWidth === 0 || containerRef.current.offsetHeight === 0)
-            return
-          fitRef.current.fit()
-          if (term.cols > 0 && term.rows > 0) {
-            window.agentDeck.pty.resize(sessionId, term.cols, term.rows)
-          }
+          safeFitAndResize(containerRef.current, fitRef.current, termRef.current, sessionId)
         } catch {
           // terminal may have been disposed
         }
@@ -272,14 +283,7 @@ export function TerminalPane({
     const handlePaneResizeEnd = (): void => {
       requestAnimationFrame(() => {
         try {
-          if (!fitRef.current || !containerRef.current || !termRef.current) return
-          if (containerRef.current.offsetWidth === 0 || containerRef.current.offsetHeight === 0)
-            return
-          fitRef.current.fit()
-          const t = termRef.current
-          if (t.cols > 0 && t.rows > 0) {
-            window.agentDeck.pty.resize(sessionId, t.cols, t.rows)
-          }
+          safeFitAndResize(containerRef.current, fitRef.current, termRef.current, sessionId)
         } catch {
           // terminal disposed
         }
@@ -310,9 +314,13 @@ export function TerminalPane({
     }
   }, [sessionId, setSessionStatus, removeSession])
 
-  // Keep visibleRef in sync
+  // Keep visibleRef in sync and eagerly flush buffered data on show
   useEffect(() => {
     visibleRef.current = visible
+    if (visible && termRef.current && hiddenBufferRef.current.length > 0) {
+      termRef.current.write(hiddenBufferRef.current.join(''))
+      hiddenBufferRef.current.length = 0
+    }
   }, [visible])
 
   // Sync xterm internal focus with pane focus state
@@ -335,17 +343,10 @@ export function TerminalPane({
     const io = new IntersectionObserver(
       (entries) => {
         const entry = entries[0]
-        if (entry?.isIntersecting && fitRef.current && containerRef.current) {
+        if (entry?.isIntersecting) {
           requestAnimationFrame(() => {
             try {
-              if (!containerRef.current || !fitRef.current || !termRef.current) return
-              if (containerRef.current.offsetWidth === 0 || containerRef.current.offsetHeight === 0)
-                return
-              fitRef.current.fit()
-              const t = termRef.current
-              if (t.cols > 0 && t.rows > 0) {
-                window.agentDeck.pty.resize(sessionId, t.cols, t.rows)
-              }
+              safeFitAndResize(containerRef.current, fitRef.current, termRef.current, sessionId)
             } catch {
               // terminal disposed
             }

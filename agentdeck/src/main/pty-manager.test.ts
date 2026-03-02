@@ -172,6 +172,33 @@ describe('createPtyManager', () => {
 
       expect(win.webContents.send).toHaveBeenCalledWith('pty:data:s1', 'hello world\n')
     })
+
+    it('coalesces multiple rapid chunks into a single IPC send', () => {
+      const win = makeMockWindow()
+      const mgr = createPtyManager(win)
+
+      mgr.spawn('s1', 80, 24)
+
+      const cb = ptyInstances[0]?.onData[0]
+
+      // Simulate 3 rapid chunks within the same tick
+      cb?.('chunk1')
+      cb?.('chunk2')
+      cb?.('chunk3')
+
+      // Should NOT have sent yet (batching via setImmediate)
+      expect(win.webContents.send).not.toHaveBeenCalledWith('pty:data:s1', expect.anything())
+
+      // Flush the setImmediate
+      vi.runAllTimers()
+
+      // Should have sent exactly ONE concatenated message
+      const dataCalls = vi
+        .mocked(win.webContents.send)
+        .mock.calls.filter((c) => c[0] === 'pty:data:s1')
+      expect(dataCalls).toHaveLength(1)
+      expect(dataCalls[0]?.[1]).toBe('chunk1chunk2chunk3')
+    })
   })
 
   describe('write', () => {
@@ -205,6 +232,31 @@ describe('createPtyManager', () => {
 
       const mockProc = vi.mocked(pty.spawn).mock.results[0]?.value
       expect(mockProc.resize).toHaveBeenCalledWith(120, 40)
+    })
+
+    it('clamps cols and rows to minimum 1', () => {
+      const win = makeMockWindow()
+      const mgr = createPtyManager(win)
+
+      mgr.spawn('s1', 80, 24)
+      const mockProc = vi.mocked(pty.spawn).mock.results[0]?.value
+
+      mgr.resize('s1', 0, 0)
+      expect(mockProc.resize).toHaveBeenCalledWith(1, 1)
+
+      mgr.resize('s1', 0, 24)
+      expect(mockProc.resize).toHaveBeenCalledWith(1, 24)
+
+      mgr.resize('s1', 80, 0)
+      expect(mockProc.resize).toHaveBeenCalledWith(80, 1)
+    })
+
+    it('is a no-op for unknown session', () => {
+      const win = makeMockWindow()
+      const mgr = createPtyManager(win)
+
+      // Should not throw
+      mgr.resize('nonexistent', 80, 24)
     })
   })
 
