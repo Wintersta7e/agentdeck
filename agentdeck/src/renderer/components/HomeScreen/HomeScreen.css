@@ -488,6 +488,14 @@
   margin-top: 2px;
 }
 
+/* Add-agent card text overrides */
+.agent-add-icon {
+  color: var(--text3);
+}
+.agent-add-name {
+  color: var(--text2);
+}
+
 /* Scrollbar */
 .home-main::-webkit-scrollbar {
   width: 4px;

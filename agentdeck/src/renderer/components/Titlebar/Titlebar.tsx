@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useAppStore } from '../../store/appStore'
 import type { Session } from '../../../shared/types'
 import './Titlebar.css'
@@ -9,17 +9,35 @@ interface TitlebarProps {
   onAddTab: () => void
 }
 
+const DOT_STYLE_RUNNING: React.CSSProperties = {
+  background: 'var(--green)',
+  boxShadow: '0 0 5px var(--green)',
+}
+const DOT_STYLE_ERROR: React.CSSProperties = {
+  background: 'var(--red)',
+  boxShadow: '0 0 5px var(--red)',
+}
+const DOT_STYLE_IDLE: React.CSSProperties = { background: 'var(--text3)' }
+
 export function Titlebar({
   onCloseTab,
   onCloseWorkflowTab,
   onAddTab,
 }: TitlebarProps): React.JSX.Element {
   const [closingTabs, setClosingTabs] = useState<Set<string>>(() => new Set())
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(
+    () => () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+    },
+    [],
+  )
 
   const animateCloseSession = useCallback(
     (sessionId: string) => {
       setClosingTabs((prev) => new Set(prev).add(sessionId))
-      setTimeout(() => {
+      closeTimerRef.current = setTimeout(() => {
         setClosingTabs((prev) => {
           const next = new Set(prev)
           next.delete(sessionId)
@@ -34,7 +52,7 @@ export function Titlebar({
   const animateCloseWorkflow = useCallback(
     (workflowId: string) => {
       setClosingTabs((prev) => new Set(prev).add(workflowId))
-      setTimeout(() => {
+      closeTimerRef.current = setTimeout(() => {
         setClosingTabs((prev) => {
           const next = new Set(prev)
           next.delete(workflowId)
@@ -54,8 +72,9 @@ export function Titlebar({
   const closeWizard = useAppStore((s) => s.closeWizard)
   const settingsProjectId = useAppStore((s) => s.settingsProjectId)
   const closeSettings = useAppStore((s) => s.closeSettings)
-  const viewStack = useAppStore((s) => s.viewStack)
-  const previousView = viewStack.length > 0 ? viewStack[viewStack.length - 1] : 'home'
+  const previousView = useAppStore((s) =>
+    s.viewStack.length > 0 ? s.viewStack[s.viewStack.length - 1] : 'home',
+  )
   const paneLayout = useAppStore((s) => s.paneLayout)
   const cyclePaneLayout = useAppStore((s) => s.cyclePaneLayout)
   const toggleRightPanel = useAppStore((s) => s.toggleRightPanel)
@@ -71,13 +90,12 @@ export function Titlebar({
   }
 
   function dotStyle(status: string): React.CSSProperties {
-    if (status === 'running')
-      return { background: 'var(--green)', boxShadow: '0 0 5px var(--green)' }
-    if (status === 'error') return { background: 'var(--red)', boxShadow: '0 0 5px var(--red)' }
-    return { background: 'var(--text3)' }
+    if (status === 'running') return DOT_STYLE_RUNNING
+    if (status === 'error') return DOT_STYLE_ERROR
+    return DOT_STYLE_IDLE
   }
 
-  const sessionList = Object.values(sessions)
+  const sessionList = useMemo(() => Object.values(sessions), [sessions])
 
   return (
     <div className="titlebar">

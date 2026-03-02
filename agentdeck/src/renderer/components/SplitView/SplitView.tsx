@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { PaneTopbar } from './PaneTopbar'
 import { TerminalPane } from '../Terminal/TerminalPane'
@@ -106,6 +106,26 @@ export function SplitView(): React.JSX.Element {
     }
   }, [])
 
+  // Memoize per-project env and startupCommands so inline objects are stable across renders
+  const envMap = useMemo(() => {
+    const map: Record<string, Record<string, string> | undefined> = {}
+    for (const p of projects) {
+      map[p.id] =
+        p.envVars && p.envVars.length > 0
+          ? Object.fromEntries(p.envVars.map((v) => [v.key, v.value]))
+          : undefined
+    }
+    return map
+  }, [projects])
+
+  const startupCommandsMap = useMemo(() => {
+    const map: Record<string, string[] | undefined> = {}
+    for (const p of projects) {
+      map[p.id] = p.startupCommands?.map((c) => c.value)
+    }
+    return map
+  }, [projects])
+
   // Determine which sessions are assigned to pane slots
   const paneSessionIds = PANE_INDICES.map((i) => paneSessions[i] ?? '')
 
@@ -156,12 +176,8 @@ export function SplitView(): React.JSX.Element {
                     sessionId={sessionId}
                     focused={isFocused}
                     projectPath={project?.path}
-                    startupCommands={project?.startupCommands?.map((c) => c.value)}
-                    env={
-                      project?.envVars && project.envVars.length > 0
-                        ? Object.fromEntries(project.envVars.map((v) => [v.key, v.value]))
-                        : undefined
-                    }
+                    startupCommands={project ? startupCommandsMap[project.id] : undefined}
+                    env={project ? envMap[project.id] : undefined}
                     agent={project?.agent ?? undefined}
                     agentFlags={project?.agentFlags ?? undefined}
                   />
@@ -187,12 +203,8 @@ export function SplitView(): React.JSX.Element {
               sessionId={sid}
               focused={false}
               projectPath={project?.path}
-              startupCommands={project?.startupCommands?.map((c) => c.value)}
-              env={
-                project?.envVars && project.envVars.length > 0
-                  ? Object.fromEntries(project.envVars.map((v) => [v.key, v.value]))
-                  : undefined
-              }
+              startupCommands={project ? startupCommandsMap[project.id] : undefined}
+              env={project ? envMap[project.id] : undefined}
               agent={project?.agent ?? undefined}
               agentFlags={project?.agentFlags ?? undefined}
             />

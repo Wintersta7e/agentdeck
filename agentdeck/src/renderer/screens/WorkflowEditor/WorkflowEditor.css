@@ -254,6 +254,13 @@
   min-height: 0;
 }
 
+.wf-tab-hidden {
+  display: none;
+}
+.wf-tab-visible {
+  display: flex;
+}
+
 .wf-right-empty {
   display: flex;
   align-items: center;

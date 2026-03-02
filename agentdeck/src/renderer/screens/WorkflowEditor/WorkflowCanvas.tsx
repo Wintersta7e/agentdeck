@@ -19,7 +19,7 @@ import type {
   WorkflowNodeStatus,
 } from '../../../shared/types'
 import { WorkflowNodeComponent, type WorkflowNodeData, type WfNode } from './WorkflowNode'
-import { WorkflowEdgeComponent, type WorkflowEdgeData } from './WorkflowEdgeComponent'
+import WorkflowEdgeComponent, { type WorkflowEdgeData } from './WorkflowEdgeComponent'
 import './WorkflowCanvas.css'
 
 interface WorkflowCanvasProps {

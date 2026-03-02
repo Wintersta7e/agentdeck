@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import './StatusBar.css'
 
@@ -33,7 +33,10 @@ export function StatusBar({ onAboutClick }: StatusBarProps): React.JSX.Element {
       })
   }, [])
 
-  const activeCount = Object.values(sessions).filter((s) => s.status === 'running').length
+  const activeCount = useMemo(
+    () => Object.values(sessions).filter((s) => s.status === 'running').length,
+    [sessions],
+  )
   const layoutLabel = paneLayout === 1 ? 'single pane' : `${String(paneLayout)}-pane split`
 
   let activeProjectName: string | null = null

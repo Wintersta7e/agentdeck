@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { useProjects } from '../../hooks/useProjects'
 import type { Project } from '../../../shared/types'
@@ -32,7 +32,8 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
   const toggleSidebarSection = useAppStore((s) => s.toggleSidebarSection)
   const { updateProject, deleteProject } = useProjects()
 
-  const pinned = projects.filter((p) => p.pinned)
+  const pinned = useMemo(() => projects.filter((p) => p.pinned), [projects])
+  const groupedTemplates = useMemo(() => groupTemplates(templates), [templates])
 
   // Right-click context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -48,6 +49,14 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
   const [renamingWorkflowId, setRenamingWorkflowId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const renameInputRef = useRef<HTMLInputElement>(null)
+  const focusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(
+    () => () => {
+      if (focusTimerRef.current) clearTimeout(focusTimerRef.current)
+    },
+    [],
+  )
 
   const closeMenu = useCallback(() => setContextMenu(null), [setContextMenu])
 
@@ -143,7 +152,7 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
     setRenameValue(wf.name)
     closeMenu()
     // Focus input after render
-    setTimeout(() => renameInputRef.current?.select(), 0)
+    focusTimerRef.current = setTimeout(() => renameInputRef.current?.select(), 0)
   }
 
   function commitRename(): void {
@@ -280,7 +289,7 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
                 <span>Attach Templates</span>
               </div>
               <div className="sidebar-ctx-tpl-body">
-                {groupTemplates(templates).map((group) => {
+                {groupedTemplates.map((group) => {
                   const project = projects.find((p) => p.id === contextMenu.projectId)
                   const attached = project?.attachedTemplates ?? []
                   return (
@@ -343,7 +352,7 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
           </button>
         </div>
         {sidebarSections.templates &&
-          groupTemplates(templates).map((group) => (
+          groupedTemplates.map((group) => (
             <div key={group.category} className="sidebar-tpl-group">
               <div className="sidebar-group-label">{group.category}</div>
               {group.templates.map((t) => (
@@ -409,7 +418,7 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
                       e.stopPropagation()
                       setRenamingWorkflowId(w.id)
                       setRenameValue(w.name)
-                      setTimeout(() => renameInputRef.current?.select(), 0)
+                      focusTimerRef.current = setTimeout(() => renameInputRef.current?.select(), 0)
                     }}
                   >
                     {w.name}

@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { getBezierPath, type EdgeProps, type Edge } from '@xyflow/react'
 
 export interface WorkflowEdgeData {
@@ -7,7 +8,7 @@ export interface WorkflowEdgeData {
 
 type WfEdge = Edge<WorkflowEdgeData, 'workflowEdge'>
 
-export function WorkflowEdgeComponent({
+function WorkflowEdgeComponent({
   id,
   sourceX,
   sourceY,
@@ -70,3 +71,5 @@ export function WorkflowEdgeComponent({
     </>
   )
 }
+
+export default memo(WorkflowEdgeComponent)

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import './PanelDivider.css'
 
 interface PanelDividerProps {
@@ -22,6 +22,15 @@ export function PanelDivider({
   const [dragging, setDragging] = useState(false)
   const startXRef = useRef(0)
   const startWidthRef = useRef(0)
+  const cleanupRef = useRef<(() => void) | null>(null)
+
+  // Remove drag listeners if the component unmounts mid-drag
+  useEffect(
+    () => () => {
+      cleanupRef.current?.()
+    },
+    [],
+  )
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -47,6 +56,7 @@ export function PanelDivider({
         document.removeEventListener('mouseup', handleMouseUp)
         document.body.style.cursor = ''
         document.body.style.userSelect = ''
+        cleanupRef.current = null
         setDragging(false)
 
         if (panel) {
@@ -58,6 +68,13 @@ export function PanelDivider({
       document.addEventListener('mouseup', handleMouseUp)
       document.body.style.cursor = 'col-resize'
       document.body.style.userSelect = 'none'
+
+      cleanupRef.current = () => {
+        document.removeEventListener('mousemove', handleMouseMove)
+        document.removeEventListener('mouseup', handleMouseUp)
+        document.body.style.cursor = ''
+        document.body.style.userSelect = ''
+      }
     },
     [side, panelRef, minWidth, maxWidth, onResizeEnd],
   )

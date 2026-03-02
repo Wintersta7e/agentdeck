@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { useAppStore } from '../../store/appStore'
 import type { Template } from '../../../shared/types'
+import './ContextTab.css'
 
 export function ContextTab(): React.JSX.Element {
   const sessions = useAppStore((s) => s.sessions)
@@ -58,16 +59,13 @@ export function ContextTab(): React.JSX.Element {
         attachedTemplates.map((t) => (
           <div
             key={t.id}
-            className="context-item"
-            style={{ borderColor: 'var(--amber-border)' }}
+            className="context-item context-item--template"
             onClick={() => handleTemplateClick(t)}
             title="Click to send to agent"
           >
             <div className="context-item-header">
               <span className="context-icon">{'\uD83D\uDCCB'}</span>
-              <span className="context-name" style={{ color: 'var(--amber)' }}>
-                {t.name}
-              </span>
+              <span className="context-name context-name--template">{t.name}</span>
               {t.category && <span className="context-tag">{t.category}</span>}
             </div>
             <div className="context-path">{t.description}</div>
@@ -79,9 +77,7 @@ export function ContextTab(): React.JSX.Element {
 
       <div className="panel-section-header">Project notes</div>
       {project.notes ? (
-        <div className="context-path" style={{ padding: '4px 0' }}>
-          {project.notes}
-        </div>
+        <div className="context-path context-notes">{project.notes}</div>
       ) : (
         <div className="panel-placeholder">No notes</div>
       )}

@@ -8,12 +8,12 @@ interface PaneTopbarProps {
 }
 
 export function PaneTopbar({ sessionId, focused }: PaneTopbarProps): React.JSX.Element {
-  const session = useAppStore((s) => s.sessions[sessionId])
+  const status = useAppStore((s) => s.sessions[sessionId]?.status ?? 'exited')
+  const projectId = useAppStore((s) => s.sessions[sessionId]?.projectId)
   const projects = useAppStore((s) => s.projects)
   const restartSession = useAppStore((s) => s.restartSession)
-  const project = session ? projects.find((p) => p.id === session.projectId) : undefined
+  const project = projectId ? projects.find((p) => p.id === projectId) : undefined
 
-  const status = session?.status ?? 'exited'
   const accentColor = project?.identity?.accentColor ?? undefined
   const agentName = project?.agent ?? 'claude-code'
 

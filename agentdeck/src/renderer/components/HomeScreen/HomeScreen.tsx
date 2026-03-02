@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { ParticleField } from './ParticleField'
 import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
@@ -35,6 +35,12 @@ function formatDate(): string {
 /** Sanitize badge to a valid CSS class segment (e.g. ".NET" → "net") */
 function badgeClass(badge: string): string {
   return badge.toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
+const STATUS_DOT_STYLES: Record<string, React.CSSProperties> = {
+  running: { background: 'var(--green)' },
+  error: { background: 'var(--red)' },
+  idle: { background: 'var(--text3)' },
 }
 
 const BADGE_ICONS: Record<StackBadge, string> = {
@@ -109,18 +115,35 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
       })
   }, [])
 
-  const pinned = projects.filter((p) => p.pinned)
-  const allRecent = [...projects]
-    .filter((p) => p.lastOpened)
-    .sort((a, b) => (b.lastOpened ?? 0) - (a.lastOpened ?? 0))
+  const pinned = useMemo(() => projects.filter((p) => p.pinned), [projects])
+  const allRecent = useMemo(
+    () =>
+      [...projects]
+        .filter((p) => p.lastOpened)
+        .sort((a, b) => (b.lastOpened ?? 0) - (a.lastOpened ?? 0)),
+    [projects],
+  )
   const recent = showAllRecent ? allRecent : allRecent.slice(0, 5)
 
-  const activeSessions = Object.values(sessions).filter((s) => s.status === 'running').length
-  const erroredSessions = Object.values(sessions).filter((s) => s.status === 'error').length
+  const activeSessions = useMemo(
+    () => Object.values(sessions).filter((s) => s.status === 'running').length,
+    [sessions],
+  )
+  const erroredSessions = useMemo(
+    () => Object.values(sessions).filter((s) => s.status === 'error').length,
+    [sessions],
+  )
+
+  const projectStatusMap = useMemo(() => {
+    const map: Record<string, string> = {}
+    for (const s of Object.values(sessions)) {
+      if (s.projectId) map[s.projectId] = s.status
+    }
+    return map
+  }, [sessions])
 
   function getProjectStatus(projectId: string): string {
-    const session = Object.values(sessions).find((s) => s.projectId === projectId)
-    return session ? session.status : 'idle'
+    return projectStatusMap[projectId] ?? 'idle'
   }
 
   function statusColorClass(status: string): string {
@@ -209,14 +232,7 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
                       <div className={`card-status ${statusColorClass(status)}`}>
                         <div
                           className={`card-status-dot ${statusColorClass(status)}`}
-                          style={{
-                            background:
-                              status === 'running'
-                                ? 'var(--green)'
-                                : status === 'error'
-                                  ? 'var(--red)'
-                                  : 'var(--text3)',
-                          }}
+                          style={STATUS_DOT_STYLES[status] ?? STATUS_DOT_STYLES.idle}
                         />
                         {status}
                       </div>
@@ -267,14 +283,7 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
                   >
                     <div
                       className="recent-dot"
-                      style={{
-                        background:
-                          status === 'running'
-                            ? 'var(--green)'
-                            : status === 'error'
-                              ? 'var(--red)'
-                              : 'var(--text3)',
-                      }}
+                      style={STATUS_DOT_STYLES[status] ?? STATUS_DOT_STYLES.idle}
                     />
                     <div className="recent-name">{p.name}</div>
                     <div className="recent-path">{p.path}</div>
@@ -309,12 +318,8 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
             </div>
           ))}
           <div className="agent-card add-agent" onClick={() => openCommandPalette('agents')}>
-            <div className="agent-card-icon" style={{ color: 'var(--text3)' }}>
-              +
-            </div>
-            <div className="agent-card-name" style={{ color: 'var(--text2)' }}>
-              Add agent
-            </div>
+            <div className="agent-card-icon agent-add-icon">+</div>
+            <div className="agent-card-name agent-add-name">Add agent</div>
             <div className="agent-card-desc">Custom command</div>
           </div>
         </div>

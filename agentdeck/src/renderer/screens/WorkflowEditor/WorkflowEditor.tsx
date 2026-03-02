@@ -62,6 +62,7 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
   // ── Auto-save debounce ──
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const focusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // H8: Track latest workflow for flush-before-run
   const latestWorkflowRef = useRef<Workflow | null>(null)
 
@@ -92,6 +93,7 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
   useEffect(() => {
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+      if (focusTimerRef.current) clearTimeout(focusTimerRef.current)
     }
   }, [])
 
@@ -275,12 +277,12 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
         updateWorkflowMeta(workflowId, { nodeCount: updated.nodes.length })
         return updated
       })
-      if (selectedNodeId === nodeId) {
+      if (selectedNodeIdRef.current === nodeId) {
         setSelectedNodeId(null)
         setDetailNode(null)
       }
     },
-    [autoSave, selectedNodeId, workflowId, updateWorkflowMeta],
+    [autoSave, workflowId, updateWorkflowMeta],
   )
 
   const handleDeleteEdge = useCallback(
@@ -377,7 +379,7 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
     setEditName(workflow?.name ?? 'Workflow')
     setIsEditingName(true)
     // Focus input on next tick after render
-    setTimeout(() => nameInputRef.current?.select(), 0)
+    focusTimerRef.current = setTimeout(() => nameInputRef.current?.select(), 0)
   }, [workflow?.name])
 
   const commitName = useCallback(() => {
@@ -523,8 +525,7 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
 
           {/* Tab content */}
           <div
-            className="wf-right-content"
-            style={{ display: rightTab === 'editor' ? 'flex' : 'none' }}
+            className={`wf-right-content ${rightTab === 'editor' ? 'wf-tab-visible' : 'wf-tab-hidden'}`}
           >
             {detailNode ? (
               <WorkflowNodeEditorPanel
@@ -540,7 +541,10 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
               <div className="wf-right-empty">Select a node to edit</div>
             )}
           </div>
-          <div style={{ display: rightTab === 'log' ? 'flex' : 'none', flex: 1, minHeight: 0 }}>
+          <div
+            className={rightTab === 'log' ? 'wf-tab-visible' : 'wf-tab-hidden'}
+            style={{ flex: 1, minHeight: 0 }}
+          >
             <WorkflowLogPanel
               events={logs}
               workflow={workflow}
