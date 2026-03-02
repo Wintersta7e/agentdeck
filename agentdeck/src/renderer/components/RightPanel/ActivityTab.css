@@ -1,8 +1,15 @@
+/* Virtualized scroll container — fills the panel, lets react-window manage height */
+.activity-virt-container {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
 .activity-item {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  margin-bottom: 10px;
+  padding-bottom: 10px;
   font-size: 10px;
 }
 
@@ -53,6 +60,9 @@
   color: var(--text1);
   font-weight: 500;
   line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .activity-detail {
