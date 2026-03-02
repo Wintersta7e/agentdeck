@@ -75,6 +75,15 @@ export interface Template {
   category?: TemplateCategory | undefined
 }
 
+export interface Role {
+  id: string
+  name: string
+  icon: string
+  persona: string
+  outputFormat?: string | undefined
+  builtin: boolean
+}
+
 export type SessionStatus = 'starting' | 'running' | 'error' | 'exited'
 
 export interface Session {
@@ -122,6 +131,7 @@ export interface WorkflowNode {
   agent?: AgentType | undefined
   agentFlags?: string | undefined
   prompt?: string | undefined
+  roleId?: string | undefined
 
   // shell nodes
   command?: string | undefined
