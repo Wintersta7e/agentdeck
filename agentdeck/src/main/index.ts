@@ -3,7 +3,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { join } from 'path'
 import { createPtyManager, type PtyManager } from './pty-manager'
-import { createProjectStore, seedTemplates, type AppStore } from './project-store'
+import { createProjectStore, seedRoles, seedTemplates, type AppStore } from './project-store'
 import { detectStack } from './detect-stack'
 import { getDefaultDistro, wslPathToWindows } from './wsl-utils'
 import { initLogger, createLogger } from './logger'
@@ -492,6 +492,7 @@ app.whenReady().then(() => {
   log.info('App ready')
   appStore = createProjectStore()
   seedTemplates(appStore)
+  seedRoles(appStore)
   registerIpcHandlers(appStore)
 
   createWindow()

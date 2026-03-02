@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { ActivityEvent, Workflow, WorkflowMeta, WorkflowEvent } from '../shared/types'
+import type { ActivityEvent, Role, Workflow, WorkflowMeta, WorkflowEvent } from '../shared/types'
 
 // File drag-and-drop: accept drops visually (dragover), but let the default
 // drop behavior trigger navigation to file:// URL. The main process intercepts
@@ -105,6 +105,9 @@ contextBridge.exposeInMainWorld('agentDeck', {
     getTemplates: () => ipcRenderer.invoke('store:getTemplates'),
     saveTemplate: (template: unknown) => ipcRenderer.invoke('store:saveTemplate', template),
     deleteTemplate: (id: string) => ipcRenderer.invoke('store:deleteTemplate', id),
+    getRoles: () => ipcRenderer.invoke('store:getRoles') as Promise<Role[]>,
+    saveRole: (role: unknown) => ipcRenderer.invoke('store:saveRole', role) as Promise<Role>,
+    deleteRole: (id: string) => ipcRenderer.invoke('store:deleteRole', id) as Promise<void>,
   },
   agents: {
     check: () => ipcRenderer.invoke('agents:check') as Promise<Record<string, boolean>>,

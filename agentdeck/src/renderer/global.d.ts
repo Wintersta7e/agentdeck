@@ -1,4 +1,4 @@
-import type { ActivityEvent, DetectedStack, Project, Template } from '../shared/types'
+import type { ActivityEvent, DetectedStack, Project, Role, Template } from '../shared/types'
 
 declare global {
   interface Window {
@@ -65,6 +65,9 @@ declare global {
         getTemplates: () => Promise<Template[]>
         saveTemplate: (template: Partial<Template>) => Promise<Template>
         deleteTemplate: (id: string) => Promise<void>
+        getRoles: () => Promise<Role[]>
+        saveRole: (role: Partial<Role>) => Promise<Role>
+        deleteRole: (id: string) => Promise<void>
       }
       agents: {
         check: () => Promise<Record<string, boolean>>
