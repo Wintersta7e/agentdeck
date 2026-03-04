@@ -4,6 +4,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { randomUUID } from 'crypto'
 import type { EnvVar, Project, Role, Template, TemplateCategory } from '../shared/types'
+import { migrateProjectAgents } from '../shared/agent-helpers'
 import { createLogger } from './logger'
 
 const log = createLogger('project-store')
@@ -103,7 +104,20 @@ export function createProjectStore(): Store<StoreSchema> {
 
   ipcMain.handle('store:getProjects', () => {
     const projects = store.get('projects')
-    return projects.map((p) => ({ ...p, envVars: decryptEnvVars(p.envVars) }))
+
+    // Auto-migrate legacy single-agent projects to agents[] array
+    let agentsMigrated = false
+    const updated = projects.map((p: Project) => {
+      const m = migrateProjectAgents(p)
+      if (m !== p) agentsMigrated = true
+      return m
+    })
+    if (agentsMigrated) {
+      // env vars are already encrypted on disk — write back as-is
+      store.set('projects', updated)
+    }
+
+    return updated.map((p) => ({ ...p, envVars: decryptEnvVars(p.envVars) }))
   })
 
   ipcMain.handle('store:saveProject', (_, project: unknown) => {
