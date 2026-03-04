@@ -235,6 +235,7 @@ export function SplitView(): React.JSX.Element {
                       session?.agentFlagsOverride ??
                       (project ? getDefaultAgent(project).agentFlags : undefined)
                     }
+                    scrollback={project?.scrollbackLines}
                   />
                 </>
               ) : (
@@ -269,6 +270,7 @@ export function SplitView(): React.JSX.Element {
                 sessions[sid]?.agentFlagsOverride ??
                 (project ? getDefaultAgent(project).agentFlags : undefined)
               }
+              scrollback={project?.scrollbackLines}
             />
           </div>
         )

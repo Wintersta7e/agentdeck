@@ -136,6 +136,7 @@ interface TerminalPaneProps {
   env?: Record<string, string> | undefined
   agent?: string | undefined
   agentFlags?: string | undefined
+  scrollback?: number | undefined
 }
 
 export function TerminalPane({
@@ -147,6 +148,7 @@ export function TerminalPane({
   env,
   agent,
   agentFlags,
+  scrollback,
 }: TerminalPaneProps): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
@@ -157,6 +159,7 @@ export function TerminalPane({
   const envRef = useRef(env)
   const agentRef = useRef(agent)
   const agentFlagsRef = useRef(agentFlags)
+  const scrollbackRef = useRef(scrollback)
   const visibleRef = useRef(visible)
   const hiddenBufferRef = useRef<string[]>([])
   const setSessionStatus = useAppStore((s) => s.setSessionStatus)
@@ -191,7 +194,7 @@ export function TerminalPane({
         cursorBlink: true,
         cursorInactiveStyle: 'none',
         theme: getXtermTheme(document.documentElement.dataset.theme ?? ''),
-        scrollback: 5000,
+        scrollback: scrollbackRef.current ?? 5000,
       })
 
       // Copy/paste: Ctrl+Shift+C/V or Ctrl+C (with selection) / Ctrl+V
