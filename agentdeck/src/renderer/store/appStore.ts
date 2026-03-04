@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type {
+  AgentType,
   Project,
   Role,
   Template,
@@ -18,7 +19,11 @@ import type {
 interface AppState {
   sessions: Record<string, Session>
   activeSessionId: string | null
-  addSession: (sessionId: string, projectId: string) => void
+  addSession: (
+    sessionId: string,
+    projectId: string,
+    overrides?: { agentOverride?: AgentType; agentFlagsOverride?: string },
+  ) => void
   setSessionStatus: (sessionId: string, status: SessionStatus) => void
   setActiveSession: (sessionId: string) => void
   removeSession: (sessionId: string) => void
@@ -142,7 +147,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   sessions: {},
   activeSessionId: null,
 
-  addSession: (sessionId, projectId) =>
+  addSession: (sessionId, projectId, overrides) =>
     set((state) => {
       const paneSessions = [...state.paneSessions]
       // Place new session in the focused pane so it's always visible
@@ -151,10 +156,18 @@ export const useAppStore = create<AppState>((set, get) => ({
         paneSessions.push('')
       }
       paneSessions[targetPane] = sessionId
+      const session: Session = {
+        id: sessionId,
+        projectId,
+        status: 'starting',
+        startedAt: Date.now(),
+        agentOverride: overrides?.agentOverride,
+        agentFlagsOverride: overrides?.agentFlagsOverride,
+      }
       return {
         sessions: {
           ...state.sessions,
-          [sessionId]: { id: sessionId, projectId, status: 'starting', startedAt: Date.now() },
+          [sessionId]: session,
         },
         activeSessionId: sessionId,
         currentView: 'session' as const,
@@ -255,6 +268,8 @@ export const useAppStore = create<AppState>((set, get) => ({
             projectId,
             status: 'starting' as const,
             startedAt: Date.now(),
+            agentOverride: oldSession.agentOverride,
+            agentFlagsOverride: oldSession.agentFlagsOverride,
           },
         },
         activityFeeds: remainingFeeds,
