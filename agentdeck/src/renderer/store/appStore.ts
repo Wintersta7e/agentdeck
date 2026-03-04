@@ -120,6 +120,13 @@ interface AppState {
   visibleAgents: string[] | null
   setVisibleAgents: (agents: string[]) => void
 
+  // Cached HomeScreen data (fetched once at startup)
+  wslUsername: string
+  setWslUsername: (name: string) => void
+  agentStatus: Record<string, boolean>
+  setAgentStatus: (status: Record<string, boolean>) => void
+  refreshAgentStatus: () => Promise<void>
+
   // Notifications
   notifications: Array<{
     id: string
@@ -559,6 +566,16 @@ export const useAppStore = create<AppState>((set, get) => ({
   setVisibleAgents: (agents) => {
     window.agentDeck.agents.setVisible(agents)
     set({ visibleAgents: agents })
+  },
+
+  // Cached HomeScreen data
+  wslUsername: '',
+  setWslUsername: (name) => set({ wslUsername: name }),
+  agentStatus: {},
+  setAgentStatus: (status) => set({ agentStatus: status }),
+  refreshAgentStatus: async () => {
+    const status = await window.agentDeck.agents.check()
+    set({ agentStatus: status })
   },
 
   // Notifications
