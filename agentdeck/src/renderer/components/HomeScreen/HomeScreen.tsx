@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { ParticleField } from './ParticleField'
 import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
-import type { Project, Template, StackBadge } from '../../../shared/types'
+import type { AgentConfig, Project, Template, StackBadge } from '../../../shared/types'
 import './HomeScreen.css'
 
 function timeAgo(timestamp: number | undefined): string {
@@ -82,9 +82,13 @@ const AGENTS = SHARED_AGENTS.map((a) => ({ name: a.id, icon: a.icon, desc: a.des
 
 interface HomeScreenProps {
   onOpenProject: (project: Project) => void
+  onOpenProjectWithAgent: (project: Project, agentConfig: AgentConfig) => void
 }
 
-export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Element {
+export function HomeScreen({
+  onOpenProject,
+  onOpenProjectWithAgent: _onOpenProjectWithAgent,
+}: HomeScreenProps): React.JSX.Element {
   const projects = useAppStore((s) => s.projects)
   const templates = useAppStore((s) => s.templates)
   const openWizard = useAppStore((s) => s.openWizard)

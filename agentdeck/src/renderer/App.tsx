@@ -11,7 +11,7 @@ import { AboutDialog } from './components/AboutDialog/AboutDialog'
 import { NotificationToast } from './components/NotificationToast/NotificationToast'
 import { useAppStore } from './store/appStore'
 import { useProjects } from './hooks/useProjects'
-import type { ActivityEvent, Project } from '../shared/types'
+import type { ActivityEvent, AgentConfig, Project } from '../shared/types'
 import './App.css'
 
 const WorkflowEditor = lazy(() => import('./screens/WorkflowEditor/WorkflowEditor'))
@@ -76,6 +76,21 @@ export function App(): React.JSX.Element {
     (project: Project) => {
       const sessionId = `session-${project.id}-${Date.now()}`
       addSession(sessionId, project.id)
+      void updateProject({ ...project, lastOpened: Date.now() }).catch(() => {})
+    },
+    [addSession, updateProject],
+  )
+
+  const handleOpenProjectWithAgent = useCallback(
+    (project: Project, agentConfig: AgentConfig) => {
+      const sessionId = `session-${project.id}-${Date.now()}`
+      const overrides: { agentOverride: typeof agentConfig.agent; agentFlagsOverride?: string } = {
+        agentOverride: agentConfig.agent,
+      }
+      if (agentConfig.agentFlags !== undefined) {
+        overrides.agentFlagsOverride = agentConfig.agentFlags
+      }
+      addSession(sessionId, project.id, overrides)
       void updateProject({ ...project, lastOpened: Date.now() }).catch(() => {})
     },
     [addSession, updateProject],
@@ -261,7 +276,10 @@ export function App(): React.JSX.Element {
           className={`sidebar-wrapper${sidebarOpen ? '' : ' collapsed'}`}
           style={sidebarStyle}
         >
-          <Sidebar onOpenProject={handleOpenProject} />
+          <Sidebar
+            onOpenProject={handleOpenProject}
+            onOpenProjectWithAgent={handleOpenProjectWithAgent}
+          />
         </div>
         {sidebarOpen && (
           <PanelDivider
@@ -273,7 +291,12 @@ export function App(): React.JSX.Element {
           />
         )}
         <div className="app-main">
-          {currentView === 'home' && <HomeScreen onOpenProject={handleOpenProject} />}
+          {currentView === 'home' && (
+            <HomeScreen
+              onOpenProject={handleOpenProject}
+              onOpenProjectWithAgent={handleOpenProjectWithAgent}
+            />
+          )}
           <Suspense fallback={null}>
             {currentView === 'wizard' && <NewProjectWizard onCreateProject={handleOpenProject} />}
             {currentView === 'settings' && <ProjectSettings key={settingsProjectId} />}

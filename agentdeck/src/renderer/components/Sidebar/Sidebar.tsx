@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { useProjects } from '../../hooks/useProjects'
-import type { Project } from '../../../shared/types'
+import type { AgentConfig, Project } from '../../../shared/types'
+import { getProjectAgents } from '../../../shared/agent-helpers'
+import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
 import { groupTemplates } from '../../utils/templateUtils'
 import { createBlankWorkflow } from '../../utils/workflowUtils'
 import './Sidebar.css'
@@ -12,9 +14,13 @@ function badgeClass(badge: string): string {
 
 interface SidebarProps {
   onOpenProject: (project: Project) => void
+  onOpenProjectWithAgent: (project: Project, agentConfig: AgentConfig) => void
 }
 
-export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
+export function Sidebar({
+  onOpenProject,
+  onOpenProjectWithAgent,
+}: SidebarProps): React.JSX.Element {
   const projects = useAppStore((s) => s.projects)
   const templates = useAppStore((s) => s.templates)
   const sessions = useAppStore((s) => s.sessions)
@@ -41,7 +47,7 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
     y: number
     projectId?: string | undefined
     workflowId?: string | undefined
-    subMenu?: 'templates' | undefined
+    subMenu?: 'templates' | 'agents' | undefined
   } | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -279,6 +285,12 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
             <>
               <button
                 className="sidebar-context-item"
+                onClick={() => setContextMenu({ ...contextMenu, subMenu: 'agents' })}
+              >
+                {'Launch with... \u25B8'}
+              </button>
+              <button
+                className="sidebar-context-item"
                 onClick={() => setContextMenu({ ...contextMenu, subMenu: 'templates' })}
               >
                 Attach Templates
@@ -328,6 +340,45 @@ export function Sidebar({ onOpenProject }: SidebarProps): React.JSX.Element {
               </div>
             </div>
           )}
+          {contextMenu.projectId &&
+            contextMenu.subMenu === 'agents' &&
+            (() => {
+              const project = projects.find((p) => p.id === contextMenu.projectId)
+              if (!project) return null
+              const projectAgents = getProjectAgents(project)
+              return (
+                <div className="sidebar-ctx-tpl-panel">
+                  <div className="sidebar-ctx-tpl-header">
+                    <button
+                      className="sidebar-ctx-back"
+                      onClick={() => setContextMenu({ ...contextMenu, subMenu: undefined })}
+                    >
+                      {'\u2190'}
+                    </button>
+                    <span>Launch with...</span>
+                  </div>
+                  <div className="sidebar-ctx-tpl-body">
+                    {projectAgents.map((ac) => {
+                      const agentMeta = SHARED_AGENTS.find((a) => a.id === ac.agent)
+                      return (
+                        <button
+                          key={ac.agent}
+                          className="sidebar-context-item sidebar-agent-item"
+                          onClick={() => {
+                            onOpenProjectWithAgent(project, ac)
+                            closeMenu()
+                          }}
+                        >
+                          <span className="sidebar-agent-icon">{agentMeta?.icon ?? '\u25C8'}</span>
+                          <span className="sidebar-agent-name">{agentMeta?.name ?? ac.agent}</span>
+                          {ac.isDefault && <span className="sidebar-agent-default">DEFAULT</span>}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })()}
           {contextMenu.workflowId && (
             <>
               <button className="sidebar-context-item" onClick={handleRenameWorkflow}>

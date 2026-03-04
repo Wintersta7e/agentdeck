@@ -420,6 +420,35 @@
   background: var(--purple-dim);
 }
 
+/* ─── Agent launch sub-panel ─── */
+.sidebar-agent-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebar-agent-icon {
+  font-size: 14px;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.sidebar-agent-name {
+  flex: 1;
+  text-align: left;
+}
+
+.sidebar-agent-default {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.12);
+  padding: 1px 5px;
+  border-radius: var(--r);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sidebar-item,
   .new-project-btn {
