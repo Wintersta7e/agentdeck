@@ -328,22 +328,17 @@
   margin-top: 1px;
 }
 .agent-row-check {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  background: var(--bg0);
+  width: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 9px;
+  font-size: 14px;
   flex-shrink: 0;
-  transition: all 0.12s;
+  color: var(--text3);
+  transition: color 0.12s;
 }
 .agent-row.selected .agent-row-check {
-  background: var(--amber);
-  border-color: var(--amber);
-  color: var(--bg0);
+  color: var(--accent);
 }
 
 /* Template chips (settings) */
@@ -646,4 +641,54 @@
   outline: none;
   margin-right: 8px;
   width: 200px;
+}
+
+/* Multi-agent tab */
+.agent-multi-row {
+  display: flex;
+  flex-direction: column;
+}
+
+.agent-star-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: var(--text3);
+  padding: 2px 4px;
+  flex-shrink: 0;
+}
+
+.agent-star-btn.active {
+  color: var(--accent);
+}
+
+.agent-star-btn:hover {
+  color: var(--accent);
+}
+
+.agent-expand-btn {
+  background: none;
+  border: none;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--text3);
+  padding: 2px 6px;
+  flex-shrink: 0;
+}
+
+.agent-expand-btn:hover {
+  color: var(--text1);
+}
+
+.agent-flags-panel {
+  padding: 8px 12px 12px 40px;
+  background: rgba(var(--accent-rgb), 0.04);
+  border-bottom: 1px solid var(--bg3);
+}
+
+.section-head-sub {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 2px;
 }

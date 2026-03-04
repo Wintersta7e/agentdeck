@@ -1,83 +1,148 @@
+import { useState } from 'react'
 import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
 import type { Project, AgentType } from '../../../shared/types'
+import { getProjectAgents } from '../../../shared/agent-helpers'
 
 interface TabProps {
   draft: Project
   onChange: (updates: Partial<Project>) => void
 }
 
-const AGENTS: { type: AgentType; icon: string; name: string; desc: string }[] = SHARED_AGENTS.map(
-  (a) => ({ type: a.id, icon: a.icon, name: a.id, desc: a.description }),
-)
-
 export function AgentTab({ draft, onChange }: TabProps): React.JSX.Element {
-  const selectedAgent = draft.agent ?? 'claude-code'
+  const agents = getProjectAgents(draft)
+  const [expandedAgent, setExpandedAgent] = useState<string | null>(null)
+
+  function isEnabled(agentId: AgentType): boolean {
+    return agents.some((a) => a.agent === agentId)
+  }
+
+  function getDefault(): AgentType {
+    return agents.find((a) => a.isDefault)?.agent ?? agents[0]?.agent ?? 'claude-code'
+  }
+
+  function toggleAgent(agentId: AgentType): void {
+    const current = [...agents]
+    const idx = current.findIndex((a) => a.agent === agentId)
+    if (idx >= 0) {
+      // Don't allow removing the last agent
+      if (current.length <= 1) return
+      const removed = current[idx]
+      current.splice(idx, 1)
+      // If removing the default, mark the first remaining as default
+      if (removed?.isDefault && current.length > 0) {
+        const first = current[0]
+        if (first) {
+          current[0] = { ...first, isDefault: true }
+        }
+      }
+      // Collapse if we're disabling the expanded agent
+      if (expandedAgent === agentId) setExpandedAgent(null)
+    } else {
+      current.push({ agent: agentId })
+    }
+    onChange({ agents: current })
+  }
+
+  function setDefault(agentId: AgentType): void {
+    const updated = agents.map((a) => ({
+      ...a,
+      isDefault: a.agent === agentId ? true : undefined,
+    }))
+    onChange({ agents: updated })
+  }
+
+  function updateAgentFlags(agentId: AgentType, flags: string): void {
+    const updated = agents.map((a) =>
+      a.agent === agentId ? { ...a, agentFlags: flags || undefined } : a,
+    )
+    onChange({ agents: updated })
+  }
+
+  function getAgentFlags(agentId: AgentType): string {
+    return agents.find((a) => a.agent === agentId)?.agentFlags ?? ''
+  }
 
   return (
     <div className="settings-tab-panel">
-      {/* Agent Selection */}
       <div className="settings-section">
         <div className="section-head">
-          <div className="section-head-title">Agent Selection</div>
+          <div className="section-head-title">Agents</div>
+          <div className="section-head-sub">Check agents to enable, star one as default</div>
         </div>
         <div className="section-body">
-          {AGENTS.map((agent) => {
-            const isSelected = selectedAgent === agent.type
+          {SHARED_AGENTS.map((agentDef) => {
+            const enabled = isEnabled(agentDef.id)
+            const isDefaultAgent = getDefault() === agentDef.id
+            const isExpanded = expandedAgent === agentDef.id && enabled
             return (
-              <div
-                key={agent.type}
-                className={`agent-row${isSelected ? ' selected' : ''}`}
-                onClick={() => onChange({ agent: agent.type })}
-              >
-                <div className="agent-row-icon">{agent.icon}</div>
-                <div className="agent-row-info">
-                  <div className="agent-row-name">{agent.name}</div>
-                  <div className="agent-row-desc">{agent.desc}</div>
+              <div key={agentDef.id} className="agent-multi-row">
+                <div
+                  className={`agent-row${enabled ? ' selected' : ''}`}
+                  onClick={() => toggleAgent(agentDef.id)}
+                >
+                  <div className="agent-row-check">{enabled ? '\u2611' : '\u2610'}</div>
+                  <div className="agent-row-icon">{agentDef.icon}</div>
+                  <div className="agent-row-info">
+                    <div className="agent-row-name">{agentDef.name}</div>
+                    <div className="agent-row-desc">{agentDef.description}</div>
+                  </div>
+                  {enabled && (
+                    <button
+                      className={`agent-star-btn${isDefaultAgent ? ' active' : ''}`}
+                      title={isDefaultAgent ? 'Default agent' : 'Set as default'}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setDefault(agentDef.id)
+                      }}
+                    >
+                      {isDefaultAgent ? '\u2605' : '\u2606'}
+                    </button>
+                  )}
+                  {enabled && (
+                    <button
+                      className="agent-expand-btn"
+                      title="Configure flags"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setExpandedAgent(isExpanded ? null : agentDef.id)
+                      }}
+                    >
+                      {isExpanded ? '\u25B4' : '\u25BE'}
+                    </button>
+                  )}
                 </div>
-                <div className="agent-row-check">{isSelected ? '\u2713' : ''}</div>
+                {isExpanded && (
+                  <div className="agent-flags-panel">
+                    <div className="form-row">
+                      <div className="form-label-col">
+                        <div className="form-label">Custom flags</div>
+                        <div className="form-sublabel">Appended to the agent command</div>
+                      </div>
+                      <div className="form-control-col">
+                        <input
+                          type="text"
+                          className="settings-input"
+                          value={getAgentFlags(agentDef.id)}
+                          onChange={(e) => updateAgentFlags(agentDef.id, e.target.value)}
+                          maxLength={200}
+                          placeholder="e.g. --model claude-opus-4-5"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )
           })}
         </div>
       </div>
 
-      {/* Agent Options */}
+      {/* Context File — shared across all agents */}
       <div className="settings-section">
         <div className="section-head">
-          <div className="section-head-title">Agent Options</div>
+          <div className="section-head-title">Context File</div>
         </div>
         <div className="section-body">
-          <div className="form-row">
-            <div className="form-label-col">
-              <div className="form-label">Custom flags</div>
-              <div className="form-sublabel">Appended to the agent command</div>
-            </div>
-            <div className="form-control-col">
-              <input
-                type="text"
-                className="settings-input"
-                value={draft.agentFlags ?? ''}
-                onChange={(e) => onChange({ agentFlags: e.target.value })}
-                onPaste={(e) => {
-                  e.preventDefault()
-                  const text = e.clipboardData
-                    .getData('text/plain')
-                    .replace(/[\r\n]+/g, ' ')
-                    .trim()
-                    .slice(0, 200)
-                  const input = e.currentTarget
-                  const start = input.selectionStart ?? 0
-                  const end = input.selectionEnd ?? 0
-                  const current = draft.agentFlags ?? ''
-                  const next = current.slice(0, start) + text + current.slice(end)
-                  onChange({ agentFlags: next.slice(0, 200) })
-                }}
-                maxLength={200}
-                placeholder="e.g. --model claude-opus-4-5"
-              />
-            </div>
-          </div>
-
           <div className="form-row">
             <div className="form-label-col">
               <div className="form-label">Context file</div>
