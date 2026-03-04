@@ -3,6 +3,7 @@ import { Terminal, type ITheme } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebglAddon } from '@xterm/addon-webgl'
 import { Unicode11Addon } from '@xterm/addon-unicode11'
+import { SearchAddon } from '@xterm/addon-search'
 import '@xterm/xterm/css/xterm.css'
 import { useAppStore } from '../../store/appStore'
 import { subscribeTheme } from '../../utils/themeObserver'
@@ -124,6 +125,7 @@ interface CachedTerminal {
   term: Terminal
   fit: FitAddon
   webgl: WebglAddon | null
+  search: SearchAddon
 }
 const terminalCache = new Map<string, CachedTerminal>()
 
@@ -153,6 +155,7 @@ export function TerminalPane({
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
+  const searchRef = useRef<SearchAddon | null>(null)
   const exitTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const projectPathRef = useRef(projectPath)
   const startupRef = useRef(startupCommands)
@@ -171,6 +174,7 @@ export function TerminalPane({
     let term: Terminal
     let fit: FitAddon
     let webglAddon: WebglAddon | null = null
+    let search: SearchAddon | null = null
     let isReattached = false
 
     // ── Try to reclaim a cached terminal (tab switch back) ──
@@ -180,6 +184,8 @@ export function TerminalPane({
       term = cached.term
       fit = cached.fit
       webglAddon = cached.webgl
+      search = cached.search
+      searchRef.current = search
       isReattached = true
       // Move the xterm DOM tree into the new container
       if (term.element) {
@@ -241,6 +247,11 @@ export function TerminalPane({
       const unicode11 = new Unicode11Addon()
       term.loadAddon(unicode11)
       term.unicode.activeVersion = '11'
+
+      // Load search addon (cached across tab switches for find-in-terminal)
+      search = new SearchAddon()
+      term.loadAddon(search)
+      searchRef.current = search
 
       // Load WebGL renderer for GPU-accelerated painting (fallback: canvas 2D)
       try {
@@ -360,6 +371,7 @@ export function TerminalPane({
       // Null out refs so stale async callbacks (rAF, setTimeout) can't use them
       termRef.current = null
       fitRef.current = null
+      searchRef.current = null
 
       const state = useAppStore.getState()
       if (state.sessions[sessionId]) {
@@ -368,7 +380,13 @@ export function TerminalPane({
         if (term.element?.parentElement) {
           term.element.parentElement.removeChild(term.element)
         }
-        terminalCache.set(sessionId, { term, fit, webgl: webglAddon })
+        // search is always non-null here — assigned in both cache-reclaim and fresh-creation paths
+        terminalCache.set(sessionId, {
+          term,
+          fit,
+          webgl: webglAddon,
+          search: search as SearchAddon,
+        })
       } else {
         // Session removed → dispose everything
         try {
