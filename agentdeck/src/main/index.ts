@@ -207,15 +207,16 @@ function registerIpcHandlers(store: AppStore): void {
         })
       })
 
-    await Promise.all([
+    // Run diagnostics in parallel with agent checks (diagnostics are for logging only,
+    // they don't gate the agent results)
+    const diagnosticsPromise = Promise.all([
       wslDiag('distro', ['--status']),
       wslDiag('default-shell', ['--', 'bash', '-c', 'echo $SHELL']),
       wslDiag('bash-version', ['--', 'bash', '--version']),
       wslDiag('PATH', ['--', 'bash', '-lic', 'echo "$PATH"']),
       wslDiag('npm-global-bin', ['--', 'bash', '-lic', 'npm bin -g 2>/dev/null']),
       wslDiag('node-version', ['--', 'bash', '-lic', 'node --version 2>/dev/null']),
-    ])
-    log.debug(`WSL diagnostics completed in ${Date.now() - t0}ms`)
+    ]).then(() => log.debug(`WSL diagnostics completed in ${Date.now() - t0}ms`))
 
     // Check each agent binary — first via PATH, then search common locations
     const check = (bin: string): Promise<boolean> =>
@@ -287,7 +288,10 @@ function registerIpcHandlers(store: AppStore): void {
       })
 
     const entries = Object.entries(AGENT_BINARY_MAP)
-    const results = await Promise.all(entries.map(([, bin]) => check(bin)))
+    const [, results] = await Promise.all([
+      diagnosticsPromise,
+      Promise.all(entries.map(([, bin]) => check(bin))),
+    ])
     log.info(`Agent detection total: ${Date.now() - t0}ms`)
     return Object.fromEntries(entries.map(([name], i) => [name, results[i]]))
   })
