@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Terminal, type ITheme } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebglAddon } from '@xterm/addon-webgl'
@@ -7,6 +7,7 @@ import { SearchAddon } from '@xterm/addon-search'
 import '@xterm/xterm/css/xterm.css'
 import { useAppStore } from '../../store/appStore'
 import { subscribeTheme } from '../../utils/themeObserver'
+import { TerminalSearchBar } from './TerminalSearchBar'
 import './TerminalPane.css'
 
 const BASE_XTERM_THEME: ITheme = {
@@ -129,6 +130,12 @@ interface CachedTerminal {
 }
 const terminalCache = new Map<string, CachedTerminal>()
 
+// Module-level map for render-time access to SearchAddon instances.
+// Using a module-scope Map (like terminalCache) avoids ESLint react-hooks/refs
+// (can't read useRef.current in render) and react-hooks/immutability (can't
+// mutate useMemo results). The Map is populated in useEffect and read in JSX.
+const searchAddonMap = new Map<string, SearchAddon>()
+
 interface TerminalPaneProps {
   sessionId: string
   focused?: boolean | undefined
@@ -152,6 +159,7 @@ export function TerminalPane({
   agentFlags,
   scrollback,
 }: TerminalPaneProps): React.JSX.Element {
+  const [searchOpen, setSearchOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
@@ -186,6 +194,7 @@ export function TerminalPane({
       webglAddon = cached.webgl
       search = cached.search
       searchRef.current = search
+      searchAddonMap.set(sessionId, search)
       isReattached = true
       // Move the xterm DOM tree into the new container
       if (term.element) {
@@ -206,6 +215,12 @@ export function TerminalPane({
       // Copy/paste: Ctrl+Shift+C/V or Ctrl+C (with selection) / Ctrl+V
       term.attachCustomKeyEventHandler((e: KeyboardEvent) => {
         if (e.type !== 'keydown') return true
+        // Search: Ctrl+Shift+F
+        if (e.ctrlKey && e.shiftKey && e.key === 'F') {
+          e.preventDefault()
+          setSearchOpen((v) => !v)
+          return false
+        }
         // Ctrl+Shift+C or Ctrl+C with selection → copy
         if (e.ctrlKey && e.key === 'c' && (e.shiftKey || term.hasSelection())) {
           navigator.clipboard.writeText(term.getSelection()).catch(() => {})
@@ -252,6 +267,7 @@ export function TerminalPane({
       search = new SearchAddon()
       term.loadAddon(search)
       searchRef.current = search
+      searchAddonMap.set(sessionId, search)
 
       // Load WebGL renderer for GPU-accelerated painting (fallback: canvas 2D)
       try {
@@ -372,6 +388,7 @@ export function TerminalPane({
       termRef.current = null
       fitRef.current = null
       searchRef.current = null
+      searchAddonMap.delete(sessionId)
 
       const state = useAppStore.getState()
       if (state.sessions[sessionId]) {
@@ -460,5 +477,16 @@ export function TerminalPane({
     return () => io.disconnect()
   }, [sessionId])
 
-  return <div ref={containerRef} className="terminal-container" />
+  const searchAddon = searchAddonMap.get(sessionId)
+  return (
+    <div ref={containerRef} className="terminal-container">
+      {searchAddon && (
+        <TerminalSearchBar
+          searchAddon={searchAddon}
+          visible={searchOpen}
+          onClose={() => setSearchOpen(false)}
+        />
+      )}
+    </div>
+  )
 }
