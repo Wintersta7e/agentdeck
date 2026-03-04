@@ -113,6 +113,11 @@
   letter-spacing: 0.12em;
   font-weight: 600;
 }
+.section-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
 .section-action {
   font-size: 10px;
   color: var(--text2);

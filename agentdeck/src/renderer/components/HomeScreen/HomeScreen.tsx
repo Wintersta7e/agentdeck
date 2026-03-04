@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { ParticleField } from './ParticleField'
 import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
@@ -118,36 +118,10 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
     return map
   }, [projectStatusStr])
 
-  const [agentStatus, setAgentStatus] = useState<Record<string, boolean>>({})
-  const [username, setUsername] = useState('')
+  const agentStatus = useAppStore((s) => s.agentStatus)
+  const username = useAppStore((s) => s.wslUsername)
+  const refreshAgentStatus = useAppStore((s) => s.refreshAgentStatus)
   const [showAllRecent, setShowAllRecent] = useState(false)
-
-  useEffect(() => {
-    let cancelled = false
-    window.agentDeck.app
-      .wslUsername()
-      .then((name) => {
-        if (!cancelled) setUsername(name)
-      })
-      .catch((err: unknown) => {
-        window.agentDeck.log.send('warn', 'home', 'WSL username fetch failed', {
-          err: String(err),
-        })
-      })
-    window.agentDeck.agents
-      .check()
-      .then((status) => {
-        if (!cancelled) setAgentStatus(status)
-      })
-      .catch((err: unknown) => {
-        window.agentDeck.log.send('error', 'home', 'Agent detection failed', {
-          err: String(err),
-        })
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   const pinned = useMemo(() => projects.filter((p) => p.pinned), [projects])
   const allRecent = useMemo(
@@ -324,9 +298,14 @@ export function HomeScreen({ onOpenProject }: HomeScreenProps): React.JSX.Elemen
 
         <div className="section-header">
           <div className="section-title">Available Agents</div>
-          <button className="section-action" onClick={() => openCommandPalette('agents')}>
-            {'Configure \u2192'}
-          </button>
+          <div className="section-actions">
+            <button className="section-action" onClick={() => void refreshAgentStatus()}>
+              {'Refresh \u21BB'}
+            </button>
+            <button className="section-action" onClick={() => openCommandPalette('agents')}>
+              {'Configure \u2192'}
+            </button>
+          </div>
         </div>
         <div className="agent-grid">
           {AGENTS.filter((a) => !visibleAgents || visibleAgents.includes(a.name)).map((a) => (
