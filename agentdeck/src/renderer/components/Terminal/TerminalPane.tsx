@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Terminal, type ITheme } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebglAddon } from '@xterm/addon-webgl'
+import { Unicode11Addon } from '@xterm/addon-unicode11'
 import '@xterm/xterm/css/xterm.css'
 import { useAppStore } from '../../store/appStore'
 import { subscribeTheme } from '../../utils/themeObserver'
@@ -232,6 +233,11 @@ export function TerminalPane({
       fit = new FitAddon()
       term.loadAddon(fit)
       term.open(containerRef.current)
+
+      // Enable Unicode 11 for proper emoji & CJK character width
+      const unicode11 = new Unicode11Addon()
+      term.loadAddon(unicode11)
+      term.unicode.activeVersion = '11'
 
       // Load WebGL renderer for GPU-accelerated painting (fallback: canvas 2D)
       try {
