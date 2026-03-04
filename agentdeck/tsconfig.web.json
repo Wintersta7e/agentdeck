@@ -6,7 +6,7 @@
     "target": "ESNext",
     "jsx": "react-jsx",
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "types": ["vitest/globals"],
+    "types": ["vitest/globals", "@testing-library/jest-dom/vitest"],
     "outDir": "out"
   },
   "include": ["src/renderer/**/*", "src/shared/**/*"]
