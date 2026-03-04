@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useStoreWithEqualityFn } from 'zustand/traditional'
 import { useAppStore } from '../../store/appStore'
+import { getDefaultAgent } from '../../../shared/agent-helpers'
 import { PaneTopbar } from './PaneTopbar'
 import { TerminalPane } from '../Terminal/TerminalPane'
 import type { PaneLayout } from '../../../shared/types'
@@ -16,13 +17,26 @@ export function SplitView(): React.JSX.Element {
   const paneLayout = useAppStore((s) => s.paneLayout)
   const focusedPane = useAppStore((s) => s.focusedPane)
   const paneSessions = useAppStore((s) => s.paneSessions)
-  // Narrow selector: only re-render when session IDs or projectIds change
+  // Narrow selector: only re-render when session IDs, projectIds, or agent overrides change
   const sessions = useStoreWithEqualityFn(
     useAppStore,
     (s) => {
-      const result: Record<string, { id: string; projectId: string }> = {}
+      const result: Record<
+        string,
+        {
+          id: string
+          projectId: string
+          agentOverride?: string | undefined
+          agentFlagsOverride?: string | undefined
+        }
+      > = {}
       for (const [id, session] of Object.entries(s.sessions)) {
-        result[id] = { id: session.id, projectId: session.projectId }
+        result[id] = {
+          id: session.id,
+          projectId: session.projectId,
+          agentOverride: session.agentOverride,
+          agentFlagsOverride: session.agentFlagsOverride,
+        }
       }
       return result
     },
@@ -32,6 +46,8 @@ export function SplitView(): React.JSX.Element {
       if (aKeys.length !== bKeys.length) return false
       for (const key of aKeys) {
         if (a[key]?.projectId !== b[key]?.projectId) return false
+        if (a[key]?.agentOverride !== b[key]?.agentOverride) return false
+        if (a[key]?.agentFlagsOverride !== b[key]?.agentFlagsOverride) return false
       }
       return true
     },
@@ -211,8 +227,14 @@ export function SplitView(): React.JSX.Element {
                     projectPath={project?.path}
                     startupCommands={project ? startupCommandsMap[project.id] : undefined}
                     env={project ? envMap[project.id] : undefined}
-                    agent={project?.agent ?? undefined}
-                    agentFlags={project?.agentFlags ?? undefined}
+                    agent={
+                      session?.agentOverride ??
+                      (project ? getDefaultAgent(project).agent : undefined)
+                    }
+                    agentFlags={
+                      session?.agentFlagsOverride ??
+                      (project ? getDefaultAgent(project).agentFlags : undefined)
+                    }
                   />
                 </>
               ) : (
@@ -239,8 +261,14 @@ export function SplitView(): React.JSX.Element {
               projectPath={project?.path}
               startupCommands={project ? startupCommandsMap[project.id] : undefined}
               env={project ? envMap[project.id] : undefined}
-              agent={project?.agent ?? undefined}
-              agentFlags={project?.agentFlags ?? undefined}
+              agent={
+                sessions[sid]?.agentOverride ??
+                (project ? getDefaultAgent(project).agent : undefined)
+              }
+              agentFlags={
+                sessions[sid]?.agentFlagsOverride ??
+                (project ? getDefaultAgent(project).agentFlags : undefined)
+              }
             />
           </div>
         )
