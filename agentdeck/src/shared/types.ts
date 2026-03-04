@@ -35,6 +35,12 @@ export interface ProjectIdentity {
   accentColor: string
 }
 
+export interface AgentConfig {
+  agent: AgentType
+  agentFlags?: string | undefined
+  isDefault?: boolean | undefined
+}
+
 export interface Project {
   id: string
   name: string
@@ -49,6 +55,7 @@ export interface Project {
   envVars?: EnvVar[] | undefined
   agent?: AgentType | undefined
   agentFlags?: string | undefined
+  agents?: AgentConfig[] | undefined
   contextFile?: string | undefined
   identity?: ProjectIdentity | undefined
   autoOpen?: boolean | undefined
@@ -91,6 +98,8 @@ export interface Session {
   projectId: string
   status: SessionStatus
   startedAt: number
+  agentOverride?: AgentType | undefined
+  agentFlagsOverride?: string | undefined
 }
 
 export type ViewType = 'home' | 'session' | 'wizard' | 'settings' | 'template-editor' | 'workflow'
