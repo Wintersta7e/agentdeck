@@ -1,11 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import type {
-  Project,
-  StartupCommand,
-  EnvVar,
-  DetectedStack,
-  AgentType,
-} from '../../../shared/types'
+import type { Project, StartupCommand, EnvVar, DetectedStack } from '../../../shared/types'
 import { useProjects } from '../../hooks/useProjects'
 import { useAppStore } from '../../store/appStore'
 import { groupTemplates } from '../../utils/templateUtils'
@@ -36,7 +30,7 @@ export function NewProjectWizard({ onCreateProject }: NewProjectWizardProps): Re
 
   const [currentStep, setCurrentStep] = useState(0)
   const [wizardData, setWizardData] = useState<Partial<Project>>({
-    agent: 'claude-code',
+    agents: [{ agent: 'claude-code', isDefault: true }],
     pinned: true,
     startupCommands: [],
     envVars: [],
@@ -83,7 +77,7 @@ export function NewProjectWizard({ onCreateProject }: NewProjectWizardProps): Re
           setWizardData((prev) => ({
             ...prev,
             badge: result.badge,
-            agent: result.suggestedAgent,
+            agents: [{ agent: result.suggestedAgent, isDefault: true }],
             startupCommands: result.suggestedCommands.map((cmd) => ({
               id: crypto.randomUUID(),
               value: cmd,
@@ -181,7 +175,7 @@ export function NewProjectWizard({ onCreateProject }: NewProjectWizardProps): Re
       case 0:
         return Boolean(wizardData.path?.trim())
       case 3:
-        return Boolean(wizardData.agent)
+        return Boolean(wizardData.agents && wizardData.agents.length > 0)
       default:
         return true
     }
@@ -387,8 +381,8 @@ export function NewProjectWizard({ onCreateProject }: NewProjectWizardProps): Re
                 Agent <span className="wizard-field-required">*</span>
               </div>
               <AgentSelector
-                value={(wizardData.agent as AgentType) ?? 'claude-code'}
-                onChange={(agent) => updateField('agent', agent)}
+                value={wizardData.agents?.[0]?.agent ?? 'claude-code'}
+                onChange={(agent) => updateField('agents', [{ agent, isDefault: true }])}
               />
             </div>
 
@@ -465,7 +459,7 @@ export function NewProjectWizard({ onCreateProject }: NewProjectWizardProps): Re
                 <div className="summary-row">
                   <div className="summary-label">Agent</div>
                   <div className="summary-value" style={{ color: 'var(--amber)' }}>
-                    {wizardData.agent ?? 'claude-code'}
+                    {wizardData.agents?.[0]?.agent ?? 'claude-code'}
                   </div>
                 </div>
                 {(wizardData.startupCommands ?? []).length > 0 && (
