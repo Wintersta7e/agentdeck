@@ -35,6 +35,13 @@ async function initAndRender(): Promise<void> {
     ...(layout.wfLogPanelWidth !== undefined && { wfLogPanelWidth: layout.wfLogPanelWidth }),
   })
 
+  // Pre-fetch WSL username + agent detection (parallel, non-blocking on failure)
+  const [username, agentStatusResult] = await Promise.all([
+    window.agentDeck.app.wslUsername().catch(() => ''),
+    window.agentDeck.agents.check().catch(() => ({}) as Record<string, boolean>),
+  ])
+  useAppStore.setState({ wslUsername: username, agentStatus: agentStatusResult })
+
   const root = document.getElementById('root')
   if (!root) throw new Error('Root element #root not found')
 
