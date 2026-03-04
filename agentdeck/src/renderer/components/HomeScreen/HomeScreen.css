@@ -585,3 +585,90 @@
     animation: none;
   }
 }
+
+/* Agent chips on project cards */
+.card-agents {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.card-agent-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 13px;
+  padding: 1px 4px;
+  border-radius: var(--r);
+  background: rgba(var(--bg4-rgb, 255, 255, 255), 0.06);
+}
+
+.card-agent-chip.default {
+  background: rgba(var(--accent-rgb), 0.12);
+}
+
+.card-agent-star {
+  font-size: 8px;
+  color: var(--accent);
+}
+
+/* Right-click context menu */
+.home-context-menu {
+  position: fixed;
+  z-index: 2000;
+  background: var(--bg1);
+  border: 1px solid var(--bg3);
+  border-radius: var(--r);
+  padding: 4px 0;
+  min-width: 180px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.home-context-header {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text3);
+  padding: 6px 12px 4px;
+}
+
+.home-context-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 12px;
+  background: none;
+  border: none;
+  color: var(--text1);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-mono);
+}
+
+.home-context-item:hover {
+  background: rgba(var(--accent-rgb), 0.1);
+}
+
+.home-ctx-agent-icon {
+  font-size: 14px;
+  width: 20px;
+  text-align: center;
+}
+
+.home-ctx-agent-name {
+  flex: 1;
+}
+
+.home-ctx-agent-badge {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.12);
+  padding: 1px 5px;
+  border-radius: var(--r);
+}

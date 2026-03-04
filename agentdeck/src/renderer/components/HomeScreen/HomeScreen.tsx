@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { ParticleField } from './ParticleField'
 import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
 import type { AgentConfig, Project, Template, StackBadge } from '../../../shared/types'
+import { getProjectAgents } from '../../../shared/agent-helpers'
 import './HomeScreen.css'
 
 function timeAgo(timestamp: number | undefined): string {
@@ -87,7 +88,7 @@ interface HomeScreenProps {
 
 export function HomeScreen({
   onOpenProject,
-  onOpenProjectWithAgent: _onOpenProjectWithAgent,
+  onOpenProjectWithAgent,
 }: HomeScreenProps): React.JSX.Element {
   const projects = useAppStore((s) => s.projects)
   const templates = useAppStore((s) => s.templates)
@@ -126,6 +127,12 @@ export function HomeScreen({
   const username = useAppStore((s) => s.wslUsername)
   const refreshAgentStatus = useAppStore((s) => s.refreshAgentStatus)
   const [showAllRecent, setShowAllRecent] = useState(false)
+  const [cardMenu, setCardMenu] = useState<{
+    x: number
+    y: number
+    projectId: string
+  } | null>(null)
+  const cardMenuRef = useRef<HTMLDivElement>(null)
 
   const pinned = useMemo(() => projects.filter((p) => p.pinned), [projects])
   const allRecent = useMemo(
@@ -143,6 +150,24 @@ export function HomeScreen({
     for (const t of templates) map.set(t.id, t)
     return map
   }, [templates])
+
+  useEffect(() => {
+    if (!cardMenu) return
+    function handleClick(e: MouseEvent): void {
+      if (cardMenuRef.current && !cardMenuRef.current.contains(e.target as Node)) {
+        setCardMenu(null)
+      }
+    }
+    function handleKey(e: KeyboardEvent): void {
+      if (e.key === 'Escape') setCardMenu(null)
+    }
+    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [cardMenu])
 
   function getProjectStatus(projectId: string): string {
     return projectStatusMap[projectId] ?? 'idle'
@@ -224,6 +249,10 @@ export function HomeScreen({
                     className={`project-card stagger-item ${status === 'running' ? 'running' : ''} ${status === 'error' ? 'error' : ''}`}
                     style={{ animationDelay: `${index * 60}ms` }}
                     onClick={() => onOpenProject(p)}
+                    onContextMenu={(e) => {
+                      e.preventDefault()
+                      setCardMenu({ x: e.clientX, y: e.clientY, projectId: p.id })
+                    }}
                   >
                     <div className="card-top">
                       <div
@@ -256,6 +285,21 @@ export function HomeScreen({
                         ))}
                       </div>
                     )}
+                    <div className="card-agents">
+                      {getProjectAgents(p).map((ac) => {
+                        const meta = SHARED_AGENTS.find((a) => a.id === ac.agent)
+                        return (
+                          <span
+                            key={ac.agent}
+                            className={`card-agent-chip${ac.isDefault ? ' default' : ''}`}
+                            title={meta?.name ?? ac.agent}
+                          >
+                            {meta?.icon ?? '\u25C8'}
+                            {ac.isDefault && <span className="card-agent-star">{'\u2605'}</span>}
+                          </span>
+                        )
+                      })}
+                    </div>
                   </div>
                 )
               })}
@@ -331,6 +375,39 @@ export function HomeScreen({
           </div>
         </div>
       </div>
+
+      {cardMenu &&
+        (() => {
+          const project = projects.find((pp) => pp.id === cardMenu.projectId)
+          if (!project) return null
+          const projectAgents = getProjectAgents(project)
+          return (
+            <div
+              ref={cardMenuRef}
+              className="home-context-menu"
+              style={{ top: cardMenu.y, left: cardMenu.x }}
+            >
+              <div className="home-context-header">Launch with...</div>
+              {projectAgents.map((ac) => {
+                const agentMeta = SHARED_AGENTS.find((a) => a.id === ac.agent)
+                return (
+                  <button
+                    key={ac.agent}
+                    className="home-context-item"
+                    onClick={() => {
+                      onOpenProjectWithAgent(project, ac)
+                      setCardMenu(null)
+                    }}
+                  >
+                    <span className="home-ctx-agent-icon">{agentMeta?.icon ?? '\u25C8'}</span>
+                    <span className="home-ctx-agent-name">{agentMeta?.name ?? ac.agent}</span>
+                    {ac.isDefault && <span className="home-ctx-agent-badge">DEFAULT</span>}
+                  </button>
+                )
+              })}
+            </div>
+          )
+        })()}
     </div>
   )
 }
