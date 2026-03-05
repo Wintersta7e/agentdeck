@@ -434,7 +434,7 @@ function registerIpcHandlers(store: AppStore): void {
     // H1: Validate projectPath if provided (WSL absolute path, allow spaces, reject ..)
     if (
       wslPath !== undefined &&
-      (!/^\/[a-zA-Z0-9 _./-]+$/.test(wslPath) || wslPath.includes('..'))
+      (!/^\/[^\x00;|&`$<>\\]+$/.test(wslPath) || wslPath.includes('..'))
     ) {
       throw new Error(`Invalid project path: ${wslPath}`)
     }
