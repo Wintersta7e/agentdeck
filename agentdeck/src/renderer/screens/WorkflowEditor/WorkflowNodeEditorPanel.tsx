@@ -261,16 +261,23 @@ export default function WorkflowNodeEditorPanel({
         {/* Timeout (shell + agent nodes) */}
         {(node.type === 'shell' || node.type === 'agent') && (
           <div className="wf-ne-field">
-            <label className="wf-ne-label">Timeout (ms)</label>
+            <label className="wf-ne-label">
+              {node.type === 'agent' ? 'Absolute Timeout (ms, optional)' : 'Timeout (ms)'}
+            </label>
             <input
               className="wf-ne-input"
               type="number"
-              min={1}
-              value={node.timeout ?? (node.type === 'shell' ? 60000 : 300000)}
+              min={0}
+              placeholder={node.type === 'agent' ? 'Idle timeout only (2 min silence)' : '60000'}
+              value={node.timeout ?? (node.type === 'shell' ? 60000 : '')}
               onChange={(e) => {
                 const val = parseInt(e.target.value, 10)
-                const fallback = node.type === 'shell' ? 60000 : 300000
-                update({ timeout: val > 0 ? val : fallback })
+                if (node.type === 'agent') {
+                  // Agent: 0 or empty = no absolute timeout (idle timeout handles stuck agents)
+                  update({ timeout: val > 0 ? val : undefined })
+                } else {
+                  update({ timeout: val > 0 ? val : 60000 })
+                }
               }}
             />
           </div>

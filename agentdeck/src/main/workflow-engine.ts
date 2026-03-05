@@ -48,8 +48,11 @@ const NODE_INIT =
     'true',
   ].join('; ') + '; '
 
-/** Default timeout for agent nodes (ms) — prevents stuck processes (e.g. codex) */
-export const DEFAULT_AGENT_TIMEOUT = 300_000 // 5 minutes
+/** How long an agent node can be idle (no stdout/stderr) before being killed (ms) */
+export const AGENT_IDLE_TIMEOUT = 120_000 // 2 minutes of silence
+
+/** How often to check whether an agent node has gone idle (ms) */
+const IDLE_CHECK_INTERVAL = 30_000
 
 /** Max number of nodes to run concurrently within a single tier */
 const MAX_TIER_CONCURRENCY = 5
@@ -211,6 +214,12 @@ export function createWorkflowEngine(
       })
       return
     }
+    log.info('Starting workflow', {
+      id: workflow.id,
+      name: workflow.name,
+      nodes: workflow.nodes.length,
+      projectPath,
+    })
 
     let stopped = false
     const nodeOutputs = new Map<string, string>()
@@ -319,9 +328,13 @@ export function createWorkflowEngine(
           }
         }, LINE_FLUSH_MS)
 
+        // Activity tracking: kill agent only when idle (no output) for too long
+        let lastActivityTime = Date.now()
+
         const handleData = (chunk: Buffer): void => {
           const text = stripAnsi(chunk.toString())
           if (!text) return
+          lastActivityTime = Date.now()
           output = (output + text).slice(-8192)
           nodeOutputs.set(node.id, output)
           flushLines(text)
@@ -330,17 +343,49 @@ export function createWorkflowEngine(
         child.stdout?.on('data', handleData)
         child.stderr?.on('data', handleData)
 
-        // C1: Agent timeout — prevents stuck processes (e.g. codex hanging)
-        const timeoutMs = node.timeout ?? DEFAULT_AGENT_TIMEOUT
-        const timeoutTimer = setTimeout(() => {
-          forceKillTree(child)
-          clearInterval(flushTimer)
-          activeChildProcesses.delete(child)
-          reject(new Error(`Agent ${bin} timed out after ${timeoutMs / 1000}s`))
-        }, timeoutMs)
+        // Idle timeout: kill agent if it produces no output for AGENT_IDLE_TIMEOUT ms
+        const idleCheckTimer = setInterval(() => {
+          const idleMs = Date.now() - lastActivityTime
+          if (idleMs >= AGENT_IDLE_TIMEOUT) {
+            log.warn('Agent node idle timeout', {
+              workflowId: workflow.id,
+              nodeId: node.id,
+              agent: bin,
+              idleMs,
+            })
+            forceKillTree(child)
+            clearInterval(flushTimer)
+            clearInterval(idleCheckTimer)
+            clearTimeout(absoluteTimer)
+            activeChildProcesses.delete(child)
+            reject(new Error(`Agent ${bin} idle for ${Math.round(idleMs / 1000)}s — no output`))
+          }
+        }, IDLE_CHECK_INTERVAL)
+
+        // Optional absolute timeout: only if the user set node.timeout explicitly
+        const absoluteTimer = node.timeout
+          ? setTimeout(() => {
+              log.warn('Agent node absolute timeout', {
+                workflowId: workflow.id,
+                nodeId: node.id,
+                agent: bin,
+                timeoutMs: node.timeout,
+              })
+              forceKillTree(child)
+              clearInterval(flushTimer)
+              clearInterval(idleCheckTimer)
+              activeChildProcesses.delete(child)
+              reject(
+                new Error(
+                  `Agent ${bin} timed out after ${(node.timeout ?? 0) / 1000}s (absolute limit)`,
+                ),
+              )
+            }, node.timeout)
+          : undefined
 
         child.on('close', (code) => {
-          clearTimeout(timeoutTimer)
+          clearInterval(idleCheckTimer)
+          clearTimeout(absoluteTimer)
           clearInterval(flushTimer)
           activeChildProcesses.delete(child)
           // Flush any remaining partial line
@@ -351,7 +396,8 @@ export function createWorkflowEngine(
         })
 
         child.on('error', (err: Error) => {
-          clearTimeout(timeoutTimer)
+          clearInterval(idleCheckTimer)
+          clearTimeout(absoluteTimer)
           clearInterval(flushTimer)
           activeChildProcesses.delete(child)
           reject(err)
@@ -440,6 +486,12 @@ export function createWorkflowEngine(
             if (stopped) return
 
             runningNodeIds.add(node.id)
+            log.info('Node started', {
+              workflowId: workflow.id,
+              nodeId: node.id,
+              type: node.type,
+              agent: node.agent,
+            })
             push(workflow.id, {
               type: 'node:started',
               workflowId: workflow.id,
@@ -470,6 +522,7 @@ export function createWorkflowEngine(
               }
 
               runningNodeIds.delete(node.id)
+              log.info('Node completed', { workflowId: workflow.id, nodeId: node.id })
               push(workflow.id, {
                 type: 'node:done',
                 workflowId: workflow.id,
@@ -478,6 +531,11 @@ export function createWorkflowEngine(
               })
             } catch (err) {
               runningNodeIds.delete(node.id)
+              log.warn('Node failed', {
+                workflowId: workflow.id,
+                nodeId: node.id,
+                err: String(err),
+              })
               push(workflow.id, {
                 type: 'node:error',
                 workflowId: workflow.id,
@@ -511,12 +569,14 @@ export function createWorkflowEngine(
       }
 
       if (!stopped) {
+        log.info('Workflow completed', { id: workflow.id, name: workflow.name })
         push(workflow.id, {
           type: 'workflow:done',
           workflowId: workflow.id,
           message: 'All nodes completed',
         })
       } else {
+        log.info('Workflow stopped', { id: workflow.id, name: workflow.name })
         push(workflow.id, {
           type: 'workflow:stopped',
           workflowId: workflow.id,

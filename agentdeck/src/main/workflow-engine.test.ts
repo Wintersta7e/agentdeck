@@ -4,7 +4,7 @@ import {
   shellQuote,
   topoSort,
   validateWorkflow,
-  DEFAULT_AGENT_TIMEOUT,
+  AGENT_IDLE_TIMEOUT,
 } from './workflow-engine'
 import type { WorkflowNode } from '../shared/types'
 import { makeWorkflowNode, makeWorkflowEdge, makeWorkflow, resetCounter } from '../__test__/helpers'
@@ -359,12 +359,11 @@ describe('validateWorkflow', () => {
   })
 })
 
-// ── DEFAULT_AGENT_TIMEOUT ─────────────────────────────────
+// ── AGENT_IDLE_TIMEOUT ────────────────────────────────────
 
-describe('DEFAULT_AGENT_TIMEOUT', () => {
-  // T4: Verify the exported constant exists and has the correct value
-  it('is exported and equals 300000 (5 minutes)', () => {
-    expect(DEFAULT_AGENT_TIMEOUT).toBe(300_000)
+describe('AGENT_IDLE_TIMEOUT', () => {
+  it('is exported and equals 120000 (2 minutes)', () => {
+    expect(AGENT_IDLE_TIMEOUT).toBe(120_000)
   })
 })
 
