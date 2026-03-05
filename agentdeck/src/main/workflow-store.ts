@@ -2,6 +2,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { app } from 'electron'
 import { createLogger } from './logger'
+import { validateWorkflow } from './workflow-engine'
 import type { Workflow, WorkflowMeta } from '../shared/types'
 
 const log = createLogger('workflow-store')
@@ -21,6 +22,9 @@ function getWorkflowsDir(): string {
   cachedWorkflowsDir = dir
   return dir
 }
+
+// M2: Per-workflow write lock to prevent concurrent saves
+const writeLocks = new Map<string, Promise<Workflow>>()
 
 // H4: Async versions of all workflow operations
 
@@ -62,17 +66,40 @@ export async function loadWorkflow(id: string): Promise<Workflow | null> {
 }
 
 export async function saveWorkflow(workflow: Workflow): Promise<Workflow> {
-  const now = Date.now()
-  const w: Workflow = {
-    ...workflow,
-    updatedAt: now,
-    createdAt: workflow.createdAt || now,
-    id: workflow.id || crypto.randomUUID(),
+  const id = workflow.id || crypto.randomUUID()
+  const pending = writeLocks.get(id)
+
+  const doSave = async (): Promise<Workflow> => {
+    if (pending) await pending.catch(() => {})
+
+    const now = Date.now()
+    const w: Workflow = {
+      ...workflow,
+      updatedAt: now,
+      createdAt: workflow.createdAt || now,
+      id,
+    }
+
+    // C2: Validate before persisting to disk
+    validateWorkflow(w)
+
+    // H5: Atomic write — write to .tmp then rename
+    const file = path.join(getWorkflowsDir(), `${safeId(w.id)}.json`)
+    const tmpFile = file + '.tmp'
+    await fs.promises.writeFile(tmpFile, JSON.stringify(w, null, 2), 'utf-8')
+    await fs.promises.rename(tmpFile, file)
+
+    log.info('Workflow saved', { id: w.id, name: w.name })
+    return w
   }
-  const file = path.join(getWorkflowsDir(), `${safeId(w.id)}.json`)
-  await fs.promises.writeFile(file, JSON.stringify(w, null, 2), 'utf-8')
-  log.info('Workflow saved', { id: w.id, name: w.name })
-  return w
+
+  const p = doSave()
+  writeLocks.set(id, p)
+  try {
+    return await p
+  } finally {
+    if (writeLocks.get(id) === p) writeLocks.delete(id)
+  }
 }
 
 export async function renameWorkflow(id: string, name: string): Promise<void> {

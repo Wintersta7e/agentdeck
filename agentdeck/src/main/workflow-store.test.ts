@@ -19,6 +19,16 @@ vi.mock('fs', () => {
       writeFile: vi.fn(async (filepath: string, data: string) => {
         store.set(filepath, data)
       }),
+      rename: vi.fn(async (src: string, dest: string) => {
+        const data = store.get(src)
+        if (data === undefined) {
+          const err = new Error(`ENOENT: no such file`) as NodeJS.ErrnoException
+          err.code = 'ENOENT'
+          throw err
+        }
+        store.delete(src)
+        store.set(dest, data)
+      }),
       rm: vi.fn(async (filepath: string) => {
         store.delete(filepath)
       }),
@@ -103,6 +113,7 @@ describe('loadWorkflow', () => {
 describe('saveWorkflow', () => {
   it('generates ID if missing', async () => {
     vi.mocked(fs.promises.writeFile).mockResolvedValueOnce(undefined)
+    vi.mocked(fs.promises.rename).mockResolvedValueOnce(undefined)
 
     const result = await saveWorkflow({
       id: '',
@@ -118,6 +129,7 @@ describe('saveWorkflow', () => {
 
   it('sets timestamps', async () => {
     vi.mocked(fs.promises.writeFile).mockResolvedValueOnce(undefined)
+    vi.mocked(fs.promises.rename).mockResolvedValueOnce(undefined)
     const before = Date.now()
 
     const result = await saveWorkflow({
@@ -135,6 +147,7 @@ describe('saveWorkflow', () => {
 
   it('preserves existing createdAt', async () => {
     vi.mocked(fs.promises.writeFile).mockResolvedValueOnce(undefined)
+    vi.mocked(fs.promises.rename).mockResolvedValueOnce(undefined)
 
     const result = await saveWorkflow({
       id: 'wf-save',
@@ -158,23 +171,17 @@ describe('deleteWorkflow', () => {
 })
 
 describe('safeId (via saveWorkflow path)', () => {
-  it('strips path traversal characters from id', async () => {
-    vi.mocked(fs.promises.writeFile).mockResolvedValueOnce(undefined)
-
-    await saveWorkflow({
-      id: 'wf/../../../etc/passwd',
-      name: 'Evil',
-      nodes: [],
-      edges: [],
-      createdAt: 1,
-      updatedAt: 1,
-    })
-
-    // The filename portion should not contain path traversal chars
-    const writtenPath = vi.mocked(fs.promises.writeFile).mock.calls[0]?.[0] as string
-    const filename = writtenPath.split('/').pop() ?? ''
-    expect(filename).not.toContain('..')
-    // safeId strips everything except [a-zA-Z0-9_-]
-    expect(filename).toBe('wfetcpasswd.json')
+  it('rejects ids with path traversal characters via validation', async () => {
+    // C2: validateWorkflow rejects ids containing dots/slashes
+    await expect(
+      saveWorkflow({
+        id: 'wf/../../../etc/passwd',
+        name: 'Evil',
+        nodes: [],
+        edges: [],
+        createdAt: 1,
+        updatedAt: 1,
+      }),
+    ).rejects.toThrow(/Invalid workflow id/)
   })
 })

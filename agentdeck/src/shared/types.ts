@@ -149,7 +149,11 @@ export interface WorkflowNode {
   message?: string | undefined
 
   // shell nodes: configurable timeout (ms), defaults to 60000
+  // agent nodes: timeout (ms), defaults to DEFAULT_AGENT_TIMEOUT (300000)
   timeout?: number | undefined
+
+  // If true, workflow continues executing when this node fails
+  continueOnError?: boolean | undefined
 }
 
 export interface WorkflowEdge {

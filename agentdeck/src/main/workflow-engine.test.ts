@@ -1,5 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { stripAnsi, shellQuote, topoSort, validateWorkflow } from './workflow-engine'
+import {
+  stripAnsi,
+  shellQuote,
+  topoSort,
+  validateWorkflow,
+  DEFAULT_AGENT_TIMEOUT,
+} from './workflow-engine'
+import type { WorkflowNode } from '../shared/types'
 import { makeWorkflowNode, makeWorkflowEdge, makeWorkflow, resetCounter } from '../__test__/helpers'
 
 beforeEach(() => {
@@ -314,5 +321,69 @@ describe('validateWorkflow', () => {
         edges: [],
       }),
     ).toThrow('roleId exceeds 200')
+  })
+
+  // T6: Edge validation — fromNodeId / toNodeId must reference existing nodes
+  it('rejects edge with non-existent fromNodeId', () => {
+    expect(() =>
+      validateWorkflow({
+        id: 'wf-1',
+        name: 'test',
+        nodes: [{ id: 'n1', type: 'agent', name: 'node1', x: 0, y: 0 }],
+        edges: [{ id: 'e1', fromNodeId: 'ghost', toNodeId: 'n1' }],
+      }),
+    ).toThrow('Edge e1 references non-existent node: ghost')
+  })
+
+  it('rejects edge with non-existent toNodeId', () => {
+    expect(() =>
+      validateWorkflow({
+        id: 'wf-1',
+        name: 'test',
+        nodes: [{ id: 'n1', type: 'agent', name: 'node1', x: 0, y: 0 }],
+        edges: [{ id: 'e2', fromNodeId: 'n1', toNodeId: 'missing' }],
+      }),
+    ).toThrow('Edge e2 references non-existent node: missing')
+  })
+
+  it('accepts edges referencing valid nodes', () => {
+    const wf = makeWorkflow({
+      id: 'wf-valid',
+      nodes: [
+        makeWorkflowNode({ id: 'a', type: 'agent' }),
+        makeWorkflowNode({ id: 'b', type: 'shell', command: 'echo hi' }),
+      ],
+      edges: [makeWorkflowEdge('a', 'b')],
+    })
+    expect(validateWorkflow(wf)).toBe(true)
+  })
+})
+
+// ── DEFAULT_AGENT_TIMEOUT ─────────────────────────────────
+
+describe('DEFAULT_AGENT_TIMEOUT', () => {
+  // T4: Verify the exported constant exists and has the correct value
+  it('is exported and equals 300000 (5 minutes)', () => {
+    expect(DEFAULT_AGENT_TIMEOUT).toBe(300_000)
+  })
+})
+
+// ── continueOnError type ──────────────────────────────────
+
+describe('WorkflowNode continueOnError', () => {
+  // T1: Verify the type accepts continueOnError flag
+  it('accepts continueOnError as optional boolean on WorkflowNode', () => {
+    const node: WorkflowNode = makeWorkflowNode({
+      id: 'n-coe',
+      type: 'shell',
+      command: 'npm test',
+      continueOnError: true,
+    })
+    expect(node.continueOnError).toBe(true)
+  })
+
+  it('defaults continueOnError to undefined when not set', () => {
+    const node: WorkflowNode = makeWorkflowNode({ id: 'n-default' })
+    expect(node.continueOnError).toBeUndefined()
   })
 })

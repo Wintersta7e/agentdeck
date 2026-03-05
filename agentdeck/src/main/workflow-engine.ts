@@ -48,8 +48,14 @@ const NODE_INIT =
     'true',
   ].join('; ') + '; '
 
+/** Default timeout for agent nodes (ms) — prevents stuck processes (e.g. codex) */
+export const DEFAULT_AGENT_TIMEOUT = 300_000 // 5 minutes
+
+/** Max number of nodes to run concurrently within a single tier */
+const MAX_TIER_CONCURRENCY = 5
+
 /** How often to flush the line buffer even without a newline (ms) */
-const LINE_FLUSH_MS = 3000
+const LINE_FLUSH_MS = 500
 
 /**
  * Force-kill a child process tree on Windows.
@@ -132,6 +138,16 @@ export function validateWorkflow(w: unknown): w is Workflow {
     if (typeof n.roleId === 'string' && n.roleId.length > MAX_NAME)
       throw new Error(`Node roleId exceeds ${MAX_NAME} chars`)
   }
+
+  // C6: Validate edge references
+  const nodeIds = new Set((wf.nodes as Record<string, unknown>[]).map((n) => n.id as string))
+  for (const e of wf.edges as { id: string; fromNodeId: string; toNodeId: string }[]) {
+    if (!nodeIds.has(e.fromNodeId))
+      throw new Error(`Edge ${e.id} references non-existent node: ${e.fromNodeId}`)
+    if (!nodeIds.has(e.toNodeId))
+      throw new Error(`Edge ${e.id} references non-existent node: ${e.toNodeId}`)
+  }
+
   return true
 }
 
@@ -176,7 +192,7 @@ export function createWorkflowEngine(
 
   function push(workflowId: string, event: Omit<WorkflowEvent, 'id' | 'timestamp'>): void {
     if (mainWindow.isDestroyed()) return
-    const safeChannel = `workflow:event:${workflowId.replace(/[^a-zA-Z0-9_-]/g, '')}`
+    const safeChannel = `workflow:event:${workflowId}`
     mainWindow.webContents.send(safeChannel, {
       ...event,
       id: crypto.randomUUID(),
@@ -234,15 +250,24 @@ export function createWorkflowEngine(
         const printFlags = AGENT_PRINT_FLAGS[agentName] ?? ['--print']
 
         let sanitizedFlags = ''
-        if (node.agentFlags && SAFE_FLAGS_RE.test(node.agentFlags)) {
-          sanitizedFlags = ` ${node.agentFlags}`
+        if (node.agentFlags) {
+          if (SAFE_FLAGS_RE.test(node.agentFlags)) {
+            sanitizedFlags = ` ${node.agentFlags}`
+          } else {
+            push(workflow.id, {
+              type: 'node:output',
+              workflowId: workflow.id,
+              nodeId: node.id,
+              message: `⚠ Agent flags rejected (unsafe): ${node.agentFlags}`,
+            })
+          }
         }
 
         // Build non-interactive command: cd to project, then run agent in print mode
         const parts: string[] = []
         if (projectPath) parts.push(`cd ${shellQuote(projectPath)}`)
         const flagStr = printFlags.length > 0 ? printFlags.join(' ') + ' ' : ''
-        parts.push(`${bin} ${flagStr}${shellQuote(prompt)}${sanitizedFlags}`)
+        parts.push(`${shellQuote(bin)} ${flagStr}${shellQuote(prompt)}${sanitizedFlags}`)
         const fullCmd = parts.join(' && ')
 
         push(workflow.id, {
@@ -305,7 +330,17 @@ export function createWorkflowEngine(
         child.stdout?.on('data', handleData)
         child.stderr?.on('data', handleData)
 
+        // C1: Agent timeout — prevents stuck processes (e.g. codex hanging)
+        const timeoutMs = node.timeout ?? DEFAULT_AGENT_TIMEOUT
+        const timeoutTimer = setTimeout(() => {
+          forceKillTree(child)
+          clearInterval(flushTimer)
+          activeChildProcesses.delete(child)
+          reject(new Error(`Agent ${bin} timed out after ${timeoutMs / 1000}s`))
+        }, timeoutMs)
+
         child.on('close', (code) => {
+          clearTimeout(timeoutTimer)
           clearInterval(flushTimer)
           activeChildProcesses.delete(child)
           // Flush any remaining partial line
@@ -316,6 +351,7 @@ export function createWorkflowEngine(
         })
 
         child.on('error', (err: Error) => {
+          clearTimeout(timeoutTimer)
           clearInterval(flushTimer)
           activeChildProcesses.delete(child)
           reject(err)
@@ -394,65 +430,81 @@ export function createWorkflowEngine(
             .filter((e) => tier.some((n) => n.id === e.toNodeId))
             .map((e) => {
               const out = nodeOutputs.get(e.fromNodeId)
-              return out ? `[${e.fromNodeId}]: ${out.slice(-2000)}` : ''
+              return out ? `[${e.fromNodeId}]: ${out.slice(-4000)}` : ''
             })
             .filter(Boolean)
             .join('\n\n')
 
-          await Promise.all(
-            tier.map(async (node) => {
-              if (stopped) return
+          // H2: Run tier nodes with concurrency limit
+          async function runSingleNode(node: WorkflowNode): Promise<void> {
+            if (stopped) return
 
-              runningNodeIds.add(node.id)
+            runningNodeIds.add(node.id)
+            push(workflow.id, {
+              type: 'node:started',
+              workflowId: workflow.id,
+              nodeId: node.id,
+              message: `Starting ${node.name}`,
+            })
+
+            try {
+              if (node.type === 'agent') {
+                await runAgentNode(node, contextSummary, rolesMap)
+              } else if (node.type === 'shell') {
+                await runShellNode(node)
+              } else if (node.type === 'checkpoint') {
+                push(workflow.id, {
+                  type: 'node:paused',
+                  workflowId: workflow.id,
+                  nodeId: node.id,
+                  message: node.message ?? 'Waiting for user to continue...',
+                })
+                await onCheckpoint(node.id)
+                if (stopped) return
+                push(workflow.id, {
+                  type: 'node:resumed',
+                  workflowId: workflow.id,
+                  nodeId: node.id,
+                  message: 'Resumed',
+                })
+              }
+
+              runningNodeIds.delete(node.id)
               push(workflow.id, {
-                type: 'node:started',
+                type: 'node:done',
                 workflowId: workflow.id,
                 nodeId: node.id,
-                message: `Starting ${node.name}`,
+                message: `${node.name} completed`,
               })
-
-              try {
-                if (node.type === 'agent') {
-                  await runAgentNode(node, contextSummary, rolesMap)
-                } else if (node.type === 'shell') {
-                  await runShellNode(node)
-                } else if (node.type === 'checkpoint') {
-                  push(workflow.id, {
-                    type: 'node:paused',
-                    workflowId: workflow.id,
-                    nodeId: node.id,
-                    message: node.message ?? 'Waiting for user to continue...',
-                  })
-                  await onCheckpoint(node.id)
-                  if (stopped) return
-                  push(workflow.id, {
-                    type: 'node:resumed',
-                    workflowId: workflow.id,
-                    nodeId: node.id,
-                    message: 'Resumed',
-                  })
-                }
-
-                runningNodeIds.delete(node.id)
-                push(workflow.id, {
-                  type: 'node:done',
-                  workflowId: workflow.id,
-                  nodeId: node.id,
-                  message: `${node.name} completed`,
-                })
-              } catch (err) {
-                runningNodeIds.delete(node.id)
-                push(workflow.id, {
-                  type: 'node:error',
-                  workflowId: workflow.id,
-                  nodeId: node.id,
-                  message: String(err),
-                })
+            } catch (err) {
+              runningNodeIds.delete(node.id)
+              push(workflow.id, {
+                type: 'node:error',
+                workflowId: workflow.id,
+                nodeId: node.id,
+                message: String(err),
+              })
+              // H1: continueOnError — don't stop workflow for non-critical nodes
+              if (!node.continueOnError) {
                 stopped = true
                 throw err
               }
-            }),
+            }
+          }
+
+          const queue = [...tier]
+          async function runNext(): Promise<void> {
+            let node = queue.shift()
+            while (node) {
+              if (stopped) return
+              await runSingleNode(node)
+              node = queue.shift()
+            }
+          }
+          const workers = Array.from({ length: Math.min(MAX_TIER_CONCURRENCY, tier.length) }, () =>
+            runNext(),
           )
+          await Promise.all(workers)
         }
       } catch {
         // Node errors propagate here via throw — already emitted as node:error above
@@ -503,6 +555,14 @@ export function createWorkflowEngine(
         if (resolver) {
           resolver()
           runCheckpoints.delete(nodeId)
+        } else {
+          // M8: Warn on invalid checkpoint resume
+          push(workflow.id, {
+            type: 'node:output',
+            workflowId: workflow.id,
+            nodeId,
+            message: `⚠ Resume called for unknown checkpoint: ${nodeId}`,
+          })
         }
       },
     }
