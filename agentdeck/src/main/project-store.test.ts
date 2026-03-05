@@ -160,6 +160,41 @@ describe('createProjectStore', () => {
     // Should not encrypt when unavailable
     expect(safeStorage.encryptString).not.toHaveBeenCalled()
   })
+
+  it('auto-migrates legacy single-agent project to agents[] on load', () => {
+    createProjectStore()
+    // Save a project with legacy agent field (bypass migration by saving with agents undefined)
+    const saved = callHandler('store:saveProject', {
+      name: 'Legacy',
+      path: '/home/legacy',
+      agent: 'goose',
+      agentFlags: '--verbose',
+    }) as Project
+
+    // Reading back should trigger migration
+    const projects = callHandler('store:getProjects') as Project[]
+    const migrated = projects.find((p) => p.id === saved.id)
+    expect(migrated).toBeDefined()
+    expect(migrated?.agents).toEqual([{ agent: 'goose', agentFlags: '--verbose', isDefault: true }])
+    // Legacy fields should be cleaned up
+    expect(migrated?.agent).toBeUndefined()
+    expect(migrated?.agentFlags).toBeUndefined()
+  })
+
+  it('does not re-migrate projects that already have agents[]', () => {
+    createProjectStore()
+    const saved = callHandler('store:saveProject', {
+      name: 'Modern',
+      path: '/home/modern',
+      agents: [{ agent: 'claude-code', isDefault: true }, { agent: 'aider' }],
+    }) as Project
+
+    const projects = callHandler('store:getProjects') as Project[]
+    const project = projects.find((p) => p.id === saved.id)
+    expect(project?.agents).toHaveLength(2)
+    expect(project?.agents?.[0]?.agent).toBe('claude-code')
+    expect(project?.agents?.[1]?.agent).toBe('aider')
+  })
 })
 
 describe('seedTemplates', () => {

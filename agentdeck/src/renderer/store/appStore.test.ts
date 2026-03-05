@@ -58,6 +58,36 @@ describe('Session lifecycle', () => {
     const state = useAppStore.getState()
     expect(state.paneSessions[0]).toBe('s1')
   })
+
+  it('adds a session with agent overrides', () => {
+    useAppStore.getState().addSession('s1', 'proj-1', {
+      agentOverride: 'aider',
+      agentFlagsOverride: '--model gpt-4',
+    })
+    const session = useAppStore.getState().sessions['s1']
+    expect(session?.agentOverride).toBe('aider')
+    expect(session?.agentFlagsOverride).toBe('--model gpt-4')
+  })
+
+  it('adds a session without overrides (fields undefined)', () => {
+    useAppStore.getState().addSession('s1', 'proj-1')
+    const session = useAppStore.getState().sessions['s1']
+    expect(session?.agentOverride).toBeUndefined()
+    expect(session?.agentFlagsOverride).toBeUndefined()
+  })
+
+  it('restartSession preserves agent overrides', () => {
+    useAppStore.getState().addSession('s1', 'proj-1', {
+      agentOverride: 'codex',
+      agentFlagsOverride: '--fast',
+    })
+    const newId = useAppStore.getState().restartSession('s1')
+    expect(newId).toBeTruthy()
+    const newSession = newId ? useAppStore.getState().sessions[newId] : undefined
+    expect(newSession?.agentOverride).toBe('codex')
+    expect(newSession?.agentFlagsOverride).toBe('--fast')
+    expect(newSession?.status).toBe('starting')
+  })
 })
 
 describe('View navigation', () => {
