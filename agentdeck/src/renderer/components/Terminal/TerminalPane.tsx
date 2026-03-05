@@ -117,6 +117,13 @@ function safeFitAndResize(
   }
 }
 
+/** Validate scrollback: enforce minimum of 1000, default to 5000 if unset/invalid. */
+function validScrollback(value: number | undefined): number {
+  if (value === undefined || value === null) return 5000
+  if (!Number.isFinite(value) || value < 1000) return 5000
+  return value
+}
+
 // ─── Terminal cache ───────────────────────────────────────────────────
 // When a TerminalPane unmounts because its session moved between pane slots
 // (tab switch), the Terminal instance is cached here instead of being disposed.
@@ -126,7 +133,7 @@ interface CachedTerminal {
   term: Terminal
   fit: FitAddon
   webgl: WebglAddon | null
-  search: SearchAddon
+  search: SearchAddon | null
 }
 const terminalCache = new Map<string, CachedTerminal>()
 
@@ -163,7 +170,6 @@ export function TerminalPane({
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
-  const searchRef = useRef<SearchAddon | null>(null)
   const exitTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const projectPathRef = useRef(projectPath)
   const startupRef = useRef(startupCommands)
@@ -193,8 +199,7 @@ export function TerminalPane({
       fit = cached.fit
       webglAddon = cached.webgl
       search = cached.search
-      searchRef.current = search
-      searchAddonMap.set(sessionId, search)
+      if (search) searchAddonMap.set(sessionId, search)
       isReattached = true
       // Move the xterm DOM tree into the new container
       if (term.element) {
@@ -209,7 +214,7 @@ export function TerminalPane({
         cursorBlink: true,
         cursorInactiveStyle: 'none',
         theme: getXtermTheme(document.documentElement.dataset.theme ?? ''),
-        scrollback: scrollbackRef.current ?? 5000,
+        scrollback: validScrollback(scrollbackRef.current),
       })
 
       // Copy/paste: Ctrl+Shift+C/V or Ctrl+C (with selection) / Ctrl+V
@@ -223,7 +228,11 @@ export function TerminalPane({
         }
         // Ctrl+Shift+C or Ctrl+C with selection → copy
         if (e.ctrlKey && e.key === 'c' && (e.shiftKey || term.hasSelection())) {
-          navigator.clipboard.writeText(term.getSelection()).catch(() => {})
+          navigator.clipboard.writeText(term.getSelection()).catch((err: unknown) => {
+            window.agentDeck.log.send('warn', 'terminal', 'Clipboard copy failed', {
+              err: String(err),
+            })
+          })
           term.clearSelection()
           return false
         }
@@ -248,7 +257,11 @@ export function TerminalPane({
               const escaped = paths.map((p) => (p.includes(' ') ? `"${p}"` : p)).join(' ')
               window.agentDeck.pty.write(sessionId, escaped)
             }
-          })().catch(() => {})
+          })().catch((err: unknown) => {
+            window.agentDeck.log.send('warn', 'terminal', `Paste failed for ${sessionId}`, {
+              err: String(err),
+            })
+          })
           return false
         }
         return true
@@ -259,15 +272,27 @@ export function TerminalPane({
       term.open(containerRef.current)
 
       // Enable Unicode 11 for proper emoji & CJK character width
-      const unicode11 = new Unicode11Addon()
-      term.loadAddon(unicode11)
-      term.unicode.activeVersion = '11'
+      try {
+        const unicode11 = new Unicode11Addon()
+        term.loadAddon(unicode11)
+        term.unicode.activeVersion = '11'
+      } catch (err: unknown) {
+        window.agentDeck.log.send('warn', 'terminal', `Unicode11 addon failed for ${sessionId}`, {
+          err: String(err),
+        })
+      }
 
       // Load search addon (cached across tab switches for find-in-terminal)
-      search = new SearchAddon()
-      term.loadAddon(search)
-      searchRef.current = search
-      searchAddonMap.set(sessionId, search)
+      try {
+        search = new SearchAddon()
+        term.loadAddon(search)
+        searchAddonMap.set(sessionId, search)
+      } catch (err: unknown) {
+        search = null
+        window.agentDeck.log.send('warn', 'terminal', `Search addon failed for ${sessionId}`, {
+          err: String(err),
+        })
+      }
 
       // Load WebGL renderer for GPU-accelerated painting (fallback: canvas 2D)
       try {
@@ -387,8 +412,12 @@ export function TerminalPane({
       // Null out refs so stale async callbacks (rAF, setTimeout) can't use them
       termRef.current = null
       fitRef.current = null
-      searchRef.current = null
-      searchAddonMap.delete(sessionId)
+
+      // Guard against StrictMode double-invoke: only delete if this effect's
+      // search instance is still the one in the map (prevents stale removal).
+      if (searchAddonMap.get(sessionId) === search) {
+        searchAddonMap.delete(sessionId)
+      }
 
       const state = useAppStore.getState()
       if (state.sessions[sessionId]) {
@@ -397,13 +426,7 @@ export function TerminalPane({
         if (term.element?.parentElement) {
           term.element.parentElement.removeChild(term.element)
         }
-        // search is always non-null here — assigned in both cache-reclaim and fresh-creation paths
-        terminalCache.set(sessionId, {
-          term,
-          fit,
-          webgl: webglAddon,
-          search: search as SearchAddon,
-        })
+        terminalCache.set(sessionId, { term, fit, webgl: webglAddon, search })
       } else {
         // Session removed → dispose everything
         try {
@@ -420,6 +443,14 @@ export function TerminalPane({
       }
     }
   }, [sessionId, setSessionStatus, removeSession])
+
+  // Clear search decorations when search is dismissed via Ctrl+Shift+F toggle
+  // (Escape already clears in the TerminalSearchBar component)
+  useEffect(() => {
+    if (!searchOpen) {
+      searchAddonMap.get(sessionId)?.clearDecorations()
+    }
+  }, [searchOpen, sessionId])
 
   // Keep visibleRef in sync, flush buffered data, and re-fit on show
   useEffect(() => {
