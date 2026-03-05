@@ -196,6 +196,7 @@ export function SplitView(): React.JSX.Element {
         const sessionId = paneSessionIds[paneIndex] ?? ''
         const session = sessionId ? sessions[sessionId] : undefined
         const project = session ? projects.find((p) => p.id === session.projectId) : undefined
+        const defaultAgent = project ? getDefaultAgent(project) : undefined
         const isVisible = paneIndex < paneLayout
         const isFocused = paneIndex === focusedPane && isVisible
 
@@ -227,14 +228,8 @@ export function SplitView(): React.JSX.Element {
                     projectPath={project?.path}
                     startupCommands={project ? startupCommandsMap[project.id] : undefined}
                     env={project ? envMap[project.id] : undefined}
-                    agent={
-                      session?.agentOverride ??
-                      (project ? getDefaultAgent(project).agent : undefined)
-                    }
-                    agentFlags={
-                      session?.agentFlagsOverride ??
-                      (project ? getDefaultAgent(project).agentFlags : undefined)
-                    }
+                    agent={session.agentOverride ?? defaultAgent?.agent}
+                    agentFlags={session.agentFlagsOverride ?? defaultAgent?.agentFlags}
                     scrollback={project?.scrollbackLines}
                   />
                 </>
@@ -253,6 +248,7 @@ export function SplitView(): React.JSX.Element {
         const session = sessions[sid]
         if (!session) return null
         const project = projects.find((p) => p.id === session.projectId)
+        const defaultAgent = project ? getDefaultAgent(project) : undefined
         return (
           <div key={sid} className="split-pane--hidden">
             <TerminalPane
@@ -262,14 +258,8 @@ export function SplitView(): React.JSX.Element {
               projectPath={project?.path}
               startupCommands={project ? startupCommandsMap[project.id] : undefined}
               env={project ? envMap[project.id] : undefined}
-              agent={
-                sessions[sid]?.agentOverride ??
-                (project ? getDefaultAgent(project).agent : undefined)
-              }
-              agentFlags={
-                sessions[sid]?.agentFlagsOverride ??
-                (project ? getDefaultAgent(project).agentFlags : undefined)
-              }
+              agent={session.agentOverride ?? defaultAgent?.agent}
+              agentFlags={session.agentFlagsOverride ?? defaultAgent?.agentFlags}
               scrollback={project?.scrollbackLines}
             />
           </div>
