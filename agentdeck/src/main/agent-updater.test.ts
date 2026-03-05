@@ -1,24 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 /**
- * The module under test does:
- *   import { execFile } from 'child_process'
- *   import { promisify } from 'util'
- *   const execFileAsync = promisify(execFile)   // captured at module scope
- *
- * We mock `util.promisify` to return a single stable mock function.
- * The module captures that reference once, then tests control it via
- * mockRunCmd.mockResolvedValueOnce / mockRejectedValueOnce / etc.
+ * The module under test calls execFile(cmd, args, opts, callback) directly.
+ * We mock execFile to invoke the callback with controlled stdout/stderr/err.
  */
 
-const mockRunCmd = vi.fn()
+type ExecFileCb = (err: Error | null, stdout: string, stderr: string) => void
 
-vi.mock('util', () => ({
-  promisify: () => mockRunCmd,
-}))
+const mockExecFile = vi.fn()
 
 vi.mock('child_process', () => ({
-  execFile: vi.fn(),
+  execFile: (...args: unknown[]) => mockExecFile(...args),
 }))
 
 vi.mock('./logger', () => ({
@@ -33,17 +25,29 @@ vi.mock('./logger', () => ({
 // Dynamic import so mocks are wired before module evaluation
 const { checkAgentVersion, updateAgent, checkAllUpdates } = await import('./agent-updater')
 
+/** Queue of results to return from mockExecFile — consumed in order */
+let callQueue: Array<{ stdout: string; stderr?: string; err?: Error }>
+
+function enqueue(...results: Array<{ stdout: string; stderr?: string; err?: Error }>): void {
+  callQueue.push(...results)
+  mockExecFile.mockImplementation(
+    (_bin: string, _args: string[], _opts: unknown, cb: ExecFileCb) => {
+      const r = callQueue.shift() ?? { stdout: '', err: new Error('unexpected call') }
+      cb(r.err ?? null, r.stdout, r.stderr ?? '')
+    },
+  )
+}
+
 beforeEach(() => {
-  mockRunCmd.mockReset()
+  mockExecFile.mockReset()
+  callQueue = []
 })
 
 // ─── checkAgentVersion ──────────────────────────────────────────────
 
 describe('checkAgentVersion', () => {
   it('returns updateAvailable=true when current and latest differ', async () => {
-    mockRunCmd
-      .mockResolvedValueOnce({ stdout: 'Claude Code v2.1.69 (stable)\n', stderr: '' })
-      .mockResolvedValueOnce({ stdout: '2.2.0\n', stderr: '' })
+    enqueue({ stdout: 'Claude Code v2.1.69 (stable)\n' }, { stdout: '2.2.0\n' })
 
     const info = await checkAgentVersion('claude-code')
 
@@ -56,9 +60,7 @@ describe('checkAgentVersion', () => {
   })
 
   it('returns updateAvailable=false when versions match', async () => {
-    mockRunCmd
-      .mockResolvedValueOnce({ stdout: '1.5.0\n', stderr: '' })
-      .mockResolvedValueOnce({ stdout: '1.5.0\n', stderr: '' })
+    enqueue({ stdout: '1.5.0\n' }, { stdout: '1.5.0\n' })
 
     const info = await checkAgentVersion('claude-code')
 
@@ -79,13 +81,11 @@ describe('checkAgentVersion', () => {
       latest: null,
       updateAvailable: false,
     })
-    expect(mockRunCmd).not.toHaveBeenCalled()
+    expect(mockExecFile).not.toHaveBeenCalled()
   })
 
   it('returns null current when version command fails, still gets latest', async () => {
-    mockRunCmd
-      .mockRejectedValueOnce(new Error('command not found'))
-      .mockResolvedValueOnce({ stdout: '2.2.0\n', stderr: '' })
+    enqueue({ stdout: '', err: new Error('command not found') }, { stdout: '2.2.0\n' })
 
     const info = await checkAgentVersion('claude-code')
 
@@ -98,9 +98,7 @@ describe('checkAgentVersion', () => {
   })
 
   it('returns null latest when registry check fails', async () => {
-    mockRunCmd
-      .mockResolvedValueOnce({ stdout: '2.1.0\n', stderr: '' })
-      .mockRejectedValueOnce(new Error('npm registry unreachable'))
+    enqueue({ stdout: '2.1.0\n' }, { stdout: '', err: new Error('npm registry unreachable') })
 
     const info = await checkAgentVersion('claude-code')
 
@@ -113,9 +111,7 @@ describe('checkAgentVersion', () => {
   })
 
   it('extracts semver from complex version strings', async () => {
-    mockRunCmd
-      .mockResolvedValueOnce({ stdout: 'codex-cli 0.107.0\n', stderr: '' })
-      .mockResolvedValueOnce({ stdout: '0.108.0\n', stderr: '' })
+    enqueue({ stdout: 'codex-cli 0.107.0\n' }, { stdout: '0.108.0\n' })
 
     const info = await checkAgentVersion('codex')
 
@@ -126,17 +122,29 @@ describe('checkAgentVersion', () => {
       updateAvailable: true,
     })
   })
+
+  it('tolerates stderr noise when stdout has data', async () => {
+    enqueue(
+      { stdout: '2.1.69\n', stderr: 'fnm: command not found', err: new Error('exit 1') },
+      { stdout: '2.2.0\n' },
+    )
+
+    const info = await checkAgentVersion('claude-code')
+
+    expect(info.current).toBe('2.1.69')
+    expect(info.latest).toBe('2.2.0')
+  })
 })
 
 // ─── updateAgent ────────────────────────────────────────────────────
 
 describe('updateAgent', () => {
   it('returns success when update command succeeds', async () => {
-    // Call 1: update command itself
-    mockRunCmd.mockResolvedValueOnce({ stdout: 'updated\n', stderr: '' })
-    // Calls 2 & 3: checkAgentVersion after update (version + latest)
-    mockRunCmd.mockResolvedValueOnce({ stdout: '2.3.0\n', stderr: '' })
-    mockRunCmd.mockResolvedValueOnce({ stdout: '2.3.0\n', stderr: '' })
+    enqueue(
+      { stdout: 'updated\n' }, // update cmd
+      { stdout: '2.3.0\n' }, // re-check: version
+      { stdout: '2.3.0\n' }, // re-check: latest
+    )
 
     const result = await updateAgent('claude-code')
 
@@ -146,11 +154,11 @@ describe('updateAgent', () => {
       newVersion: '2.3.0',
       message: 'Updated to 2.3.0',
     })
-    expect(mockRunCmd).toHaveBeenCalledTimes(3)
+    expect(mockExecFile).toHaveBeenCalledTimes(3)
   })
 
   it('returns failure when update command errors', async () => {
-    mockRunCmd.mockRejectedValueOnce(new Error('permission denied'))
+    enqueue({ stdout: '', err: new Error('permission denied') })
 
     const result = await updateAgent('claude-code')
 
@@ -171,7 +179,20 @@ describe('updateAgent', () => {
       newVersion: null,
       message: 'Unknown agent',
     })
-    expect(mockRunCmd).not.toHaveBeenCalled()
+    expect(mockExecFile).not.toHaveBeenCalled()
+  })
+
+  it('succeeds when update has stderr noise but stdout is present', async () => {
+    enqueue(
+      { stdout: 'added 1 package\n', stderr: 'fnm: command not found', err: new Error('exit 1') },
+      { stdout: '2.3.0\n' },
+      { stdout: '2.3.0\n' },
+    )
+
+    const result = await updateAgent('claude-code')
+
+    expect(result.success).toBe(true)
+    expect(result.newVersion).toBe('2.3.0')
   })
 })
 
@@ -185,36 +206,32 @@ describe('checkAllUpdates', () => {
       webContents: { send },
     } as unknown as import('electron').BrowserWindow
 
-    // Two agents installed, one not
     const installed: Record<string, boolean> = {
       'claude-code': true,
       codex: true,
       aider: false,
     }
 
-    // checkAllUpdates fires concurrent checkAgentVersion calls, so
-    // mockResolvedValueOnce ordering is non-deterministic. Use
-    // mockImplementation that inspects the WSL command string.
-    mockRunCmd.mockImplementation((_bin: string, args: string[]) => {
-      const cmd = args[3] as string // NODE_INIT + actual command
-      if (cmd.includes('claude --version')) {
-        return Promise.resolve({ stdout: '2.1.0\n', stderr: '' })
-      }
-      if (cmd.includes('@anthropic-ai/claude-code version')) {
-        return Promise.resolve({ stdout: '2.2.0\n', stderr: '' })
-      }
-      if (cmd.includes('npm list -g @openai/codex')) {
-        return Promise.resolve({ stdout: '0.107.0\n', stderr: '' })
-      }
-      if (cmd.includes('@openai/codex version')) {
-        return Promise.resolve({ stdout: '0.107.0\n', stderr: '' })
-      }
-      return Promise.reject(new Error(`unexpected cmd: ${cmd}`))
-    })
+    // Use command-string matching since calls are concurrent
+    mockExecFile.mockImplementation(
+      (_bin: string, args: string[], _opts: unknown, cb: ExecFileCb) => {
+        const cmd = args[3] as string
+        if (cmd.includes('claude --version')) {
+          cb(null, '2.1.0\n', '')
+        } else if (cmd.includes('@anthropic-ai/claude-code version')) {
+          cb(null, '2.2.0\n', '')
+        } else if (cmd.includes('npm list -g @openai/codex')) {
+          cb(null, '0.107.0\n', '')
+        } else if (cmd.includes('@openai/codex version')) {
+          cb(null, '0.107.0\n', '')
+        } else {
+          cb(new Error(`unexpected cmd: ${cmd}`), '', '')
+        }
+      },
+    )
 
     checkAllUpdates(win, installed)
 
-    // Wait for the fire-and-forget promises to settle
     await vi.waitFor(() => {
       expect(send).toHaveBeenCalledTimes(2)
     })
@@ -232,7 +249,6 @@ describe('checkAllUpdates', () => {
       updateAvailable: false,
     })
 
-    // aider was false, so only 4 runWslCmd calls total (2 per agent)
-    expect(mockRunCmd).toHaveBeenCalledTimes(4)
+    expect(mockExecFile).toHaveBeenCalledTimes(4)
   })
 })

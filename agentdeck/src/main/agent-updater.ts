@@ -1,12 +1,9 @@
 import { execFile } from 'child_process'
-import { promisify } from 'util'
 import type { BrowserWindow } from 'electron'
 import { AGENTS, AGENT_BINARY_MAP } from '../shared/agents'
 import { createLogger } from './logger'
 
 const log = createLogger('agent-updater')
-
-const execFileAsync = promisify(execFile)
 
 /**
  * Prefix sourced before every WSL command in bash -lc (non-interactive).
@@ -37,12 +34,33 @@ export interface UpdateResult {
   message: string
 }
 
-/** Run a command inside WSL via bash login shell with nvm/fnm PATH init. */
-async function runWslCmd(cmd: string): Promise<string> {
-  const { stdout } = await execFileAsync('wsl.exe', ['--', 'bash', '-lc', NODE_INIT + cmd], {
-    timeout: 15000,
+/**
+ * Run a command inside WSL via bash login shell with nvm/fnm PATH init.
+ * Returns stdout on success. Tolerates stderr noise (e.g. fnm warnings)
+ * — only rejects if exit code is non-zero AND stdout is empty.
+ */
+function runWslCmd(cmd: string, timeout = 15000): Promise<string> {
+  return new Promise((resolve, reject) => {
+    execFile(
+      'wsl.exe',
+      ['--', 'bash', '-lc', NODE_INIT + cmd],
+      { timeout },
+      (err, stdout, stderr) => {
+        const out = stdout?.trim() ?? ''
+        if (err) {
+          // If we got usable stdout despite a non-zero exit, return it
+          if (out) {
+            log.debug(`Command had stderr but produced output`, { cmd, stderr: stderr?.trim() })
+            resolve(out)
+            return
+          }
+          reject(new Error(stderr?.trim() || err.message))
+          return
+        }
+        resolve(out)
+      },
+    )
   })
-  return stdout.trim()
 }
 
 /**
@@ -100,7 +118,7 @@ export async function updateAgent(agentId: string): Promise<UpdateResult> {
   log.info(`Starting update for ${agentId}`)
 
   try {
-    await runWslCmd(agent.updateCmd)
+    await runWslCmd(agent.updateCmd, 60000)
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     log.warn(`Update failed for ${agentId}`, { message })
