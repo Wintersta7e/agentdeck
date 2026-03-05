@@ -8,13 +8,45 @@ interface TerminalSearchBarProps {
   onClose: () => void
 }
 
-const DECO_OPTIONS = {
-  matchBackground: 'rgba(245,166,35,0.15)',
-  matchBorder: 'rgba(245,166,35,0.25)',
-  matchOverviewRuler: 'rgba(245,166,35,0.5)',
-  activeMatchBackground: 'rgba(245,166,35,0.35)',
-  activeMatchBorder: '#f5a623',
-  activeMatchColorOverviewRuler: '#f5a623',
+/** Read the current theme's accent color and build xterm search decoration options. */
+function getDecoOptions() {
+  const style = getComputedStyle(document.documentElement)
+  const rgb = style.getPropertyValue('--accent-rgb').trim() || '245, 166, 35'
+  const accent = style.getPropertyValue('--accent').trim() || '#f5a623'
+  return {
+    matchBackground: `rgba(${rgb}, 0.15)`,
+    matchBorder: `rgba(${rgb}, 0.25)`,
+    matchOverviewRuler: `rgba(${rgb}, 0.5)`,
+    activeMatchBackground: `rgba(${rgb}, 0.35)`,
+    activeMatchBorder: accent,
+    activeMatchColorOverviewRuler: accent,
+  }
+}
+
+/** Safely call findNext — catches SyntaxError from invalid regex patterns. */
+function safeFindNext(
+  addon: SearchAddon,
+  query: string,
+  options: Parameters<SearchAddon['findNext']>[1],
+): boolean {
+  try {
+    return addon.findNext(query, options)
+  } catch {
+    return false
+  }
+}
+
+/** Safely call findPrevious — catches SyntaxError from invalid regex patterns. */
+function safeFindPrevious(
+  addon: SearchAddon,
+  query: string,
+  options: Parameters<SearchAddon['findPrevious']>[1],
+): boolean {
+  try {
+    return addon.findPrevious(query, options)
+  } catch {
+    return false
+  }
 }
 
 export function TerminalSearchBar({ searchAddon, visible, onClose }: TerminalSearchBarProps) {
@@ -26,6 +58,17 @@ export function TerminalSearchBar({ searchAddon, visible, onClose }: TerminalSea
   const [resultCount, setResultCount] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const queryRef = useRef(query)
+  const [prevAddon, setPrevAddon] = useState(searchAddon)
+
+  // Reset stale result counts when searchAddon identity changes (tab switch).
+  // Uses useState (not useRef) to satisfy both react-hooks/refs and
+  // react-hooks/set-state-in-effect — setState during render is the official
+  // React pattern for "adjusting state based on changing props".
+  if (prevAddon !== searchAddon) {
+    setPrevAddon(searchAddon)
+    setResultIndex(-1)
+    setResultCount(0)
+  }
 
   // Subscribe to result changes
   useEffect(() => {
@@ -49,7 +92,7 @@ export function TerminalSearchBar({ searchAddon, visible, onClose }: TerminalSea
       caseSensitive,
       wholeWord,
       incremental: true,
-      decorations: DECO_OPTIONS,
+      decorations: getDecoOptions(),
     }),
     [regex, caseSensitive, wholeWord],
   )
@@ -64,7 +107,7 @@ export function TerminalSearchBar({ searchAddon, visible, onClose }: TerminalSea
     caseSensitive: overrides.caseSensitive ?? caseSensitive,
     wholeWord: overrides.wholeWord ?? wholeWord,
     incremental: true,
-    decorations: DECO_OPTIONS,
+    decorations: getDecoOptions(),
   })
 
   const doSearch = useCallback(
@@ -75,7 +118,7 @@ export function TerminalSearchBar({ searchAddon, visible, onClose }: TerminalSea
         setResultCount(0)
         return
       }
-      searchAddon.findNext(q, searchOptions())
+      safeFindNext(searchAddon, q, searchOptions())
     },
     [searchAddon, searchOptions],
   )
@@ -87,7 +130,7 @@ export function TerminalSearchBar({ searchAddon, visible, onClose }: TerminalSea
     wholeWord?: boolean
   }) => {
     const q = queryRef.current
-    if (q) searchAddon.findNext(q, buildSearchOptions(overrides))
+    if (q) safeFindNext(searchAddon, q, buildSearchOptions(overrides))
   }
 
   const handleChange = (value: string) => {
@@ -123,9 +166,9 @@ export function TerminalSearchBar({ searchAddon, visible, onClose }: TerminalSea
     if (e.key === 'Enter') {
       e.preventDefault()
       if (e.shiftKey) {
-        searchAddon.findPrevious(query, searchOptions())
+        safeFindPrevious(searchAddon, query, searchOptions())
       } else {
-        searchAddon.findNext(query, searchOptions())
+        safeFindNext(searchAddon, query, searchOptions())
       }
       return
     }
@@ -192,7 +235,7 @@ export function TerminalSearchBar({ searchAddon, visible, onClose }: TerminalSea
         className="term-search-nav"
         title="Previous Match (Shift+Enter)"
         disabled={!hasResults}
-        onClick={() => searchAddon.findPrevious(query, searchOptions())}
+        onClick={() => safeFindPrevious(searchAddon, query, searchOptions())}
       >
         &#9650;
       </button>
@@ -200,7 +243,7 @@ export function TerminalSearchBar({ searchAddon, visible, onClose }: TerminalSea
         className="term-search-nav"
         title="Next Match (Enter)"
         disabled={!hasResults}
-        onClick={() => searchAddon.findNext(query, searchOptions())}
+        onClick={() => safeFindNext(searchAddon, query, searchOptions())}
       >
         &#9660;
       </button>
