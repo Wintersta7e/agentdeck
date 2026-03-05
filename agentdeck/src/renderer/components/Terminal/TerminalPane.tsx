@@ -134,6 +134,7 @@ interface CachedTerminal {
   fit: FitAddon
   webgl: WebglAddon | null
   search: SearchAddon | null
+  hiddenBuffer: string[]
 }
 const terminalCache = new Map<string, CachedTerminal>()
 
@@ -200,6 +201,10 @@ export function TerminalPane({
       webglAddon = cached.webgl
       search = cached.search
       if (search) searchAddonMap.set(sessionId, search)
+      // Restore any data buffered while this terminal was hidden
+      if (cached.hiddenBuffer.length > 0) {
+        hiddenBufferRef.current = cached.hiddenBuffer
+      }
       isReattached = true
       // Move the xterm DOM tree into the new container
       if (term.element) {
@@ -427,7 +432,13 @@ export function TerminalPane({
         if (term.element?.parentElement) {
           term.element.parentElement.removeChild(term.element)
         }
-        terminalCache.set(sessionId, { term, fit, webgl: webglAddon, search })
+        terminalCache.set(sessionId, {
+          term,
+          fit,
+          webgl: webglAddon,
+          search,
+          hiddenBuffer: hiddenBufferRef.current,
+        })
       } else {
         // Session removed → dispose everything
         try {
