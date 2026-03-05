@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { ParticleField } from './ParticleField'
 import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
@@ -124,6 +124,10 @@ export function HomeScreen({
   }, [projectStatusStr])
 
   const agentStatus = useAppStore((s) => s.agentStatus)
+  const agentVersions = useAppStore((s) => s.agentVersions)
+  const setAgentUpdating = useAppStore((s) => s.setAgentUpdating)
+  const setAgentVersion = useAppStore((s) => s.setAgentVersion)
+  const addNotification = useAppStore((s) => s.addNotification)
   const username = useAppStore((s) => s.wslUsername)
   const refreshAgentStatus = useAppStore((s) => s.refreshAgentStatus)
   const [showAllRecent, setShowAllRecent] = useState(false)
@@ -168,6 +172,31 @@ export function HomeScreen({
       document.removeEventListener('keydown', handleKey)
     }
   }, [cardMenu])
+
+  const handleAgentUpdate = useCallback(
+    async (agentId: string) => {
+      setAgentUpdating(agentId, true)
+      try {
+        const result = await window.agentDeck.agents.update(agentId)
+        const displayName = SHARED_AGENTS.find((a) => a.id === agentId)?.name ?? agentId
+        if (result.success) {
+          addNotification('info', `${displayName} updated to ${result.newVersion ?? 'latest'}`)
+          setAgentVersion(agentId, {
+            current: result.newVersion,
+            latest: result.newVersion,
+            updateAvailable: false,
+          })
+        } else {
+          addNotification('error', `Failed to update ${displayName}: ${result.message}`)
+        }
+      } catch (err: unknown) {
+        addNotification('error', `Update error: ${String(err)}`)
+      } finally {
+        setAgentUpdating(agentId, false)
+      }
+    },
+    [setAgentUpdating, setAgentVersion, addNotification],
+  )
 
   function getProjectStatus(projectId: string): string {
     return projectStatusMap[projectId] ?? 'idle'
@@ -356,18 +385,37 @@ export function HomeScreen({
           </div>
         </div>
         <div className="agent-grid">
-          {AGENTS.filter((a) => !visibleAgents || visibleAgents.includes(a.name)).map((a) => (
-            <div key={a.name} className={`agent-card ${agentStatus[a.name] ? 'active' : ''}`}>
-              <div className="agent-card-icon">{a.icon}</div>
-              <div className="agent-card-name">{a.name}</div>
-              <div className="agent-card-desc">{a.desc}</div>
-              {agentStatus[a.name] !== undefined && (
-                <div className={agentStatus[a.name] ? 'agent-installed' : 'agent-missing'}>
-                  {agentStatus[a.name] ? '\u2713 installed' : '\u2717 not found'}
-                </div>
-              )}
-            </div>
-          ))}
+          {AGENTS.filter((a) => !visibleAgents || visibleAgents.includes(a.name)).map((a) => {
+            const vInfo = agentVersions[a.name]
+            const installed = agentStatus[a.name]
+            return (
+              <div key={a.name} className={`agent-card ${installed ? 'active' : ''}`}>
+                <div className="agent-card-icon">{a.icon}</div>
+                <div className="agent-card-name">{a.name}</div>
+                {vInfo?.current && <div className="agent-card-version">v{vInfo.current}</div>}
+                <div className="agent-card-desc">{a.desc}</div>
+                {agentStatus[a.name] !== undefined && (
+                  <div className={installed ? 'agent-installed' : 'agent-missing'}>
+                    {installed ? '\u2713 installed' : '\u2717 not found'}
+                  </div>
+                )}
+                {installed && vInfo && (
+                  <button
+                    className={`agent-update-btn${vInfo.updateAvailable ? ' has-update' : ''}${vInfo.updating ? ' updating' : ''}`}
+                    disabled={vInfo.updating}
+                    onClick={() => void handleAgentUpdate(a.name)}
+                    type="button"
+                  >
+                    {vInfo.updating
+                      ? 'Updating\u2026'
+                      : vInfo.updateAvailable
+                        ? `Update \u2192 ${vInfo.latest}`
+                        : '\u2713 Up to date'}
+                  </button>
+                )}
+              </div>
+            )
+          })}
           <div className="agent-card add-agent" onClick={() => openCommandPalette('agents')}>
             <div className="agent-card-icon agent-add-icon">+</div>
             <div className="agent-card-name agent-add-name">Add agent</div>

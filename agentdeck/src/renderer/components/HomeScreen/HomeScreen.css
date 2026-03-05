@@ -493,6 +493,42 @@
   margin-top: 2px;
 }
 
+.agent-card-version {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text3);
+  margin-top: -2px;
+}
+
+.agent-update-btn {
+  margin-top: 6px;
+  padding: 3px 8px;
+  border: 1px solid var(--bg3);
+  border-radius: var(--r);
+  background: transparent;
+  color: var(--text2);
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.agent-update-btn:hover {
+  border-color: var(--text2);
+  color: var(--text1);
+}
+.agent-update-btn.has-update {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.agent-update-btn.has-update:hover {
+  background: var(--accent);
+  color: var(--bg0);
+}
+.agent-update-btn.updating {
+  opacity: 0.6;
+  cursor: wait;
+}
+
 /* Add-agent card text overrides */
 .agent-add-icon {
   color: var(--text3);

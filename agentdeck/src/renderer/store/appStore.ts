@@ -132,6 +132,23 @@ interface AppState {
   setAgentStatus: (status: Record<string, boolean>) => void
   refreshAgentStatus: () => Promise<void>
 
+  // Agent version info (populated by background checks)
+  agentVersions: Record<
+    string,
+    {
+      current: string | null
+      latest: string | null
+      updateAvailable: boolean
+      checking: boolean
+      updating: boolean
+    }
+  >
+  setAgentVersion: (
+    agentId: string,
+    info: { current: string | null; latest: string | null; updateAvailable: boolean },
+  ) => void
+  setAgentUpdating: (agentId: string, updating: boolean) => void
+
   // Notifications
   notifications: Array<{
     id: string
@@ -596,6 +613,32 @@ export const useAppStore = create<AppState>((set, get) => ({
     const status = await window.agentDeck.agents.check()
     set({ agentStatus: status })
   },
+
+  agentVersions: {},
+
+  setAgentVersion: (agentId, info) =>
+    set((state) => ({
+      agentVersions: {
+        ...state.agentVersions,
+        [agentId]: {
+          ...info,
+          checking: false,
+          updating: state.agentVersions[agentId]?.updating ?? false,
+        },
+      },
+    })),
+
+  setAgentUpdating: (agentId, updating) =>
+    set((state) => {
+      const existing = state.agentVersions[agentId]
+      if (!existing) return state
+      return {
+        agentVersions: {
+          ...state.agentVersions,
+          [agentId]: { ...existing, updating },
+        },
+      }
+    }),
 
   // Notifications
   notifications: [],

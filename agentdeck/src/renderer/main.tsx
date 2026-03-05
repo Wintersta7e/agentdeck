@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { ErrorBoundary } from './components/ErrorBoundary/ErrorBoundary'
 import { useAppStore } from './store/appStore'
+import { AGENTS } from '../shared/agents'
 import { App } from './App'
 import './styles/tokens.css'
 import './styles/global.css'
@@ -52,6 +53,23 @@ async function initAndRender(): Promise<void> {
       </ErrorBoundary>
     </StrictMode>,
   )
+
+  // Fire-and-forget: check for agent updates in background (non-blocking)
+  // Runs AFTER render so the UI is already interactive
+  window.agentDeck.agents.onVersionInfo((info) => {
+    const { setAgentVersion, addNotification } = useAppStore.getState()
+    setAgentVersion(info.agentId, {
+      current: info.current,
+      latest: info.latest,
+      updateAvailable: info.updateAvailable,
+    })
+    if (info.updateAvailable && info.current && info.latest) {
+      const agent = AGENTS.find((a) => a.id === info.agentId)
+      const name = agent?.name ?? info.agentId
+      addNotification('info', `Update available: ${name} ${info.current} \u2192 ${info.latest}`)
+    }
+  })
+  window.agentDeck.agents.checkUpdates(agentStatusResult)
 }
 
 initAndRender().catch((err: unknown) => {
