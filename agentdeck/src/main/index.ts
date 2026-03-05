@@ -350,11 +350,25 @@ function registerIpcHandlers(store: AppStore): void {
   /* ── WSL username ─────────────────────────────────────────────── */
   ipcMain.handle('app:wslUsername', async () => {
     const { execFile } = await import('child_process')
-    return new Promise<string>((resolve) => {
-      execFile('wsl.exe', ['--', 'bash', '-lc', 'whoami'], { timeout: 5000 }, (err, stdout) => {
-        resolve(err ? '' : stdout.trim())
+    const tryCmd = (args: string[]): Promise<string> =>
+      new Promise((resolve) => {
+        execFile('wsl.exe', args, { timeout: 5000 }, (err, stdout) => {
+          const out = stdout?.trim() ?? ''
+          if (err || !out) {
+            resolve('')
+            return
+          }
+          resolve(out)
+        })
       })
-    })
+
+    // Try multiple approaches — some WSL configs fail on one but succeed on another
+    const result =
+      (await tryCmd(['--', 'bash', '-lc', 'whoami'])) ||
+      (await tryCmd(['--', 'whoami'])) ||
+      (await tryCmd(['--', 'bash', '-lc', 'echo $USER']))
+    if (!result) log.warn('Failed to detect WSL username')
+    return result
   })
 
   /* ── Project utilities ──────────────────────────────────────────── */
