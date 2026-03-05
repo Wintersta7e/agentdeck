@@ -1,4 +1,5 @@
 .terminal-container {
+  position: relative;
   flex: 1;
   overflow: hidden;
   background: var(--bg0);
