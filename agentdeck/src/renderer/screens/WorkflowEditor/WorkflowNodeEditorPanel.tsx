@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { WorkflowNode, WorkflowNodeStatus, AgentType } from '../../../shared/types'
 import { AGENTS } from '../../../shared/agents'
 import { useAppStore } from '../../store/appStore'
@@ -29,6 +29,13 @@ export default function WorkflowNodeEditorPanel({
   const role = node.roleId ? rolesMap.get(node.roleId) : undefined
 
   const [roleFormMode, setRoleFormMode] = useState<'edit' | 'create' | null>(null)
+
+  // H7: Auto-clear orphan roleId when role has been deleted
+  useEffect(() => {
+    if (node.roleId && !rolesMap.has(node.roleId)) {
+      onUpdateNode({ ...node, roleId: undefined })
+    }
+  }, [node, rolesMap, onUpdateNode])
 
   const update = useCallback(
     (patch: Partial<WorkflowNode>) => {
@@ -251,15 +258,20 @@ export default function WorkflowNodeEditorPanel({
           </div>
         )}
 
-        {/* Timeout (shell nodes only) */}
-        {node.type === 'shell' && (
+        {/* Timeout (shell + agent nodes) */}
+        {(node.type === 'shell' || node.type === 'agent') && (
           <div className="wf-ne-field">
             <label className="wf-ne-label">Timeout (ms)</label>
             <input
               className="wf-ne-input"
               type="number"
-              value={node.timeout ?? 60000}
-              onChange={(e) => update({ timeout: parseInt(e.target.value, 10) || 60000 })}
+              min={1}
+              value={node.timeout ?? (node.type === 'shell' ? 60000 : 300000)}
+              onChange={(e) => {
+                const val = parseInt(e.target.value, 10)
+                const fallback = node.type === 'shell' ? 60000 : 300000
+                update({ timeout: val > 0 ? val : fallback })
+              }}
             />
           </div>
         )}

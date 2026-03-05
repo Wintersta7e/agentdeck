@@ -70,11 +70,12 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
     latestWorkflowRef.current = w
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(() => {
-      // H2: Catch save failures
+      // H2: Catch save failures — H3: Surface to user via notification
       window.agentDeck.workflows.save(w).catch((err: unknown) => {
         window.agentDeck.log.send('error', 'workflow-editor', 'Auto-save failed', {
           err: String(err),
         })
+        useAppStore.getState().addNotification('error', `Workflow auto-save failed: ${String(err)}`)
       })
     }, 500)
   }, [])
@@ -551,6 +552,7 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
               nodeStatuses={nodeStatuses}
               onResumeCheckpoint={handleResume}
               onClear={handleClearLogs}
+              visible={rightTab === 'log'}
             />
           </div>
         </div>

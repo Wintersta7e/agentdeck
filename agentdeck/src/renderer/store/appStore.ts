@@ -495,10 +495,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   addWorkflowLog: (workflowId, event) =>
     set((state) => {
       const existing = state.workflowLogs[workflowId] ?? []
+      // M6: Skip duplicate events (same ID from rapid IPC)
+      if (event.id && existing.length > 0 && existing[existing.length - 1]?.id === event.id) {
+        return state
+      }
       return {
         workflowLogs: {
           ...state.workflowLogs,
-          [workflowId]: [...existing, event].slice(-1000),
+          [workflowId]: [...existing, event].slice(-5000),
         },
       }
     }),

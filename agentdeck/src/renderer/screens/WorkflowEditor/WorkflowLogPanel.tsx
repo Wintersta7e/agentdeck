@@ -14,6 +14,8 @@ interface WorkflowLogPanelProps {
   nodeStatuses: Record<string, WorkflowNodeStatus>
   onResumeCheckpoint: (workflowId: string, nodeId: string) => void
   onClear: () => void
+  /** M5: When true, the panel is visible — triggers react-window re-measurement */
+  visible?: boolean | undefined
 }
 
 // ── Flat row model for virtualization ───────────────────────────────────────
@@ -195,6 +197,7 @@ export default function WorkflowLogPanel({
   nodeStatuses,
   onResumeCheckpoint,
   onClear,
+  visible,
 }: WorkflowLogPanelProps): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<string>('all')
 
@@ -267,6 +270,18 @@ export default function WorkflowLogPanel({
     if (!autoScrollRef.current || rows.length === 0) return
     listRef.current?.scrollToRow({ index: rows.length - 1, align: 'end' })
   }, [rows.length, listRef])
+
+  // M5: Re-measure when tab becomes visible (display:none → flex breaks react-window).
+  // react-window v2 doesn't expose resetAfterIndex — re-scroll to force layout recalc.
+  useEffect(() => {
+    if (visible && rows.length > 0) {
+      // Dispatch a resize event so the List recalculates its container dimensions
+      window.dispatchEvent(new Event('resize'))
+      if (autoScrollRef.current) {
+        listRef.current?.scrollToRow({ index: rows.length - 1, align: 'end' })
+      }
+    }
+  }, [visible, listRef, rows.length])
 
   // Handle user scroll to detect if they've scrolled away from bottom
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
