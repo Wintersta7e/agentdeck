@@ -1,0 +1,136 @@
+import { execFile } from 'child_process'
+import { promisify } from 'util'
+import type { BrowserWindow } from 'electron'
+import { AGENTS, AGENT_BINARY_MAP } from '../shared/agents'
+import { createLogger } from './logger'
+
+const log = createLogger('agent-updater')
+
+const execFileAsync = promisify(execFile)
+
+/**
+ * Prefix sourced before every WSL command in bash -lc (non-interactive).
+ * Login shells don't source .bashrc, so nvm/fnm/volta aren't on PATH.
+ * This explicitly initialises the most common node version managers.
+ */
+const NODE_INIT =
+  [
+    '[ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh" 2>/dev/null',
+    'type fnm &>/dev/null && eval "$(fnm env --shell bash)" 2>/dev/null',
+    'true',
+  ].join('; ') + '; '
+
+/** Semver extraction pattern */
+const SEMVER_RE = /(\d+\.\d+\.\d+)/
+
+export interface VersionInfo {
+  agentId: string
+  current: string | null
+  latest: string | null
+  updateAvailable: boolean
+}
+
+export interface UpdateResult {
+  agentId: string
+  success: boolean
+  newVersion: string | null
+  message: string
+}
+
+/** Run a command inside WSL via bash login shell with nvm/fnm PATH init. */
+async function runWslCmd(cmd: string): Promise<string> {
+  const { stdout } = await execFileAsync('wsl.exe', ['--', 'bash', '-lc', NODE_INIT + cmd], {
+    timeout: 15000,
+  })
+  return stdout.trim()
+}
+
+/**
+ * Check the current and latest versions of an agent.
+ * Returns safe defaults (nulls, updateAvailable: false) on any error.
+ */
+export async function checkAgentVersion(agentId: string): Promise<VersionInfo> {
+  const agent = AGENTS.find((a) => a.id === agentId)
+  if (!agent) {
+    return { agentId, current: null, latest: null, updateAvailable: false }
+  }
+
+  const binary = AGENT_BINARY_MAP[agentId] ?? agentId
+
+  // Get current version
+  let current: string | null = null
+  try {
+    const versionCmd = `${binary} ${agent.versionArgs.join(' ')}`
+    const raw = await runWslCmd(versionCmd)
+    const match = SEMVER_RE.exec(raw)
+    current = match?.[1] ?? null
+  } catch {
+    log.debug(`Failed to get current version for ${agentId}`)
+  }
+
+  // Get latest version
+  let latest: string | null = null
+  try {
+    const raw = await runWslCmd(agent.latestCmd)
+    const match = SEMVER_RE.exec(raw)
+    latest = match?.[1] ?? null
+  } catch {
+    log.debug(`Failed to get latest version for ${agentId}`)
+  }
+
+  const updateAvailable = current !== null && latest !== null && current !== latest
+
+  log.info(`Version check: ${agentId}`, { current, latest, updateAvailable })
+
+  return { agentId, current, latest, updateAvailable }
+}
+
+/**
+ * Run the agent's update command and re-check the version afterward.
+ */
+export async function updateAgent(agentId: string): Promise<UpdateResult> {
+  const agent = AGENTS.find((a) => a.id === agentId)
+  if (!agent) {
+    return { agentId, success: false, newVersion: null, message: 'Unknown agent' }
+  }
+
+  log.info(`Starting update for ${agentId}`)
+
+  try {
+    await runWslCmd(agent.updateCmd)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    log.warn(`Update failed for ${agentId}`, { message })
+    return { agentId, success: false, newVersion: null, message }
+  }
+
+  // Re-check version after update
+  const info = await checkAgentVersion(agentId)
+  log.info(`Update complete for ${agentId}`, { newVersion: info.current })
+
+  return {
+    agentId,
+    success: true,
+    newVersion: info.current,
+    message: info.current ? `Updated to ${info.current}` : 'Update completed',
+  }
+}
+
+/**
+ * Fire-and-forget version checks for all installed agents.
+ * Each result is pushed to the renderer via IPC as it completes.
+ */
+export function checkAllUpdates(
+  win: BrowserWindow,
+  installedAgents: Record<string, boolean>,
+): void {
+  for (const agentId of Object.keys(installedAgents)) {
+    if (!installedAgents[agentId]) continue
+
+    void checkAgentVersion(agentId).then((info) => {
+      if (!win.isDestroyed()) {
+        win.webContents.send('agents:versionInfo', info)
+      }
+    })
+  }
+}
