@@ -213,6 +213,7 @@ export function TerminalPane({
         lineHeight: 1.5,
         cursorBlink: true,
         cursorInactiveStyle: 'none',
+        allowProposedApi: true,
         theme: getXtermTheme(document.documentElement.dataset.theme ?? ''),
         scrollback: validScrollback(scrollbackRef.current),
       })
