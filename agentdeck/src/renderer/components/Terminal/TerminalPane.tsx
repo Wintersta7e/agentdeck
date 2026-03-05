@@ -215,7 +215,7 @@ export function TerminalPane({
       term = new Terminal({
         fontFamily: "'JetBrains Mono', monospace",
         fontSize: 12,
-        lineHeight: 1.5,
+        lineHeight: 1.2,
         cursorBlink: true,
         cursorInactiveStyle: 'none',
         allowProposedApi: true,
@@ -370,8 +370,13 @@ export function TerminalPane({
       }
     })
 
+    // Filter OSC color query responses from xterm.js before forwarding to PTY.
+    // Apps like Codex send OSC 10/11 to detect terminal colors; xterm.js responds
+    // correctly, but some apps don't consume the response and display it as text.
+    const OSC_RESPONSE_RE = /\x1b\]\d+;[^\x07\x1b]*(?:\x07|\x1b\\)/g
     const onDataDisposable = term.onData((data) => {
-      window.agentDeck.pty.write(sessionId, data)
+      const filtered = data.replace(OSC_RESPONSE_RE, '')
+      if (filtered) window.agentDeck.pty.write(sessionId, filtered)
     })
 
     const unsubExit = window.agentDeck.pty.onExit(sessionId, () => {

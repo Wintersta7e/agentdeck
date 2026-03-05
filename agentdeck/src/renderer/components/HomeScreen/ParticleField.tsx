@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { subscribeTheme } from '../../utils/themeObserver'
 
 interface Particle {
   x: number
@@ -42,9 +43,14 @@ export function ParticleField(): React.JSX.Element {
     }
     resize()
 
-    // Read accent colour from CSS custom properties
-    const style = getComputedStyle(document.documentElement)
-    const accentRgb = style.getPropertyValue('--accent-rgb').trim() || '245, 166, 35'
+    // Read accent colour from CSS custom properties (mutable so theme changes take effect)
+    const readAccentRgb = (): string =>
+      getComputedStyle(document.documentElement).getPropertyValue('--accent-rgb').trim() ||
+      '245, 166, 35'
+    let accentRgb = readAccentRgb()
+    const unsubTheme = subscribeTheme(() => {
+      accentRgb = readAccentRgb()
+    })
 
     // Initialise particles
     for (let i = 0; i < COUNT; i++) {
@@ -90,6 +96,7 @@ export function ParticleField(): React.JSX.Element {
       cancelAnimationFrame(animId)
       if (resizeTimer) clearTimeout(resizeTimer)
       ro.disconnect()
+      unsubTheme()
     }
   }, [])
 

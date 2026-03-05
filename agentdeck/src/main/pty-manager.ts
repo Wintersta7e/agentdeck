@@ -85,7 +85,9 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
     }
 
     const cwd = process.env['USERPROFILE'] ?? process.cwd()
-    const mergedEnv = { ...process.env, ...env } as Record<string, string>
+    // Set COLORFGBG so TUI apps (Codex/crossterm) detect dark background without
+    // sending OSC 10/11 color queries that leak as visible text in xterm.js.
+    const mergedEnv = { COLORFGBG: '15;0', ...process.env, ...env } as Record<string, string>
 
     /* Fix 8 (ERR-6): Wrap pty.spawn in try-catch */
     let proc: IPty
