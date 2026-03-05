@@ -1,6 +1,6 @@
 import type { AgentConfig, Project } from './types'
 
-const FALLBACK: AgentConfig = { agent: 'claude-code', isDefault: true }
+const FALLBACK: Readonly<AgentConfig> = Object.freeze({ agent: 'claude-code', isDefault: true })
 
 /** Get the default agent for a project (backward-compatible with legacy `agent` field). */
 export function getDefaultAgent(project: Project): AgentConfig {
@@ -36,5 +36,7 @@ export function migrateProjectAgents(project: Project): Project {
   return {
     ...project,
     agents: [{ agent: project.agent, agentFlags: project.agentFlags, isDefault: true }],
+    agent: undefined,
+    agentFlags: undefined,
   }
 }

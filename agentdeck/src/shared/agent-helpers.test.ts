@@ -76,12 +76,14 @@ describe('getProjectAgents', () => {
 })
 
 describe('migrateProjectAgents', () => {
-  it('migrates legacy agent to agents array', () => {
+  it('migrates legacy agent to agents array and cleans up legacy fields', () => {
     const project = makeProject({ agent: 'aider', agentFlags: '--model gpt-4' })
     const result = migrateProjectAgents(project)
     expect(result.agents).toEqual([
       { agent: 'aider', agentFlags: '--model gpt-4', isDefault: true },
     ])
+    expect(result.agent).toBeUndefined()
+    expect(result.agentFlags).toBeUndefined()
   })
 
   it('returns project unchanged when agents already set', () => {
