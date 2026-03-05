@@ -28,6 +28,7 @@ type LogRow = HeaderRow | EntryRow | ResumeRow
 // Row pixel heights
 const ROW_HEIGHT_HEADER = 34
 const ROW_HEIGHT_ENTRY = 20
+const AUTO_SCROLL_THRESHOLD = 20
 const ROW_HEIGHT_RESUME = 36
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -287,7 +288,7 @@ export default function WorkflowLogPanel({
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget
     const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
-    autoScrollRef.current = distFromBottom <= 20
+    autoScrollRef.current = distFromBottom <= AUTO_SCROLL_THRESHOLD
   }, [])
 
   // Stable rowProps object — must be memoized to avoid unnecessary re-renders

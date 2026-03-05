@@ -19,6 +19,10 @@ interface WorkflowEditorProps {
   workflowId: string
 }
 
+// L8: Named constants for magic numbers
+const AUTO_SAVE_DEBOUNCE_MS = 500
+const NEW_NODE_X_OFFSET = 260
+
 // Stable empty defaults — avoid `?? []` / `?? {}` in Zustand selectors
 // which create new references every render and cause infinite re-render loops.
 const EMPTY_LOGS: WorkflowEvent[] = []
@@ -77,7 +81,7 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
         })
         useAppStore.getState().addNotification('error', `Workflow auto-save failed: ${String(err)}`)
       })
-    }, 500)
+    }, AUTO_SAVE_DEBOUNCE_MS)
   }, [])
 
   /** Flush any pending auto-save immediately */
@@ -189,7 +193,7 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
           id,
           type,
           name: defaultNames[type],
-          x: maxX + 260,
+          x: maxX + NEW_NODE_X_OFFSET,
           y: maxY > 0 ? 100 : 140,
         }
 
