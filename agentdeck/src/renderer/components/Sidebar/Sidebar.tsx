@@ -302,8 +302,8 @@ export function Sidebar({
             </>
           )}
           {contextMenu.projectId && contextMenu.subMenu === 'templates' && (
-            <div className="sidebar-ctx-tpl-panel">
-              <div className="sidebar-ctx-tpl-header">
+            <div className="sidebar-ctx-sub-panel">
+              <div className="sidebar-ctx-sub-header">
                 <button
                   className="sidebar-ctx-back"
                   onClick={() => setContextMenu({ ...contextMenu, subMenu: undefined })}
@@ -312,25 +312,25 @@ export function Sidebar({
                 </button>
                 <span>Attach Templates</span>
               </div>
-              <div className="sidebar-ctx-tpl-body">
+              <div className="sidebar-ctx-sub-body">
                 {groupedTemplates.map((group) => {
                   const project = projects.find((p) => p.id === contextMenu.projectId)
                   const attached = project?.attachedTemplates ?? []
                   return (
                     <div key={group.category}>
-                      <div className="sidebar-ctx-tpl-cat">{group.category}</div>
+                      <div className="sidebar-ctx-sub-cat">{group.category}</div>
                       {group.templates.map((t) => {
                         const checked = attached.includes(t.id)
                         return (
                           <button
                             key={t.id}
-                            className={`sidebar-ctx-tpl-item${checked ? ' checked' : ''}`}
+                            className={`sidebar-ctx-sub-item${checked ? ' checked' : ''}`}
                             onClick={() => handleToggleTemplate(t.id)}
                           >
-                            <span className={`sidebar-ctx-tpl-check${checked ? ' on' : ''}`}>
+                            <span className={`sidebar-ctx-sub-check${checked ? ' on' : ''}`}>
                               {checked ? '\u2611' : '\u2610'}
                             </span>
-                            <span className="sidebar-ctx-tpl-name">{t.name}</span>
+                            <span className="sidebar-ctx-sub-name">{t.name}</span>
                           </button>
                         )
                       })}
@@ -347,8 +347,8 @@ export function Sidebar({
               if (!project) return null
               const projectAgents = getProjectAgents(project)
               return (
-                <div className="sidebar-ctx-tpl-panel">
-                  <div className="sidebar-ctx-tpl-header">
+                <div className="sidebar-ctx-sub-panel">
+                  <div className="sidebar-ctx-sub-header">
                     <button
                       className="sidebar-ctx-back"
                       onClick={() => setContextMenu({ ...contextMenu, subMenu: undefined })}
@@ -357,7 +357,7 @@ export function Sidebar({
                     </button>
                     <span>Launch with...</span>
                   </div>
-                  <div className="sidebar-ctx-tpl-body">
+                  <div className="sidebar-ctx-sub-body">
                     {projectAgents.map((ac) => {
                       const agentMeta = SHARED_AGENTS.find((a) => a.id === ac.agent)
                       return (
