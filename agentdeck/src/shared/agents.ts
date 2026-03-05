@@ -23,6 +23,7 @@ export const AGENTS = [
     name: 'Codex',
     description: 'OpenAI CLI agent',
     versionArgs: ['--version'],
+    installedCmd: 'npm list -g @openai/codex --json 2>/dev/null',
     latestCmd: 'npm view @openai/codex version 2>/dev/null',
     updateCmd: 'npm update -g @openai/codex',
   },

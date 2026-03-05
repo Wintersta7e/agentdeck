@@ -57,10 +57,13 @@ export async function checkAgentVersion(agentId: string): Promise<VersionInfo> {
 
   const binary = AGENT_BINARY_MAP[agentId] ?? agentId
 
-  // Get current version
+  // Get current version — use installedCmd if provided (avoids PATH conflicts)
   let current: string | null = null
   try {
-    const versionCmd = `${binary} ${agent.versionArgs.join(' ')}`
+    const versionCmd =
+      'installedCmd' in agent && agent.installedCmd
+        ? agent.installedCmd
+        : `${binary} ${agent.versionArgs.join(' ')}`
     const raw = await runWslCmd(versionCmd)
     const match = SEMVER_RE.exec(raw)
     current = match?.[1] ?? null

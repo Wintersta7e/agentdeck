@@ -203,7 +203,7 @@ describe('checkAllUpdates', () => {
       if (cmd.includes('@anthropic-ai/claude-code version')) {
         return Promise.resolve({ stdout: '2.2.0\n', stderr: '' })
       }
-      if (cmd.includes('codex --version')) {
+      if (cmd.includes('npm list -g @openai/codex')) {
         return Promise.resolve({ stdout: '0.107.0\n', stderr: '' })
       }
       if (cmd.includes('@openai/codex version')) {
