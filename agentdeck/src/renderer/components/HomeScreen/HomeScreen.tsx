@@ -130,7 +130,6 @@ export function HomeScreen({
   const addNotification = useAppStore((s) => s.addNotification)
   const username = useAppStore((s) => s.wslUsername)
   const refreshAgentStatus = useAppStore((s) => s.refreshAgentStatus)
-  const [showAllRecent, setShowAllRecent] = useState(false)
   const [cardMenu, setCardMenu] = useState<{
     x: number
     y: number
@@ -139,14 +138,6 @@ export function HomeScreen({
   const cardMenuRef = useRef<HTMLDivElement>(null)
 
   const pinned = useMemo(() => projects.filter((p) => p.pinned), [projects])
-  const allRecent = useMemo(
-    () =>
-      [...projects]
-        .filter((p) => p.lastOpened)
-        .sort((a, b) => (b.lastOpened ?? 0) - (a.lastOpened ?? 0)),
-    [projects],
-  )
-  const recent = showAllRecent ? allRecent : allRecent.slice(0, 5)
 
   // O(1) template lookup map — avoids O(n) find() per pinned card
   const templateMap = useMemo(() => {
@@ -329,43 +320,6 @@ export function HomeScreen({
                         )
                       })}
                     </div>
-                  </div>
-                )
-              })}
-            </div>
-          </>
-        )}
-
-        {recent.length > 0 && (
-          <>
-            <div className="section-header">
-              <div className="section-title">Recent</div>
-              {allRecent.length > 5 && (
-                <button className="section-action" onClick={() => setShowAllRecent((v) => !v)}>
-                  {showAllRecent ? 'Show less' : `See all (${allRecent.length}) \u2192`}
-                </button>
-              )}
-            </div>
-            <div className="recent-list">
-              {recent.map((p, index) => {
-                const status = getProjectStatus(p.id)
-                return (
-                  <div
-                    key={p.id}
-                    className="recent-item stagger-item"
-                    style={{ animationDelay: `${index * 60}ms` }}
-                    onClick={() => onOpenProject(p)}
-                  >
-                    <div
-                      className="recent-dot"
-                      style={STATUS_DOT_STYLES[status] ?? STATUS_DOT_STYLES.idle}
-                    />
-                    <div className="recent-name">{p.name}</div>
-                    <div className="recent-path">{p.path}</div>
-                    {p.badge && (
-                      <span className={`recent-badge badge-${badgeClass(p.badge)}`}>{p.badge}</span>
-                    )}
-                    <div className="recent-time">{timeAgo(p.lastOpened)}</div>
                   </div>
                 )
               })}
