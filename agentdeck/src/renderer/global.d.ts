@@ -73,6 +73,21 @@ declare global {
         check: () => Promise<Record<string, boolean>>
         getVisible: () => Promise<string[] | null>
         setVisible: (agents: string[]) => Promise<string[]>
+        checkUpdates: (installedAgents: Record<string, boolean>) => Promise<void>
+        update: (agentId: string) => Promise<{
+          agentId: string
+          success: boolean
+          newVersion: string | null
+          message: string
+        }>
+        onVersionInfo: (
+          cb: (info: {
+            agentId: string
+            current: string | null
+            latest: string | null
+            updateAvailable: boolean
+          }) => void,
+        ) => () => void
       }
       projects: {
         detectStack: (path: string, distro?: string) => Promise<DetectedStack | null>

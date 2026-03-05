@@ -114,6 +114,35 @@ contextBridge.exposeInMainWorld('agentDeck', {
     getVisible: () => ipcRenderer.invoke('agents:getVisible') as Promise<string[] | null>,
     setVisible: (agents: string[]) =>
       ipcRenderer.invoke('agents:setVisible', agents) as Promise<string[]>,
+    checkUpdates: (installedAgents: Record<string, boolean>) =>
+      ipcRenderer.invoke('agents:checkUpdates', installedAgents) as Promise<void>,
+    update: (agentId: string) =>
+      ipcRenderer.invoke('agents:update', agentId) as Promise<{
+        agentId: string
+        success: boolean
+        newVersion: string | null
+        message: string
+      }>,
+    onVersionInfo: (
+      cb: (info: {
+        agentId: string
+        current: string | null
+        latest: string | null
+        updateAvailable: boolean
+      }) => void,
+    ) => {
+      const handler = (
+        _event: Electron.IpcRendererEvent,
+        info: {
+          agentId: string
+          current: string | null
+          latest: string | null
+          updateAvailable: boolean
+        },
+      ): void => cb(info)
+      ipcRenderer.on('agents:versionInfo', handler)
+      return () => ipcRenderer.removeListener('agents:versionInfo', handler)
+    },
   },
   projects: {
     detectStack: (path: string, distro?: string) =>

@@ -18,6 +18,7 @@ import { createWorkflowEngine, validateWorkflow } from './workflow-engine'
 import type { WorkflowEngine } from './workflow-engine'
 import type { Workflow } from '../shared/types'
 import { AGENT_BINARY_MAP, KNOWN_AGENT_IDS } from '../shared/agents'
+import { updateAgent, checkAllUpdates } from './agent-updater'
 
 const log = createLogger('app')
 
@@ -332,6 +333,18 @@ function registerIpcHandlers(store: AppStore): void {
     const safe = agents.filter((a) => typeof a === 'string' && KNOWN_AGENT_IDS.has(a))
     store.set('appPrefs', { ...store.get('appPrefs'), visibleAgents: safe })
     return safe
+  })
+
+  /* -- Agent version checks (fire-and-forget) ---------------------- */
+  ipcMain.handle('agents:checkUpdates', (_, installedAgents: Record<string, boolean>) => {
+    if (mainWindow) checkAllUpdates(mainWindow, installedAgents)
+  })
+
+  ipcMain.handle('agents:update', async (_, agentId: string) => {
+    if (!KNOWN_AGENT_IDS.has(agentId)) {
+      return { agentId, success: false, newVersion: null, message: 'Unknown agent' }
+    }
+    return updateAgent(agentId)
   })
 
   /* ── WSL username ─────────────────────────────────────────────── */
