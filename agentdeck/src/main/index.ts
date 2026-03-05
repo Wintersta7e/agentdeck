@@ -351,7 +351,7 @@ function registerIpcHandlers(store: AppStore): void {
   ipcMain.handle('app:wslUsername', async () => {
     const { execFile } = await import('child_process')
     return new Promise<string>((resolve) => {
-      execFile('wsl.exe', ['--', 'whoami'], { timeout: 5000 }, (err, stdout) => {
+      execFile('wsl.exe', ['--', 'bash', '-lc', 'whoami'], { timeout: 5000 }, (err, stdout) => {
         resolve(err ? '' : stdout.trim())
       })
     })
