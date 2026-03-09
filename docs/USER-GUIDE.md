@@ -1,6 +1,6 @@
 # AgentDeck User Guide
 
-> **Version**: 3.6.0
+> **Version**: 3.10.0
 
 AgentDeck is a desktop command center for managing AI coding agents through WSL2 terminals. This guide covers every feature from first launch to advanced workflow automation.
 
@@ -12,16 +12,19 @@ AgentDeck is a desktop command center for managing AI coding agents through WSL2
 2. [Home Screen](#home-screen)
 3. [Creating a Project](#creating-a-project)
 4. [Terminal Sessions](#terminal-sessions)
-5. [Split View](#split-view)
-6. [Right Panel](#right-panel)
-7. [Sidebar](#sidebar)
-8. [Prompt Templates](#prompt-templates)
-9. [Agentic Workflows](#agentic-workflows)
-10. [Workflow Roles](#workflow-roles)
-11. [Command Palette](#command-palette)
-12. [Themes](#themes)
-13. [Keyboard Shortcuts](#keyboard-shortcuts)
-14. [Troubleshooting](#troubleshooting)
+5. [Bare Terminals](#bare-terminals)
+6. [Split View](#split-view)
+7. [Terminal Search](#terminal-search)
+8. [Right Panel](#right-panel)
+9. [Sidebar](#sidebar)
+10. [Prompt Templates](#prompt-templates)
+11. [Agentic Workflows](#agentic-workflows)
+12. [Workflow Roles](#workflow-roles)
+13. [Command Palette](#command-palette)
+14. [Agent Updates](#agent-updates)
+15. [Themes](#themes)
+16. [Keyboard Shortcuts](#keyboard-shortcuts)
+17. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -34,7 +37,7 @@ AgentDeck is a desktop command center for managing AI coding agents through WSL2
 
 ### Launching
 
-Run the portable executable (`AgentDeck-3.6.0-portable.exe`) or start from source:
+Run the portable executable (`AgentDeck-{version}-portable.exe`) or start from source:
 
 ```bash
 cd agentdeck
@@ -42,7 +45,13 @@ npm install --no-bin-links
 npm run dev
 ```
 
-On first launch, AgentDeck seeds 16 prompt templates and 8 workflow roles into your local storage.
+On first launch, AgentDeck will:
+1. Render the home screen immediately
+2. Detect your WSL username and installed agents in the background
+3. Check for agent updates and show a toast notification if any are available
+4. Seed 16 prompt templates and 8 workflow roles into local storage
+
+If WSL is still booting (cold start can take 15+ seconds), the app retries automatically after 5 seconds.
 
 ---
 
@@ -52,8 +61,8 @@ The home screen appears when no session or workflow tab is active.
 
 - **Greeting** — Shows your WSL username and the current date
 - **Pinned Projects** — Cards for your saved projects, click to open a session
-- **Agent Grid** — Shows all available agents with detection status (green = installed, grey = not found)
-- **Quick Actions** — New Project (Ctrl+N), open Command Palette (Esc)
+- **Agent Grid** — Shows all available agents with detection status, version info, and update buttons
+- **Quick Actions** — New Project (Ctrl+N), New Terminal (Ctrl+T), open Command Palette (Esc)
 
 ### Agent Detection
 
@@ -79,7 +88,11 @@ Press **Ctrl+N** or click "New Project" to open the 5-step wizard:
 
 ### Step 1: Project Folder
 
-Select a WSL folder path (e.g., `/home/user/myproject`). AgentDeck stores all paths as WSL paths.
+Select a folder path. AgentDeck accepts multiple formats and auto-converts to WSL paths:
+- WSL native: `/home/user/project`
+- Windows: `C:\Users\...` (converted to `/mnt/c/Users/...`)
+- UNC: `\\wsl$\Ubuntu\home\...` or `\\wsl.localhost\Ubuntu\...` (prefix stripped)
+- Tilde: `~/project` (expanded to `$HOME/project`)
 
 ### Step 2: Stack Detection
 
@@ -144,6 +157,18 @@ Each project can have agent-specific CLI flags (e.g., `--model opus` for Claude 
 
 ---
 
+## Bare Terminals
+
+Press **Ctrl+T** or select "New Terminal" from the Command Palette to open a plain WSL bash shell. No project or agent is attached — just a raw terminal. Useful for:
+- Running system commands
+- Installing tools
+- Quick file operations
+- Testing commands before configuring a project
+
+Bare terminals show "Terminal" in the tab bar and "shell" as the agent label in the pane topbar.
+
+---
+
 ## Split View
 
 AgentDeck supports 1, 2, or 3 terminal panes side-by-side:
@@ -157,6 +182,23 @@ AgentDeck supports 1, 2, or 3 terminal panes side-by-side:
 - **Resize** — Drag the divider between panes
 - **Independent sessions** — Each pane runs its own PTY session
 - **Preserved state** — Terminal instances are cached across tab switches, preserving scrollback history, cursor position, alternate buffer state, and colors. Hidden panes buffer incoming data and flush it when shown again.
+
+---
+
+## Terminal Search
+
+Press **Ctrl+Shift+F** in a terminal session to open the search bar.
+
+| Action | Shortcut |
+|--------|----------|
+| Next match | Enter |
+| Previous match | Shift+Enter |
+| Toggle regex | Alt+R |
+| Toggle case-sensitive | Alt+C |
+| Toggle whole word | Alt+W |
+| Close search | Escape |
+
+Match count and current position are displayed in the search bar.
 
 ---
 
@@ -422,6 +464,23 @@ In the Themes sub-menu, arrow keys give a live preview of each theme. Press Ente
 
 ---
 
+## Agent Updates
+
+AgentDeck checks for agent updates on startup and shows a toast notification when updates are available.
+
+### How It Works
+
+1. On launch, AgentDeck detects installed agents via `which` in WSL
+2. For each installed agent, it checks the current version vs. the latest available
+3. A toast notification summarizes available updates
+4. Click "Update" on any agent card on the home screen to update in place
+
+### Manual Refresh
+
+Use the Command Palette or home screen to re-check agent status. This also triggers update detection. If the initial check failed (e.g., WSL was still booting), the app retries automatically after 5 seconds.
+
+---
+
 ## Themes
 
 AgentDeck includes 8 themes:
@@ -457,28 +516,68 @@ Theme changes use a circular reveal animation (View Transition API). Light theme
 
 ## Keyboard Shortcuts
 
+Press **Ctrl+/** to view the full shortcut reference overlay at any time.
+
+### Global
+
 | Shortcut | Action |
 |----------|--------|
-| **Esc** | Toggle command palette |
-| **Ctrl+K** | Toggle command palette (alternative) |
-| **Ctrl+N** | New project wizard |
-| **Ctrl+B** | Toggle sidebar |
-| **Ctrl+\\** | Toggle right panel |
-| **Ctrl+1** | Single pane layout |
-| **Ctrl+2** | Dual pane layout |
-| **Ctrl+3** | Triple pane layout |
-| **Ctrl++** | Zoom in |
-| **Ctrl+-** | Zoom out |
-| **Ctrl+0** | Reset zoom |
-| **Ctrl+V** | Paste text or file paths |
+| **Ctrl+K** | Command Palette |
+| **Esc** | Command Palette (from session) |
+| **Ctrl+N** | New Project |
+| **Ctrl+T** | New Terminal |
+| **Ctrl+B** | Toggle Sidebar |
+| **Ctrl+\\** | Toggle Right Panel |
+| **Ctrl+/** | Keyboard Shortcuts |
+| **Ctrl+1/2/3** | Pane Layout |
+| **Ctrl++/-** | Zoom In/Out |
+| **Ctrl+0** | Reset Zoom |
 
-### In Workflow Editor
+### Terminal
+
+| Shortcut | Action |
+|----------|--------|
+| **Ctrl+Shift+F** | Search in Terminal |
+| **Ctrl+Shift+C** | Copy Selection |
+| **Ctrl+V** | Paste |
+
+### Search Bar
+
+| Shortcut | Action |
+|----------|--------|
+| **Enter** | Next Match |
+| **Shift+Enter** | Previous Match |
+| **Alt+R** | Toggle Regex |
+| **Alt+C** | Toggle Case Sensitive |
+| **Alt+W** | Toggle Whole Word |
+| **Esc** | Close Search |
+
+### Command Palette
+
+| Shortcut | Action |
+|----------|--------|
+| **Up/Down** | Navigate Items |
+| **Enter** | Execute Selected |
+| **Space** | Toggle (in agent list) |
+| **Esc** | Close / Back |
+
+### Editors
+
+| Shortcut | Action |
+|----------|--------|
+| **Ctrl+S** | Save Template |
+| **Delete** | Delete Template |
+| **Enter** | Commit Node / Rename Edit |
+| **Shift+Enter** | Newline in Node Edit |
+| **Esc** | Cancel Edit / Close Dialog |
+
+### Workflow Editor
 
 | Shortcut | Action |
 |----------|--------|
 | **Esc** | Cancel pending edge connection |
 | **Double-click node** | Open inline edit form |
-| **Click node** | Select node, open in Node Editor panel |
+| **Click node** | Select and edit in Node Editor panel |
 
 ---
 
@@ -494,12 +593,29 @@ AgentDeck runs `which <binary>` in an interactive bash shell. If an agent isn't 
 ### Terminal shows blank or garbled output
 
 - Try **Ctrl+0** to reset zoom
-- Switch themes (some terminal escape sequences render differently)
+- OSC color query responses from some agents (Codex, crossterm-based tools) are automatically filtered
+- If you see garbled output, ensure your WSL locale is UTF-8: `locale` should show `en_US.UTF-8`
 - Check that your WSL distribution is running (`wsl --list --verbose`)
 
 ### WSL username shows "operator"
 
-The username lookup (`wsl.exe -- whoami`) can be intermittent. Restart AgentDeck to retry.
+The username lookup uses a fallback chain (`bash -lc whoami` -> `whoami` -> `echo $USER`). If it fails on first launch (WSL cold boot), the app retries after 5 seconds. Restart AgentDeck if it persists.
+
+### Project path errors
+
+AgentDeck accepts paths in multiple formats:
+- WSL native: `/home/user/project`
+- Windows: `C:\Users\...` (auto-converted to `/mnt/c/Users/...`)
+- UNC: `\\wsl$\Ubuntu\home\...` (prefix stripped automatically)
+- Tilde: `~/project` (expanded to `$HOME/project`)
+
+If `cd` fails, check that the path exists inside WSL: `ls /path/to/project`
+
+### Agent update button not appearing
+
+- Agent updates are checked on startup. If WSL was still booting, the check may have timed out.
+- Trigger a manual refresh from the home screen or Command Palette.
+- The app retries automatically 5 seconds after a failed initial check.
 
 ### Workflow agent node fails
 

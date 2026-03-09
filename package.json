@@ -21,7 +21,7 @@
     "test:main": "node node_modules/vitest/vitest.mjs run --project main",
     "test:renderer": "node node_modules/vitest/vitest.mjs run --project renderer",
     "typecheck": "node node_modules/typescript/bin/tsc -p tsconfig.node.json --noEmit && node node_modules/typescript/bin/tsc -p tsconfig.web.json --noEmit",
-    "prepare": "cd .. && node agentdeck/node_modules/husky/bin.js"
+    "prepare": "node node_modules/husky/bin.js"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
