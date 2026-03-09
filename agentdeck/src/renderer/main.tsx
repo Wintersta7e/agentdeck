@@ -36,13 +36,6 @@ async function initAndRender(): Promise<void> {
     ...(layout.wfLogPanelWidth !== undefined && { wfLogPanelWidth: layout.wfLogPanelWidth }),
   })
 
-  // Pre-fetch WSL username + agent detection (parallel, non-blocking on failure)
-  const [username, agentStatusResult] = await Promise.all([
-    window.agentDeck.app.wslUsername().catch(() => ''),
-    window.agentDeck.agents.check().catch(() => ({}) as Record<string, boolean>),
-  ])
-  useAppStore.setState({ wslUsername: username, agentStatus: agentStatusResult })
-
   const root = document.getElementById('root')
   if (!root) throw new Error('Root element #root not found')
 
@@ -54,8 +47,7 @@ async function initAndRender(): Promise<void> {
     </StrictMode>,
   )
 
-  // Fire-and-forget: check for agent updates in background (non-blocking)
-  // Runs AFTER render so the UI is already interactive
+  // Listen for version info updates (register before any checkUpdates call)
   window.agentDeck.agents.onVersionInfo((info) => {
     const { setAgentVersion, addNotification } = useAppStore.getState()
     setAgentVersion(info.agentId, {
@@ -69,7 +61,40 @@ async function initAndRender(): Promise<void> {
       addNotification('info', `Update available: ${name} ${info.current} \u2192 ${info.latest}`)
     }
   })
-  window.agentDeck.agents.checkUpdates(agentStatusResult)
+
+  // Fetch WSL data after render so the UI is interactive immediately.
+  // On WSL cold boot the first call can take 15s+ while the VM starts.
+  const fetchWslData = async (): Promise<{
+    username: string
+    agents: Record<string, boolean>
+  }> => {
+    const [username, agents] = await Promise.all([
+      window.agentDeck.app.wslUsername().catch(() => ''),
+      window.agentDeck.agents.check().catch(() => ({}) as Record<string, boolean>),
+    ])
+    useAppStore.setState({ wslUsername: username, agentStatus: agents })
+    return { username, agents }
+  }
+
+  const { username, agents: agentStatusResult } = await fetchWslData()
+
+  // If all agents came back not-found AND username failed, WSL was likely
+  // cold-booting.  Retry once after a short delay so the warm VM succeeds.
+  const allMissing =
+    Object.keys(agentStatusResult).length === 0 || Object.values(agentStatusResult).every((v) => !v)
+  if (!username && allMissing) {
+    setTimeout(async () => {
+      const { agents: retryAgents } = await fetchWslData()
+      // Trigger update checks with the (now hopefully populated) result
+      const hasInstalled = Object.values(retryAgents).some((v) => v)
+      if (hasInstalled) {
+        window.agentDeck.agents.checkUpdates(retryAgents)
+      }
+    }, 5000)
+  } else {
+    // WSL was already warm — trigger update checks immediately
+    window.agentDeck.agents.checkUpdates(agentStatusResult)
+  }
 }
 
 initAndRender().catch((err: unknown) => {

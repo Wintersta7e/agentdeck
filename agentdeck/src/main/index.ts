@@ -29,12 +29,17 @@ let appStore: AppStore | null = null
 
 const ALLOWED_FILES = new Set(['CLAUDE.md', 'AGENTS.md', 'README.md'])
 
-/** Convert a Windows path (C:\Users\...) to WSL (/mnt/c/Users/...) */
+/** Convert a Windows path to WSL: C:\foo → /mnt/c/foo, \\wsl$\D\x → /x */
 function toWslPathMain(p: string): string {
   const normalized = p.replace(/\\/g, '/')
-  const match = normalized.match(/^([A-Za-z]):\/(.*)$/)
-  if (match && match[1] && match[2] !== undefined) {
-    return `/mnt/${match[1].toLowerCase()}/${match[2]}`
+  const driveMatch = normalized.match(/^([A-Za-z]):\/(.*)$/)
+  if (driveMatch && driveMatch[1] && driveMatch[2] !== undefined) {
+    return `/mnt/${driveMatch[1].toLowerCase()}/${driveMatch[2]}`
+  }
+  // UNC WSL path: //wsl$/Distro/home/user/... or //wsl.localhost/Distro/...
+  const uncMatch = normalized.match(/^\/\/(?:wsl\$|wsl\.localhost)\/[^/]+\/?(.*)$/)
+  if (uncMatch) {
+    return `/${uncMatch[1] ?? ''}`
   }
   return normalized
 }
@@ -352,7 +357,7 @@ function registerIpcHandlers(store: AppStore): void {
     const { execFile } = await import('child_process')
     const tryCmd = (args: string[]): Promise<string> =>
       new Promise((resolve) => {
-        execFile('wsl.exe', args, { timeout: 5000 }, (err, stdout) => {
+        execFile('wsl.exe', args, { timeout: 15000 }, (err, stdout) => {
           const out = stdout?.trim() ?? ''
           if (err || !out) {
             resolve('')
