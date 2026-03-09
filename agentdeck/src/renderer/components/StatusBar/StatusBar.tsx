@@ -4,9 +4,10 @@ import './StatusBar.css'
 
 interface StatusBarProps {
   onAboutClick?: (() => void) | undefined
+  onShortcutsClick?: (() => void) | undefined
 }
 
-export function StatusBar({ onAboutClick }: StatusBarProps): React.JSX.Element {
+export function StatusBar({ onAboutClick, onShortcutsClick }: StatusBarProps): React.JSX.Element {
   // Granular scalar selectors — only re-render when the derived value changes
   const activeCount = useAppStore(
     (s) => Object.values(s.sessions).filter((sess) => sess.status === 'running').length,
@@ -89,6 +90,10 @@ export function StatusBar({ onAboutClick }: StatusBarProps): React.JSX.Element {
             <span className="status-sep">|</span>
           </>
         )}
+        <button className="status-cmd" onClick={onShortcutsClick}>
+          <span className="status-cmd-icon">{'\u2328'}</span>
+          <kbd className="status-cmd-kbd">Ctrl+/</kbd>
+        </button>
         <button className="status-cmd" onClick={() => openCommandPalette()}>
           <span className="status-cmd-icon">{'\u2261'}</span>
           <span>Menu</span>

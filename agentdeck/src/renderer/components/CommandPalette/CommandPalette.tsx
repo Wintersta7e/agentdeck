@@ -25,6 +25,7 @@ interface PaletteItem {
 interface CommandPaletteProps {
   onOpenProject: (project: Project) => void
   onAbout?: (() => void) | undefined
+  onShortcuts?: (() => void) | undefined
 }
 
 const SCOPE_TABS: { label: string; value: ScopeTab }[] = [
@@ -118,15 +119,20 @@ function highlightMatch(text: string, query: string): React.JSX.Element {
 export function CommandPalette({
   onOpenProject,
   onAbout,
+  onShortcuts,
 }: CommandPaletteProps): React.JSX.Element | null {
   const isOpen = useAppStore((s) => s.commandPaletteOpen)
 
   if (!isOpen) return null
 
-  return <PaletteInner onOpenProject={onOpenProject} onAbout={onAbout} />
+  return <PaletteInner onOpenProject={onOpenProject} onAbout={onAbout} onShortcuts={onShortcuts} />
 }
 
-function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JSX.Element {
+function PaletteInner({
+  onOpenProject,
+  onAbout,
+  onShortcuts,
+}: CommandPaletteProps): React.JSX.Element {
   const closePalette = useAppStore((s) => s.closeCommandPalette)
   const projects = useAppStore((s) => s.projects)
   const templates = useAppStore((s) => s.templates)
@@ -280,6 +286,15 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
     })
     items.push({
       type: 'action',
+      id: 'action-shortcuts',
+      icon: '\u2328', // keyboard
+      iconClass: '',
+      name: 'Keyboard Shortcuts',
+      detail: 'View all keyboard shortcuts',
+      kbd: 'Ctrl+/',
+    })
+    items.push({
+      type: 'action',
       id: 'action-change-theme',
       icon: '\u25D1', // half circle
       iconClass: '',
@@ -407,6 +422,8 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
             }
           } else if (item.id === 'action-about') {
             onAbout?.()
+          } else if (item.id === 'action-shortcuts') {
+            onShortcuts?.()
           } else if (item.id === 'action-new-workflow') {
             void createBlankWorkflow(setWorkflows, openWorkflow)
           }
@@ -414,7 +431,7 @@ function PaletteInner({ onOpenProject, onAbout }: CommandPaletteProps): React.JS
         }
       }
     },
-    [closePalette, onOpenProject, onAbout, theme, setWorkflows, openWorkflow],
+    [closePalette, onOpenProject, onAbout, onShortcuts, theme, setWorkflows, openWorkflow],
   )
 
   // Keyboard navigation

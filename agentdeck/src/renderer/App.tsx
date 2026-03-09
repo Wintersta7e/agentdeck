@@ -8,6 +8,7 @@ import { RightPanel } from './components/RightPanel/RightPanel'
 import { PanelDivider } from './components/shared/PanelDivider'
 import { CommandPalette } from './components/CommandPalette/CommandPalette'
 import { AboutDialog } from './components/AboutDialog/AboutDialog'
+import { ShortcutsDialog } from './components/ShortcutsDialog/ShortcutsDialog'
 import { NotificationToast } from './components/NotificationToast/NotificationToast'
 import { useAppStore } from './store/appStore'
 import { useProjects } from './hooks/useProjects'
@@ -69,6 +70,10 @@ export function App(): React.JSX.Element {
   const [aboutOpen, setAboutOpen] = useState(false)
   const openAbout = useCallback(() => setAboutOpen(true), [])
   const closeAbout = useCallback(() => setAboutOpen(false), [])
+
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const openShortcuts = useCallback(() => setShortcutsOpen(true), [])
+  const closeShortcuts = useCallback(() => setShortcutsOpen(false), [])
 
   const { updateProject } = useProjects()
 
@@ -203,6 +208,11 @@ export function App(): React.JSX.Element {
         useAppStore.getState().toggleSidebar()
         return
       }
+      if (e.ctrlKey && e.key === '/') {
+        e.preventDefault()
+        setShortcutsOpen((prev) => !prev)
+        return
+      }
       if (e.ctrlKey && e.key === '\\') {
         e.preventDefault()
         useAppStore.getState().toggleRightPanel()
@@ -326,9 +336,14 @@ export function App(): React.JSX.Element {
           </div>
         </div>
       </div>
-      <StatusBar onAboutClick={openAbout} />
-      <CommandPalette onOpenProject={handleOpenProject} onAbout={openAbout} />
+      <StatusBar onAboutClick={openAbout} onShortcutsClick={openShortcuts} />
+      <CommandPalette
+        onOpenProject={handleOpenProject}
+        onAbout={openAbout}
+        onShortcuts={openShortcuts}
+      />
       {aboutOpen && <AboutDialog onClose={closeAbout} />}
+      {shortcutsOpen && <ShortcutsDialog onClose={closeShortcuts} />}
       <NotificationToast />
     </div>
   )
