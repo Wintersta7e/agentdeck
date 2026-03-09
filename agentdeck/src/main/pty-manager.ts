@@ -17,14 +17,21 @@ const NPM_AGENT_PACKAGES: Record<string, { pkg: string; binEntry: string }> = {
   codex: { pkg: '@openai/codex', binEntry: 'bin/codex.js' },
 }
 
-function toWslPath(path: string): string {
-  const match = path.match(/^([A-Za-z]):[/\\](.*)$/)
-  if (match && match[1] && match[2] !== undefined) {
-    const drive = match[1].toLowerCase()
-    const rest = match[2].replace(/\\/g, '/')
+function toWslPath(p: string): string {
+  // Windows drive path: C:\foo\bar → /mnt/c/foo/bar
+  const driveMatch = p.match(/^([A-Za-z]):[/\\](.*)$/)
+  if (driveMatch && driveMatch[1] && driveMatch[2] !== undefined) {
+    const drive = driveMatch[1].toLowerCase()
+    const rest = driveMatch[2].replace(/\\/g, '/')
     return `/mnt/${drive}/${rest}`
   }
-  return path
+  // UNC WSL path: \\wsl$\Distro\home\user\... or \\wsl.localhost\Distro\home\user\...
+  const uncMatch = p.match(/^[/\\]{2}(?:wsl\$|wsl\.localhost)[/\\][^/\\]+[/\\]?(.*)$/)
+  if (uncMatch) {
+    const rest = (uncMatch[1] ?? '').replace(/\\/g, '/')
+    return `/${rest}`
+  }
+  return p
 }
 
 export interface PtyManager {
@@ -113,7 +120,11 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
     // Build the full command sequence: cd to project dir, startup commands, then launch agent
     const commands: string[] = []
     if (projectPath) {
-      const wslPath = toWslPath(projectPath)
+      let wslPath = toWslPath(projectPath)
+      // Expand leading ~ so it works inside double quotes (bash doesn't expand ~ in quotes)
+      if (wslPath === '~' || wslPath.startsWith('~/')) {
+        wslPath = '$HOME' + wslPath.slice(1)
+      }
       commands.push(`cd "${wslPath}"`)
     }
     if (startupCommands) {
