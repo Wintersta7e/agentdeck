@@ -612,6 +612,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   refreshAgentStatus: async () => {
     const status = await window.agentDeck.agents.check()
     set({ agentStatus: status })
+    // Also trigger version checks for newly-found agents (handles cold-boot retry
+    // and manual refresh scenarios where initial check missed agents)
+    const hasInstalled = Object.values(status).some((v) => v)
+    if (hasInstalled) {
+      window.agentDeck.agents.checkUpdates(status)
+    }
   },
 
   agentVersions: {},
