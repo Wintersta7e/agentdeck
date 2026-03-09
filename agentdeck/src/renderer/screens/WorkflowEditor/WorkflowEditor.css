@@ -1,0 +1,271 @@
+/* ── WorkflowEditor root layout ── */
+
+.wf-editor {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  background: var(--bg0);
+}
+
+/* ── Toolbar ── */
+
+.wf-toolbar {
+  height: 40px;
+  background: var(--bg1);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.wf-name {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text0);
+  margin-right: 8px;
+  cursor: default;
+}
+
+.wf-name-input {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text0);
+  background: var(--bg0);
+  border: 1px solid var(--purple-border);
+  border-radius: var(--r);
+  padding: 1px 6px;
+  margin-right: 8px;
+  outline: none;
+  width: 180px;
+}
+
+.wf-name-badge {
+  font-size: 9px;
+  background: var(--purple-dim);
+  color: var(--purple);
+  border: 1px solid var(--purple-border);
+  padding: 1px 6px;
+  border-radius: 20px;
+  font-weight: 500;
+}
+
+.wf-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  margin: 0 4px;
+}
+
+.wf-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: none;
+  color: var(--text1);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.wf-btn:hover {
+  border-color: var(--border-bright);
+  color: var(--text0);
+}
+
+.wf-btn.play {
+  border-color: rgba(var(--green-rgb), 0.5);
+  color: var(--green);
+  background: var(--green-dim);
+  font-weight: 600;
+}
+
+.wf-btn.play:hover {
+  border-color: var(--green);
+  background: var(--green-border);
+}
+
+.wf-btn.play.running {
+  border-color: var(--red);
+  color: var(--red);
+  background: var(--red-dim);
+}
+
+.wf-btn.play.running:hover {
+  border-color: var(--red);
+  background: var(--red-border);
+}
+
+.wf-btn.add-node {
+  border-color: rgba(var(--purple-rgb), 0.4);
+  color: var(--purple);
+}
+
+.wf-btn.add-node:hover {
+  border-color: var(--purple);
+  background: var(--purple-dim);
+}
+
+.wf-btn-icon {
+  font-size: 12px;
+}
+
+.wf-project-select {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  background: var(--bg1);
+  color: var(--text1);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 4px 8px;
+  outline: none;
+  cursor: pointer;
+  max-width: 180px;
+}
+
+.wf-project-select:hover {
+  border-color: var(--border-bright);
+}
+
+.wf-project-select:focus {
+  border-color: var(--purple);
+}
+
+.wf-project-select option {
+  background: var(--bg1);
+  color: var(--text1);
+}
+
+.wf-spacer {
+  flex: 1;
+}
+
+.wf-status {
+  font-size: 10px;
+  color: var(--text2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wf-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.wf-status-dot.idle {
+  background: var(--text3);
+}
+
+.wf-status-dot.running {
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  animation: wf-pulse 1.2s infinite;
+}
+
+.wf-status-dot.done {
+  background: var(--green);
+}
+
+.wf-status-dot.error {
+  background: var(--red);
+}
+
+.wf-status-dot.stopped {
+  background: var(--text3);
+}
+
+@keyframes wf-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+/* ── Content area ── */
+
+.wf-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.wf-canvas-area {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── Right panel tabs ── */
+
+.wf-right-panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg1);
+  border-left: 1px solid var(--border);
+}
+
+.wf-right-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.wf-right-tab {
+  flex: 1;
+  padding: 8px 0;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+  transition:
+    color 0.12s,
+    border-color 0.12s;
+}
+
+.wf-right-tab:hover {
+  color: var(--text1);
+}
+
+.wf-right-tab.active {
+  color: var(--text0);
+  border-bottom-color: var(--purple);
+}
+
+.wf-right-content {
+  flex: 1;
+  flex-direction: column;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.wf-tab-hidden {
+  display: none;
+}
+.wf-tab-visible {
+  display: flex;
+}
+
+.wf-right-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text3);
+  font-size: 12px;
+}

@@ -1,0 +1,48 @@
+.sortable-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 7px 10px;
+  transition: border-color 0.12s;
+}
+
+.sortable-item:hover {
+  border-color: var(--border-bright);
+}
+
+.sortable-item.dragging {
+  opacity: 0.5;
+  border-color: var(--amber);
+}
+
+.drag-handle {
+  color: var(--text3);
+  cursor: grab;
+  font-size: 12px;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.remove-btn {
+  background: none;
+  border: none;
+  color: var(--text3);
+  font-size: 14px;
+  cursor: pointer;
+  line-height: 1;
+  transition: color 0.12s;
+  flex-shrink: 0;
+}
+
+.remove-btn:hover {
+  color: var(--red);
+}

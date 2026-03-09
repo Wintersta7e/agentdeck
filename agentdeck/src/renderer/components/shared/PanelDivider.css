@@ -1,0 +1,36 @@
+.panel-divider {
+  width: 4px;
+  background: var(--border);
+  cursor: col-resize;
+  flex-shrink: 0;
+  z-index: 5;
+  transition: background 0.15s;
+  position: relative;
+}
+
+.panel-divider:hover {
+  background: var(--accent-hover);
+}
+
+.panel-divider::after {
+  content: '\2807';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(90deg);
+  font-size: 10px;
+  color: var(--text3);
+  pointer-events: none;
+}
+
+.panel-divider:hover::after {
+  color: var(--accent);
+}
+
+.panel-divider.dragging {
+  background: var(--accent-hover);
+}
+
+.panel-divider.dragging::after {
+  color: var(--accent);
+}

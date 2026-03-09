@@ -1,0 +1,13 @@
+/* ContextTab inline-style replacements */
+
+.context-item--template {
+  border-color: var(--amber-border);
+}
+
+.context-name--template {
+  color: var(--amber);
+}
+
+.context-notes {
+  padding: 4px 0;
+}

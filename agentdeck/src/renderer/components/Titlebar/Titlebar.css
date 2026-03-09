@@ -1,0 +1,251 @@
+.titlebar {
+  height: 36px;
+  background: var(--bg0);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 10px;
+  flex-shrink: 0;
+  -webkit-app-region: drag;
+  position: relative;
+  z-index: 10;
+}
+
+.titlebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 8px;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  padding: 2px 6px;
+  border-radius: var(--r);
+  transition: background 0.15s;
+}
+
+.titlebar-logo:hover {
+  background: var(--accent-glow);
+}
+
+.logo-mark {
+  width: 18px;
+  height: 18px;
+  background: var(--accent);
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  flex-shrink: 0;
+  transition:
+    transform 0.2s ease,
+    filter 0.2s ease;
+}
+
+.titlebar-logo:hover .logo-mark {
+  transform: scale(1.15);
+  filter: drop-shadow(0 0 4px var(--accent));
+}
+
+.logo-text {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--text0);
+  letter-spacing: 0.05em;
+  transition: color 0.15s;
+}
+.logo-text span {
+  color: var(--accent);
+  transition: color 0.15s;
+}
+
+.titlebar-logo:hover .logo-text {
+  color: var(--accent);
+}
+.titlebar-logo:hover .logo-text span {
+  filter: brightness(1.2);
+}
+
+.titlebar-center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: var(--text2);
+  letter-spacing: 0.08em;
+}
+
+/* Tab bar — inline in titlebar */
+.tab-bar {
+  display: flex;
+  align-items: center;
+  margin-left: 16px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 14px;
+  height: 36px;
+  cursor: pointer;
+  border-right: 1px solid var(--border);
+  border-bottom: 2px solid transparent;
+  font-size: 11px;
+  color: var(--text2);
+  transition:
+    all 0.12s,
+    max-width 0.25s ease,
+    opacity 0.2s ease,
+    padding 0.25s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+  position: relative;
+  -webkit-app-region: no-drag;
+  max-width: 300px;
+}
+
+.tab.closing {
+  max-width: 0;
+  opacity: 0;
+  padding: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab.closing {
+    transition: none;
+  }
+}
+.tab:hover {
+  color: var(--text1);
+  background: var(--bg1);
+}
+.tab.active {
+  color: var(--text0);
+  background: var(--bg0);
+  border-bottom-color: var(--amber);
+}
+
+.tab-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tab-close {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--text3);
+  transition: all 0.12s;
+  margin-left: 2px;
+  opacity: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+.tab:hover .tab-close {
+  opacity: 1;
+}
+.tab-close:hover {
+  background: var(--bg4);
+  color: var(--red);
+}
+
+.tab-add {
+  padding: 0 12px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  color: var(--text3);
+  cursor: pointer;
+  font-size: 16px;
+  transition: color 0.12s;
+  flex-shrink: 0;
+  -webkit-app-region: no-drag;
+}
+.tab-add:hover {
+  color: var(--amber);
+}
+
+.titlebar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  -webkit-app-region: no-drag;
+}
+
+/* Windows-style window controls — always rightmost */
+.window-controls {
+  display: flex;
+  align-items: stretch;
+  height: 36px;
+  margin-left: 8px;
+  -webkit-app-region: no-drag;
+  flex-shrink: 0;
+}
+.window-btn {
+  width: 46px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text2);
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    background 0.1s,
+    color 0.1s;
+  font-family: inherit;
+}
+.window-btn:hover {
+  background: var(--bg3);
+  color: var(--text0);
+}
+.window-btn-close:hover {
+  background: var(--red);
+  color: var(--text0);
+}
+
+.titlebar-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text2);
+  padding: 3px 8px;
+  border-radius: var(--r);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  transition: all 0.15s;
+}
+.titlebar-btn:hover {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+.titlebar-btn.primary {
+  border-color: var(--amber);
+  color: var(--amber);
+  background: var(--amber-glow);
+}
+
+.tab-workflow.active {
+  border-bottom-color: var(--purple);
+}
+.tab-wf-icon {
+  color: var(--purple);
+  font-size: 9px;
+  flex-shrink: 0;
+}

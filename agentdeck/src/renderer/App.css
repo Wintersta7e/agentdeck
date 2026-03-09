@@ -1,0 +1,50 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.app-main {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.view-panel {
+  flex: 1;
+  overflow: hidden;
+}
+.view-panel--hidden {
+  display: none;
+}
+.view-panel--visible {
+  display: flex;
+}
+
+.sidebar-wrapper {
+  display: flex;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+  transition:
+    width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    border-right-color 0.3s ease;
+  min-width: 0;
+  will-change: width;
+}
+
+.sidebar-wrapper.collapsed {
+  border-right-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-wrapper {
+    transition: none;
+  }
+}

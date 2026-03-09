@@ -1,0 +1,199 @@
+@import '@fontsource/jetbrains-mono/latin-400.css';
+@import '@fontsource/jetbrains-mono/latin-500.css';
+@import '@fontsource/jetbrains-mono/latin-600.css';
+@import '@fontsource-variable/syne';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--bg0);
+  color: var(--text0);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar defaults */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--bg4);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ─── Stack badge colours (shared across Sidebar, HomeScreen, etc.) ─── */
+.badge-java {
+  background: rgba(229, 89, 52, 0.2);
+  color: #e55934;
+}
+.badge-js {
+  background: rgba(76, 175, 125, 0.2);
+  color: var(--green);
+}
+.badge-ts {
+  background: rgba(49, 120, 198, 0.2);
+  color: #3178c6;
+}
+.badge-python {
+  background: var(--badge-python-bg);
+  color: var(--badge-python);
+}
+.badge-rust {
+  background: rgba(206, 100, 50, 0.2);
+  color: #ce6432;
+}
+.badge-go {
+  background: rgba(0, 173, 216, 0.2);
+  color: #00add8;
+}
+.badge-net {
+  background: rgba(91, 45, 168, 0.2);
+  color: #512bd4;
+}
+.badge-agent {
+  background: rgba(155, 114, 207, 0.2);
+  color: var(--purple);
+}
+.badge-other {
+  background: rgba(110, 107, 102, 0.2);
+  color: var(--text2);
+}
+.badge-cc {
+  background: rgba(0, 89, 156, 0.2);
+  color: #00599c;
+}
+.badge-ruby {
+  background: rgba(204, 52, 45, 0.2);
+  color: #cc342d;
+}
+.badge-php {
+  background: rgba(119, 123, 180, 0.2);
+  color: #777bb4;
+}
+.badge-kotlin {
+  background: rgba(127, 82, 255, 0.2);
+  color: #7f52ff;
+}
+.badge-swift {
+  background: rgba(240, 81, 56, 0.2);
+  color: #f05138;
+}
+.badge-dart {
+  background: rgba(1, 167, 220, 0.2);
+  color: #01a7dc;
+}
+
+/* ─── Spotlight cursor effect ─── */
+.spotlight {
+  position: fixed;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(var(--accent-rgb, 245, 166, 35), 0.03) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 0;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.3s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spotlight {
+    display: none;
+  }
+}
+
+/* ─── Circular theme reveal (View Transition API — typed) ─── */
+:root:active-view-transition-type(theme-reveal) {
+  &::view-transition-old(root) {
+    animation: none;
+  }
+  &::view-transition-new(root) {
+    clip-path: circle(0% at var(--reveal-x, 50%) var(--reveal-y, 50%));
+    animation: circleReveal 0.4s ease-in-out forwards;
+  }
+}
+
+@keyframes circleReveal {
+  to {
+    clip-path: circle(150% at var(--reveal-x, 50%) var(--reveal-y, 50%));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+}
+
+/* ─── Button press scale ─── */
+button:active,
+.tab:active,
+.sidebar-item:active,
+.new-project-btn:active,
+.sidebar-new-wf:active {
+  transform: scale(0.95);
+  transition: transform 0.06s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button:active,
+  .tab:active,
+  .sidebar-item:active,
+  .new-project-btn:active,
+  .sidebar-new-wf:active {
+    transform: none;
+  }
+}
+
+/* ─── View mount fade-in ─── */
+.home-main,
+.wizard-shell,
+.settings-main,
+.template-editor,
+.wf-editor {
+  animation: viewFadeIn 0.18s ease;
+}
+
+@keyframes viewFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-main,
+  .wizard-shell,
+  .settings-main,
+  .template-editor,
+  .wf-editor {
+    animation: none;
+  }
+}

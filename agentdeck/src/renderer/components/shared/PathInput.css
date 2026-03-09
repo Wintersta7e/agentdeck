@@ -1,0 +1,49 @@
+.path-input {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: center;
+}
+
+.path-input-field {
+  flex: 1;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  color: var(--text0);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 6px 10px;
+  caret-color: var(--amber);
+  outline: none;
+  min-width: 0;
+  transition: border-color 0.15s;
+}
+
+.path-input-field::placeholder {
+  color: var(--text2);
+}
+
+.path-input-field:focus {
+  border-color: var(--amber);
+}
+
+.path-input-browse {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  color: var(--text1);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 6px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+}
+
+.path-input-browse:hover {
+  color: var(--amber);
+  border-color: var(--amber);
+}
