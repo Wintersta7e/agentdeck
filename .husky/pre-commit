@@ -1,1 +1,1 @@
-cd agentdeck && node node_modules/lint-staged/bin/lint-staged.js && node node_modules/typescript/bin/tsc -p tsconfig.node.json --noEmit && node node_modules/typescript/bin/tsc -p tsconfig.web.json --noEmit && node node_modules/vitest/vitest.mjs run --changed --reporter=dot
+node node_modules/lint-staged/bin/lint-staged.js && node node_modules/typescript/bin/tsc -p tsconfig.node.json --noEmit && node node_modules/typescript/bin/tsc -p tsconfig.web.json --noEmit && node node_modules/vitest/vitest.mjs run --changed --reporter=dot

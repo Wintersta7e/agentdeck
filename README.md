@@ -1,91 +1,103 @@
 # AgentDeck
 
-A desktop command center for managing multiple AI coding agent sessions in WSL2. Launch, monitor, and orchestrate agents like Claude Code, Aider, Codex, and more — all from one window.
+A desktop terminal manager for WSL AI coding agents. Launch, manage, and orchestrate sessions across multiple agents from a single interface.
 
 ![Electron](https://img.shields.io/badge/Electron-40-47848F?logo=electron)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
 
 ## Overview
 
-AgentDeck provides a unified workspace for running AI coding agents through WSL2 terminals:
+AgentDeck provides a unified desktop environment for working with AI coding agents through WSL terminals:
 
-- **Multi-Agent Support** — 7 agents: Claude Code, Aider, Codex, Goose, Gemini CLI, Amazon Q, OpenCode
-- **Project Management** — Pin projects, configure startup commands, auto-detect stack
-- **Split Terminal Views** — 1/2/3-pane layouts with drag-to-resize dividers
-- **Prompt Templates** — 16 built-in templates across 8 categories with a full template editor
-- **Visual Workflows** — Node-graph pipeline editor for chaining agents, shell commands, and checkpoints
-- **Workflow Roles** — 8 reusable agent personas (Reviewer, Developer, Tester, Architect, etc.) with output format presets
-- **8 Themes** — 4 dark (Amber, Cyan, Violet, Ice) + 4 light (Parchment, Fog, Lavender, Stone)
+- **Multi-Agent Support** - 7 agents: Claude Code, Codex, Aider, Goose, Gemini CLI, Amazon Q, OpenCode
+- **Project Management** - Configure projects with paths, agents, prompt templates, and stack badges
+- **Split Terminal Views** - 1/2/3 pane layouts with independent sessions
+- **Agentic Workflows** - Visual node-graph editor for multi-step agent orchestration
+- **8 Themes** - 4 dark + 4 light themes with smooth view transitions
+- **Command Palette** - Quick access to projects, sessions, templates, and tools
 
 ## Features
 
 ### Terminal Sessions
 
-| Feature | Description |
-|---------|-------------|
-| Split view | 1, 2, or 3 terminal panes side-by-side (Ctrl+1/2/3) |
-| GPU rendering | WebGL-accelerated terminal via @xterm/addon-webgl (canvas 2D fallback) |
-| Session persistence | Terminal state (scrollback, cursor, colors) preserved across tab switches |
-| Tab bar | Session + workflow tabs with polymorphic styling |
-| Right panel | Context, Activity, and Memory tabs per session |
-| Activity tracking | Real-time parsing of agent tool use from PTY stdout |
-| File drag & drop | Drop files onto the terminal to paste WSL paths |
-| Clipboard paste | Ctrl+V pastes text or file paths (CF_HDROP support) |
+- **Split View** - Up to 3 terminal panes side-by-side with draggable dividers
+- **Bare Terminals** - Open plain WSL shells without a project (Ctrl+T)
+- **Terminal Caching** - Sessions persist across tab switches without re-rendering
+- **Terminal Search** - Find text in terminal output (Ctrl+Shift+F) with regex and case-sensitive modes
+- **Activity Tracking** - Real-time parsing of agent tool use (file reads, writes, commands)
+- **Right Panel** - Context, Activity, and Memory tabs per session
 
 ### Project Management
 
-| Feature | Description |
-|---------|-------------|
-| New project wizard | 5-step setup: folder, auto-detect, startup commands, templates, confirm |
-| Stack detection | Scans project files to detect language, package manager, and tools |
-| Stack badges | Java, JS, TS, Python, Rust, Go, Ruby, PHP, C/C++, .NET, Docker, Agent |
-| Startup commands | Ordered list of shell commands that run on session open |
-| Environment variables | Per-project env vars, secrets encrypted via Electron safeStorage |
-| Pinned projects | Quick-access sidebar with right-click context menu |
+- **New Project Wizard** - 5-step setup with folder picker and agent configuration
+- **Multi-Agent Projects** - Assign multiple agents per project, launch with any via context menu
+- **Stack Detection** - Auto-detect project stack (React, Python, Rust, etc.) from files
+- **Pinned Projects** - Pin favorites to the home screen grid
+- **Project Settings** - 6-tab settings panel for path, agent, templates, and more
 
 ### Prompt Templates
 
-| Feature | Description |
-|---------|-------------|
-| 8 categories | Orient, Review, Fix, Test, Refactor, Debug, Docs, Git |
-| Template editor | Full editor with name, category, body, and live preview |
-| Seeded library | 16 built-in templates created on first launch |
-| Per-project binding | Assign templates to projects via settings or sidebar context menu |
+- **16 Seed Templates** - Ready-to-use templates across 8 categories
+- **Template Editor** - Create and edit templates with live preview
+- **Template Attach** - Attach templates to sessions from the Context tab
+- **Categories** - Code Review, Debugging, Documentation, Planning, Refactoring, Security, Testing, General
 
 ### Agentic Workflows
 
-| Feature | Description |
-|---------|-------------|
-| Node types | Agent, Shell, and Checkpoint nodes on a visual canvas |
-| Visual editor | Drag-and-drop node graph with click-to-connect edges |
-| Rich node cards | Labeled sections (Role badge, Agent, Task preview) with emoji type icons |
-| Workflow roles | 8 built-in personas: Reviewer, Developer, Tester, Architect, Security Auditor, Docs Writer, Refactorer, Debugger |
-| Node Editor panel | Tabbed right panel with detailed node editing + role selection |
-| Execution engine | Topological sort into parallel tiers, `Promise.all` per tier |
-| Workflow tabs | Open multiple workflows as first-class tabs alongside sessions |
-| Log panel | Per-node execution logs with auto-scroll and scroll-lock |
-| Auto-save | 500ms debounced save to JSON files |
+- **Visual Node Graph** - Drag-and-drop editor for agent/shell/checkpoint nodes
+- **Workflow Engine** - Topological sort with parallel tier execution
+- **Roles** - 8 seed roles (Architect, Reviewer, etc.) with persona injection
+- **Checkpoints** - Pause/resume execution at designated points
+- **Concurrency** - Configurable parallel execution with MAX_TIER_CONCURRENCY
 
-### Theming & Polish
+### Command Palette
 
-| Feature | Description |
-|---------|-------------|
-| 8 themes | Dark: Amber, Cyan, Violet, Ice — Light: Parchment, Fog, Lavender, Stone |
-| Circular reveal | View Transition API animation on theme switch |
-| Visual effects | 19 effects: spotlight cursor, card shimmer, glassmorphism, particles, aurora, neon glow, button press, tab close, scroll fades, node flash, edge particles, and more |
-| Reduced motion | All effects respect `prefers-reduced-motion` |
-| Zoom control | Ctrl+/- zoom (50%-250%), persisted across sessions |
-| Command palette | Fuzzy search across projects, sessions, templates, and tools (Esc to toggle) |
+- **Quick Launch** - Open projects, switch sessions, run templates (Ctrl+K / Escape)
+- **Theme Switcher** - Live-preview themes before applying
+- **Agent Visibility** - Toggle which agents appear on the home screen
+- **Keyboard Shortcuts** - Full shortcut reference (Ctrl+/)
+
+### Agent Updates
+
+- **Version Checking** - Startup notification when agent updates are available
+- **One-Click Update** - Update agents directly from the home screen
+- **Automatic Detection** - Discovers installed agents via WSL PATH
+
+### Theming
+
+| Dark | Light |
+|------|-------|
+| Amber (default) | Parchment |
+| Navy + Cyan | Fog |
+| Midnight + Violet | Lavender |
+| Charcoal + Ice | Stone |
+
+All themes use CSS custom properties. View transitions provide smooth theme switching with a circular reveal effect.
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| Ctrl+K | Command Palette |
+| Escape | Command Palette (from session) |
+| Ctrl+N | New Project |
+| Ctrl+T | New Terminal |
+| Ctrl+B | Toggle Sidebar |
+| Ctrl+\\ | Toggle Right Panel |
+| Ctrl+/ | Keyboard Shortcuts |
+| Ctrl+1/2/3 | Pane Layout |
+| Ctrl++/- | Zoom In/Out |
+| Ctrl+0 | Reset Zoom |
+| Ctrl+Shift+F | Search in Terminal |
+| Ctrl+S | Save Template |
 
 ## Installation
 
 ### Prerequisites
-
+- Windows 10/11 with WSL2 (Ubuntu recommended)
 - Node.js 22 or later
-- npm
-- Windows 11 with WSL2 (Ubuntu recommended)
+- At least one AI coding agent installed in WSL
 
 ### Setup
 
@@ -99,159 +111,75 @@ npm install --no-bin-links
 ## Development
 
 ```bash
-# Start Electron + Vite dev server with hot reload
+# Start development server with hot reload
 npm run dev
 
-# Type check
-npm run typecheck
+# Build for production (validates TypeScript)
+npm run build
 
-# Lint
-npm run lint
-
-# Format
-npm run format
-
-# Run tests (171 tests across 11 files)
+# Run tests (250 tests)
 npm test
 
-# Production build
-npm run build
+# Lint code
+npm run lint
+
+# Format code
+npm run format
 ```
 
 ## Building for Distribution
 
 ```bash
-# Windows portable executable (~89 MB)
+# Build portable Windows executable
 npm run dist
 ```
 
-Output will be in the `dist/` folder.
-
-## Quick Start
-
-1. **Launch** — `npm run dev` or run the portable `.exe`
-2. **Create a project** — Ctrl+N opens the new project wizard; point it at a WSL folder
-3. **Open a session** — Click a pinned project or use the command palette (Esc)
-4. **Split panes** — Ctrl+1/2/3 for single, dual, or triple terminal layout
-5. **Run workflows** — Open a workflow from the sidebar to build agent pipelines
-6. **Switch themes** — Open the command palette and navigate to the Themes sub-menu
+Output: `dist/AgentDeck-{version}-portable.exe` (~89 MB)
 
 ## Project Structure
 
 ```
-agentdeck/
-├── src/
-│   ├── main/                       # Electron main process
-│   │   ├── index.ts                # App bootstrap, BrowserWindow, IPC handlers
-│   │   ├── pty-manager.ts          # node-pty: spawn, resize, kill, write
-│   │   ├── project-store.ts        # electron-store: projects, templates, prefs
-│   │   ├── workflow-store.ts       # Workflow file CRUD (JSON)
-│   │   ├── workflow-engine.ts      # Workflow execution engine
-│   │   ├── detect-stack.ts         # File-based stack detection
-│   │   ├── wsl-utils.ts            # WSL path conversion utilities
-│   │   ├── pty-bus.ts              # PTY event bus (main-process IPC bridge)
-│   │   └── logger.ts               # Structured logging
-│   ├── preload/
-│   │   └── index.ts                # contextBridge: safe IPC surface
-│   ├── shared/
-│   │   ├── types.ts                # Shared TypeScript interfaces
-│   │   └── agents.ts               # Canonical agent registry (single source of truth)
-│   └── renderer/                   # React app (Vite)
-│       ├── App.tsx                  # Root layout, keybindings, IPC listeners
-│       ├── store/
-│       │   └── appStore.ts         # Zustand store (single store, sliced)
-│       ├── components/
-│       │   ├── Titlebar/           # Custom titlebar with tab bar
-│       │   ├── Sidebar/            # Project list, workflow list, templates
-│       │   ├── HomeScreen/         # Welcome screen, pinned cards, agent grid
-│       │   ├── SplitView/          # 1/2/3-pane terminal layout
-│       │   ├── Terminal/           # xterm.js terminal wrapper
-│       │   ├── RightPanel/         # Context, Activity, Memory tabs
-│       │   ├── CommandPalette/     # Fuzzy search overlay
-│       │   ├── StatusBar/          # Session count, project, layout info
-│       │   ├── NewProjectWizard/   # 5-step project creation
-│       │   ├── ProjectSettings/    # 6-tab project configuration
-│       │   ├── TemplateEditor/     # Template CRUD with live preview
-│       │   ├── AboutDialog/        # Version and credits
-│       │   ├── ErrorBoundary/      # React error boundary
-│       │   └── shared/             # Reusable: Toggle, FieldRow, PathInput, etc.
-│       ├── screens/
-│       │   └── WorkflowEditor/     # Visual node-graph workflow editor
-│       ├── hooks/
-│       │   └── useProjects.ts      # Project CRUD hook
-│       ├── utils/                  # templateUtils, workflowUtils
-│       └── styles/
-│           ├── tokens.css          # Design tokens (colors, fonts, spacing)
-│           └── global.css          # Global styles and effects
-├── package.json
-├── electron-builder.yml
-├── electron-vite.config.ts
-├── tsconfig.*.json
-└── eslint.config.mjs
+src/
+├── main/                    # Electron main process
+│   ├── index.ts             # App lifecycle, IPC handlers, WSL integration
+│   ├── pty-manager.ts       # node-pty: spawn, resize, kill, activity parsing
+│   ├── agent-updater.ts     # Agent version checking and updating via WSL
+│   ├── workflow-engine.ts   # Workflow execution: topo sort, concurrency, timeouts
+│   ├── workflow-store.ts    # Workflow persistence with atomic writes
+│   └── project-store.ts     # electron-store: CRUD + safeStorage for API keys
+├── preload/
+│   └── index.ts             # contextBridge: safe IPC surface (window.agentDeck)
+├── renderer/                # React app (Vite)
+│   ├── components/          # Titlebar, Sidebar, SplitView, CommandPalette,
+│   │                        # HomeScreen, StatusBar, Terminal, RightPanel, etc.
+│   ├── screens/             # WorkflowEditor, ProjectSettings, TemplateEditor
+│   ├── store/appStore.ts    # Zustand store (single store, granular selectors)
+│   ├── hooks/               # useProjects, usePty, useRolesMap
+│   └── styles/              # tokens.css (design system), global.css
+└── shared/
+    ├── agents.ts            # Agent registry (7 agents with metadata)
+    └── types.ts             # Shared TypeScript interfaces
 ```
 
 ## Tech Stack
 
 | Technology | Purpose |
 |------------|---------|
-| [Electron 40](https://electronjs.org) | Desktop shell with ConPTY support |
-| [React 19](https://react.dev) | Component-based UI |
-| [TypeScript 5](https://typescriptlang.org) | Strict type-safe development |
-| [electron-vite 5](https://electron-vite.org) | Build tooling + hot reload |
-| [xterm.js 5](https://xtermjs.org) | Terminal emulator (same as VS Code) |
-| [node-pty](https://github.com/nickvdp/node-pty) | Pseudo-terminal for WSL sessions |
-| [Zustand 5](https://zustand-demo.pmnd.rs) | Lightweight state management |
-| [React Flow](https://reactflow.dev) | Node-graph canvas for workflows |
-| [electron-store 11](https://github.com/nickvdp/electron-store) | Persistent JSON storage |
-| [dnd-kit](https://dndkit.com) | Drag-and-drop (sortable lists) |
+| [Electron 40](https://electronjs.org) | Desktop application shell |
+| [React 19](https://react.dev) | UI framework |
+| [TypeScript 5](https://typescriptlang.org) | Type-safe development (strict mode) |
+| [electron-vite 5](https://electron-vite.org) | Build tooling |
+| [xterm.js 5](https://xtermjs.org) | Terminal emulator |
+| [node-pty](https://github.com/microsoft/node-pty) | Pseudo-terminal (WSL sessions) |
+| [Zustand](https://zustand-demo.pmnd.rs) | State management |
+| [Vitest 4](https://vitest.dev) | Testing framework (250 tests) |
+| [ESLint 9](https://eslint.org) | Linting (flat config) |
 
-## Design References
+## Documentation
 
-The project includes HTML mockups (open in any browser) that serve as pixel-perfect design specifications:
+- **[User Guide](./docs/USER-GUIDE.md)** - Detailed usage instructions
 
-| Mockup | Description |
-|--------|-------------|
-| `agentdeck-home.html` | Home / launch screen |
-| `agentic-sandbox-ui.html` | Main session view (tabs + terminal + panels) |
-| `agentdeck-split-view.html` | Split terminal layout (1/2/3 panes) |
-| `agentdeck-command-palette.html` | Command palette overlay |
-| `agentdeck-new-project.html` | 5-step new project wizard |
-| `agentdeck-project-settings.html` | 6-tab project settings |
-| `agentdeck-template-editor.html` | Template editor with preview |
-| `agentdeck-workflows-mockup.html` | Workflow editor canvas |
-| `agentdeck-workflow-tabs-mockup.html` | Polymorphic tab bar |
-| `agentdeck-roles-mockup.html` | Workflow roles concept (Approach A/B) |
+## Support
 
-## Keyboard Shortcuts
-
-| Shortcut | Action |
-|----------|--------|
-| Esc | Toggle command palette |
-| Ctrl+N | New project wizard |
-| Ctrl+B | Toggle sidebar |
-| Ctrl+\\ | Toggle right panel |
-| Ctrl+1/2/3 | Set pane layout (single/dual/triple) |
-| Ctrl++/- | Zoom in/out |
-| Ctrl+0 | Reset zoom |
-
-## Security
-
-- Context isolation enabled (`contextIsolation: true`, `nodeIntegration: false`)
-- Content Security Policy via `<meta>` tag (restricts scripts, styles, and connections)
-- All Node.js access goes through the preload `contextBridge`
-- Environment variable secrets encrypted at rest via Electron `safeStorage`
-- No telemetry, no network requests (fonts bundled locally)
-
-## Contributing
-
-Contributions are welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run `npm run lint`, `npm run typecheck`, and `npm test`
-5. Submit a pull request
-
-## License
-
-MIT License - see [LICENSE](./LICENSE) for details.
+- Star this repository
+- [Report issues](../../issues) or suggest features
