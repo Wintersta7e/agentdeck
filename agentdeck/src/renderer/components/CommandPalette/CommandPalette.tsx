@@ -26,6 +26,7 @@ interface CommandPaletteProps {
   onOpenProject: (project: Project) => void
   onAbout?: (() => void) | undefined
   onShortcuts?: (() => void) | undefined
+  onNewTerminal?: (() => void) | undefined
 }
 
 const SCOPE_TABS: { label: string; value: ScopeTab }[] = [
@@ -120,18 +121,27 @@ export function CommandPalette({
   onOpenProject,
   onAbout,
   onShortcuts,
+  onNewTerminal,
 }: CommandPaletteProps): React.JSX.Element | null {
   const isOpen = useAppStore((s) => s.commandPaletteOpen)
 
   if (!isOpen) return null
 
-  return <PaletteInner onOpenProject={onOpenProject} onAbout={onAbout} onShortcuts={onShortcuts} />
+  return (
+    <PaletteInner
+      onOpenProject={onOpenProject}
+      onAbout={onAbout}
+      onShortcuts={onShortcuts}
+      onNewTerminal={onNewTerminal}
+    />
+  )
 }
 
 function PaletteInner({
   onOpenProject,
   onAbout,
   onShortcuts,
+  onNewTerminal,
 }: CommandPaletteProps): React.JSX.Element {
   const closePalette = useAppStore((s) => s.closeCommandPalette)
   const projects = useAppStore((s) => s.projects)
@@ -202,15 +212,18 @@ function PaletteInner({
       : []
 
     for (const session of sessionEntries) {
-      const project = projects.find((p) => p.id === session.projectId)
-      if (!project) continue
+      const project = session.projectId
+        ? projects.find((p) => p.id === session.projectId)
+        : undefined
+      const name = project ? project.name : 'Terminal'
+      const detail = project ? `${project.path} \u00B7 ${session.status}` : session.status
       items.push({
         type: 'session',
         id: `session-${session.id}`,
-        icon: '\u2B21', // hexagon
+        icon: project ? '\u2B21' : '\u2588', // hexagon or block
         iconClass: session.status === 'running' ? 'green' : session.status === 'error' ? 'red' : '',
-        name: project.name,
-        detail: `${project.path} \u00B7 ${session.status}`,
+        name,
+        detail,
         badge: session.status === 'running' ? '\u25CF running' : session.status,
         data: project,
       })
@@ -258,6 +271,15 @@ function PaletteInner({
       name: 'New Project',
       detail: 'Open folder and configure a new project',
       kbd: 'Ctrl+N',
+    })
+    items.push({
+      type: 'action',
+      id: 'action-new-terminal',
+      icon: '\u2588', // block
+      iconClass: '',
+      name: 'New Terminal',
+      detail: 'Open a plain WSL shell',
+      kbd: 'Ctrl+T',
     })
     items.push({
       type: 'action',
@@ -413,6 +435,8 @@ function PaletteInner({
         case 'action': {
           if (item.id === 'action-new-project') {
             useAppStore.getState().openWizard()
+          } else if (item.id === 'action-new-terminal') {
+            onNewTerminal?.()
           } else if (item.id === 'action-new-template') {
             useAppStore.getState().openTemplateEditor()
           } else if (item.id === 'action-settings') {
@@ -431,7 +455,16 @@ function PaletteInner({
         }
       }
     },
-    [closePalette, onOpenProject, onAbout, onShortcuts, theme, setWorkflows, openWorkflow],
+    [
+      closePalette,
+      onOpenProject,
+      onAbout,
+      onShortcuts,
+      onNewTerminal,
+      theme,
+      setWorkflows,
+      openWorkflow,
+    ],
   )
 
   // Keyboard navigation

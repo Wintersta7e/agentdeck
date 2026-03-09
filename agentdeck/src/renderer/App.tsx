@@ -75,6 +75,11 @@ export function App(): React.JSX.Element {
   const openShortcuts = useCallback(() => setShortcutsOpen(true), [])
   const closeShortcuts = useCallback(() => setShortcutsOpen(false), [])
 
+  const handleNewTerminal = useCallback(() => {
+    const sessionId = `terminal-${Date.now()}`
+    addSession(sessionId, '')
+  }, [addSession])
+
   const { updateProject } = useProjects()
 
   const handleOpenProject = useCallback(
@@ -201,6 +206,11 @@ export function App(): React.JSX.Element {
       if (e.ctrlKey && e.key === 'n') {
         e.preventDefault()
         useAppStore.getState().openWizard()
+        return
+      }
+      if (e.ctrlKey && e.key === 't') {
+        e.preventDefault()
+        handleNewTerminal()
         return
       }
       if (e.ctrlKey && e.key === 'b') {
@@ -341,6 +351,7 @@ export function App(): React.JSX.Element {
         onOpenProject={handleOpenProject}
         onAbout={openAbout}
         onShortcuts={openShortcuts}
+        onNewTerminal={handleNewTerminal}
       />
       {aboutOpen && <AboutDialog onClose={closeAbout} />}
       {shortcutsOpen && <ShortcutsDialog onClose={closeShortcuts} />}

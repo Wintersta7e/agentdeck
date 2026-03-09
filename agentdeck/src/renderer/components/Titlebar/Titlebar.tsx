@@ -99,7 +99,10 @@ export function Titlebar({
   }, [workflows])
 
   const getProjectName = useCallback(
-    (session: Session): string => projectNameMap.get(session.projectId) ?? session.id,
+    (session: Session): string => {
+      if (!session.projectId) return 'Terminal'
+      return projectNameMap.get(session.projectId) ?? session.id
+    },
     [projectNameMap],
   )
 

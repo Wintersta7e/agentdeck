@@ -16,6 +16,7 @@ export function StatusBar({ onAboutClick, onShortcutsClick }: StatusBarProps): R
     if (s.currentView !== 'session' || !s.activeSessionId) return null
     const session = s.sessions[s.activeSessionId]
     if (!session) return null
+    if (!session.projectId) return 'Terminal'
     return s.projects.find((p) => p.id === session.projectId)?.name ?? null
   })
   const activeWorkflowName = useAppStore((s) => {

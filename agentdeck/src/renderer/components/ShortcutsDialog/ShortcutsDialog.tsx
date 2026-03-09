@@ -22,6 +22,7 @@ const SHORTCUT_SECTIONS: ShortcutSection[] = [
       { keys: 'Ctrl+K', action: 'Command Palette' },
       { keys: 'Escape', action: 'Command Palette (from session)' },
       { keys: 'Ctrl+N', action: 'New Project' },
+      { keys: 'Ctrl+T', action: 'New Terminal' },
       { keys: 'Ctrl+B', action: 'Toggle Sidebar' },
       { keys: 'Ctrl+\\', action: 'Toggle Right Panel' },
       { keys: 'Ctrl+/', action: 'Keyboard Shortcuts' },

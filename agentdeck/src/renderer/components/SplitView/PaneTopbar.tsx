@@ -17,11 +17,12 @@ export const PaneTopbar = memo(function PaneTopbar({
   const restartSession = useAppStore((s) => s.restartSession)
   const project = projectId ? projects.find((p) => p.id === projectId) : undefined
 
+  const isTerminal = !projectId
   const accentColor = project?.identity?.accentColor ?? undefined
-  const agentName = project?.agent ?? 'claude-code'
+  const agentName = isTerminal ? 'shell' : (project?.agent ?? 'claude-code')
 
   // Extract a clean display name: use project name, but if it looks like a path, take the last segment
-  const rawName = project?.name ?? 'Unknown'
+  const rawName = isTerminal ? 'Terminal' : (project?.name ?? 'Unknown')
   const displayName =
     rawName.includes('/') || rawName.includes('\\')
       ? (rawName.split(/[/\\]/).filter(Boolean).pop() ?? rawName)
