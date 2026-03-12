@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
+import { PanelBox } from '../shared/PanelBox'
 import { ParticleField } from './ParticleField'
 import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
 import type { AgentConfig, Project, Template, StackBadge } from '../../../shared/types'
@@ -220,11 +221,15 @@ export function HomeScreen({
           </div>
         </div>
 
-        <div className="quick-open" onClick={openWizard}>
-          <span className="quick-open-icon">{'\u2318'}</span>
-          <span className="quick-open-text">Open project, run template, or jump to session...</span>
-          <span className="quick-open-hint">Ctrl+N</span>
-        </div>
+        <PanelBox corners="all" glow="none" className="home-quick-open">
+          <div className="quick-open" onClick={openWizard}>
+            <span className="quick-open-icon">{'\u2318'}</span>
+            <span className="quick-open-text">
+              Open project, run template, or jump to session...
+            </span>
+            <span className="quick-open-hint">Ctrl+N</span>
+          </div>
+        </PanelBox>
 
         <div className="stats-row">
           <div className="stat-item">
@@ -264,63 +269,66 @@ export function HomeScreen({
                   .map((tid) => templateMap.get(tid))
                   .filter((t): t is Template => t !== undefined)
                 return (
-                  <div
-                    key={p.id}
-                    className={`project-card stagger-item ${status === 'running' ? 'running' : ''} ${status === 'error' ? 'error' : ''}`}
-                    style={{ animationDelay: `${index * 60}ms` }}
-                    onClick={() => onOpenProject(p)}
-                    onContextMenu={(e) => {
-                      e.preventDefault()
-                      setCardMenu({ x: e.clientX, y: e.clientY, projectId: p.id })
-                    }}
-                  >
-                    <div className="card-top">
-                      <div
-                        className={`card-icon ${(p.badge && BADGE_ICON_CLASS[p.badge]) ?? 'card-icon-agent'}`}
-                      >
-                        {(p.badge && BADGE_ICONS[p.badge]) ?? '\u25C8'}
-                      </div>
-                      <div className={`card-status ${statusColorClass(status)}`}>
+                  <PanelBox key={p.id} corners={['tl', 'br']} glow="none" className="home-card">
+                    <div
+                      className={`project-card stagger-item ${status === 'running' ? 'running' : ''} ${status === 'error' ? 'error' : ''}`}
+                      style={{ animationDelay: `${index * 60}ms` }}
+                      onClick={() => onOpenProject(p)}
+                      onContextMenu={(e) => {
+                        e.preventDefault()
+                        setCardMenu({ x: e.clientX, y: e.clientY, projectId: p.id })
+                      }}
+                    >
+                      <div className="card-top">
                         <div
-                          className={`card-status-dot ${statusColorClass(status)}`}
-                          style={STATUS_DOT_STYLES[status] ?? STATUS_DOT_STYLES.idle}
-                        />
-                        {status}
+                          className={`card-icon ${(p.badge && BADGE_ICON_CLASS[p.badge]) ?? 'card-icon-agent'}`}
+                        >
+                          {(p.badge && BADGE_ICONS[p.badge]) ?? '\u25C8'}
+                        </div>
+                        <div className={`card-status ${statusColorClass(status)}`}>
+                          <div
+                            className={`card-status-dot ${statusColorClass(status)}`}
+                            style={STATUS_DOT_STYLES[status] ?? STATUS_DOT_STYLES.idle}
+                          />
+                          {status}
+                        </div>
                       </div>
-                    </div>
-                    <div className="card-name">{p.name}</div>
-                    <div className="card-path">{p.path}</div>
-                    <div className="card-meta">
-                      {p.badge && (
-                        <span className={`card-badge badge-${badgeClass(p.badge)}`}>{p.badge}</span>
+                      <div className="card-name">{p.name}</div>
+                      <div className="card-path">{p.path}</div>
+                      <div className="card-meta">
+                        {p.badge && (
+                          <span className={`card-badge badge-${badgeClass(p.badge)}`}>
+                            {p.badge}
+                          </span>
+                        )}
+                        <span className="card-last">{timeAgo(p.lastOpened)}</span>
+                      </div>
+                      {tNames.length > 0 && (
+                        <div className="card-templates">
+                          {tNames.map((t) => (
+                            <span key={t.id} className="card-template-chip">
+                              {t.name}
+                            </span>
+                          ))}
+                        </div>
                       )}
-                      <span className="card-last">{timeAgo(p.lastOpened)}</span>
-                    </div>
-                    {tNames.length > 0 && (
-                      <div className="card-templates">
-                        {tNames.map((t) => (
-                          <span key={t.id} className="card-template-chip">
-                            {t.name}
-                          </span>
-                        ))}
+                      <div className="card-agents">
+                        {getProjectAgents(p).map((ac) => {
+                          const meta = SHARED_AGENTS.find((a) => a.id === ac.agent)
+                          return (
+                            <span
+                              key={ac.agent}
+                              className={`card-agent-chip${ac.isDefault ? ' default' : ''}`}
+                              title={meta?.name ?? ac.agent}
+                            >
+                              {meta?.icon ?? '\u25C8'}
+                              {ac.isDefault && <span className="card-agent-star">{'\u2605'}</span>}
+                            </span>
+                          )
+                        })}
                       </div>
-                    )}
-                    <div className="card-agents">
-                      {getProjectAgents(p).map((ac) => {
-                        const meta = SHARED_AGENTS.find((a) => a.id === ac.agent)
-                        return (
-                          <span
-                            key={ac.agent}
-                            className={`card-agent-chip${ac.isDefault ? ' default' : ''}`}
-                            title={meta?.name ?? ac.agent}
-                          >
-                            {meta?.icon ?? '\u25C8'}
-                            {ac.isDefault && <span className="card-agent-star">{'\u2605'}</span>}
-                          </span>
-                        )
-                      })}
                     </div>
-                  </div>
+                  </PanelBox>
                 )
               })}
             </div>
@@ -343,31 +351,33 @@ export function HomeScreen({
             const vInfo = agentVersions[a.name]
             const installed = agentStatus[a.name]
             return (
-              <div key={a.name} className={`agent-card ${installed ? 'active' : ''}`}>
-                <div className="agent-card-icon">{a.icon}</div>
-                <div className="agent-card-name">{a.name}</div>
-                {vInfo?.current && <div className="agent-card-version">v{vInfo.current}</div>}
-                <div className="agent-card-desc">{a.desc}</div>
-                {agentStatus[a.name] !== undefined && (
-                  <div className={installed ? 'agent-installed' : 'agent-missing'}>
-                    {installed ? '\u2713 installed' : '\u2717 not found'}
-                  </div>
-                )}
-                {installed && vInfo && (
-                  <button
-                    className={`agent-update-btn${vInfo.updateAvailable ? ' has-update' : ''}${vInfo.updating ? ' updating' : ''}`}
-                    disabled={vInfo.updating}
-                    onClick={() => void handleAgentUpdate(a.name)}
-                    type="button"
-                  >
-                    {vInfo.updating
-                      ? 'Updating\u2026'
-                      : vInfo.updateAvailable
-                        ? `Update \u2192 ${vInfo.latest}`
-                        : '\u2713 Up to date'}
-                  </button>
-                )}
-              </div>
+              <PanelBox key={a.name} corners={['tl', 'br']} glow="none" className="home-card">
+                <div className={`agent-card ${installed ? 'active' : ''}`}>
+                  <div className="agent-card-icon">{a.icon}</div>
+                  <div className="agent-card-name">{a.name}</div>
+                  {vInfo?.current && <div className="agent-card-version">v{vInfo.current}</div>}
+                  <div className="agent-card-desc">{a.desc}</div>
+                  {agentStatus[a.name] !== undefined && (
+                    <div className={installed ? 'agent-installed' : 'agent-missing'}>
+                      {installed ? '\u2713 installed' : '\u2717 not found'}
+                    </div>
+                  )}
+                  {installed && vInfo && (
+                    <button
+                      className={`agent-update-btn${vInfo.updateAvailable ? ' has-update' : ''}${vInfo.updating ? ' updating' : ''}`}
+                      disabled={vInfo.updating}
+                      onClick={() => void handleAgentUpdate(a.name)}
+                      type="button"
+                    >
+                      {vInfo.updating
+                        ? 'Updating\u2026'
+                        : vInfo.updateAvailable
+                          ? `Update \u2192 ${vInfo.latest}`
+                          : '\u2713 Up to date'}
+                    </button>
+                  )}
+                </div>
+              </PanelBox>
             )
           })}
           <div className="agent-card add-agent" onClick={() => openCommandPalette('agents')}>
