@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useAppStore } from '../../store/appStore'
+import { HexDot } from '../shared/HexDot'
 import type { Session } from '../../../shared/types'
 import './Titlebar.css'
 
@@ -8,16 +9,6 @@ interface TitlebarProps {
   onCloseWorkflowTab: (workflowId: string) => void
   onAddTab: () => void
 }
-
-const DOT_STYLE_RUNNING: React.CSSProperties = {
-  background: 'var(--green)',
-  boxShadow: '0 0 5px var(--green)',
-}
-const DOT_STYLE_ERROR: React.CSSProperties = {
-  background: 'var(--red)',
-  boxShadow: '0 0 5px var(--red)',
-}
-const DOT_STYLE_IDLE: React.CSSProperties = { background: 'var(--text3)' }
 
 export function Titlebar({
   onCloseTab,
@@ -106,12 +97,6 @@ export function Titlebar({
     [projectNameMap],
   )
 
-  function dotStyle(status: string): React.CSSProperties {
-    if (status === 'running') return DOT_STYLE_RUNNING
-    if (status === 'error') return DOT_STYLE_ERROR
-    return DOT_STYLE_IDLE
-  }
-
   const sessionList = useMemo(() => Object.values(sessions), [sessions])
 
   return (
@@ -143,7 +128,10 @@ export function Titlebar({
                 setCurrentView('session')
               }}
             >
-              <div className="tab-dot" style={dotStyle(s.status)} />
+              <HexDot
+                status={s.status === 'running' ? 'live' : s.status === 'error' ? 'error' : 'idle'}
+                size={6}
+              />
               {getProjectName(s)}
               <button
                 className="tab-close"

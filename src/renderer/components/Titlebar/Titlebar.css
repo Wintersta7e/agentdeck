@@ -1,7 +1,6 @@
 .titlebar {
   height: 36px;
   background: var(--bg0);
-  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   padding: 0 12px;
@@ -34,6 +33,7 @@
   background: var(--accent);
   clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
   flex-shrink: 0;
+  filter: drop-shadow(0 0 5px rgba(var(--accent-rgb), 0.4));
   transition:
     transform 0.2s ease,
     filter 0.2s ease;
@@ -103,6 +103,8 @@
   position: relative;
   -webkit-app-region: no-drag;
   max-width: 300px;
+  clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+  min-width: 80px;
 }
 
 .tab.closing {
@@ -125,7 +127,20 @@
 .tab.active {
   color: var(--text0);
   background: var(--bg0);
-  border-bottom-color: var(--amber);
+  border-bottom-color: transparent;
+}
+
+.tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.3);
+  animation: energy-underline-in 200ms ease;
+  transform-origin: center;
 }
 
 .tab-dot {
@@ -248,4 +263,16 @@
   color: var(--purple);
   font-size: 9px;
   flex-shrink: 0;
+}
+
+/* Titlebar bottom energy vein */
+.titlebar::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 5%;
+  right: 5%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(var(--accent-rgb), 0.15), transparent);
+  pointer-events: none;
 }
