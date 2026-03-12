@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { PanelBox } from '../shared/PanelBox'
-import { HexGrid } from '../shared/HexGrid'
 import { ParticleField } from './ParticleField'
 import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
 import type { AgentConfig, Project, Template, StackBadge } from '../../../shared/types'
@@ -132,16 +131,6 @@ export function HomeScreen({
   const addNotification = useAppStore((s) => s.addNotification)
   const username = useAppStore((s) => s.wslUsername)
   const refreshAgentStatus = useAppStore((s) => s.refreshAgentStatus)
-  const hexGridRef = useRef<HTMLDivElement>(null)
-
-  const onMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!hexGridRef.current) return
-    const rect = hexGridRef.current.getBoundingClientRect()
-    const x = ((e.clientX - rect.left) / rect.width) * 100
-    const y = ((e.clientY - rect.top) / rect.height) * 100
-    hexGridRef.current.style.maskImage = `radial-gradient(circle 200px at ${x}% ${y}%, rgba(0,0,0,0.08) 0%, transparent 100%)`
-    hexGridRef.current.style.webkitMaskImage = hexGridRef.current.style.maskImage
-  }, [])
 
   const [cardMenu, setCardMenu] = useState<{
     x: number
@@ -213,10 +202,8 @@ export function HomeScreen({
   }
 
   return (
-    <div className="home-main" onMouseMove={onMouseMove}>
-      <div className="home-hex-grid-reactive" ref={hexGridRef}>
-        <HexGrid rotation={15} opacity={1} />
-      </div>
+    <div className="home-main">
+      {/* Global HexGrid in App.tsx provides background — no duplicate needed */}
       <div className="home-decor">
         <div className="home-aurora" />
         <ParticleField />

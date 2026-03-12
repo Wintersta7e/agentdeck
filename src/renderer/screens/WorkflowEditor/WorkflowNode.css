@@ -405,13 +405,3 @@
 .wf-node-dropdown-item.danger:hover {
   background: var(--red-dim);
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .wf-node-inner,
-  .wf-node-inner.running,
-  .wf-node-inner.running .wf-node-status-dot,
-  .wf-node-inner.done,
-  .wf-node-inner.error {
-    animation: none;
-  }
-}

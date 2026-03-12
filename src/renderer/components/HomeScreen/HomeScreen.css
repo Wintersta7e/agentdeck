@@ -7,7 +7,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding: 48px 40px 0;
-  background: var(--bg0);
+  background: transparent;
   position: relative;
 }
 
@@ -260,18 +260,6 @@
   left: 125%;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .project-card {
-    transition: none;
-  }
-  .project-card:hover {
-    transform: none;
-    box-shadow: none;
-  }
-  .project-card::after {
-    display: none;
-  }
-}
 .project-card.running::before {
   background: var(--green);
 }
@@ -522,10 +510,10 @@
 @keyframes auroraShift {
   0%,
   100% {
-    background-position: 0% 50%;
+    transform: translate3d(0, 0, 0);
   }
   50% {
-    background-position: 100% 50%;
+    transform: translate3d(-15%, 8%, 0);
   }
 }
 
@@ -546,16 +534,10 @@
       rgba(var(--accent-rgb, 245, 166, 35), 0.03) 0%,
       transparent 50%
     );
-  background-size: 200% 200%;
   animation: auroraShift 20s ease-in-out infinite;
+  will-change: transform;
   pointer-events: none;
   z-index: 0;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .home-aurora {
-    animation: none;
-  }
 }
 
 /* Staggered reveal animation */
@@ -573,13 +555,6 @@
 .stagger-item {
   opacity: 0;
   animation: fadeSlideUp 0.3s ease forwards;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .stagger-item {
-    opacity: 1;
-    animation: none;
-  }
 }
 
 /* Agent chips on project cards */

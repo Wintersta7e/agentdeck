@@ -9,8 +9,9 @@ interface EnergyVeinProps {
 
 export function EnergyVein({ color, count, speed }: EnergyVeinProps) {
   const gradId = useId()
+  const highlightGradId = `${gradId}-hl`
   const paths = useMemo(() => generatePaths(count), [count])
-  const duration = speed > 0 ? Math.round(12 + (1 - speed) * 25.7) : 0
+  const duration = speed > 0 ? Math.round(8 + (1 - speed) * 20) : 0
   const paused = speed === 0
 
   return (
@@ -22,37 +23,57 @@ export function EnergyVein({ color, count, speed }: EnergyVeinProps) {
         width: '100%',
         height: '100%',
         pointerEvents: 'none',
+        willChange: 'transform',
       }}
       viewBox="0 0 600 400"
       preserveAspectRatio="none"
       aria-hidden="true"
     >
       <defs>
+        {/* Base gradient — fades at edges */}
         <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%" stopColor={color} stopOpacity="0" />
-          <stop offset="40%" stopColor={color} stopOpacity="0.6" />
-          <stop offset="60%" stopColor={color} stopOpacity="0.6" />
+          <stop offset="30%" stopColor={color} stopOpacity="0.4" />
+          <stop offset="70%" stopColor={color} stopOpacity="0.4" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+        {/* Highlight gradient — brighter for the traveling pulse */}
+        <linearGradient id={highlightGradId} x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor={color} stopOpacity="0" />
+          <stop offset="25%" stopColor={color} stopOpacity="0.8" />
+          <stop offset="50%" stopColor={color} stopOpacity="1" />
+          <stop offset="75%" stopColor={color} stopOpacity="0.8" />
           <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
       </defs>
       {paths.map((d, i) => (
-        <path
-          key={i}
-          d={d}
-          stroke={`url(#${gradId})`}
-          strokeWidth={1.5 - i * 0.3}
-          fill="none"
-          opacity={1}
-          strokeDasharray="200"
-          style={{
-            animationName: 'vein-drift',
-            animationDuration: `${duration}s`,
-            animationTimingFunction: 'linear',
-            animationIterationCount: 'infinite',
-            animationPlayState: paused ? 'paused' : 'running',
-            animationDelay: `${i * -5}s`,
-          }}
-        />
+        <g key={i}>
+          {/* Base layer: continuous line, always visible */}
+          <path
+            d={d}
+            stroke={`url(#${gradId})`}
+            strokeWidth={1.2 - i * 0.2}
+            fill="none"
+            opacity={1}
+          />
+          {/* Highlight layer: traveling bright pulse */}
+          <path
+            d={d}
+            stroke={`url(#${highlightGradId})`}
+            strokeWidth={2 - i * 0.3}
+            fill="none"
+            opacity={0.7}
+            strokeDasharray="100 500"
+            style={{
+              animationName: 'vein-drift',
+              animationDuration: `${duration}s`,
+              animationTimingFunction: 'linear',
+              animationIterationCount: 'infinite',
+              animationPlayState: paused ? 'paused' : 'running',
+              animationDelay: `${i * -4}s`,
+            }}
+          />
+        </g>
       ))}
     </svg>
   )

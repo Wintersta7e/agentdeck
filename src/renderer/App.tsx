@@ -13,6 +13,7 @@ import { NotificationToast } from './components/NotificationToast/NotificationTo
 import { HexGrid } from './components/shared/HexGrid'
 import { EnergyVein } from './components/shared/EnergyVein'
 import { AmbientGlow } from './components/shared/AmbientGlow'
+
 import { useAppStore } from './store/appStore'
 import { useProjects } from './hooks/useProjects'
 import { useAmbientState } from './hooks/useAmbientState'
@@ -128,19 +129,6 @@ export function App(): React.JSX.Element {
 
   const handleCloseWorkflowTab = useCallback((workflowId: string) => {
     useAppStore.getState().closeWorkflow(workflowId)
-  }, [])
-
-  // Spotlight cursor effect
-  const spotlightRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const handler = (e: MouseEvent): void => {
-      if (spotlightRef.current) {
-        spotlightRef.current.style.left = `${e.clientX}px`
-        spotlightRef.current.style.top = `${e.clientY}px`
-      }
-    }
-    window.addEventListener('mousemove', handler)
-    return () => window.removeEventListener('mousemove', handler)
   }, [])
 
   // File drag-and-drop: preload handles the DOM drop event (File.path is only
@@ -299,19 +287,19 @@ export function App(): React.JSX.Element {
           overflow: 'hidden',
           pointerEvents: 'none',
           zIndex: 0,
+          contain: 'strict',
         }}
       >
-        <HexGrid rotation={15} opacity={0.04} />
+        <HexGrid rotation={15} opacity={0.08} />
         <EnergyVein color="var(--accent)" count={2} speed={veinSpeed} />
         <AmbientGlow
-          color="rgba(var(--accent-rgb), 0.1)"
+          color="rgba(var(--accent-rgb), 0.15)"
           position={[25, 15]}
-          size={500}
+          size={600}
           skew={-12}
         />
-        <AmbientGlow color="rgba(100, 180, 255, 0.06)" position={[75, 80]} size={400} skew={5} />
+        <AmbientGlow color="rgba(100, 180, 255, 0.08)" position={[75, 80]} size={500} skew={5} />
       </div>
-      <div className="spotlight" ref={spotlightRef} />
       <Titlebar
         onCloseTab={handleCloseTab}
         onCloseWorkflowTab={handleCloseWorkflowTab}

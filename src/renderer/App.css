@@ -10,6 +10,8 @@
   flex: 1;
   display: flex;
   overflow: hidden;
+  padding: 6px;
+  gap: 4px;
 }
 
 .app-main {
@@ -27,25 +29,18 @@
 }
 .view-panel--visible {
   display: flex;
+  gap: 4px;
 }
 
 .sidebar-wrapper {
   display: flex;
   overflow: hidden;
-  border-right: 1px solid var(--border);
-  transition:
-    width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-    border-right-color 0.3s ease;
+  border-right: none;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   min-width: 0;
   will-change: width;
 }
 
 .sidebar-wrapper.collapsed {
-  border-right-color: transparent;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sidebar-wrapper {
-    transition: none;
-  }
+  /* No border to clear */
 }

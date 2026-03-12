@@ -1,11 +1,10 @@
 .sidebar {
   width: 100%;
-  background: rgba(var(--bg1-rgb), 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.015);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  border-radius: var(--r);
 }
 
 .sidebar-section {
@@ -358,7 +357,6 @@
 .sidebar-bottom {
   margin-top: auto;
   padding: 8px 12px;
-  border-top: 1px solid var(--border);
 }
 
 .new-project-btn {
@@ -447,13 +445,6 @@
   background: rgba(var(--accent-rgb), 0.12);
   padding: 1px 5px;
   border-radius: var(--r);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sidebar-item,
-  .new-project-btn {
-    transition: none;
-  }
 }
 
 .sidebar ::-webkit-scrollbar {

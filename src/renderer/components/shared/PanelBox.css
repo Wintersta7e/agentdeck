@@ -1,7 +1,7 @@
 .panel-box {
   position: relative;
-  background: rgba(var(--bg1-rgb), 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: var(--r);
   overflow: hidden;
 }

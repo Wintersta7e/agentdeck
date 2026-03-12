@@ -506,6 +506,15 @@ export function Sidebar({
             ))}
         </div>
 
+        <div className="sidebar-bottom">
+          <button className="new-project-btn" onClick={openWizard}>
+            <span>+</span> New Project
+          </button>
+          <button className="sidebar-new-wf" onClick={createNewWorkflow}>
+            {'\u2B21'} New Workflow
+          </button>
+        </div>
+
         {Object.values(sessions).length > 0 && (
           <div className="sidebar-summary">
             {Object.values(sessions).map((s) => (
@@ -515,18 +524,12 @@ export function Sidebar({
                 size={5}
               />
             ))}
-            <span className="sidebar-summary-label">{Object.values(sessions).length} sessions</span>
+            <span className="sidebar-summary-label">
+              {Object.values(sessions).length}{' '}
+              {Object.values(sessions).length === 1 ? 'session' : 'sessions'}
+            </span>
           </div>
         )}
-
-        <div className="sidebar-bottom">
-          <button className="new-project-btn" onClick={openWizard}>
-            <span>+</span> New Project
-          </button>
-          <button className="sidebar-new-wf" onClick={createNewWorkflow}>
-            {'\u2B21'} New Workflow
-          </button>
-        </div>
       </PanelBox>
     </div>
   )

@@ -18,6 +18,7 @@ export function HexGrid({ rotation, opacity, style }: HexGridProps) {
         height: '100%',
         pointerEvents: 'none',
         opacity,
+        color: 'var(--accent)',
         ...style,
       }}
       aria-hidden="true"

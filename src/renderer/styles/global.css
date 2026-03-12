@@ -118,12 +118,6 @@ body {
   transition: opacity 0.3s;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .spotlight {
-    display: none;
-  }
-}
-
 /* ─── Circular theme reveal (View Transition API — typed) ─── */
 :root:active-view-transition-type(theme-reveal) {
   &::view-transition-old(root) {
@@ -141,13 +135,6 @@ body {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  ::view-transition-old(root),
-  ::view-transition-new(root) {
-    animation: none !important;
-  }
-}
-
 /* ─── Button press scale ─── */
 button:active,
 .tab:active,
@@ -156,16 +143,6 @@ button:active,
 .sidebar-new-wf:active {
   transform: scale(0.95);
   transition: transform 0.06s ease;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  button:active,
-  .tab:active,
-  .sidebar-item:active,
-  .new-project-btn:active,
-  .sidebar-new-wf:active {
-    transform: none;
-  }
 }
 
 /* ─── View mount fade-in ─── */
@@ -188,26 +165,16 @@ button:active,
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .home-main,
-  .wizard-shell,
-  .settings-main,
-  .template-editor,
-  .wf-editor {
-    animation: none;
-  }
-}
-
 /* === Fusion Animations === */
 @keyframes hex-pulse {
   0%,
   100% {
     transform: scale(1);
-    filter: drop-shadow(0 0 3px var(--accent));
+    opacity: 0.8;
   }
   50% {
     transform: scale(1.15);
-    filter: drop-shadow(0 0 6px var(--accent));
+    opacity: 1;
   }
 }
 
@@ -226,7 +193,7 @@ button:active,
     stroke-dashoffset: 0;
   }
   100% {
-    stroke-dashoffset: 200;
+    stroke-dashoffset: 600;
   }
 }
 
@@ -248,16 +215,5 @@ button:active,
   }
   100% {
     transform: scaleX(1);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0s !important;
-    animation-delay: 0s !important;
-    transition-duration: 0s !important;
-    transition-delay: 0s !important;
   }
 }

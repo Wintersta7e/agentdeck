@@ -8,22 +8,33 @@ describe('EnergyVein', () => {
     expect(container.querySelector('svg')).not.toBeNull()
   })
 
-  it('renders the correct number of paths', () => {
+  it('renders two layers per path (base + highlight)', () => {
     const { container } = render(<EnergyVein color="#f5a623" count={3} speed={0.5} />)
-    expect(container.querySelectorAll('path').length).toBe(3)
+    // 3 paths × 2 layers each = 6 path elements
+    expect(container.querySelectorAll('path').length).toBe(6)
+    // 3 groups
+    expect(container.querySelectorAll('g').length).toBe(3)
   })
 
   it('pauses animation when speed is 0', () => {
     const { container } = render(<EnergyVein color="#f5a623" count={2} speed={0} />)
-    container.querySelectorAll('path').forEach((p) => {
-      expect(p.style.animationPlayState).toBe('paused')
+    // Highlight layer (2nd path per group) has animation
+    const groups = container.querySelectorAll('g')
+    groups.forEach((g) => {
+      const paths = g.querySelectorAll('path')
+      const highlight = paths[1]
+      if (!highlight) throw new Error('Expected highlight path')
+      expect(highlight.style.animationPlayState).toBe('paused')
     })
   })
 
   it('sets animation duration based on speed', () => {
     const { container } = render(<EnergyVein color="#f5a623" count={1} speed={1} />)
-    const path = container.querySelector('path') as SVGPathElement
-    expect(path.style.animationDuration).toBe('12s')
+    // speed=1 → duration = 8 + (1-1)*20 = 8s
+    const group = container.querySelector('g') as SVGGElement
+    const highlight = group.querySelectorAll('path')[1]
+    if (!highlight) throw new Error('Expected highlight path')
+    expect(highlight.style.animationDuration).toBe('8s')
   })
 
   it('is non-interactive and absolutely positioned', () => {

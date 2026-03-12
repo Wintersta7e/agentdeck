@@ -1,8 +1,6 @@
 .titlebar {
   height: 36px;
-  background: rgba(var(--bg1-rgb), 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(0, 0, 0, 0.2);
   display: flex;
   align-items: center;
   padding: 0 12px;
@@ -11,6 +9,7 @@
   -webkit-app-region: drag;
   position: relative;
   z-index: 10;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .titlebar-logo {
@@ -122,11 +121,6 @@
   pointer-events: none;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .tab.closing {
-    transition: none;
-  }
-}
 .tab:hover {
   color: var(--text1);
   background: var(--bg1);

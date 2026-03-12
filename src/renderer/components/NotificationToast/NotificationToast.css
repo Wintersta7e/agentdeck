@@ -61,9 +61,3 @@
     transform: translateX(0);
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .toast {
-    animation: none;
-  }
-}
