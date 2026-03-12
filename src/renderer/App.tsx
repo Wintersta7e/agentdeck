@@ -298,18 +298,18 @@ export function App(): React.JSX.Element {
           inset: 0,
           overflow: 'hidden',
           pointerEvents: 'none',
-          zIndex: -1,
+          zIndex: 0,
         }}
       >
-        <HexGrid rotation={15} opacity={0.02} />
+        <HexGrid rotation={15} opacity={0.04} />
         <EnergyVein color="var(--accent)" count={2} speed={veinSpeed} />
         <AmbientGlow
-          color="rgba(var(--accent-rgb), 0.045)"
-          position={[30, 20]}
-          size={300}
+          color="rgba(var(--accent-rgb), 0.1)"
+          position={[25, 15]}
+          size={500}
           skew={-12}
         />
-        <AmbientGlow color="rgba(100, 180, 255, 0.025)" position={[75, 80]} size={200} skew={5} />
+        <AmbientGlow color="rgba(100, 180, 255, 0.06)" position={[75, 80]} size={400} skew={5} />
       </div>
       <div className="spotlight" ref={spotlightRef} />
       <Titlebar

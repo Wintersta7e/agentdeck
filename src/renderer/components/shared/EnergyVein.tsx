@@ -40,9 +40,9 @@ export function EnergyVein({ color, count, speed }: EnergyVeinProps) {
           key={i}
           d={d}
           stroke={`url(#${gradId})`}
-          strokeWidth={0.8 - i * 0.15}
+          strokeWidth={1.5 - i * 0.3}
           fill="none"
-          opacity={0.8 - i * 0.2}
+          opacity={1}
           strokeDasharray="200"
           style={{
             animationName: 'vein-drift',

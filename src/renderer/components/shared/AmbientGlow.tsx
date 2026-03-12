@@ -18,7 +18,7 @@ export function AmbientGlow({ color, position, size, skew }: AmbientGlowProps) {
         height: `${size}px`,
         transform: `translate(-50%, -50%) skewX(${skew}deg)`,
         background: `radial-gradient(ellipse, ${color} 0%, transparent 70%)`,
-        filter: 'blur(50px)',
+        filter: 'blur(40px)',
         opacity: 'var(--ambient-glow-opacity)',
         pointerEvents: 'none',
         transition: 'left 2s ease, top 2s ease',

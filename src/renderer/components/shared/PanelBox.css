@@ -1,7 +1,7 @@
 .panel-box {
   position: relative;
   background: rgba(var(--bg1-rgb), 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--r);
   overflow: hidden;
 }
@@ -24,10 +24,10 @@
   height: 100%;
   background: linear-gradient(
     to bottom,
-    rgba(var(--accent-rgb), 0.2),
+    rgba(var(--accent-rgb), 0.35),
     transparent 40%,
     transparent 70%,
-    rgba(var(--accent-rgb), 0.08)
+    rgba(var(--accent-rgb), 0.2)
   );
 }
 
@@ -38,10 +38,10 @@
   height: 100%;
   background: linear-gradient(
     to bottom,
-    rgba(var(--accent-rgb), 0.2),
+    rgba(var(--accent-rgb), 0.35),
     transparent 40%,
     transparent 70%,
-    rgba(var(--accent-rgb), 0.08)
+    rgba(var(--accent-rgb), 0.2)
   );
 }
 
@@ -50,7 +50,7 @@
   left: 0;
   width: 100%;
   height: var(--edge-glow-width);
-  background: linear-gradient(to right, transparent, rgba(var(--accent-rgb), 0.2), transparent);
+  background: linear-gradient(to right, transparent, rgba(var(--accent-rgb), 0.35), transparent);
 }
 
 .panel-box--glow-bottom::before {
@@ -58,7 +58,7 @@
   left: 0;
   width: 100%;
   height: var(--edge-glow-width);
-  background: linear-gradient(to right, transparent, rgba(var(--accent-rgb), 0.15), transparent);
+  background: linear-gradient(to right, transparent, rgba(var(--accent-rgb), 0.3), transparent);
 }
 
 /* Pulse — brief brightness flash on activity */

@@ -70,14 +70,14 @@
 
   /* === Fusion Design System === */
   --corner-accent-size: 20px;
-  --corner-accent-opacity: 0.3;
-  --corner-accent-secondary: 0.1;
-  --edge-glow-width: 2px;
-  --energy-vein-opacity: 0.12;
-  --hex-grid-opacity: 0.02;
+  --corner-accent-opacity: 0.55;
+  --corner-accent-secondary: 0.2;
+  --edge-glow-width: 3px;
+  --energy-vein-opacity: 0.3;
+  --hex-grid-opacity: 0.04;
   --content-glow-radius: 14px;
-  --content-glow-opacity: 0.04;
-  --ambient-glow-opacity: 0.045;
+  --content-glow-opacity: 0.1;
+  --ambient-glow-opacity: 0.1;
 
   /* Shape */
   --r: 4px;

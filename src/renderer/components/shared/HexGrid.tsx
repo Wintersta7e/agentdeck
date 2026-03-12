@@ -34,7 +34,7 @@ export function HexGrid({ rotation, opacity, style }: HexGridProps) {
             points="12,2 22,8 22,22 12,28 2,22 2,8"
             fill="none"
             stroke="currentColor"
-            strokeWidth="0.5"
+            strokeWidth="0.8"
           />
         </pattern>
       </defs>

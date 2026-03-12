@@ -1,7 +1,9 @@
 .right-panel {
   width: 100%;
   height: 100%;
-  background: var(--bg1);
+  background: rgba(var(--bg1-rgb), 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -50,7 +52,7 @@
   right: 10%;
   height: 2px;
   background: linear-gradient(90deg, transparent, var(--accent), transparent);
-  box-shadow: 0 0 6px rgba(var(--accent-rgb), 0.2);
+  box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.4);
   animation: energy-underline-in 200ms ease;
 }
 

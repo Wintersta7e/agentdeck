@@ -1,6 +1,8 @@
 .titlebar {
   height: 36px;
-  background: var(--bg0);
+  background: rgba(var(--bg1-rgb), 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
   padding: 0 12px;
@@ -143,7 +145,7 @@
   right: 10%;
   height: 2px;
   background: linear-gradient(90deg, transparent, var(--accent), transparent);
-  box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.3);
+  box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.5);
   animation: energy-underline-in 200ms ease;
   transform-origin: center;
 }
@@ -278,6 +280,6 @@
   left: 5%;
   right: 5%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(var(--accent-rgb), 0.15), transparent);
+  background: linear-gradient(90deg, transparent, rgba(var(--accent-rgb), 0.3), transparent);
   pointer-events: none;
 }

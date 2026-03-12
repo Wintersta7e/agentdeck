@@ -1,7 +1,9 @@
 .statusbar {
   height: 26px;
   line-height: 26px;
-  background: var(--bg0);
+  background: rgba(var(--bg1-rgb), 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-top: none;
   position: relative;
   display: flex;
@@ -20,7 +22,7 @@
   left: 10%;
   right: 10%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(var(--accent-rgb), 0.12), transparent);
+  background: linear-gradient(90deg, transparent, rgba(var(--accent-rgb), 0.25), transparent);
 }
 
 .status-item {
