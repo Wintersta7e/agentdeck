@@ -37,6 +37,11 @@
   transition:
     transform 0.2s ease,
     filter 0.2s ease;
+  animation: logo-breathe 4s ease-in-out infinite;
+}
+
+.logo-mark--active {
+  animation-play-state: paused;
 }
 
 .titlebar-logo:hover .logo-mark {

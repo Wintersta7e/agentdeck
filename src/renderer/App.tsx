@@ -15,6 +15,7 @@ import { EnergyVein } from './components/shared/EnergyVein'
 import { AmbientGlow } from './components/shared/AmbientGlow'
 import { useAppStore } from './store/appStore'
 import { useProjects } from './hooks/useProjects'
+import { useAmbientState } from './hooks/useAmbientState'
 import type { ActivityEvent, AgentConfig, Project } from '../shared/types'
 import './App.css'
 
@@ -82,6 +83,8 @@ export function App(): React.JSX.Element {
     const sessionId = `terminal-${Date.now()}`
     addSession(sessionId, '')
   }, [addSession])
+
+  const { veinSpeed, isIdle } = useAmbientState()
 
   const { updateProject } = useProjects()
 
@@ -299,7 +302,7 @@ export function App(): React.JSX.Element {
         }}
       >
         <HexGrid rotation={15} opacity={0.02} />
-        <EnergyVein color="var(--accent)" count={2} speed={0.3} />
+        <EnergyVein color="var(--accent)" count={2} speed={veinSpeed} />
         <AmbientGlow
           color="rgba(var(--accent-rgb), 0.045)"
           position={[30, 20]}
@@ -313,6 +316,7 @@ export function App(): React.JSX.Element {
         onCloseTab={handleCloseTab}
         onCloseWorkflowTab={handleCloseWorkflowTab}
         onAddTab={handleAddTab}
+        isIdle={isIdle}
       />
       <div className="app-body">
         <div

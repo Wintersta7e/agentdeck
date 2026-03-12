@@ -8,12 +8,14 @@ interface TitlebarProps {
   onCloseTab: (sessionId: string) => void
   onCloseWorkflowTab: (workflowId: string) => void
   onAddTab: () => void
+  isIdle?: boolean | undefined
 }
 
 export function Titlebar({
   onCloseTab,
   onCloseWorkflowTab,
   onAddTab,
+  isIdle,
 }: TitlebarProps): React.JSX.Element {
   const [closingTabs, setClosingTabs] = useState<Set<string>>(() => new Set())
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -102,7 +104,7 @@ export function Titlebar({
   return (
     <div className="titlebar">
       <div className="titlebar-logo" onClick={() => setCurrentView('home')} title="Home">
-        <div className="logo-mark" />
+        <div className={`logo-mark${isIdle ? '' : ' logo-mark--active'}`} />
         <div className="logo-text">
           Agent<span>Deck</span>
         </div>
