@@ -79,6 +79,15 @@
   --content-glow-opacity: 0.12;
   --ambient-glow-opacity: 0.15;
 
+  /* Fusion panel surfaces */
+  --glass-bg: rgba(255, 255, 255, 0.015);
+  --glass-border: rgba(255, 255, 255, 0.05);
+  --terminal-bg: rgba(0, 0, 0, 0.45);
+  --terminal-border: rgba(var(--accent-rgb), 0.06);
+  --titlebar-bg: rgba(0, 0, 0, 0.2);
+  --statusbar-bg: rgba(0, 0, 0, 0.15);
+  --chrome-border: rgba(255, 255, 255, 0.04);
+
   /* Shape */
   --r: 4px;
 
@@ -218,6 +227,17 @@
   --purple: #6b4c9a;
   --badge-python: #b08800;
   --badge-python-bg: rgba(176, 136, 0, 0.15);
+  /* Fusion overrides — light */
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --terminal-bg: rgba(0, 0, 0, 0.85);
+  --terminal-border: rgba(var(--accent-rgb), 0.15);
+  --titlebar-bg: rgba(255, 255, 255, 0.6);
+  --statusbar-bg: rgba(255, 255, 255, 0.5);
+  --chrome-border: rgba(0, 0, 0, 0.08);
+  --energy-vein-opacity: 0.25;
+  --hex-grid-opacity: 0.04;
+  --ambient-glow-opacity: 0.1;
 }
 
 /* ─── Theme: Fog (light) ─── */
@@ -254,6 +274,17 @@
   --purple: #7c3aed;
   --badge-python: #b08800;
   --badge-python-bg: rgba(176, 136, 0, 0.15);
+  /* Fusion overrides — light */
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --terminal-bg: rgba(0, 0, 0, 0.85);
+  --terminal-border: rgba(var(--accent-rgb), 0.15);
+  --titlebar-bg: rgba(255, 255, 255, 0.6);
+  --statusbar-bg: rgba(255, 255, 255, 0.5);
+  --chrome-border: rgba(0, 0, 0, 0.08);
+  --energy-vein-opacity: 0.25;
+  --hex-grid-opacity: 0.04;
+  --ambient-glow-opacity: 0.1;
 }
 
 /* ─── Theme: Lavender (light) ─── */
@@ -290,6 +321,17 @@
   --purple: #7c3aed;
   --badge-python: #b08800;
   --badge-python-bg: rgba(176, 136, 0, 0.15);
+  /* Fusion overrides — light */
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --terminal-bg: rgba(0, 0, 0, 0.85);
+  --terminal-border: rgba(var(--accent-rgb), 0.15);
+  --titlebar-bg: rgba(255, 255, 255, 0.6);
+  --statusbar-bg: rgba(255, 255, 255, 0.5);
+  --chrome-border: rgba(0, 0, 0, 0.08);
+  --energy-vein-opacity: 0.25;
+  --hex-grid-opacity: 0.04;
+  --ambient-glow-opacity: 0.1;
 }
 
 /* ─── Theme: Stone (light) ─── */
@@ -326,6 +368,17 @@
   --purple: #7c3aed;
   --badge-python: #b08800;
   --badge-python-bg: rgba(176, 136, 0, 0.15);
+  /* Fusion overrides — light */
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --terminal-bg: rgba(0, 0, 0, 0.85);
+  --terminal-border: rgba(var(--accent-rgb), 0.15);
+  --titlebar-bg: rgba(255, 255, 255, 0.6);
+  --statusbar-bg: rgba(255, 255, 255, 0.5);
+  --chrome-border: rgba(0, 0, 0, 0.08);
+  --energy-vein-opacity: 0.25;
+  --hex-grid-opacity: 0.04;
+  --ambient-glow-opacity: 0.1;
 }
 
 /* ─── Theme transition — scoped to UI containers ─── */
