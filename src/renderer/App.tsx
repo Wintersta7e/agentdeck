@@ -10,6 +10,9 @@ import { CommandPalette } from './components/CommandPalette/CommandPalette'
 import { AboutDialog } from './components/AboutDialog/AboutDialog'
 import { ShortcutsDialog } from './components/ShortcutsDialog/ShortcutsDialog'
 import { NotificationToast } from './components/NotificationToast/NotificationToast'
+import { HexGrid } from './components/shared/HexGrid'
+import { EnergyVein } from './components/shared/EnergyVein'
+import { AmbientGlow } from './components/shared/AmbientGlow'
 import { useAppStore } from './store/appStore'
 import { useProjects } from './hooks/useProjects'
 import type { ActivityEvent, AgentConfig, Project } from '../shared/types'
@@ -284,6 +287,27 @@ export function App(): React.JSX.Element {
 
   return (
     <div className="app">
+      {/* Fusion ambient layer */}
+      <div
+        className="fusion-ambient"
+        style={{
+          position: 'fixed',
+          inset: 0,
+          overflow: 'hidden',
+          pointerEvents: 'none',
+          zIndex: -1,
+        }}
+      >
+        <HexGrid rotation={15} opacity={0.02} />
+        <EnergyVein color="var(--accent)" count={2} speed={0.3} />
+        <AmbientGlow
+          color="rgba(var(--accent-rgb), 0.045)"
+          position={[30, 20]}
+          size={300}
+          skew={-12}
+        />
+        <AmbientGlow color="rgba(100, 180, 255, 0.025)" position={[75, 80]} size={200} skew={5} />
+      </div>
       <div className="spotlight" ref={spotlightRef} />
       <Titlebar
         onCloseTab={handleCloseTab}
