@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useStoreWithEqualityFn } from 'zustand/traditional'
 import { useAppStore } from '../../store/appStore'
 import { getDefaultAgent } from '../../../shared/agent-helpers'
@@ -76,6 +76,33 @@ export function SplitView(): React.JSX.Element {
   const projects = useAppStore((s) => s.projects)
   const setPaneLayout = useAppStore((s) => s.setPaneLayout)
   const setFocusedPane = useAppStore((s) => s.setFocusedPane)
+
+  // Activity-driven pulse state for PanelBox
+  const [pulseState, setPulseState] = useState<Record<number, boolean>>({})
+  const pulseTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({})
+
+  // Subscribe to activity for pulse effect on each pane's session
+  useEffect(() => {
+    const unsubs: (() => void)[] = []
+    for (const idx of PANE_INDICES) {
+      if (idx >= paneLayout) continue
+      const sid = paneSessions[idx]
+      if (!sid) continue
+      const paneIdx = idx
+      const unsub = window.agentDeck.pty.onActivity(sid, () => {
+        setPulseState((prev) => ({ ...prev, [paneIdx]: true }))
+        clearTimeout(pulseTimers.current[paneIdx])
+        pulseTimers.current[paneIdx] = setTimeout(() => {
+          setPulseState((prev) => ({ ...prev, [paneIdx]: false }))
+        }, 400)
+      })
+      unsubs.push(unsub)
+    }
+    return () => {
+      unsubs.forEach((u) => u())
+      Object.values(pulseTimers.current).forEach(clearTimeout)
+    }
+  }, [paneLayout, paneSessions])
 
   const paneRefs = useRef<(HTMLDivElement | null)[]>([null, null, null])
   const splitAreaRef = useRef<HTMLDivElement>(null)
@@ -242,6 +269,7 @@ export function SplitView(): React.JSX.Element {
                 corners={isFocused ? ['tl', 'tr', 'br'] : ['tl', 'br']}
                 glow="none"
                 intensity={isFocused ? 0.3 : 0.1}
+                pulse={pulseState[paneIndex] ?? false}
                 className="split-pane-inner"
               >
                 {session ? (
