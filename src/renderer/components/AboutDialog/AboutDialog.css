@@ -46,6 +46,16 @@
   font-weight: 700;
   color: var(--amber);
   letter-spacing: 0.5px;
+  position: relative;
+}
+
+.about-name::after {
+  content: '';
+  display: block;
+  margin-top: 6px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  box-shadow: 0 0 6px rgba(var(--accent-rgb), 0.2);
 }
 
 .about-version {

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { PanelBox } from '../shared/PanelBox'
 import './AboutDialog.css'
 
 interface AboutDialogProps {
@@ -47,7 +48,7 @@ export function AboutDialog({ onClose }: AboutDialogProps): React.JSX.Element {
 
   return (
     <div className="about-overlay" onClick={handleOverlayClick}>
-      <div className="about-dialog">
+      <PanelBox corners="all" glow="none" className="about-dialog">
         <button className="about-close" onClick={onClose}>
           {'\u2715'}
         </button>
@@ -70,7 +71,7 @@ export function AboutDialog({ onClose }: AboutDialogProps): React.JSX.Element {
           </div>
         )}
         <div className="about-copyright">{'\u00A9'} 2025 AgentDeck</div>
-      </div>
+      </PanelBox>
     </div>
   )
 }
