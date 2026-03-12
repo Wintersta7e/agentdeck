@@ -111,6 +111,7 @@
   border-left: none;
   border-right: none;
   font-family: var(--font-mono);
+  position: relative;
 }
 
 .scope-tab:hover {
@@ -119,7 +120,17 @@
 
 .scope-tab.active {
   color: var(--amber);
-  border-bottom-color: var(--amber);
+}
+
+.scope-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  box-shadow: 0 0 6px rgba(var(--accent-rgb), 0.2);
 }
 
 /* ─── Results ─── */
@@ -186,6 +197,7 @@
 
 .result-item:hover {
   background: var(--bg3);
+  border-left: 2px solid rgba(var(--accent-rgb), 0.3);
 }
 
 .result-item.selected {
