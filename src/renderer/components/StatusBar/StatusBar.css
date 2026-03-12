@@ -1,8 +1,8 @@
 .statusbar {
   height: 26px;
   line-height: 26px;
-  background: rgba(0, 0, 0, 0.15);
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  background: var(--statusbar-bg);
+  border-top: 1px solid var(--chrome-border);
   position: relative;
   display: flex;
   align-items: center;

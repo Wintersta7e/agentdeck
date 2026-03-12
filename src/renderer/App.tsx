@@ -290,7 +290,7 @@ export function App(): React.JSX.Element {
           contain: 'strict',
         }}
       >
-        <HexGrid rotation={15} opacity={0.08} />
+        <HexGrid rotation={15} />
         <EnergyVein color="var(--accent)" count={2} speed={veinSpeed} />
         <AmbientGlow
           color="rgba(var(--accent-rgb), 0.15)"

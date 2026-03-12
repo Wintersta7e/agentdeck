@@ -1,6 +1,6 @@
 .sidebar {
   width: 100%;
-  background: rgba(255, 255, 255, 0.015);
+  background: var(--glass-bg);
   display: flex;
   flex-direction: column;
   overflow: hidden;

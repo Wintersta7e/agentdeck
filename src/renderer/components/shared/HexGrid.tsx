@@ -2,7 +2,7 @@ import { useId } from 'react'
 
 interface HexGridProps {
   rotation: number
-  opacity: number
+  opacity?: number | undefined
   style?: React.CSSProperties | undefined
 }
 
@@ -17,7 +17,7 @@ export function HexGrid({ rotation, opacity, style }: HexGridProps) {
         width: '100%',
         height: '100%',
         pointerEvents: 'none',
-        opacity,
+        opacity: opacity ?? 'var(--hex-grid-opacity)',
         color: 'var(--accent)',
         ...style,
       }}

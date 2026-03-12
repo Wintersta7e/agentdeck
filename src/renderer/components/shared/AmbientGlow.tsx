@@ -18,6 +18,7 @@ export function AmbientGlow({ color, position, size, skew }: AmbientGlowProps) {
         height: `${size}px`,
         transform: `translate(-50%, -50%) skewX(${skew}deg)`,
         background: `radial-gradient(ellipse, ${color} 0%, transparent 50%)`,
+        opacity: 'var(--ambient-glow-opacity)',
         pointerEvents: 'none',
       }}
       aria-hidden="true"

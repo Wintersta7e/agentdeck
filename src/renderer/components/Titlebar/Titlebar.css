@@ -1,6 +1,6 @@
 .titlebar {
   height: 36px;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--titlebar-bg);
   display: flex;
   align-items: center;
   padding: 0 12px;
@@ -9,7 +9,7 @@
   -webkit-app-region: drag;
   position: relative;
   z-index: 10;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--chrome-border);
 }
 
 .titlebar-logo {

@@ -10,8 +10,8 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.45);
-  border: 1px solid rgba(var(--accent-rgb), 0.06);
+  background: var(--terminal-bg);
+  border: 1px solid var(--terminal-border);
   position: relative;
   transition: box-shadow 0.2s ease;
   border-radius: var(--r);
