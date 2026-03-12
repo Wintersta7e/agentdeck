@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { useProjects } from '../../hooks/useProjects'
+import { PanelBox } from '../shared/PanelBox'
+import { HexDot } from '../shared/HexDot'
 import type { AgentConfig, Project } from '../../../shared/types'
 import { getProjectAgents } from '../../../shared/agent-helpers'
 import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
@@ -213,294 +215,319 @@ export function Sidebar({
     return activeProjectId === projectId
   }
 
-  function dotClass(status: string): string {
-    if (status === 'running') return 'dot-running'
-    if (status === 'error') return 'dot-error'
-    return 'dot-idle'
-  }
-
   return (
     <div className="sidebar">
-      <div className="sidebar-section">
-        <div
-          className="sidebar-label sidebar-label-clickable"
-          onClick={() => toggleSidebarSection('pinned')}
-        >
-          <span>
-            <span className={`sidebar-chevron${sidebarSections.pinned ? ' open' : ''}`}>
-              {'\u25B6'}
-            </span>
-            Pinned
-          </span>
-          <button
-            className="sidebar-action"
-            onClick={(e) => {
-              e.stopPropagation()
-              openWizard()
-            }}
+      <PanelBox corners={['tl', 'br']} glow="left" className="sidebar-panel">
+        <div className="sidebar-section">
+          <div
+            className="sidebar-label sidebar-label-clickable"
+            onClick={() => toggleSidebarSection('pinned')}
           >
-            +
-          </button>
-        </div>
-        {sidebarSections.pinned &&
-          pinned.map((p) => (
-            <div
-              key={p.id}
-              className={`sidebar-item ${isActive(p.id) ? 'active' : ''}`}
-              onClick={() => onOpenProject(p)}
-              onContextMenu={(e) => handleContextMenu(e, p.id)}
+            <span>
+              <span className={`sidebar-chevron${sidebarSections.pinned ? ' open' : ''}`}>
+                {'\u25B6'}
+              </span>
+              Pinned
+            </span>
+            <button
+              className="sidebar-action"
+              onClick={(e) => {
+                e.stopPropagation()
+                openWizard()
+              }}
             >
-              <div className={`sidebar-dot ${dotClass(getProjectStatus(p.id))}`} />
-              <div className="sidebar-item-info">
-                <div className="sidebar-item-name">{p.name}</div>
-                <div className="sidebar-item-sub">{p.path}</div>
-              </div>
-              {p.badge && (
-                <span className={`sidebar-badge badge-${badgeClass(p.badge)}`}>{p.badge}</span>
-              )}
-              <button
-                className="sidebar-item-gear"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  openSettings(p.id)
-                }}
-                title="Project settings"
+              +
+            </button>
+          </div>
+          {sidebarSections.pinned &&
+            pinned.map((p) => (
+              <div
+                key={p.id}
+                className={`sidebar-item ${isActive(p.id) ? 'active' : ''}`}
+                onClick={() => onOpenProject(p)}
+                onContextMenu={(e) => handleContextMenu(e, p.id)}
               >
-                {'\u2699'}
-              </button>
-            </div>
-          ))}
-      </div>
-
-      <div className="sidebar-divider" />
-
-      {/* Context menu portal */}
-      {contextMenu && (
-        <div
-          ref={menuRef}
-          className="sidebar-context-menu"
-          style={{ top: contextMenu.y, left: contextMenu.x }}
-        >
-          {contextMenu.projectId && !contextMenu.subMenu && (
-            <>
-              <button
-                className="sidebar-context-item"
-                onClick={() => setContextMenu({ ...contextMenu, subMenu: 'agents' })}
-              >
-                {'Launch with... \u25B8'}
-              </button>
-              <button
-                className="sidebar-context-item"
-                onClick={() => setContextMenu({ ...contextMenu, subMenu: 'templates' })}
-              >
-                Attach Templates
-              </button>
-              <div className="sidebar-context-divider" />
-              <button className="sidebar-context-item danger" onClick={handleRemoveProject}>
-                Remove project
-              </button>
-            </>
-          )}
-          {contextMenu.projectId && contextMenu.subMenu === 'templates' && (
-            <div className="sidebar-ctx-sub-panel">
-              <div className="sidebar-ctx-sub-header">
+                <HexDot
+                  status={
+                    getProjectStatus(p.id) === 'running'
+                      ? 'live'
+                      : getProjectStatus(p.id) === 'error'
+                        ? 'error'
+                        : 'idle'
+                  }
+                  size={8}
+                />
+                <div className="sidebar-item-info">
+                  <div className="sidebar-item-name">{p.name}</div>
+                  <div className="sidebar-item-sub">{p.path}</div>
+                </div>
+                {p.badge && (
+                  <span className={`sidebar-badge badge-${badgeClass(p.badge)}`}>{p.badge}</span>
+                )}
                 <button
-                  className="sidebar-ctx-back"
-                  onClick={() => setContextMenu({ ...contextMenu, subMenu: undefined })}
+                  className="sidebar-item-gear"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    openSettings(p.id)
+                  }}
+                  title="Project settings"
                 >
-                  {'\u2190'}
+                  {'\u2699'}
                 </button>
-                <span>Attach Templates</span>
               </div>
-              <div className="sidebar-ctx-sub-body">
-                {groupedTemplates.map((group) => {
-                  const project = projects.find((p) => p.id === contextMenu.projectId)
-                  const attached = project?.attachedTemplates ?? []
-                  return (
-                    <div key={group.category}>
-                      <div className="sidebar-ctx-sub-cat">{group.category}</div>
-                      {group.templates.map((t) => {
-                        const checked = attached.includes(t.id)
+            ))}
+        </div>
+
+        <div className="sidebar-divider" />
+
+        {/* Context menu portal */}
+        {contextMenu && (
+          <div
+            ref={menuRef}
+            className="sidebar-context-menu"
+            style={{ top: contextMenu.y, left: contextMenu.x }}
+          >
+            {contextMenu.projectId && !contextMenu.subMenu && (
+              <>
+                <button
+                  className="sidebar-context-item"
+                  onClick={() => setContextMenu({ ...contextMenu, subMenu: 'agents' })}
+                >
+                  {'Launch with... \u25B8'}
+                </button>
+                <button
+                  className="sidebar-context-item"
+                  onClick={() => setContextMenu({ ...contextMenu, subMenu: 'templates' })}
+                >
+                  Attach Templates
+                </button>
+                <div className="sidebar-context-divider" />
+                <button className="sidebar-context-item danger" onClick={handleRemoveProject}>
+                  Remove project
+                </button>
+              </>
+            )}
+            {contextMenu.projectId && contextMenu.subMenu === 'templates' && (
+              <div className="sidebar-ctx-sub-panel">
+                <div className="sidebar-ctx-sub-header">
+                  <button
+                    className="sidebar-ctx-back"
+                    onClick={() => setContextMenu({ ...contextMenu, subMenu: undefined })}
+                  >
+                    {'\u2190'}
+                  </button>
+                  <span>Attach Templates</span>
+                </div>
+                <div className="sidebar-ctx-sub-body">
+                  {groupedTemplates.map((group) => {
+                    const project = projects.find((p) => p.id === contextMenu.projectId)
+                    const attached = project?.attachedTemplates ?? []
+                    return (
+                      <div key={group.category}>
+                        <div className="sidebar-ctx-sub-cat">{group.category}</div>
+                        {group.templates.map((t) => {
+                          const checked = attached.includes(t.id)
+                          return (
+                            <button
+                              key={t.id}
+                              className={`sidebar-ctx-sub-item${checked ? ' checked' : ''}`}
+                              onClick={() => handleToggleTemplate(t.id)}
+                            >
+                              <span className={`sidebar-ctx-sub-check${checked ? ' on' : ''}`}>
+                                {checked ? '\u2611' : '\u2610'}
+                              </span>
+                              <span className="sidebar-ctx-sub-name">{t.name}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+            {contextMenu.projectId &&
+              contextMenu.subMenu === 'agents' &&
+              (() => {
+                const project = projects.find((p) => p.id === contextMenu.projectId)
+                if (!project) return null
+                const projectAgents = getProjectAgents(project)
+                return (
+                  <div className="sidebar-ctx-sub-panel">
+                    <div className="sidebar-ctx-sub-header">
+                      <button
+                        className="sidebar-ctx-back"
+                        onClick={() => setContextMenu({ ...contextMenu, subMenu: undefined })}
+                      >
+                        {'\u2190'}
+                      </button>
+                      <span>Launch with...</span>
+                    </div>
+                    <div className="sidebar-ctx-sub-body">
+                      {projectAgents.map((ac) => {
+                        const agentMeta = SHARED_AGENTS.find((a) => a.id === ac.agent)
                         return (
                           <button
-                            key={t.id}
-                            className={`sidebar-ctx-sub-item${checked ? ' checked' : ''}`}
-                            onClick={() => handleToggleTemplate(t.id)}
+                            key={ac.agent}
+                            className="sidebar-context-item sidebar-agent-item"
+                            onClick={() => {
+                              onOpenProjectWithAgent(project, ac)
+                              closeMenu()
+                            }}
                           >
-                            <span className={`sidebar-ctx-sub-check${checked ? ' on' : ''}`}>
-                              {checked ? '\u2611' : '\u2610'}
+                            <span className="sidebar-agent-icon">
+                              {agentMeta?.icon ?? '\u25C8'}
                             </span>
-                            <span className="sidebar-ctx-sub-name">{t.name}</span>
+                            <span className="sidebar-agent-name">
+                              {agentMeta?.name ?? ac.agent}
+                            </span>
+                            {ac.isDefault && <span className="sidebar-agent-default">DEFAULT</span>}
                           </button>
                         )
                       })}
                     </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-          {contextMenu.projectId &&
-            contextMenu.subMenu === 'agents' &&
-            (() => {
-              const project = projects.find((p) => p.id === contextMenu.projectId)
-              if (!project) return null
-              const projectAgents = getProjectAgents(project)
-              return (
-                <div className="sidebar-ctx-sub-panel">
-                  <div className="sidebar-ctx-sub-header">
-                    <button
-                      className="sidebar-ctx-back"
-                      onClick={() => setContextMenu({ ...contextMenu, subMenu: undefined })}
-                    >
-                      {'\u2190'}
-                    </button>
-                    <span>Launch with...</span>
                   </div>
-                  <div className="sidebar-ctx-sub-body">
-                    {projectAgents.map((ac) => {
-                      const agentMeta = SHARED_AGENTS.find((a) => a.id === ac.agent)
-                      return (
-                        <button
-                          key={ac.agent}
-                          className="sidebar-context-item sidebar-agent-item"
-                          onClick={() => {
-                            onOpenProjectWithAgent(project, ac)
-                            closeMenu()
-                          }}
-                        >
-                          <span className="sidebar-agent-icon">{agentMeta?.icon ?? '\u25C8'}</span>
-                          <span className="sidebar-agent-name">{agentMeta?.name ?? ac.agent}</span>
-                          {ac.isDefault && <span className="sidebar-agent-default">DEFAULT</span>}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              )
-            })()}
-          {contextMenu.workflowId && (
-            <>
-              <button className="sidebar-context-item" onClick={handleRenameWorkflow}>
-                Rename workflow
-              </button>
-              <div className="sidebar-context-divider" />
-              <button className="sidebar-context-item danger" onClick={handleDeleteWorkflow}>
-                Delete workflow
-              </button>
-            </>
-          )}
-        </div>
-      )}
+                )
+              })()}
+            {contextMenu.workflowId && (
+              <>
+                <button className="sidebar-context-item" onClick={handleRenameWorkflow}>
+                  Rename workflow
+                </button>
+                <div className="sidebar-context-divider" />
+                <button className="sidebar-context-item danger" onClick={handleDeleteWorkflow}>
+                  Delete workflow
+                </button>
+              </>
+            )}
+          </div>
+        )}
 
-      <div className={`sidebar-section${sidebarSections.templates ? ' flex-fill' : ''}`}>
-        <div
-          className="sidebar-label sidebar-label-clickable"
-          onClick={() => toggleSidebarSection('templates')}
-        >
-          <span>
-            <span className={`sidebar-chevron${sidebarSections.templates ? ' open' : ''}`}>
-              {'\u25B6'}
-            </span>
-            Templates
-          </span>
-          <button
-            className="sidebar-action"
-            onClick={(e) => {
-              e.stopPropagation()
-              openTemplateEditor()
-            }}
+        <div className={`sidebar-section${sidebarSections.templates ? ' flex-fill' : ''}`}>
+          <div
+            className="sidebar-label sidebar-label-clickable"
+            onClick={() => toggleSidebarSection('templates')}
           >
-            +
-          </button>
-        </div>
-        {sidebarSections.templates &&
-          groupedTemplates.map((group) => (
-            <div key={group.category} className="sidebar-tpl-group">
-              <div className="sidebar-group-label">{group.category}</div>
-              {group.templates.map((t) => (
-                <div key={t.id} className="sidebar-item" onClick={() => openTemplateEditor(t.id)}>
-                  <span style={{ fontSize: '11px' }}>{'\u{1F4CB}'}</span>
-                  <div className="sidebar-item-info">
-                    <div className="sidebar-item-name">{t.name}</div>
-                    <div className="sidebar-item-sub">{t.description}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ))}
-      </div>
-
-      <div className="sidebar-divider" />
-      <div className="sidebar-section">
-        <div
-          className="sidebar-label sidebar-label-clickable"
-          onClick={() => toggleSidebarSection('workflows')}
-        >
-          <span>
-            <span className={`sidebar-chevron${sidebarSections.workflows ? ' open' : ''}`}>
-              {'\u25B6'}
+            <span>
+              <span className={`sidebar-chevron${sidebarSections.templates ? ' open' : ''}`}>
+                {'\u25B6'}
+              </span>
+              Templates
             </span>
-            Workflows
-          </span>
-          <button
-            className="sidebar-action"
-            onClick={(e) => {
-              e.stopPropagation()
-              createNewWorkflow()
-            }}
-          >
-            +
-          </button>
-        </div>
-        {sidebarSections.workflows &&
-          workflows.map((w) => (
-            <div
-              key={w.id}
-              className={`sidebar-item${activeWorkflowId === w.id ? ' sidebar-item-wf-active' : ''}`}
-              onClick={() => openWorkflow(w.id)}
-              onContextMenu={(e) => handleWorkflowContextMenu(e, w.id)}
+            <button
+              className="sidebar-action"
+              onClick={(e) => {
+                e.stopPropagation()
+                openTemplateEditor()
+              }}
             >
-              <div className="sidebar-dot sidebar-dot-wf" />
-              <div className="sidebar-item-info">
-                {renamingWorkflowId === w.id ? (
-                  <input
-                    ref={renameInputRef}
-                    className="sidebar-rename-input"
-                    value={renameValue}
-                    onChange={(e) => setRenameValue(e.target.value)}
-                    onBlur={commitRename}
-                    onKeyDown={handleRenameKeyDown}
-                    onClick={(e) => e.stopPropagation()}
-                    maxLength={60}
-                  />
-                ) : (
-                  <div
-                    className="sidebar-item-name"
-                    onDoubleClick={(e) => {
-                      e.stopPropagation()
-                      setRenamingWorkflowId(w.id)
-                      setRenameValue(w.name)
-                      focusTimerRef.current = setTimeout(() => renameInputRef.current?.select(), 0)
-                    }}
-                  >
-                    {w.name}
+              +
+            </button>
+          </div>
+          {sidebarSections.templates &&
+            groupedTemplates.map((group) => (
+              <div key={group.category} className="sidebar-tpl-group">
+                <div className="sidebar-group-label">{group.category}</div>
+                {group.templates.map((t) => (
+                  <div key={t.id} className="sidebar-item" onClick={() => openTemplateEditor(t.id)}>
+                    <span style={{ fontSize: '11px' }}>{'\u{1F4CB}'}</span>
+                    <div className="sidebar-item-info">
+                      <div className="sidebar-item-name">{t.name}</div>
+                      <div className="sidebar-item-sub">{t.description}</div>
+                    </div>
                   </div>
-                )}
-                <div className="sidebar-item-sub">{w.nodeCount} nodes</div>
+                ))}
               </div>
-            </div>
-          ))}
-      </div>
+            ))}
+        </div>
 
-      <div className="sidebar-bottom">
-        <button className="new-project-btn" onClick={openWizard}>
-          <span>+</span> New Project
-        </button>
-        <button className="sidebar-new-wf" onClick={createNewWorkflow}>
-          {'\u2B21'} New Workflow
-        </button>
-      </div>
+        <div className="sidebar-divider" />
+        <div className="sidebar-section">
+          <div
+            className="sidebar-label sidebar-label-clickable"
+            onClick={() => toggleSidebarSection('workflows')}
+          >
+            <span>
+              <span className={`sidebar-chevron${sidebarSections.workflows ? ' open' : ''}`}>
+                {'\u25B6'}
+              </span>
+              Workflows
+            </span>
+            <button
+              className="sidebar-action"
+              onClick={(e) => {
+                e.stopPropagation()
+                createNewWorkflow()
+              }}
+            >
+              +
+            </button>
+          </div>
+          {sidebarSections.workflows &&
+            workflows.map((w) => (
+              <div
+                key={w.id}
+                className={`sidebar-item${activeWorkflowId === w.id ? ' sidebar-item-wf-active' : ''}`}
+                onClick={() => openWorkflow(w.id)}
+                onContextMenu={(e) => handleWorkflowContextMenu(e, w.id)}
+              >
+                <div className="sidebar-dot sidebar-dot-wf" />
+                <div className="sidebar-item-info">
+                  {renamingWorkflowId === w.id ? (
+                    <input
+                      ref={renameInputRef}
+                      className="sidebar-rename-input"
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onBlur={commitRename}
+                      onKeyDown={handleRenameKeyDown}
+                      onClick={(e) => e.stopPropagation()}
+                      maxLength={60}
+                    />
+                  ) : (
+                    <div
+                      className="sidebar-item-name"
+                      onDoubleClick={(e) => {
+                        e.stopPropagation()
+                        setRenamingWorkflowId(w.id)
+                        setRenameValue(w.name)
+                        focusTimerRef.current = setTimeout(
+                          () => renameInputRef.current?.select(),
+                          0,
+                        )
+                      }}
+                    >
+                      {w.name}
+                    </div>
+                  )}
+                  <div className="sidebar-item-sub">{w.nodeCount} nodes</div>
+                </div>
+              </div>
+            ))}
+        </div>
+
+        {Object.values(sessions).length > 0 && (
+          <div className="sidebar-summary">
+            {Object.values(sessions).map((s) => (
+              <HexDot
+                key={s.id}
+                status={s.status === 'running' ? 'live' : s.status === 'error' ? 'error' : 'idle'}
+                size={5}
+              />
+            ))}
+            <span className="sidebar-summary-label">{Object.values(sessions).length} sessions</span>
+          </div>
+        )}
+
+        <div className="sidebar-bottom">
+          <button className="new-project-btn" onClick={openWizard}>
+            <span>+</span> New Project
+          </button>
+          <button className="sidebar-new-wf" onClick={createNewWorkflow}>
+            {'\u2B21'} New Workflow
+          </button>
+        </div>
+      </PanelBox>
     </div>
   )
 }
