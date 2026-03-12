@@ -40,7 +40,7 @@
 }
 
 .split-divider:hover {
-  background: var(--amber-hover);
+  background: rgba(var(--accent-rgb), 0.15);
 }
 
 .split-divider::after {
@@ -98,6 +98,38 @@
   background: var(--amber-glow);
   border-color: var(--amber-border);
   color: var(--amber);
+}
+
+/* PanelBox inside split pane must fill available space */
+.split-pane-inner {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  background: transparent;
+}
+
+/* Content-reactive ambient glow */
+.split-pane::before {
+  content: '';
+  position: absolute;
+  top: 40px;
+  left: 12px;
+  width: 180px;
+  height: 60px;
+  background: radial-gradient(
+    ellipse,
+    rgba(var(--accent-rgb), var(--content-glow-opacity)),
+    transparent
+  );
+  filter: blur(var(--content-glow-radius));
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 800ms ease;
+  z-index: 0;
+}
+
+.split-pane.active-session::before {
+  opacity: 1;
 }
 
 .split-pane--visible {

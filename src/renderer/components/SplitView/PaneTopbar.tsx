@@ -1,5 +1,6 @@
 import { memo, useCallback } from 'react'
 import { useAppStore } from '../../store/appStore'
+import { HexDot } from '../shared/HexDot'
 import './PaneTopbar.css'
 
 interface PaneTopbarProps {
@@ -49,7 +50,10 @@ export const PaneTopbar = memo(function PaneTopbar({
         </>
       )}
       <div className="pane-status">
-        <div className={`pane-status-dot ${status}`} />
+        <HexDot
+          status={status === 'running' ? 'live' : status === 'error' ? 'error' : 'idle'}
+          size={6}
+        />
         <span className={`pane-status-text ${status}`}>{status}</span>
       </div>
       <div className="pane-actions">

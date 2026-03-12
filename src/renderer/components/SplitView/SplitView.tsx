@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useStoreWithEqualityFn } from 'zustand/traditional'
 import { useAppStore } from '../../store/appStore'
 import { getDefaultAgent } from '../../../shared/agent-helpers'
+import { PanelBox } from '../shared/PanelBox'
 import { PaneTopbar } from './PaneTopbar'
 import { TerminalPane } from '../Terminal/TerminalPane'
 import type { PaneLayout } from '../../../shared/types'
@@ -48,6 +49,26 @@ export function SplitView(): React.JSX.Element {
         if (a[key]?.projectId !== b[key]?.projectId) return false
         if (a[key]?.agentOverride !== b[key]?.agentOverride) return false
         if (a[key]?.agentFlagsOverride !== b[key]?.agentFlagsOverride) return false
+      }
+      return true
+    },
+  )
+  // Separate selector for session running status (drives active-session class)
+  const sessionStatuses = useStoreWithEqualityFn(
+    useAppStore,
+    (s) => {
+      const result: Record<string, string> = {}
+      for (const [id, session] of Object.entries(s.sessions)) {
+        result[id] = session.status
+      }
+      return result
+    },
+    (a, b) => {
+      const aKeys = Object.keys(a)
+      const bKeys = Object.keys(b)
+      if (aKeys.length !== bKeys.length) return false
+      for (const key of aKeys) {
+        if (a[key] !== b[key]) return false
       }
       return true
     },
@@ -214,30 +235,37 @@ export function SplitView(): React.JSX.Element {
               ref={(el) => {
                 paneRefs.current[paneIndex] = el
               }}
-              className={`split-pane ${isVisible ? 'split-pane--visible' : 'split-pane--hidden'}${isFocused ? ' focused' : ''}`}
+              className={`split-pane ${isVisible ? 'split-pane--visible' : 'split-pane--hidden'}${isFocused ? ' focused' : ''}${sessionId && sessionStatuses[sessionId] === 'running' ? ' active-session' : ''}`}
               onClick={() => setFocusedPane(paneIndex)}
             >
-              {session ? (
-                <>
-                  <PaneTopbar sessionId={sessionId} focused={isFocused} />
-                  <TerminalPane
-                    key={sessionId}
-                    sessionId={sessionId}
-                    focused={isFocused}
-                    visible={isVisible}
-                    projectPath={project?.path}
-                    startupCommands={project ? startupCommandsMap[project.id] : undefined}
-                    env={project ? envMap[project.id] : undefined}
-                    agent={session.agentOverride ?? defaultAgent?.agent}
-                    agentFlags={session.agentFlagsOverride ?? defaultAgent?.agentFlags}
-                    scrollback={project?.scrollbackLines}
-                  />
-                </>
-              ) : (
-                <div className="split-pane-placeholder">
-                  No session &mdash; open a project to start
-                </div>
-              )}
+              <PanelBox
+                corners={isFocused ? ['tl', 'tr', 'br'] : ['tl', 'br']}
+                glow="none"
+                intensity={isFocused ? 0.3 : 0.1}
+                className="split-pane-inner"
+              >
+                {session ? (
+                  <>
+                    <PaneTopbar sessionId={sessionId} focused={isFocused} />
+                    <TerminalPane
+                      key={sessionId}
+                      sessionId={sessionId}
+                      focused={isFocused}
+                      visible={isVisible}
+                      projectPath={project?.path}
+                      startupCommands={project ? startupCommandsMap[project.id] : undefined}
+                      env={project ? envMap[project.id] : undefined}
+                      agent={session.agentOverride ?? defaultAgent?.agent}
+                      agentFlags={session.agentFlagsOverride ?? defaultAgent?.agentFlags}
+                      scrollback={project?.scrollbackLines}
+                    />
+                  </>
+                ) : (
+                  <div className="split-pane-placeholder">
+                    No session &mdash; open a project to start
+                  </div>
+                )}
+              </PanelBox>
             </div>
           </div>
         )
