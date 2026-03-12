@@ -14,7 +14,15 @@
   flex-shrink: 0;
 }
 
+.right-panel-box {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: transparent;
+}
+
 .panel-tab {
+  position: relative;
   flex: 1;
   padding: 8px 6px;
   text-align: center;
@@ -31,7 +39,19 @@
 
 .panel-tab.active {
   color: var(--amber);
-  border-bottom-color: var(--amber);
+  border-bottom-color: transparent;
+}
+
+.panel-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  box-shadow: 0 0 6px rgba(var(--accent-rgb), 0.2);
+  animation: energy-underline-in 200ms ease;
 }
 
 .panel-tab:hover {
