@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
+import { HexDot } from '../shared/HexDot'
 import './StatusBar.css'
 
 interface StatusBarProps {
@@ -51,7 +52,7 @@ export function StatusBar({ onAboutClick, onShortcutsClick }: StatusBarProps): R
   return (
     <div className="statusbar">
       <div className={`status-item ${activeCount > 0 ? 'green' : ''}`}>
-        <span>{'\u2B21'}</span>
+        <HexDot status={activeCount > 0 ? 'live' : 'idle'} size={5} />
         <span>
           {activeCount} session{activeCount !== 1 ? 's' : ''} active
         </span>
