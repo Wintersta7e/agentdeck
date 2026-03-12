@@ -11,6 +11,21 @@
   position: relative;
 }
 
+/* Cursor-reactive hex grid overlay */
+.home-hex-grid-reactive {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mask-image: radial-gradient(circle 200px at 50% 50%, rgba(0, 0, 0, 0) 0%, transparent 100%);
+  -webkit-mask-image: radial-gradient(
+    circle 200px at 50% 50%,
+    rgba(0, 0, 0, 0) 0%,
+    transparent 100%
+  );
+  transition: mask-image 150ms ease;
+  z-index: 0;
+}
+
 /* Grid pattern removed — global HexGrid provides background */
 
 .home-content {
