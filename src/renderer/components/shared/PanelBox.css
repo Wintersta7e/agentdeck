@@ -1,0 +1,67 @@
+.panel-box {
+  position: relative;
+  background: rgba(var(--bg1-rgb), 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+
+/* Edge glow strips */
+.panel-box--glow-left::before,
+.panel-box--glow-right::before,
+.panel-box--glow-top::before,
+.panel-box--glow-bottom::before {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.panel-box--glow-left::before {
+  top: 0;
+  left: 0;
+  width: var(--edge-glow-width);
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    rgba(var(--accent-rgb), 0.2),
+    transparent 40%,
+    transparent 70%,
+    rgba(var(--accent-rgb), 0.08)
+  );
+}
+
+.panel-box--glow-right::before {
+  top: 0;
+  right: 0;
+  width: var(--edge-glow-width);
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    rgba(var(--accent-rgb), 0.2),
+    transparent 40%,
+    transparent 70%,
+    rgba(var(--accent-rgb), 0.08)
+  );
+}
+
+.panel-box--glow-top::before {
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: var(--edge-glow-width);
+  background: linear-gradient(to right, transparent, rgba(var(--accent-rgb), 0.2), transparent);
+}
+
+.panel-box--glow-bottom::before {
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: var(--edge-glow-width);
+  background: linear-gradient(to right, transparent, rgba(var(--accent-rgb), 0.15), transparent);
+}
+
+/* Pulse — brief brightness flash on activity */
+.panel-box--pulse > .corner-accent {
+  animation: edge-glow-pulse 400ms ease-out;
+}
