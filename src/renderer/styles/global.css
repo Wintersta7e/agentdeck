@@ -197,3 +197,67 @@ button:active,
     animation: none;
   }
 }
+
+/* === Fusion Animations === */
+@keyframes hex-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 3px var(--accent));
+  }
+  50% {
+    transform: scale(1.15);
+    filter: drop-shadow(0 0 6px var(--accent));
+  }
+}
+
+@keyframes logo-breathe {
+  0%,
+  100% {
+    opacity: 0.12;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@keyframes vein-drift {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: 200;
+  }
+}
+
+@keyframes edge-glow-pulse {
+  0% {
+    opacity: var(--corner-accent-opacity);
+  }
+  50% {
+    opacity: calc(var(--corner-accent-opacity) * 2);
+  }
+  100% {
+    opacity: var(--corner-accent-opacity);
+  }
+}
+
+@keyframes energy-underline-in {
+  0% {
+    transform: scaleX(0);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+  }
+}

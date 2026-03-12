@@ -65,6 +65,19 @@
   --purple-rgb: 155, 114, 207;
   --green-rgb: 76, 175, 125;
   --red-rgb: 224, 92, 92;
+  --blue-rgb: 91, 155, 213;
+  --text3-rgb: 61, 59, 56;
+
+  /* === Fusion Design System === */
+  --corner-accent-size: 20px;
+  --corner-accent-opacity: 0.3;
+  --corner-accent-secondary: 0.1;
+  --edge-glow-width: 2px;
+  --energy-vein-opacity: 0.12;
+  --hex-grid-opacity: 0.02;
+  --content-glow-radius: 14px;
+  --content-glow-opacity: 0.04;
+  --ambient-glow-opacity: 0.045;
 
   /* Shape */
   --r: 4px;
