@@ -47,7 +47,7 @@ export function EnergyVein({ color, count, speed }: EnergyVeinProps) {
         </linearGradient>
       </defs>
       {paths.map((d, i) => (
-        <g key={i}>
+        <g key={d}>
           {/* Base layer: continuous line, always visible */}
           <path
             d={d}

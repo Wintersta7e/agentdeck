@@ -1,17 +1,18 @@
 import { useCallback, useMemo } from 'react'
 import { useAppStore } from '../../store/appStore'
 import type { Template } from '../../../shared/types'
+import { File, ClipboardList } from 'lucide-react'
 import './ContextTab.css'
 
 export function ContextTab(): React.JSX.Element {
-  // Granular selectors — only re-render when the derived value changes
-  const activeProjectId = useAppStore((s) => {
+  // Single atomic selector — avoids stale closure between chained selectors
+  const project = useAppStore((s) => {
     const sid = s.activeSessionId
-    return sid ? (s.sessions[sid]?.projectId ?? null) : null
+    if (!sid) return null
+    const session = s.sessions[sid]
+    if (!session?.projectId) return null
+    return s.projects.find((p) => p.id === session.projectId) ?? null
   })
-  const project = useAppStore((s) =>
-    activeProjectId ? (s.projects.find((p) => p.id === activeProjectId) ?? null) : null,
-  )
   const templates = useAppStore((s) => s.templates)
   const activeSessionId = useAppStore((s) => s.activeSessionId)
   const setRightPanelTab = useAppStore((s) => s.setRightPanelTab)
@@ -52,7 +53,9 @@ export function ContextTab(): React.JSX.Element {
       {contextFiles.map((file) => (
         <div key={file.name} className="context-item" onClick={() => setRightPanelTab('memory')}>
           <div className="context-item-header">
-            <span className="context-icon">{'\uD83D\uDCC4'}</span>
+            <span className="context-icon">
+              <File size={14} />
+            </span>
             <span className="context-name">{file.name}</span>
             {file.tag && <span className="context-tag">{file.tag}</span>}
           </div>
@@ -73,7 +76,9 @@ export function ContextTab(): React.JSX.Element {
             title="Click to send to agent"
           >
             <div className="context-item-header">
-              <span className="context-icon">{'\uD83D\uDCCB'}</span>
+              <span className="context-icon">
+                <ClipboardList size={14} />
+              </span>
               <span className="context-name context-name--template">{t.name}</span>
               {t.category && <span className="context-tag">{t.category}</span>}
             </div>
