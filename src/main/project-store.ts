@@ -17,12 +17,10 @@ function encryptEnvVars(envVars: EnvVar[] | undefined): EnvVar[] | undefined {
   }
   return envVars.map((v) => {
     if (!v.secret) return v
-    try {
-      return { ...v, value: safeStorage.encryptString(v.value).toString('base64') }
-    } catch (err) {
-      log.error(`Failed to encrypt env var "${v.key}", storing as plaintext`, { err: String(err) })
-      return v
-    }
+    // Throw on encryption failure to prevent storing plaintext secrets on disk.
+    // A silent fallback causes data loss: next load tries to decrypt plaintext → empty string.
+    const encrypted = safeStorage.encryptString(v.value).toString('base64')
+    return { ...v, value: encrypted }
   })
 }
 
@@ -124,6 +122,18 @@ export function createProjectStore(): Store<StoreSchema> {
     if (!project || typeof project !== 'object') {
       throw new Error('store:saveProject requires a non-null object')
     }
+    // Validate required fields from renderer input before trusting the shape
+    const raw = project as Record<string, unknown>
+    if (raw.id !== undefined && typeof raw.id !== 'string')
+      throw new Error('store:saveProject — id must be a string')
+    if (raw.name !== undefined && typeof raw.name !== 'string')
+      throw new Error('store:saveProject — name must be a string')
+    if (raw.path !== undefined && typeof raw.path !== 'string')
+      throw new Error('store:saveProject — path must be a string')
+    if (typeof raw.name === 'string' && raw.name.length > 200)
+      throw new Error('store:saveProject — name too long')
+    if (typeof raw.path === 'string' && raw.path.length > 1024)
+      throw new Error('store:saveProject — path too long')
     const p = project as Partial<Project>
     const projects = store.get('projects')
     const id = p.id ?? randomUUID()
@@ -157,6 +167,13 @@ export function createProjectStore(): Store<StoreSchema> {
     if (!template || typeof template !== 'object') {
       throw new Error('store:saveTemplate requires a non-null object')
     }
+    const rawT = template as Record<string, unknown>
+    if (rawT.id !== undefined && typeof rawT.id !== 'string')
+      throw new Error('store:saveTemplate — id must be a string')
+    if (rawT.name !== undefined && typeof rawT.name !== 'string')
+      throw new Error('store:saveTemplate — name must be a string')
+    if (typeof rawT.name === 'string' && rawT.name.length > 200)
+      throw new Error('store:saveTemplate — name too long')
     const t = template as Partial<Template>
     const templates = store.get('templates')
     const id = t.id ?? randomUUID()
@@ -185,6 +202,13 @@ export function createProjectStore(): Store<StoreSchema> {
     if (!role || typeof role !== 'object') {
       throw new Error('store:saveRole requires a non-null object')
     }
+    const rawR = role as Record<string, unknown>
+    if (rawR.id !== undefined && typeof rawR.id !== 'string')
+      throw new Error('store:saveRole — id must be a string')
+    if (rawR.name !== undefined && typeof rawR.name !== 'string')
+      throw new Error('store:saveRole — name must be a string')
+    if (typeof rawR.name === 'string' && rawR.name.length > 200)
+      throw new Error('store:saveRole — name too long')
     const r = role as Partial<Role>
     const roles = store.get('roles')
     const id = r.id ?? randomUUID()

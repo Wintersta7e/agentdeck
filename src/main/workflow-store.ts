@@ -67,11 +67,8 @@ export async function loadWorkflow(id: string): Promise<Workflow | null> {
 
 export async function saveWorkflow(workflow: Workflow): Promise<Workflow> {
   const id = workflow.id || crypto.randomUUID()
-  const pending = writeLocks.get(id)
 
-  const doSave = async (): Promise<Workflow> => {
-    if (pending) await pending.catch(() => {})
-
+  const doActualSave = async (): Promise<Workflow> => {
     const now = Date.now()
     const w: Workflow = {
       ...workflow,
@@ -93,7 +90,9 @@ export async function saveWorkflow(workflow: Workflow): Promise<Workflow> {
     return w
   }
 
-  const p = doSave()
+  // Chain onto any pending write for this ID to prevent concurrent writes
+  const existing = writeLocks.get(id) ?? Promise.resolve(null as Workflow | null)
+  const p = existing.catch(() => {}).then(() => doActualSave())
   writeLocks.set(id, p)
   try {
     return await p

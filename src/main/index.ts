@@ -5,7 +5,7 @@ import { join } from 'path'
 import { createPtyManager, type PtyManager } from './pty-manager'
 import { createProjectStore, seedRoles, seedTemplates, type AppStore } from './project-store'
 import { detectStack } from './detect-stack'
-import { getDefaultDistro, wslPathToWindows } from './wsl-utils'
+import { getDefaultDistroAsync, wslPathToWindows } from './wsl-utils'
 import { initLogger, createLogger, closeLogger } from './logger'
 import {
   listWorkflows,
@@ -57,7 +57,7 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false,
+      sandbox: true,
     },
   })
 
@@ -147,8 +147,10 @@ function registerIpcHandlers(store: AppStore): void {
   ipcMain.on('pty:write', (_, sessionId: string, data: string) => {
     ptyManager?.write(sessionId, data)
   })
+  // Note: resize rate-limiting is handled renderer-side (80ms debounced ResizeObserver).
+  // No server-side guard — node-pty resize is cheap and idempotent.
   ipcMain.on('pty:resize', (_, sessionId: string, cols: number, rows: number) => {
-    ptyManager?.resize(sessionId, cols, rows)
+    if (cols > 0 && rows > 0) ptyManager?.resize(sessionId, cols, rows)
   })
   ipcMain.handle('pty:kill', (_, sessionId: string) => {
     ptyManager?.kill(sessionId)
@@ -293,11 +295,26 @@ function registerIpcHandlers(store: AppStore): void {
         )
       })
 
+    // Limit concurrency to avoid spawning too many wsl.exe processes at once
+    // (each check can spawn 2 processes: PATH check + fallback search)
+    const MAX_CONCURRENT = 3
     const entries = Object.entries(AGENT_BINARY_MAP)
-    const [, results] = await Promise.all([
-      diagnosticsPromise,
-      Promise.all(entries.map(([, bin]) => check(bin))),
-    ])
+    const checkWithLimit = async (): Promise<boolean[]> => {
+      const results: boolean[] = new Array(entries.length)
+      let idx = 0
+      const run = async (): Promise<void> => {
+        while (idx < entries.length) {
+          const i = idx++
+          const entry = entries[i]
+          if (entry) results[i] = await check(entry[1])
+        }
+      }
+      await Promise.all(
+        Array.from({ length: Math.min(MAX_CONCURRENT, entries.length) }, () => run()),
+      )
+      return results
+    }
+    const [, results] = await Promise.all([diagnosticsPromise, checkWithLimit()])
     log.info(`Agent detection total: ${Date.now() - t0}ms`)
     return Object.fromEntries(entries.map(([name], i) => [name, results[i]]))
   })
@@ -381,8 +398,8 @@ function registerIpcHandlers(store: AppStore): void {
     return detectStack(p, distro)
   })
 
-  ipcMain.handle('projects:getDefaultDistro', () => {
-    return getDefaultDistro()
+  ipcMain.handle('projects:getDefaultDistro', async () => {
+    return getDefaultDistroAsync()
   })
 
   ipcMain.handle('projects:readFile', async (_event, projectPath: string, filename: string) => {
@@ -397,7 +414,7 @@ function registerIpcHandlers(store: AppStore): void {
         windowsPath = projectPath
       } else {
         // WSL path — convert to Windows
-        const distro = getDefaultDistro()
+        const distro = await getDefaultDistroAsync()
         windowsPath = wslPathToWindows(projectPath, distro)
       }
 
@@ -510,22 +527,26 @@ function registerIpcHandlers(store: AppStore): void {
   })
 
   /* ── Renderer log relay ────────────────────────────────────────── */
+  const ALLOWED_LOG_LEVELS = new Set(['info', 'warn', 'error', 'debug'])
+  const MAX_MOD_LENGTH = 64
+  const MAX_MSG_LENGTH = 4096
+  const MAX_LOGGERS = 50
   const rendererLoggers = new Map<string, ReturnType<typeof createLogger>>()
   ipcMain.handle(
     'log:renderer',
     (_, level: string, mod: string, message: string, data?: unknown) => {
-      let rendererLog = rendererLoggers.get(mod)
+      if (typeof level !== 'string' || !ALLOWED_LOG_LEVELS.has(level)) return
+      if (typeof mod !== 'string' || mod.length > MAX_MOD_LENGTH) return
+      if (typeof message !== 'string') return
+      const safeMod = mod.replace(/[^a-zA-Z0-9:_-]/g, '_').slice(0, MAX_MOD_LENGTH)
+      const safeMsg = message.slice(0, MAX_MSG_LENGTH)
+      let rendererLog = rendererLoggers.get(safeMod)
       if (!rendererLog) {
-        rendererLog = createLogger(`renderer:${mod}`)
-        rendererLoggers.set(mod, rendererLog)
+        if (rendererLoggers.size >= MAX_LOGGERS) return // prevent unbounded growth
+        rendererLog = createLogger(`renderer:${safeMod}`)
+        rendererLoggers.set(safeMod, rendererLog)
       }
-      const methods: Record<string, (msg: string, d?: unknown) => void> = {
-        info: rendererLog.info,
-        warn: rendererLog.warn,
-        error: rendererLog.error,
-        debug: rendererLog.debug,
-      }
-      methods[level]?.(message, data)
+      rendererLog[level as 'info' | 'warn' | 'error' | 'debug'](safeMsg, data)
     },
   )
 }

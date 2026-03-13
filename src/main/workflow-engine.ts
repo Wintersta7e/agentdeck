@@ -180,7 +180,8 @@ export function topoSort(nodes: WorkflowNode[], edges: WorkflowEdge[]): Workflow
         inDegree.set(dep, (inDegree.get(dep) ?? 0) - 1)
       }
     }
-    remaining = remaining.filter((n) => !tier.includes(n))
+    const tierIds = new Set(tier.map((n) => n.id))
+    remaining = remaining.filter((n) => !tierIds.has(n.id))
   }
 
   return tiers
@@ -481,8 +482,10 @@ export function createWorkflowEngine(
             .filter(Boolean)
             .join('\n\n')
 
-          // H2: Run tier nodes with concurrency limit
-          async function runSingleNode(node: WorkflowNode): Promise<void> {
+          // H2: Run tier nodes with concurrency limit.
+          // runSingleNode accepts contextSummary as a parameter to avoid
+          // fragile closure-in-loop capture.
+          const runSingleNode = async (node: WorkflowNode, ctx: string): Promise<void> => {
             if (stopped) return
 
             runningNodeIds.add(node.id)
@@ -501,7 +504,7 @@ export function createWorkflowEngine(
 
             try {
               if (node.type === 'agent') {
-                await runAgentNode(node, contextSummary, rolesMap)
+                await runAgentNode(node, ctx, rolesMap)
               } else if (node.type === 'shell') {
                 await runShellNode(node)
               } else if (node.type === 'checkpoint') {
@@ -551,11 +554,11 @@ export function createWorkflowEngine(
           }
 
           const queue = [...tier]
-          async function runNext(): Promise<void> {
+          const runNext = async (): Promise<void> => {
             let node = queue.shift()
             while (node) {
               if (stopped) return
-              await runSingleNode(node)
+              await runSingleNode(node, contextSummary)
               node = queue.shift()
             }
           }
