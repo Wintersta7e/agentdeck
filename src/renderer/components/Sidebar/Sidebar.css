@@ -1,9 +1,10 @@
 .sidebar {
   width: 100%;
-  background: var(--bg1);
+  background: var(--glass-bg);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  border-radius: var(--r);
 }
 
 .sidebar-section {
@@ -94,11 +95,9 @@
     0 0 8px rgba(var(--accent-rgb, 245, 166, 35), 0.05);
 }
 .sidebar-item.active {
-  background: var(--amber-glow);
-  border-color: var(--accent-glow);
-  box-shadow:
-    inset 2px 0 0 var(--accent),
-    0 0 12px rgba(var(--accent-rgb, 245, 166, 35), 0.1);
+  background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.04), transparent);
+  border-color: transparent;
+  box-shadow: none;
 }
 .sidebar-item.active .sidebar-item-name {
   color: var(--amber);
@@ -171,12 +170,16 @@
   background: none;
   border: none;
   color: var(--text3);
-  font-size: 12px;
   cursor: pointer;
-  padding: 2px;
-  transition: all 0.12s;
+  padding: 4px;
+  transition:
+    opacity 0.12s,
+    color 0.12s;
   flex-shrink: 0;
-  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
 }
 .sidebar-item:hover .sidebar-item-gear {
   opacity: 1;
@@ -358,7 +361,6 @@
 .sidebar-bottom {
   margin-top: auto;
   padding: 8px 12px;
-  border-top: 1px solid var(--border);
 }
 
 .new-project-btn {
@@ -449,17 +451,68 @@
   border-radius: var(--r);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .sidebar-item,
-  .new-project-btn {
-    transition: none;
-  }
-}
-
 .sidebar ::-webkit-scrollbar {
   width: 3px;
 }
 .sidebar ::-webkit-scrollbar-thumb {
   background: var(--bg4);
   border-radius: 2px;
+}
+
+/* ─── Fusion design system additions ─── */
+
+/* Sidebar PanelBox fill */
+.sidebar-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: transparent;
+}
+
+/* Section header gradient line */
+.sidebar-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.25), transparent);
+  margin-left: 6px;
+}
+
+/* Connecting vein between pinned project items */
+.sidebar-section:first-of-type {
+  position: relative;
+}
+
+.sidebar-section:first-of-type::before {
+  content: '';
+  position: absolute;
+  left: 18px;
+  top: 40px;
+  bottom: 20px;
+  width: 1px;
+  background: linear-gradient(
+    to bottom,
+    rgba(var(--green-rgb), 0.4),
+    rgba(255, 255, 255, 0.08),
+    rgba(var(--red-rgb), 0.3)
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Session summary cluster at bottom */
+.sidebar-summary {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.sidebar-summary-label {
+  margin-left: 4px;
+  color: var(--text3);
+  font-size: 7px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.5px;
 }

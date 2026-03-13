@@ -26,12 +26,6 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .term-search-bar {
-    animation: none;
-  }
-}
-
 .term-search-input {
   background: var(--bg3);
   border: 1px solid var(--border);

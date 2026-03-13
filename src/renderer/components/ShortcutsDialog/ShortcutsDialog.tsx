@@ -1,4 +1,6 @@
 import { useCallback, useEffect } from 'react'
+import { X } from 'lucide-react'
+import { PanelBox } from '../shared/PanelBox'
 import './ShortcutsDialog.css'
 
 interface ShortcutsDialogProps {
@@ -93,9 +95,9 @@ export function ShortcutsDialog({ onClose }: ShortcutsDialogProps): React.JSX.El
 
   return (
     <div className="shortcuts-overlay" onClick={handleOverlayClick}>
-      <div className="shortcuts-dialog">
+      <PanelBox corners="all" glow="none" className="shortcuts-dialog">
         <button className="shortcuts-close" onClick={onClose}>
-          {'\u2715'}
+          <X size={16} />
         </button>
         <div className="shortcuts-title">Keyboard Shortcuts</div>
         <div className="shortcuts-grid">
@@ -111,7 +113,7 @@ export function ShortcutsDialog({ onClose }: ShortcutsDialogProps): React.JSX.El
             </div>
           ))}
         </div>
-      </div>
+      </PanelBox>
     </div>
   )
 }

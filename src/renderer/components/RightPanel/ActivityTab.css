@@ -74,6 +74,37 @@
   text-overflow: ellipsis;
 }
 
+/* Activity type tints */
+.activity-item--read {
+  background: rgba(var(--accent-rgb), 0.03);
+  border-left: 2px solid rgba(var(--accent-rgb), 0.2);
+}
+
+.activity-item--write {
+  background: rgba(var(--blue-rgb), 0.03);
+  border-left: 2px solid rgba(var(--blue-rgb), 0.3);
+}
+
+.activity-item--command {
+  background: rgba(var(--accent-rgb), 0.03);
+  border-left: 2px solid rgba(var(--accent-rgb), 0.25);
+}
+
+.activity-item--tool {
+  background: rgba(var(--purple-rgb), 0.03);
+  border-left: 2px solid rgba(var(--purple-rgb), 0.25);
+}
+
+.activity-item--error {
+  background: rgba(var(--red-rgb), 0.03);
+  border-left: 2px solid rgba(var(--red-rgb), 0.25);
+}
+
+.activity-item--think {
+  background: rgba(var(--accent-rgb), 0.02);
+  border-left: 2px solid rgba(var(--accent-rgb), 0.15);
+}
+
 @keyframes pulse {
   0%,
   100% {

@@ -125,12 +125,3 @@
     opacity: 0;
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .wf-edge-active {
-    animation: none;
-  }
-  .wf-edge-particle {
-    display: none;
-  }
-}

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { X, AlertTriangle, Info } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import './NotificationToast.css'
 
@@ -34,7 +35,7 @@ export function NotificationToast(): React.JSX.Element | null {
     }
   }, [notifications, dismissNotification])
 
-  const visible = notifications.slice(-5)
+  const visible = notifications.slice(0, 5)
 
   if (visible.length === 0) return null
 
@@ -47,7 +48,13 @@ export function NotificationToast(): React.JSX.Element | null {
           onClick={() => dismissNotification(n.id)}
         >
           <span className="toast-icon">
-            {n.type === 'error' ? '\u2717' : n.type === 'warning' ? '\u26A0' : '\u2139'}
+            {n.type === 'error' ? (
+              <X size={14} />
+            ) : n.type === 'warning' ? (
+              <AlertTriangle size={14} />
+            ) : (
+              <Info size={14} />
+            )}
           </span>
           <span className="toast-message">{n.message}</span>
         </div>

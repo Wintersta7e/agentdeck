@@ -1,5 +1,6 @@
 import { Component } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
+import { AlertTriangle } from 'lucide-react'
 import './ErrorBoundary.css'
 
 interface Props {
@@ -34,7 +35,9 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <div className="error-boundary">
-          <div className="error-boundary-icon">{'\u26A0'}</div>
+          <div className="error-boundary-icon">
+            <AlertTriangle size={32} />
+          </div>
           <div className="error-boundary-title">Something went wrong</div>
           <div className="error-boundary-message">
             AgentDeck encountered an unexpected error. Your sessions are still running in the

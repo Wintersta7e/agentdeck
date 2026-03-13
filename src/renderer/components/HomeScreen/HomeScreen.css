@@ -7,25 +7,26 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding: 48px 40px 0;
-  background: var(--bg0);
+  background: transparent;
   position: relative;
 }
 
-.home-main::before {
-  content: '';
+/* Cursor-reactive hex grid overlay */
+.home-hex-grid-reactive {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  min-height: 100%;
-  height: max(100%, 100vh);
-  background-image:
-    linear-gradient(var(--border) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border) 1px, transparent 1px);
-  background-size: 40px 40px;
-  opacity: 0.3;
+  inset: 0;
   pointer-events: none;
+  mask-image: radial-gradient(circle 200px at 50% 50%, rgba(0, 0, 0, 0) 0%, transparent 100%);
+  -webkit-mask-image: radial-gradient(
+    circle 200px at 50% 50%,
+    rgba(0, 0, 0, 0) 0%,
+    transparent 100%
+  );
+  transition: mask-image 150ms ease;
+  z-index: 0;
 }
+
+/* Grid pattern removed — global HexGrid provides background */
 
 .home-content {
   position: relative;
@@ -74,7 +75,6 @@
   border: 1px solid var(--border-bright);
   border-radius: 6px;
   padding: 10px 14px;
-  margin-bottom: 40px;
   cursor: text;
   transition: border-color 0.15s;
 }
@@ -97,6 +97,28 @@
   border: 1px solid var(--border);
   padding: 2px 6px;
   border-radius: 3px;
+}
+
+/* PanelBox card overrides */
+.home-card {
+  background: transparent;
+}
+
+.home-quick-open {
+  background: transparent;
+  margin-bottom: 40px;
+}
+
+/* Quick-open focus energy underline */
+.home-quick-open:focus-within::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.3);
 }
 
 /* Section headers */
@@ -155,9 +177,11 @@
 }
 .stat-value.green {
   color: var(--green);
+  text-shadow: 0 0 8px rgba(var(--green-rgb), 0.4);
 }
 .stat-value.red {
   color: var(--red);
+  text-shadow: 0 0 8px rgba(var(--red-rgb), 0.4);
 }
 .stat-label {
   font-size: 9px;
@@ -236,18 +260,6 @@
   left: 125%;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .project-card {
-    transition: none;
-  }
-  .project-card:hover {
-    transform: none;
-    box-shadow: none;
-  }
-  .project-card::after {
-    display: none;
-  }
-}
 .project-card.running::before {
   background: var(--green);
 }
@@ -498,10 +510,10 @@
 @keyframes auroraShift {
   0%,
   100% {
-    background-position: 0% 50%;
+    transform: translate3d(0, 0, 0);
   }
   50% {
-    background-position: 100% 50%;
+    transform: translate3d(-15%, 8%, 0);
   }
 }
 
@@ -522,16 +534,10 @@
       rgba(var(--accent-rgb, 245, 166, 35), 0.03) 0%,
       transparent 50%
     );
-  background-size: 200% 200%;
   animation: auroraShift 20s ease-in-out infinite;
+  will-change: transform;
   pointer-events: none;
   z-index: 0;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .home-aurora {
-    animation: none;
-  }
 }
 
 /* Staggered reveal animation */
@@ -549,13 +555,6 @@
 .stagger-item {
   opacity: 0;
   animation: fadeSlideUp 0.3s ease forwards;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .stagger-item {
-    opacity: 1;
-    animation: none;
-  }
 }
 
 /* Agent chips on project cards */

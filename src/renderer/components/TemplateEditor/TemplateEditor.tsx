@@ -3,6 +3,7 @@ import type { TemplateCategory } from '../../../shared/types'
 import { useAppStore } from '../../store/appStore'
 import { useProjects } from '../../hooks/useProjects'
 import { groupTemplates, CATEGORY_ORDER } from '../../utils/templateUtils'
+import { Plus, ClipboardList } from 'lucide-react'
 import './TemplateEditor.css'
 
 /** Badge colour for a project's stack badge. */
@@ -71,7 +72,9 @@ export function TemplateEditor(): React.JSX.Element {
   }
 
   // Auto-select first template if none is selected
-  if (!selectedId && templates.length > 0 && templates[0]) {
+  const [prevAutoSelectDone, setPrevAutoSelectDone] = useState(false)
+  if (!selectedId && !prevAutoSelectDone && templates.length > 0 && templates[0]) {
+    setPrevAutoSelectDone(true)
     const first = templates[0]
     setSelectedId(first.id)
     setEditingName(first.name)
@@ -138,7 +141,11 @@ export function TemplateEditor(): React.JSX.Element {
             description: editingContent.split('\n')[0]?.slice(0, 60) ?? '',
             content: editingContent,
             category: editingCategory,
-          }).catch(() => {})
+          }).catch((err: unknown) => {
+            window.agentDeck.log.send('warn', 'template-editor', 'Auto-save failed', {
+              err: String(err),
+            })
+          })
         }
       }
       const tpl = findTemplate(templates, id)
@@ -248,7 +255,7 @@ export function TemplateEditor(): React.JSX.Element {
         <div className="te-list-header">
           <span className="te-list-title">Templates</span>
           <button className="te-list-add" onClick={() => void handleNew()} title="New template">
-            +
+            <Plus size={14} />
           </button>
         </div>
         <div className="te-list-body">
@@ -261,7 +268,9 @@ export function TemplateEditor(): React.JSX.Element {
                   className={`te-row ${t.id === selectedId ? 'active' : ''}`}
                   onClick={() => handleSelect(t.id)}
                 >
-                  <div className="te-row-icon">{'\u{1F4CB}'}</div>
+                  <div className="te-row-icon">
+                    <ClipboardList size={14} />
+                  </div>
                   <div className="te-row-body">
                     <div className="te-row-name">{t.name}</div>
                     <div className="te-row-desc">{t.description}</div>
@@ -340,7 +349,7 @@ export function TemplateEditor(): React.JSX.Element {
                   <div className="te-preview-block">
                     <div className="te-preview-block-label">Input bar chip</div>
                     <div className="te-chip-preview">
-                      <span>{'\u{1F4CB}'}</span>
+                      <ClipboardList size={14} />
                       <span>{editingName || '\u2014'}</span>
                     </div>
                   </div>
@@ -408,7 +417,9 @@ export function TemplateEditor(): React.JSX.Element {
           </>
         ) : (
           <div className="te-empty-state">
-            <div className="te-empty-icon">{'\u{1F4CB}'}</div>
+            <div className="te-empty-icon">
+              <ClipboardList size={24} />
+            </div>
             <div>Select a template or create a new one</div>
           </div>
         )}

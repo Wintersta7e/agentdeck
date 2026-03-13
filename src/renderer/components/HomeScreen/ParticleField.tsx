@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { subscribeTheme } from '../../utils/themeObserver'
+import { useReducedMotion } from '../../hooks/useReducedMotion'
 
 interface Particle {
   x: number
@@ -21,8 +22,21 @@ const CANVAS_STYLE: React.CSSProperties = {
   zIndex: 0,
 }
 
+function drawHex(ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void {
+  ctx.beginPath()
+  for (let i = 0; i < 6; i++) {
+    const angle = (Math.PI / 3) * i - Math.PI / 2
+    const px = x + r * Math.cos(angle)
+    const py = y + r * Math.sin(angle)
+    if (i === 0) ctx.moveTo(px, py)
+    else ctx.lineTo(px, py)
+  }
+  ctx.closePath()
+}
+
 export function ParticleField(): React.JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const reducedMotion = useReducedMotion()
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -31,8 +45,7 @@ export function ParticleField(): React.JSX.Element {
     if (!ctx) return
 
     // Respect reduced motion preference
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
-    if (mq.matches) return
+    if (reducedMotion) return
 
     let animId = 0
     const particles: Particle[] = []
@@ -75,8 +88,7 @@ export function ParticleField(): React.JSX.Element {
         if (p.y < 0) p.y = canvas.height
         if (p.y > canvas.height) p.y = 0
 
-        ctx.beginPath()
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
+        drawHex(ctx, p.x, p.y, p.r)
         ctx.fillStyle = `rgba(${accentRgb}, ${p.alpha})`
         ctx.fill()
       }
@@ -98,7 +110,7 @@ export function ParticleField(): React.JSX.Element {
       ro.disconnect()
       unsubTheme()
     }
-  }, [])
+  }, [reducedMotion])
 
   return <canvas ref={canvasRef} style={CANVAS_STYLE} />
 }

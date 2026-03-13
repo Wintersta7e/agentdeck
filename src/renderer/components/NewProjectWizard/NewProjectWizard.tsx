@@ -10,6 +10,7 @@ import { StackBadgeSelector } from '../shared/StackBadgeSelector'
 import { StepPanel } from '../shared/StepPanel'
 import { SortableList } from '../shared/SortableList'
 import { EnvVarRow } from '../shared/EnvVarRow'
+import { Check, ArrowLeft, ArrowRight, Hexagon } from 'lucide-react'
 import './NewProjectWizard.css'
 
 const STEPS = [
@@ -285,7 +286,9 @@ export function NewProjectWizard({ onCreateProject }: NewProjectWizardProps): Re
 
             {detectedStack ? (
               <div className="detection-banner">
-                <div className="detection-icon">{'\u2713'}</div>
+                <div className="detection-icon">
+                  <Check size={16} />
+                </div>
                 <div className="detection-body">
                   <div className="detection-title">Detected stack</div>
                   <div className="detection-items">
@@ -404,7 +407,9 @@ export function NewProjectWizard({ onCreateProject }: NewProjectWizardProps): Re
                             className={`template-opt ${isSelected ? 'selected' : ''}`}
                             onClick={() => toggleTemplate(tpl.id)}
                           >
-                            <div className="template-checkbox">{isSelected ? '\u2713' : ''}</div>
+                            <div className="template-checkbox">
+                              {isSelected ? <Check size={12} /> : null}
+                            </div>
                             <div className="template-opt-body">
                               <div className="template-opt-name">{tpl.name}</div>
                               {tpl.description && (
@@ -508,7 +513,10 @@ export function NewProjectWizard({ onCreateProject }: NewProjectWizardProps): Re
             </div>
 
             <div className="wizard-info-banner">
-              {'\u2B21'} AgentDeck will immediately open a session and run the startup commands.
+              <>
+                <Hexagon size={14} /> AgentDeck will immediately open a session and run the startup
+                commands.
+              </>
             </div>
           </div>
         </div>
@@ -525,7 +533,9 @@ export function NewProjectWizard({ onCreateProject }: NewProjectWizardProps): Re
             disabled={currentStep === 0}
             onClick={handleBack}
           >
-            {'\u2190'} Back
+            <>
+              <ArrowLeft size={14} /> Back
+            </>
           </button>
           {currentStep === STEPS.length - 1 ? (
             <button
@@ -534,7 +544,9 @@ export function NewProjectWizard({ onCreateProject }: NewProjectWizardProps): Re
               disabled={!isNextEnabled() || isCreating}
               onClick={() => void handleCreate()}
             >
-              {'\u2713'} Create Project
+              <>
+                <Check size={14} /> Create Project
+              </>
             </button>
           ) : (
             <button
@@ -543,7 +555,9 @@ export function NewProjectWizard({ onCreateProject }: NewProjectWizardProps): Re
               disabled={!isNextEnabled()}
               onClick={handleNext}
             >
-              Next {'\u2192'}
+              <>
+                Next <ArrowRight size={14} />
+              </>
             </button>
           )}
         </div>

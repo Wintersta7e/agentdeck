@@ -1,3 +1,4 @@
+import { Check } from 'lucide-react'
 import { AGENTS } from '../../../shared/agents'
 import type { AgentType } from '../../../shared/types'
 import './AgentSelector.css'
@@ -27,7 +28,7 @@ export function AgentSelector({ value, onChange }: AgentSelectorProps): React.JS
           <div className="agent-opt-icon">{agent.icon}</div>
           <div className="agent-opt-name">{agent.name}</div>
           <div className="agent-opt-desc">{agent.desc}</div>
-          <div className="agent-opt-check">{value === agent.type ? '\u2713' : ''}</div>
+          <div className="agent-opt-check">{value === agent.type ? <Check size={14} /> : null}</div>
         </button>
       ))}
     </div>

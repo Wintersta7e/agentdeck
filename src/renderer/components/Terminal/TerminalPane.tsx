@@ -42,6 +42,7 @@ const XTERM_THEME_OVERRIDES: Record<string, Partial<ITheme>> = {
     cursor: '#080b14',
     cursorAccent: '#080b14',
     selectionBackground: 'rgba(0,212,255,0.20)',
+    black: '#080b14',
   },
   violet: {
     background: '#0a0a12',
@@ -49,6 +50,7 @@ const XTERM_THEME_OVERRIDES: Record<string, Partial<ITheme>> = {
     cursor: '#0a0a12',
     cursorAccent: '#0a0a12',
     selectionBackground: 'rgba(167,139,250,0.20)',
+    black: '#0a0a12',
   },
   ice: {
     background: '#0c0d10',
@@ -56,6 +58,7 @@ const XTERM_THEME_OVERRIDES: Record<string, Partial<ITheme>> = {
     cursor: '#0c0d10',
     cursorAccent: '#0c0d10',
     selectionBackground: 'rgba(96,165,250,0.20)',
+    black: '#0c0d10',
   },
   parchment: {
     background: '#1a1510',
@@ -63,6 +66,7 @@ const XTERM_THEME_OVERRIDES: Record<string, Partial<ITheme>> = {
     cursor: '#1a1510',
     cursorAccent: '#1a1510',
     selectionBackground: 'rgba(200,120,0,0.25)',
+    black: '#1a1510',
   },
   fog: {
     background: '#0f1f33',
@@ -70,6 +74,7 @@ const XTERM_THEME_OVERRIDES: Record<string, Partial<ITheme>> = {
     cursor: '#0f1f33',
     cursorAccent: '#0f1f33',
     selectionBackground: 'rgba(37,99,235,0.25)',
+    black: '#0f1f33',
   },
   lavender: {
     background: '#1a1030',
@@ -77,6 +82,7 @@ const XTERM_THEME_OVERRIDES: Record<string, Partial<ITheme>> = {
     cursor: '#1a1030',
     cursorAccent: '#1a1030',
     selectionBackground: 'rgba(109,40,217,0.25)',
+    black: '#1a1030',
   },
   stone: {
     background: '#1a1916',
@@ -84,11 +90,24 @@ const XTERM_THEME_OVERRIDES: Record<string, Partial<ITheme>> = {
     cursor: '#1a1916',
     cursorAccent: '#1a1916',
     selectionBackground: 'rgba(13,148,136,0.25)',
+    black: '#1a1916',
   },
 }
 
 function getXtermTheme(themeId: string): ITheme {
-  return { ...BASE_XTERM_THEME, ...(XTERM_THEME_OVERRIDES[themeId] ?? {}) }
+  const base = { ...BASE_XTERM_THEME, ...(XTERM_THEME_OVERRIDES[themeId] ?? {}) }
+  // Read accent colour from CSS for selection highlight. DO NOT read --terminal-bg here:
+  // that token is rgba (semi-transparent) for CSS glass effects, but xterm.js needs opaque
+  // colours — otherwise ANSI-black cells (e.g. Codex TUI) get double-composited and appear
+  // darker than the canvas background. Per-theme solid hex values above are the correct source.
+  if (typeof document !== 'undefined') {
+    const style = getComputedStyle(document.documentElement)
+    const accentRgb = style.getPropertyValue('--accent-rgb').trim()
+    if (accentRgb) {
+      base.selectionBackground = `rgba(${accentRgb}, 0.20)`
+    }
+  }
+  return base
 }
 
 // ─── Viewport sync helper ─────────────────────────────────────────────
@@ -108,12 +127,21 @@ function safeFitAndResize(
 ): void {
   if (!container || !fit || !term) return
   if (container.offsetWidth === 0 || container.offsetHeight === 0) return
+  const prevCols = term.cols
+  const prevRows = term.rows
   fit.fit()
-  // Force viewport scroll-area sync after fit — column-only changes can leave
-  // the viewport stale, hiding the scrollbar (xterm.js #3504).
-  syncViewport(term)
-  if (term.cols > 0 && term.rows > 0) {
-    window.agentDeck.pty.resize(sessionId, term.cols, term.rows)
+  // Only sync viewport and resize PTY when dimensions actually changed.
+  // Calling syncScrollArea unconditionally causes visible scroll jumps
+  // because it recalculates the viewport position on every invocation,
+  // and multiple observers (ResizeObserver, IntersectionObserver, visibility
+  // effect) can trigger this function in quick succession.
+  if (term.cols !== prevCols || term.rows !== prevRows) {
+    // Force viewport scroll-area sync after fit — column-only changes can
+    // leave the viewport stale, hiding the scrollbar (xterm.js #3504).
+    syncViewport(term)
+    if (term.cols > 0 && term.rows > 0) {
+      window.agentDeck.pty.resize(sessionId, term.cols, term.rows)
+    }
   }
 }
 
@@ -185,6 +213,10 @@ export function TerminalPane({
 
   useEffect(() => {
     if (!containerRef.current) return
+
+    // Clear any orphaned exit timer from a previous mount cycle
+    clearTimeout(exitTimeoutRef.current)
+    exitTimeoutRef.current = undefined
 
     let term: Terminal
     let fit: FitAddon

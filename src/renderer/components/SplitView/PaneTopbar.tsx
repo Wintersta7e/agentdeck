@@ -1,5 +1,6 @@
 import { memo, useCallback } from 'react'
 import { useAppStore } from '../../store/appStore'
+import { HexDot } from '../shared/HexDot'
 import './PaneTopbar.css'
 
 interface PaneTopbarProps {
@@ -19,7 +20,9 @@ export const PaneTopbar = memo(function PaneTopbar({
 
   const isTerminal = !projectId
   const accentColor = project?.identity?.accentColor ?? undefined
-  const agentName = isTerminal ? 'shell' : (project?.agent ?? 'claude-code')
+  const agentName = isTerminal
+    ? 'shell'
+    : (project?.agents?.find((a) => a.isDefault)?.agent ?? project?.agent ?? 'claude-code')
 
   // Extract a clean display name: use project name, but if it looks like a path, take the last segment
   const rawName = isTerminal ? 'Terminal' : (project?.name ?? 'Unknown')
@@ -49,7 +52,10 @@ export const PaneTopbar = memo(function PaneTopbar({
         </>
       )}
       <div className="pane-status">
-        <div className={`pane-status-dot ${status}`} />
+        <HexDot
+          status={status === 'running' ? 'live' : status === 'error' ? 'error' : 'idle'}
+          size={6}
+        />
         <span className={`pane-status-text ${status}`}>{status}</span>
       </div>
       <div className="pane-actions">

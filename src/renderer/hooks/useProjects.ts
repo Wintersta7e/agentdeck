@@ -17,6 +17,8 @@ interface UseProjectsReturn {
   deleteRole: (id: string) => Promise<void>
 }
 
+let loadingInFlight = false
+
 export function useProjects(): UseProjectsReturn {
   const setProjects = useAppStore((s) => s.setProjects)
   const setTemplates = useAppStore((s) => s.setTemplates)
@@ -27,7 +29,8 @@ export function useProjects(): UseProjectsReturn {
 
   useEffect(() => {
     async function load(): Promise<void> {
-      if (useAppStore.getState().projects.length > 0) return
+      if (useAppStore.getState().projects.length > 0 || loadingInFlight) return
+      loadingInFlight = true
       try {
         const [p, t, r] = await Promise.all([
           window.agentDeck.store.getProjects(),
@@ -39,6 +42,8 @@ export function useProjects(): UseProjectsReturn {
         setRoles(r)
       } catch (err) {
         useAppStore.getState().addNotification('error', `Failed to load projects: ${String(err)}`)
+      } finally {
+        loadingInFlight = false
       }
     }
     void load()
@@ -48,7 +53,13 @@ export function useProjects(): UseProjectsReturn {
     async (project: Partial<Project>): Promise<Project> => {
       try {
         const saved: Project = await window.agentDeck.store.saveProject(project)
-        setProjects([...useAppStore.getState().projects, saved])
+        const current = useAppStore.getState().projects
+        // Guard against duplicate: only add if not already present (concurrent add race)
+        if (current.some((p) => p.id === saved.id)) {
+          setProjects(current.map((p) => (p.id === saved.id ? saved : p)))
+        } else {
+          setProjects([...current, saved])
+        }
         return saved
       } catch (err) {
         useAppStore.getState().addNotification('error', `Failed to add project: ${String(err)}`)
@@ -88,7 +99,12 @@ export function useProjects(): UseProjectsReturn {
     async (template: Partial<Template>): Promise<Template> => {
       try {
         const saved: Template = await window.agentDeck.store.saveTemplate(template)
-        setTemplates([...useAppStore.getState().templates, saved])
+        const current = useAppStore.getState().templates
+        if (current.some((t) => t.id === saved.id)) {
+          setTemplates(current.map((t) => (t.id === saved.id ? saved : t)))
+        } else {
+          setTemplates([...current, saved])
+        }
         return saved
       } catch (err) {
         useAppStore.getState().addNotification('error', `Failed to add template: ${String(err)}`)
@@ -128,7 +144,12 @@ export function useProjects(): UseProjectsReturn {
     async (role: Partial<Role>): Promise<Role> => {
       try {
         const saved: Role = await window.agentDeck.store.saveRole(role)
-        setRoles([...useAppStore.getState().roles, saved])
+        const current = useAppStore.getState().roles
+        if (current.some((r) => r.id === saved.id)) {
+          setRoles(current.map((r) => (r.id === saved.id ? saved : r)))
+        } else {
+          setRoles([...current, saved])
+        }
         return saved
       } catch (err) {
         useAppStore.getState().addNotification('error', `Failed to add role: ${String(err)}`)

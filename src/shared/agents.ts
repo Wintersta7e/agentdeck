@@ -86,8 +86,13 @@ export type AgentId = (typeof AGENTS)[number]['id']
 export const KNOWN_AGENT_IDS = new Set<string>(AGENTS.map((a) => a.id))
 
 /** Agent ID → binary name for PTY spawning and workflow execution */
-export const AGENT_BINARY_MAP: Record<string, string> = Object.fromEntries(
-  AGENTS.map((a) => [a.id, a.binary]),
+export const AGENT_BINARY_MAP: Readonly<Record<string, string>> = Object.freeze(
+  Object.fromEntries(AGENTS.map((a) => [a.id, a.binary])),
+)
+
+/** Agent ID → display name for UI */
+export const AGENT_DISPLAY: Readonly<Record<string, string>> = Object.freeze(
+  Object.fromEntries(AGENTS.map((a) => [a.id, a.name])),
 )
 
 /** Validation pattern for agent CLI flags — rejects shell metacharacters */

@@ -3,30 +3,24 @@
   display: flex;
   overflow: hidden;
   position: relative;
+  gap: 4px;
 }
 
 .split-pane {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--bg0);
+  background: var(--terminal-bg);
+  border: 1px solid var(--terminal-border);
   position: relative;
   transition: box-shadow 0.2s ease;
+  border-radius: var(--r);
 }
 
 .split-pane.focused {
   box-shadow:
     inset 0 0 0 1px var(--accent),
     0 0 12px rgba(var(--accent-rgb, 245, 166, 35), 0.15);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .split-pane {
-    transition: none;
-  }
-  .split-pane.focused {
-    box-shadow: inset 0 0 0 1px var(--accent);
-  }
 }
 
 .split-divider {
@@ -40,7 +34,7 @@
 }
 
 .split-divider:hover {
-  background: var(--amber-hover);
+  background: rgba(var(--accent-rgb), 0.15);
 }
 
 .split-divider::after {
@@ -98,6 +92,38 @@
   background: var(--amber-glow);
   border-color: var(--amber-border);
   color: var(--amber);
+}
+
+/* PanelBox inside split pane must fill available space */
+.split-pane-inner {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  background: transparent;
+}
+
+/* Content-reactive ambient glow */
+.split-pane::before {
+  content: '';
+  position: absolute;
+  top: 40px;
+  left: 12px;
+  width: 250px;
+  height: 100px;
+  background: radial-gradient(
+    ellipse,
+    rgba(var(--accent-rgb), var(--content-glow-opacity)),
+    transparent
+  );
+  filter: blur(var(--content-glow-radius));
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 800ms ease;
+  z-index: 0;
+}
+
+.split-pane.active-session::before {
+  opacity: 1;
 }
 
 .split-pane--visible {

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Search, ArrowRight, RefreshCw, Check, X, Star, Plus } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
+import { PanelBox } from '../shared/PanelBox'
 import { ParticleField } from './ParticleField'
 import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
 import type { AgentConfig, Project, Template, StackBadge } from '../../../shared/types'
@@ -130,6 +132,7 @@ export function HomeScreen({
   const addNotification = useAppStore((s) => s.addNotification)
   const username = useAppStore((s) => s.wslUsername)
   const refreshAgentStatus = useAppStore((s) => s.refreshAgentStatus)
+
   const [cardMenu, setCardMenu] = useState<{
     x: number
     y: number
@@ -201,6 +204,7 @@ export function HomeScreen({
 
   return (
     <div className="home-main">
+      {/* Global HexGrid in App.tsx provides background — no duplicate needed */}
       <div className="home-decor">
         <div className="home-aurora" />
         <ParticleField />
@@ -220,11 +224,17 @@ export function HomeScreen({
           </div>
         </div>
 
-        <div className="quick-open" onClick={openWizard}>
-          <span className="quick-open-icon">{'\u2318'}</span>
-          <span className="quick-open-text">Open project, run template, or jump to session...</span>
-          <span className="quick-open-hint">Ctrl+N</span>
-        </div>
+        <PanelBox corners="all" glow="none" className="home-quick-open">
+          <div className="quick-open" onClick={openWizard}>
+            <span className="quick-open-icon">
+              <Search size={14} />
+            </span>
+            <span className="quick-open-text">
+              Open project, run template, or jump to session...
+            </span>
+            <span className="quick-open-hint">Ctrl+N</span>
+          </div>
+        </PanelBox>
 
         <div className="stats-row">
           <div className="stat-item">
@@ -254,7 +264,9 @@ export function HomeScreen({
             <div className="section-header">
               <div className="section-title">Pinned Projects</div>
               <button className="section-action" onClick={openWizard}>
-                {'+ New \u2192'}
+                <>
+                  <Plus size={12} /> New <ArrowRight size={12} />
+                </>
               </button>
             </div>
             <div className="pinned-grid">
@@ -264,63 +276,70 @@ export function HomeScreen({
                   .map((tid) => templateMap.get(tid))
                   .filter((t): t is Template => t !== undefined)
                 return (
-                  <div
-                    key={p.id}
-                    className={`project-card stagger-item ${status === 'running' ? 'running' : ''} ${status === 'error' ? 'error' : ''}`}
-                    style={{ animationDelay: `${index * 60}ms` }}
-                    onClick={() => onOpenProject(p)}
-                    onContextMenu={(e) => {
-                      e.preventDefault()
-                      setCardMenu({ x: e.clientX, y: e.clientY, projectId: p.id })
-                    }}
-                  >
-                    <div className="card-top">
-                      <div
-                        className={`card-icon ${(p.badge && BADGE_ICON_CLASS[p.badge]) ?? 'card-icon-agent'}`}
-                      >
-                        {(p.badge && BADGE_ICONS[p.badge]) ?? '\u25C8'}
-                      </div>
-                      <div className={`card-status ${statusColorClass(status)}`}>
+                  <PanelBox key={p.id} corners={['tl', 'br']} glow="none" className="home-card">
+                    <div
+                      className={`project-card stagger-item ${status === 'running' ? 'running' : ''} ${status === 'error' ? 'error' : ''}`}
+                      style={{ animationDelay: `${index * 60}ms` }}
+                      onClick={() => onOpenProject(p)}
+                      onContextMenu={(e) => {
+                        e.preventDefault()
+                        setCardMenu({ x: e.clientX, y: e.clientY, projectId: p.id })
+                      }}
+                    >
+                      <div className="card-top">
                         <div
-                          className={`card-status-dot ${statusColorClass(status)}`}
-                          style={STATUS_DOT_STYLES[status] ?? STATUS_DOT_STYLES.idle}
-                        />
-                        {status}
+                          className={`card-icon ${(p.badge && BADGE_ICON_CLASS[p.badge]) ?? 'card-icon-agent'}`}
+                        >
+                          {(p.badge && BADGE_ICONS[p.badge]) ?? '\u25C8'}
+                        </div>
+                        <div className={`card-status ${statusColorClass(status)}`}>
+                          <div
+                            className={`card-status-dot ${statusColorClass(status)}`}
+                            style={STATUS_DOT_STYLES[status] ?? STATUS_DOT_STYLES.idle}
+                          />
+                          {status}
+                        </div>
                       </div>
-                    </div>
-                    <div className="card-name">{p.name}</div>
-                    <div className="card-path">{p.path}</div>
-                    <div className="card-meta">
-                      {p.badge && (
-                        <span className={`card-badge badge-${badgeClass(p.badge)}`}>{p.badge}</span>
+                      <div className="card-name">{p.name}</div>
+                      <div className="card-path">{p.path}</div>
+                      <div className="card-meta">
+                        {p.badge && (
+                          <span className={`card-badge badge-${badgeClass(p.badge)}`}>
+                            {p.badge}
+                          </span>
+                        )}
+                        <span className="card-last">{timeAgo(p.lastOpened)}</span>
+                      </div>
+                      {tNames.length > 0 && (
+                        <div className="card-templates">
+                          {tNames.map((t) => (
+                            <span key={t.id} className="card-template-chip">
+                              {t.name}
+                            </span>
+                          ))}
+                        </div>
                       )}
-                      <span className="card-last">{timeAgo(p.lastOpened)}</span>
-                    </div>
-                    {tNames.length > 0 && (
-                      <div className="card-templates">
-                        {tNames.map((t) => (
-                          <span key={t.id} className="card-template-chip">
-                            {t.name}
-                          </span>
-                        ))}
+                      <div className="card-agents">
+                        {getProjectAgents(p).map((ac) => {
+                          const meta = SHARED_AGENTS.find((a) => a.id === ac.agent)
+                          return (
+                            <span
+                              key={ac.agent}
+                              className={`card-agent-chip${ac.isDefault ? ' default' : ''}`}
+                              title={meta?.name ?? ac.agent}
+                            >
+                              {meta?.icon ?? '\u25C8'}
+                              {ac.isDefault && (
+                                <span className="card-agent-star">
+                                  <Star size={10} fill="currentColor" />
+                                </span>
+                              )}
+                            </span>
+                          )
+                        })}
                       </div>
-                    )}
-                    <div className="card-agents">
-                      {getProjectAgents(p).map((ac) => {
-                        const meta = SHARED_AGENTS.find((a) => a.id === ac.agent)
-                        return (
-                          <span
-                            key={ac.agent}
-                            className={`card-agent-chip${ac.isDefault ? ' default' : ''}`}
-                            title={meta?.name ?? ac.agent}
-                          >
-                            {meta?.icon ?? '\u25C8'}
-                            {ac.isDefault && <span className="card-agent-star">{'\u2605'}</span>}
-                          </span>
-                        )
-                      })}
                     </div>
-                  </div>
+                  </PanelBox>
                 )
               })}
             </div>
@@ -331,10 +350,14 @@ export function HomeScreen({
           <div className="section-title">Available Agents</div>
           <div className="section-actions">
             <button className="section-action" onClick={() => void refreshAgentStatus()}>
-              {'Refresh \u21BB'}
+              <>
+                Refresh <RefreshCw size={12} />
+              </>
             </button>
             <button className="section-action" onClick={() => openCommandPalette('agents')}>
-              {'Configure \u2192'}
+              <>
+                Configure <ArrowRight size={12} />
+              </>
             </button>
           </div>
         </div>
@@ -343,35 +366,53 @@ export function HomeScreen({
             const vInfo = agentVersions[a.name]
             const installed = agentStatus[a.name]
             return (
-              <div key={a.name} className={`agent-card ${installed ? 'active' : ''}`}>
-                <div className="agent-card-icon">{a.icon}</div>
-                <div className="agent-card-name">{a.name}</div>
-                {vInfo?.current && <div className="agent-card-version">v{vInfo.current}</div>}
-                <div className="agent-card-desc">{a.desc}</div>
-                {agentStatus[a.name] !== undefined && (
-                  <div className={installed ? 'agent-installed' : 'agent-missing'}>
-                    {installed ? '\u2713 installed' : '\u2717 not found'}
-                  </div>
-                )}
-                {installed && vInfo && (
-                  <button
-                    className={`agent-update-btn${vInfo.updateAvailable ? ' has-update' : ''}${vInfo.updating ? ' updating' : ''}`}
-                    disabled={vInfo.updating}
-                    onClick={() => void handleAgentUpdate(a.name)}
-                    type="button"
-                  >
-                    {vInfo.updating
-                      ? 'Updating\u2026'
-                      : vInfo.updateAvailable
-                        ? `Update \u2192 ${vInfo.latest}`
-                        : '\u2713 Up to date'}
-                  </button>
-                )}
-              </div>
+              <PanelBox key={a.name} corners={['tl', 'br']} glow="none" className="home-card">
+                <div className={`agent-card ${installed ? 'active' : ''}`}>
+                  <div className="agent-card-icon">{a.icon}</div>
+                  <div className="agent-card-name">{a.name}</div>
+                  {vInfo?.current && <div className="agent-card-version">v{vInfo.current}</div>}
+                  <div className="agent-card-desc">{a.desc}</div>
+                  {agentStatus[a.name] !== undefined && (
+                    <div className={installed ? 'agent-installed' : 'agent-missing'}>
+                      {installed ? (
+                        <>
+                          <Check size={12} /> installed
+                        </>
+                      ) : (
+                        <>
+                          <X size={12} /> not found
+                        </>
+                      )}
+                    </div>
+                  )}
+                  {installed && vInfo && (
+                    <button
+                      className={`agent-update-btn${vInfo.updateAvailable ? ' has-update' : ''}${vInfo.updating ? ' updating' : ''}`}
+                      disabled={vInfo.updating}
+                      onClick={() => void handleAgentUpdate(a.name)}
+                      type="button"
+                    >
+                      {vInfo.updating ? (
+                        'Updating\u2026'
+                      ) : vInfo.updateAvailable ? (
+                        <>
+                          Update <ArrowRight size={12} /> {vInfo.latest}
+                        </>
+                      ) : (
+                        <>
+                          <Check size={12} /> Up to date
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </PanelBox>
             )
           })}
           <div className="agent-card add-agent" onClick={() => openCommandPalette('agents')}>
-            <div className="agent-card-icon agent-add-icon">+</div>
+            <div className="agent-card-icon agent-add-icon">
+              <Plus size={20} />
+            </div>
             <div className="agent-card-name agent-add-name">Add agent</div>
             <div className="agent-card-desc">Custom command</div>
           </div>
@@ -387,7 +428,10 @@ export function HomeScreen({
             <div
               ref={cardMenuRef}
               className="home-context-menu"
-              style={{ top: cardMenu.y, left: cardMenu.x }}
+              style={{
+                top: Math.min(cardMenu.y, window.innerHeight - 200),
+                left: Math.min(cardMenu.x, window.innerWidth - 180),
+              }}
             >
               <div className="home-context-header">Launch with...</div>
               {projectAgents.map((ac) => {

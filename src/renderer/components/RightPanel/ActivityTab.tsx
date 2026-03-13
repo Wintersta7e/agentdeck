@@ -32,7 +32,7 @@ function ActivityRowComponent({
 
   return (
     <div style={style}>
-      <div className="activity-item">
+      <div className={`activity-item activity-item--${event.type}`}>
         <div className="activity-line">
           <div className={`activity-dot ${event.status}`} />
           {!isLast && <div className="activity-connector" />}

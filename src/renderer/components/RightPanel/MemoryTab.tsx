@@ -30,7 +30,7 @@ export function MemoryTab(): React.JSX.Element {
     if (!session) return null
     return s.projects.find((p) => p.id === session.projectId)?.path ?? null
   })
-  const project = projectPath !== null
+  const hasProject = projectPath !== null
 
   const [state, dispatch] = useReducer(memoryReducer, {
     claudeMd: null,
@@ -70,7 +70,7 @@ export function MemoryTab(): React.JSX.Element {
     setRefreshKey((k) => k + 1)
   }
 
-  if (!project) {
+  if (!hasProject) {
     return <div className="panel-placeholder">No active session</div>
   }
 

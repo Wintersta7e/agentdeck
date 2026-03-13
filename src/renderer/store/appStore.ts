@@ -254,34 +254,34 @@ export const useAppStore = create<AppState>((set, get) => ({
     }),
 
   restartSession: (oldSessionId) => {
-    const state = get()
-    const oldSession = state.sessions[oldSessionId]
-    if (!oldSession) return null
-
-    const projectId = oldSession.projectId
-    const newSessionId = `session-${projectId}-${Date.now()}`
-
-    // Find which pane slot the old session occupies
-    const paneIndex = state.paneSessions.indexOf(oldSessionId)
+    let newSessionId: string | null = null
 
     set((s) => {
+      const oldSession = s.sessions[oldSessionId]
+      if (!oldSession) return s
+
+      const projectId = oldSession.projectId
+      const freshId = `session-${projectId}-${Date.now()}`
+      newSessionId = freshId
+
       // Remove old session
       const { [oldSessionId]: _, ...rest } = s.sessions
       const { [oldSessionId]: _feed, ...remainingFeeds } = s.activityFeeds
 
-      // Place new session in the same pane slot
-      const paneSessions = s.paneSessions.map((id) => (id === oldSessionId ? newSessionId : id))
+      // Find which pane slot the old session occupies (read from live state)
+      const paneIndex = s.paneSessions.indexOf(oldSessionId)
+      const paneSessions = s.paneSessions.map((id) => (id === oldSessionId ? freshId : id))
       if (paneIndex === -1) {
         // Old session wasn't in a pane — put new one in focused pane
         while (paneSessions.length <= s.focusedPane) paneSessions.push('')
-        paneSessions[s.focusedPane] = newSessionId
+        paneSessions[s.focusedPane] = freshId
       }
 
       return {
         sessions: {
           ...rest,
-          [newSessionId]: {
-            id: newSessionId,
+          [freshId]: {
+            id: freshId,
             projectId,
             status: 'starting' as const,
             startedAt: Date.now(),
@@ -290,7 +290,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           },
         },
         activityFeeds: remainingFeeds,
-        activeSessionId: newSessionId,
+        activeSessionId: freshId,
         paneSessions,
       }
     })
@@ -557,8 +557,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   wfLogPanelWidth: 320,
 
   toggleSidebar: () => {
-    const next = !get().sidebarOpen
-    set({ sidebarOpen: next })
+    let next = false
+    set((state) => {
+      next = !state.sidebarOpen
+      return { sidebarOpen: next }
+    })
     window.agentDeck.layout.set({ sidebarOpen: next })
   },
 
@@ -590,7 +593,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   setZoomFactor: (factor) => set({ zoomFactor: factor }),
 
   // Theme
-  theme: document.documentElement.dataset.theme ?? '',
+  // Read from DOM at store init — main.tsx sets data-theme before createRoot,
+  // so this is correct in production. In tests, jsdom yields '' which is fine.
+  theme: (typeof document !== 'undefined' ? document.documentElement.dataset.theme : '') ?? '',
   setTheme: (name) => {
     document.documentElement.dataset.theme = name
     window.agentDeck.theme.set(name)

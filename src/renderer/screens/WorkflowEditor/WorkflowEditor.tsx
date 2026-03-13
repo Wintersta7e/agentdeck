@@ -48,6 +48,7 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
   const [workflow, setWorkflow] = useState<Workflow | null>(null)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [addMenuOpen, setAddMenuOpen] = useState(false)
+  const closeAddMenu = useCallback(() => setAddMenuOpen(false), [])
   const [detailNode, setDetailNode] = useState<WorkflowNode | null>(null)
   const [rightTab, setRightTab] = useState<'editor' | 'log'>('editor')
   const [isEditingName, setIsEditingName] = useState(false)
@@ -456,11 +457,7 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
           >
             <span className="wf-btn-icon">{'\u2295'}</span> Add Node
           </button>
-          <AddNodeMenu
-            open={addMenuOpen}
-            onAdd={handleAddNode}
-            onClose={() => setAddMenuOpen(false)}
-          />
+          <AddNodeMenu open={addMenuOpen} onAdd={handleAddNode} onClose={closeAddMenu} />
         </div>
         <div className="wf-sep" />
         <select

@@ -10,8 +10,13 @@ import { CommandPalette } from './components/CommandPalette/CommandPalette'
 import { AboutDialog } from './components/AboutDialog/AboutDialog'
 import { ShortcutsDialog } from './components/ShortcutsDialog/ShortcutsDialog'
 import { NotificationToast } from './components/NotificationToast/NotificationToast'
+import { HexGrid } from './components/shared/HexGrid'
+import { EnergyVein } from './components/shared/EnergyVein'
+import { AmbientGlow } from './components/shared/AmbientGlow'
+
 import { useAppStore } from './store/appStore'
 import { useProjects } from './hooks/useProjects'
+import { useAmbientState } from './hooks/useAmbientState'
 import type { ActivityEvent, AgentConfig, Project } from '../shared/types'
 import './App.css'
 
@@ -80,6 +85,8 @@ export function App(): React.JSX.Element {
     addSession(sessionId, '')
   }, [addSession])
 
+  const { veinSpeed, isIdle } = useAmbientState()
+
   const { updateProject } = useProjects()
 
   const handleOpenProject = useCallback(
@@ -122,19 +129,6 @@ export function App(): React.JSX.Element {
 
   const handleCloseWorkflowTab = useCallback((workflowId: string) => {
     useAppStore.getState().closeWorkflow(workflowId)
-  }, [])
-
-  // Spotlight cursor effect
-  const spotlightRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const handler = (e: MouseEvent): void => {
-      if (spotlightRef.current) {
-        spotlightRef.current.style.left = `${e.clientX}px`
-        spotlightRef.current.style.top = `${e.clientY}px`
-      }
-    }
-    window.addEventListener('mousemove', handler)
-    return () => window.removeEventListener('mousemove', handler)
   }, [])
 
   // File drag-and-drop: preload handles the DOM drop event (File.path is only
@@ -284,11 +278,33 @@ export function App(): React.JSX.Element {
 
   return (
     <div className="app">
-      <div className="spotlight" ref={spotlightRef} />
+      {/* Fusion ambient layer */}
+      <div
+        className="fusion-ambient"
+        style={{
+          position: 'fixed',
+          inset: 0,
+          overflow: 'hidden',
+          pointerEvents: 'none',
+          zIndex: 0,
+          contain: 'strict',
+        }}
+      >
+        <HexGrid rotation={15} />
+        <EnergyVein color="var(--accent)" count={2} speed={veinSpeed} />
+        <AmbientGlow
+          color="rgba(var(--accent-rgb), 0.15)"
+          position={[25, 15]}
+          size={600}
+          skew={-12}
+        />
+        <AmbientGlow color="rgba(100, 180, 255, 0.08)" position={[75, 80]} size={500} skew={5} />
+      </div>
       <Titlebar
         onCloseTab={handleCloseTab}
         onCloseWorkflowTab={handleCloseWorkflowTab}
         onAddTab={handleAddTab}
+        isIdle={isIdle}
       />
       <div className="app-body">
         <div
