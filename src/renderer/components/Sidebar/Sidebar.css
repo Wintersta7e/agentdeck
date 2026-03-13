@@ -170,12 +170,16 @@
   background: none;
   border: none;
   color: var(--text3);
-  font-size: 12px;
   cursor: pointer;
-  padding: 2px;
-  transition: all 0.12s;
+  padding: 4px;
+  transition:
+    opacity 0.12s,
+    color 0.12s;
   flex-shrink: 0;
-  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
 }
 .sidebar-item:hover .sidebar-item-gear {
   opacity: 1;

@@ -74,6 +74,11 @@ export function SplitView(): React.JSX.Element {
     },
   )
   const projects = useAppStore((s) => s.projects)
+  const projectMap = useMemo(() => {
+    const m = new Map<string, (typeof projects)[number]>()
+    for (const p of projects) m.set(p.id, p)
+    return m
+  }, [projects])
   const setPaneLayout = useAppStore((s) => s.setPaneLayout)
   const setFocusedPane = useAppStore((s) => s.setFocusedPane)
 
@@ -81,7 +86,9 @@ export function SplitView(): React.JSX.Element {
   const [pulseState, setPulseState] = useState<Record<number, boolean>>({})
   const pulseTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({})
 
-  // Subscribe to activity for pulse effect on each pane's session
+  // Subscribe to activity for pulse effect on each pane's session.
+  // Skip re-render when pulse is already active — the 400ms CSS animation
+  // is already playing, so additional setState calls are pure waste.
   useEffect(() => {
     const unsubs: (() => void)[] = []
     for (const idx of PANE_INDICES) {
@@ -90,7 +97,10 @@ export function SplitView(): React.JSX.Element {
       if (!sid) continue
       const paneIdx = idx
       const unsub = window.agentDeck.pty.onActivity(sid, () => {
-        setPulseState((prev) => ({ ...prev, [paneIdx]: true }))
+        setPulseState((prev) => {
+          if (prev[paneIdx]) return prev // already pulsing — skip re-render
+          return { ...prev, [paneIdx]: true }
+        })
         clearTimeout(pulseTimers.current[paneIdx])
         pulseTimers.current[paneIdx] = setTimeout(() => {
           setPulseState((prev) => ({ ...prev, [paneIdx]: false }))
@@ -243,7 +253,7 @@ export function SplitView(): React.JSX.Element {
       {PANE_INDICES.map((paneIndex) => {
         const sessionId = paneSessionIds[paneIndex] ?? ''
         const session = sessionId ? sessions[sessionId] : undefined
-        const project = session ? projects.find((p) => p.id === session.projectId) : undefined
+        const project = session ? projectMap.get(session.projectId) : undefined
         const defaultAgent = project ? getDefaultAgent(project) : undefined
         const isVisible = paneIndex < paneLayout
         const isFocused = paneIndex === focusedPane && isVisible
@@ -303,7 +313,7 @@ export function SplitView(): React.JSX.Element {
       {hiddenSessionIds.map((sid) => {
         const session = sessions[sid]
         if (!session) return null
-        const project = projects.find((p) => p.id === session.projectId)
+        const project = projectMap.get(session.projectId)
         const defaultAgent = project ? getDefaultAgent(project) : undefined
         return (
           <div key={sid} className="split-pane--hidden">

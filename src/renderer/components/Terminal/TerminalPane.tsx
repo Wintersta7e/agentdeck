@@ -88,7 +88,23 @@ const XTERM_THEME_OVERRIDES: Record<string, Partial<ITheme>> = {
 }
 
 function getXtermTheme(themeId: string): ITheme {
-  return { ...BASE_XTERM_THEME, ...(XTERM_THEME_OVERRIDES[themeId] ?? {}) }
+  const base = { ...BASE_XTERM_THEME, ...(XTERM_THEME_OVERRIDES[themeId] ?? {}) }
+  // Read dynamic tokens from CSS so the terminal stays in sync with the design system.
+  // This prevents divergence when theme tokens in tokens.css are updated.
+  if (typeof document !== 'undefined') {
+    const style = getComputedStyle(document.documentElement)
+    const termBg = style.getPropertyValue('--terminal-bg').trim()
+    const accentRgb = style.getPropertyValue('--accent-rgb').trim()
+    if (termBg) {
+      base.background = termBg
+      base.cursor = termBg
+      base.cursorAccent = termBg
+    }
+    if (accentRgb) {
+      base.selectionBackground = `rgba(${accentRgb}, 0.20)`
+    }
+  }
+  return base
 }
 
 // ─── Viewport sync helper ─────────────────────────────────────────────
@@ -108,12 +124,21 @@ function safeFitAndResize(
 ): void {
   if (!container || !fit || !term) return
   if (container.offsetWidth === 0 || container.offsetHeight === 0) return
+  const prevCols = term.cols
+  const prevRows = term.rows
   fit.fit()
-  // Force viewport scroll-area sync after fit — column-only changes can leave
-  // the viewport stale, hiding the scrollbar (xterm.js #3504).
-  syncViewport(term)
-  if (term.cols > 0 && term.rows > 0) {
-    window.agentDeck.pty.resize(sessionId, term.cols, term.rows)
+  // Only sync viewport and resize PTY when dimensions actually changed.
+  // Calling syncScrollArea unconditionally causes visible scroll jumps
+  // because it recalculates the viewport position on every invocation,
+  // and multiple observers (ResizeObserver, IntersectionObserver, visibility
+  // effect) can trigger this function in quick succession.
+  if (term.cols !== prevCols || term.rows !== prevRows) {
+    // Force viewport scroll-area sync after fit — column-only changes can
+    // leave the viewport stale, hiding the scrollbar (xterm.js #3504).
+    syncViewport(term)
+    if (term.cols > 0 && term.rows > 0) {
+      window.agentDeck.pty.resize(sessionId, term.cols, term.rows)
+    }
   }
 }
 
@@ -185,6 +210,10 @@ export function TerminalPane({
 
   useEffect(() => {
     if (!containerRef.current) return
+
+    // Clear any orphaned exit timer from a previous mount cycle
+    clearTimeout(exitTimeoutRef.current)
+    exitTimeoutRef.current = undefined
 
     let term: Terminal
     let fit: FitAddon
