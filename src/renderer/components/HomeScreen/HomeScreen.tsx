@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Search, ArrowRight, RefreshCw, Check, X, Star, Plus } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import { PanelBox } from '../shared/PanelBox'
 import { ParticleField } from './ParticleField'
@@ -225,7 +226,9 @@ export function HomeScreen({
 
         <PanelBox corners="all" glow="none" className="home-quick-open">
           <div className="quick-open" onClick={openWizard}>
-            <span className="quick-open-icon">{'\u2318'}</span>
+            <span className="quick-open-icon">
+              <Search size={14} />
+            </span>
             <span className="quick-open-text">
               Open project, run template, or jump to session...
             </span>
@@ -261,7 +264,9 @@ export function HomeScreen({
             <div className="section-header">
               <div className="section-title">Pinned Projects</div>
               <button className="section-action" onClick={openWizard}>
-                {'+ New \u2192'}
+                <>
+                  <Plus size={12} /> New <ArrowRight size={12} />
+                </>
               </button>
             </div>
             <div className="pinned-grid">
@@ -324,7 +329,11 @@ export function HomeScreen({
                               title={meta?.name ?? ac.agent}
                             >
                               {meta?.icon ?? '\u25C8'}
-                              {ac.isDefault && <span className="card-agent-star">{'\u2605'}</span>}
+                              {ac.isDefault && (
+                                <span className="card-agent-star">
+                                  <Star size={10} fill="currentColor" />
+                                </span>
+                              )}
                             </span>
                           )
                         })}
@@ -341,10 +350,14 @@ export function HomeScreen({
           <div className="section-title">Available Agents</div>
           <div className="section-actions">
             <button className="section-action" onClick={() => void refreshAgentStatus()}>
-              {'Refresh \u21BB'}
+              <>
+                Refresh <RefreshCw size={12} />
+              </>
             </button>
             <button className="section-action" onClick={() => openCommandPalette('agents')}>
-              {'Configure \u2192'}
+              <>
+                Configure <ArrowRight size={12} />
+              </>
             </button>
           </div>
         </div>
@@ -361,7 +374,15 @@ export function HomeScreen({
                   <div className="agent-card-desc">{a.desc}</div>
                   {agentStatus[a.name] !== undefined && (
                     <div className={installed ? 'agent-installed' : 'agent-missing'}>
-                      {installed ? '\u2713 installed' : '\u2717 not found'}
+                      {installed ? (
+                        <>
+                          <Check size={12} /> installed
+                        </>
+                      ) : (
+                        <>
+                          <X size={12} /> not found
+                        </>
+                      )}
                     </div>
                   )}
                   {installed && vInfo && (
@@ -371,11 +392,17 @@ export function HomeScreen({
                       onClick={() => void handleAgentUpdate(a.name)}
                       type="button"
                     >
-                      {vInfo.updating
-                        ? 'Updating\u2026'
-                        : vInfo.updateAvailable
-                          ? `Update \u2192 ${vInfo.latest}`
-                          : '\u2713 Up to date'}
+                      {vInfo.updating ? (
+                        'Updating\u2026'
+                      ) : vInfo.updateAvailable ? (
+                        <>
+                          Update <ArrowRight size={12} /> {vInfo.latest}
+                        </>
+                      ) : (
+                        <>
+                          <Check size={12} /> Up to date
+                        </>
+                      )}
                     </button>
                   )}
                 </div>
@@ -383,7 +410,9 @@ export function HomeScreen({
             )
           })}
           <div className="agent-card add-agent" onClick={() => openCommandPalette('agents')}>
-            <div className="agent-card-icon agent-add-icon">+</div>
+            <div className="agent-card-icon agent-add-icon">
+              <Plus size={20} />
+            </div>
             <div className="agent-card-name agent-add-name">Add agent</div>
             <div className="agent-card-desc">Custom command</div>
           </div>
@@ -399,7 +428,10 @@ export function HomeScreen({
             <div
               ref={cardMenuRef}
               className="home-context-menu"
-              style={{ top: cardMenu.y, left: cardMenu.x }}
+              style={{
+                top: Math.min(cardMenu.y, window.innerHeight - 200),
+                left: Math.min(cardMenu.x, window.innerWidth - 180),
+              }}
             >
               <div className="home-context-header">Launch with...</div>
               {projectAgents.map((ac) => {

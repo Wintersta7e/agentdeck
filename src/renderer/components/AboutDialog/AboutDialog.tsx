@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { X } from 'lucide-react'
 import { PanelBox } from '../shared/PanelBox'
 import './AboutDialog.css'
 
@@ -50,7 +51,7 @@ export function AboutDialog({ onClose }: AboutDialogProps): React.JSX.Element {
     <div className="about-overlay" onClick={handleOverlayClick}>
       <PanelBox corners="all" glow="none" className="about-dialog">
         <button className="about-close" onClick={onClose}>
-          {'\u2715'}
+          <X size={16} />
         </button>
         <div className="about-name">AgentDeck</div>
         <div className="about-version">v{appVersion}</div>

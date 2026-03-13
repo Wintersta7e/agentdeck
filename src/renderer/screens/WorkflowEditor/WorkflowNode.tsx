@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect, memo } from 'react'
+import { Bot, TerminalSquare, CircleCheck, MoreHorizontal } from 'lucide-react'
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react'
 import type {
   WorkflowNode as WorkflowNodeType,
@@ -46,10 +47,10 @@ function getTextLabel(type: NodeType): string {
   return 'Message'
 }
 
-function getTypeIcon(type: NodeType): string {
-  if (type === 'agent') return '\uD83E\uDD16' // 🤖
-  if (type === 'shell') return '\uD83D\uDCBB' // 💻
-  return '\u2705' // ✅
+function getTypeIcon(type: NodeType): React.ReactNode {
+  if (type === 'agent') return <Bot size={14} />
+  if (type === 'shell') return <TerminalSquare size={14} />
+  return <CircleCheck size={14} />
 }
 
 function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Element {
@@ -162,7 +163,7 @@ function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Ele
           {getTypeBadgeLabel(node.type)}
         </span>
         <button className="wf-node-menu nodrag" onClick={handleMenuClick} type="button">
-          {'\u22EF'}
+          <MoreHorizontal size={14} />
         </button>
       </div>
 

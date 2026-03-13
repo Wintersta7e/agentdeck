@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Keyboard, Menu } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import { HexDot } from '../shared/HexDot'
 import './StatusBar.css'
@@ -93,11 +94,15 @@ export function StatusBar({ onAboutClick, onShortcutsClick }: StatusBarProps): R
           </>
         )}
         <button className="status-cmd" onClick={onShortcutsClick}>
-          <span className="status-cmd-icon">{'\u2328'}</span>
+          <span className="status-cmd-icon">
+            <Keyboard size={14} />
+          </span>
           <kbd className="status-cmd-kbd">Ctrl+/</kbd>
         </button>
         <button className="status-cmd" onClick={() => openCommandPalette()}>
-          <span className="status-cmd-icon">{'\u2261'}</span>
+          <span className="status-cmd-icon">
+            <Menu size={14} />
+          </span>
           <span>Menu</span>
           <kbd className="status-cmd-kbd">Esc</kbd>
         </button>

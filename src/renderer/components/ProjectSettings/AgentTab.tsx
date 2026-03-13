@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { SquareCheck, Square, Star, ChevronUp, ChevronDown } from 'lucide-react'
 import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
 import type { Project, AgentType } from '../../../shared/types'
 import { getProjectAgents } from '../../../shared/agent-helpers'
@@ -80,7 +81,9 @@ export function AgentTab({ draft, onChange }: TabProps): React.JSX.Element {
                   className={`agent-row${enabled ? ' selected' : ''}`}
                   onClick={() => toggleAgent(agentDef.id)}
                 >
-                  <div className="agent-row-check">{enabled ? '\u2611' : '\u2610'}</div>
+                  <div className="agent-row-check">
+                    {enabled ? <SquareCheck size={16} /> : <Square size={16} />}
+                  </div>
                   <div className="agent-row-icon">{agentDef.icon}</div>
                   <div className="agent-row-info">
                     <div className="agent-row-name">{agentDef.name}</div>
@@ -95,7 +98,7 @@ export function AgentTab({ draft, onChange }: TabProps): React.JSX.Element {
                         setDefault(agentDef.id)
                       }}
                     >
-                      {isDefaultAgent ? '\u2605' : '\u2606'}
+                      <Star size={14} fill={isDefaultAgent ? 'currentColor' : 'none'} />
                     </button>
                   )}
                   {enabled && (
@@ -107,7 +110,7 @@ export function AgentTab({ draft, onChange }: TabProps): React.JSX.Element {
                         setExpandedAgent(isExpanded ? null : agentDef.id)
                       }}
                     >
-                      {isExpanded ? '\u25B4' : '\u25BE'}
+                      {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                     </button>
                   )}
                 </div>

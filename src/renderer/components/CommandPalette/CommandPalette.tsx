@@ -1,4 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  Search,
+  ArrowLeft,
+  Check,
+  SquareCheck,
+  Square,
+  Settings,
+  Info,
+  Keyboard,
+  SunMoon,
+  Hexagon,
+  PlusCircle,
+  Terminal,
+  Plus,
+  ArrowUp,
+  ArrowDown,
+  CornerDownLeft,
+  ClipboardList,
+} from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
 import type { Project } from '../../../shared/types'
@@ -14,7 +33,7 @@ type ResultType = 'session' | 'project' | 'template' | 'action'
 interface PaletteItem {
   type: ResultType
   id: string
-  icon: string
+  icon: React.ReactNode
   iconClass: string
   name: string
   detail: string
@@ -94,10 +113,11 @@ function applyThemeWithTransition(themeId: string, x?: number, y?: number): void
     update: apply,
     types: ['theme-reveal'],
   })
-  transition.finished.then(() => {
+  const cleanupRevealProps = (): void => {
     document.documentElement.style.removeProperty('--reveal-x')
     document.documentElement.style.removeProperty('--reveal-y')
-  })
+  }
+  transition.finished.then(cleanupRevealProps).catch(cleanupRevealProps)
 }
 
 function highlightMatch(text: string, query: string): React.JSX.Element {
@@ -222,7 +242,7 @@ function PaletteInner({
       items.push({
         type: 'session',
         id: `session-${session.id}`,
-        icon: project ? '\u2B21' : '\u2588', // hexagon or block
+        icon: project ? <Hexagon size={14} /> : <Terminal size={14} />,
         iconClass: session.status === 'running' ? 'green' : session.status === 'error' ? 'red' : '',
         name,
         detail,
@@ -243,7 +263,7 @@ function PaletteInner({
       items.push({
         type: 'project',
         id: `project-${project.id}`,
-        icon: '\u2B21',
+        icon: <Hexagon size={14} />,
         iconClass: '',
         name: project.name,
         detail: project.path,
@@ -257,7 +277,7 @@ function PaletteInner({
       items.push({
         type: 'template',
         id: `template-${tmpl.id}`,
-        icon: '\uD83D\uDCCB', // clipboard emoji
+        icon: <ClipboardList size={14} />,
         iconClass: 'amber',
         name: tmpl.name,
         detail: tmpl.description || 'No description',
@@ -268,7 +288,7 @@ function PaletteInner({
     items.push({
       type: 'action',
       id: 'action-new-project',
-      icon: '+',
+      icon: <Plus size={14} />,
       iconClass: 'blue',
       name: 'New Project',
       detail: 'Open folder and configure a new project',
@@ -277,7 +297,7 @@ function PaletteInner({
     items.push({
       type: 'action',
       id: 'action-new-terminal',
-      icon: '\u2588', // block
+      icon: <Terminal size={14} />,
       iconClass: '',
       name: 'New Terminal',
       detail: 'Open a plain WSL shell',
@@ -286,7 +306,7 @@ function PaletteInner({
     items.push({
       type: 'action',
       id: 'action-new-template',
-      icon: '\u2295', // circled plus
+      icon: <PlusCircle size={14} />,
       iconClass: 'purple',
       name: 'New Template',
       detail: 'Create a new prompt template',
@@ -294,7 +314,7 @@ function PaletteInner({
     items.push({
       type: 'action',
       id: 'action-settings',
-      icon: '\u2699', // gear
+      icon: <Settings size={14} />,
       iconClass: '',
       name: 'Settings',
       detail: 'App settings, agents, keybindings',
@@ -303,7 +323,7 @@ function PaletteInner({
     items.push({
       type: 'action',
       id: 'action-about',
-      icon: '\u24D8', // info circle
+      icon: <Info size={14} />,
       iconClass: '',
       name: 'About',
       detail: 'Version info and credits',
@@ -311,7 +331,7 @@ function PaletteInner({
     items.push({
       type: 'action',
       id: 'action-shortcuts',
-      icon: '\u2328', // keyboard
+      icon: <Keyboard size={14} />,
       iconClass: '',
       name: 'Keyboard Shortcuts',
       detail: 'View all keyboard shortcuts',
@@ -320,7 +340,7 @@ function PaletteInner({
     items.push({
       type: 'action',
       id: 'action-change-theme',
-      icon: '\u25D1', // half circle
+      icon: <SunMoon size={14} />,
       iconClass: '',
       name: 'Change Theme',
       detail: 'Switch between 8 dark and light themes',
@@ -328,7 +348,7 @@ function PaletteInner({
     items.push({
       type: 'action',
       id: 'action-pinned-agents',
-      icon: '\u2699', // gear
+      icon: <Settings size={14} />,
       iconClass: '',
       name: 'Pinned Agents',
       detail: 'Choose which agents appear on the home screen',
@@ -336,7 +356,7 @@ function PaletteInner({
     items.push({
       type: 'action',
       id: 'action-new-workflow',
-      icon: '\u2B21', // hexagon
+      icon: <Hexagon size={14} />,
       iconClass: 'purple',
       name: 'New Workflow',
       detail: 'Create a new agentic workflow',
@@ -610,7 +630,9 @@ function PaletteInner({
       <PanelBox corners="all" glow="none" className="palette">
         {/* Search input */}
         <div className="palette-search">
-          <span className="palette-search-icon">{'\u2318'}</span>
+          <span className="palette-search-icon">
+            <Search size={14} />
+          </span>
           <input
             ref={inputRef}
             className="palette-input"
@@ -645,7 +667,7 @@ function PaletteInner({
                   setSelectedIndex(0)
                 }}
               >
-                {'\u2190'} back
+                <ArrowLeft size={12} /> back
               </button>
               <span>Pinned Agents</span>
             </div>
@@ -665,7 +687,7 @@ function PaletteInner({
                   onMouseEnter={() => setSelectedIndex(i)}
                 >
                   <span className={`cp-agent-check${isVisible ? ' checked' : ''}`}>
-                    {isVisible ? '\u2611' : '\u2610'}
+                    {isVisible ? <SquareCheck size={14} /> : <Square size={14} />}
                   </span>
                   <span className="cp-agent-label">{a.label}</span>
                   <span className="cp-agent-desc">{a.desc}</span>
@@ -684,7 +706,7 @@ function PaletteInner({
                   setSelectedIndex(0)
                 }}
               >
-                {'\u2190'} back
+                <ArrowLeft size={12} /> back
               </button>
               <span>Change theme</span>
             </div>
@@ -714,7 +736,11 @@ function PaletteInner({
                       >
                         <span className="cp-theme-swatch" style={{ background: t.accent }} />
                         <span className="cp-theme-label">{t.label}</span>
-                        {theme === t.id && <span className="cp-theme-check">{'\u2713'}</span>}
+                        {theme === t.id && (
+                          <span className="cp-theme-check">
+                            <Check size={12} />
+                          </span>
+                        )}
                       </div>
                     )
                   })}
@@ -762,7 +788,11 @@ function PaletteInner({
                             <span className="result-badge badge-template">template</span>
                           )}
                           {item.kbd && <span className="result-kbd">{item.kbd}</span>}
-                          {isSelected && <span className="result-kbd">{'\u21B5'}</span>}
+                          {isSelected && (
+                            <span className="result-kbd">
+                              <CornerDownLeft size={12} />
+                            </span>
+                          )}
                         </div>
                       </div>
                     )
@@ -779,11 +809,20 @@ function PaletteInner({
         {/* Footer */}
         <div className="palette-footer">
           <div className="footer-hint">
-            <span className="footer-kbd">{'\u2191\u2193'}</span> navigate
+            <span className="footer-kbd">
+              <>
+                <ArrowUp size={10} />
+                <ArrowDown size={10} />
+              </>
+            </span>{' '}
+            navigate
           </div>
           <div className="footer-sep">{'\u00B7'}</div>
           <div className="footer-hint">
-            <span className="footer-kbd">{'\u21B5'}</span> open
+            <span className="footer-kbd">
+              <CornerDownLeft size={10} />
+            </span>{' '}
+            open
           </div>
           <div className="footer-sep">{'\u00B7'}</div>
           <div className="footer-hint">

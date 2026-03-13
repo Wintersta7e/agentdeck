@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react'
+import { Hexagon, TerminalSquare, Pause } from 'lucide-react'
 import type { WorkflowNodeType } from '../../../shared/types'
 import './AddNodeMenu.css'
 
@@ -10,7 +11,7 @@ interface AddNodeMenuProps {
 
 interface NodeOption {
   type: WorkflowNodeType
-  icon: string
+  icon: React.ReactNode
   label: string
   description: string
   colorClass: string
@@ -19,21 +20,21 @@ interface NodeOption {
 const NODE_OPTIONS: NodeOption[] = [
   {
     type: 'agent',
-    icon: '\u2B21', // ⬡
+    icon: <Hexagon size={16} />,
     label: 'Agent',
     description: 'Runs an AI agent (claude-code, codex, etc.)',
     colorClass: 'wf-add-icon-agent',
   },
   {
     type: 'shell',
-    icon: '$',
+    icon: <TerminalSquare size={16} />,
     label: 'Shell',
     description: 'Executes a bash command in WSL',
     colorClass: 'wf-add-icon-shell',
   },
   {
     type: 'checkpoint',
-    icon: '\u23F8', // ⏸
+    icon: <Pause size={16} />,
     label: 'Checkpoint',
     description: 'Pauses workflow for user confirmation',
     colorClass: 'wf-add-icon-checkpoint',

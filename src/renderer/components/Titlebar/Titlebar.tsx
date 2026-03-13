@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import { X, Minus, Square, ArrowLeft, Plus, Hexagon } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import { HexDot } from '../shared/HexDot'
 import type { Session } from '../../../shared/types'
@@ -18,11 +19,12 @@ export function Titlebar({
   isIdle,
 }: TitlebarProps): React.JSX.Element {
   const [closingTabs, setClosingTabs] = useState<Set<string>>(() => new Set())
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const closeTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
   useEffect(
     () => () => {
-      if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+      closeTimersRef.current.forEach(clearTimeout)
+      closeTimersRef.current.clear()
     },
     [],
   )
@@ -30,7 +32,8 @@ export function Titlebar({
   const animateCloseSession = useCallback(
     (sessionId: string) => {
       setClosingTabs((prev) => new Set(prev).add(sessionId))
-      closeTimerRef.current = setTimeout(() => {
+      const timer = setTimeout(() => {
+        closeTimersRef.current.delete(sessionId)
         setClosingTabs((prev) => {
           const next = new Set(prev)
           next.delete(sessionId)
@@ -38,6 +41,7 @@ export function Titlebar({
         })
         onCloseTab(sessionId)
       }, 250)
+      closeTimersRef.current.set(sessionId, timer)
     },
     [onCloseTab],
   )
@@ -45,7 +49,8 @@ export function Titlebar({
   const animateCloseWorkflow = useCallback(
     (workflowId: string) => {
       setClosingTabs((prev) => new Set(prev).add(workflowId))
-      closeTimerRef.current = setTimeout(() => {
+      const timer = setTimeout(() => {
+        closeTimersRef.current.delete(workflowId)
         setClosingTabs((prev) => {
           const next = new Set(prev)
           next.delete(workflowId)
@@ -53,6 +58,7 @@ export function Titlebar({
         })
         onCloseWorkflowTab(workflowId)
       }, 250)
+      closeTimersRef.current.set(workflowId, timer)
     },
     [onCloseWorkflowTab],
   )
@@ -142,7 +148,7 @@ export function Titlebar({
                   animateCloseSession(s.id)
                 }}
               >
-                {'\u00D7'}
+                <X size={12} />
               </button>
             </div>
           ))}
@@ -152,7 +158,9 @@ export function Titlebar({
               className={`tab tab-workflow${wfId === activeWorkflowId && currentView === 'workflow' ? ' active' : ''}${closingTabs.has(wfId) ? ' closing' : ''}`}
               onClick={() => openWorkflow(wfId)}
             >
-              <span className="tab-wf-icon">{'\u2B21'}</span>
+              <span className="tab-wf-icon">
+                <Hexagon size={12} />
+              </span>
               {workflowNameMap.get(wfId) ?? 'Workflow'}
               <button
                 className="tab-close"
@@ -161,12 +169,12 @@ export function Titlebar({
                   animateCloseWorkflow(wfId)
                 }}
               >
-                {'\u00D7'}
+                <X size={12} />
               </button>
             </div>
           ))}
           <div className="tab-add" onClick={onAddTab}>
-            +
+            <Plus size={14} />
           </div>
         </div>
       )}
@@ -184,17 +192,17 @@ export function Titlebar({
         )}
         {currentView === 'wizard' && (
           <button className="titlebar-btn" onClick={closeWizard}>
-            {'\u2190'} Cancel
+            <ArrowLeft size={14} /> Cancel
           </button>
         )}
         {currentView === 'settings' && (
           <button className="titlebar-btn" onClick={closeSettings}>
-            {'\u2190'} Back to {previousView}
+            <ArrowLeft size={14} /> Back to {previousView}
           </button>
         )}
         {currentView === 'template-editor' && (
           <button className="titlebar-btn" onClick={closeTemplateEditor}>
-            {'\u2190'} Back
+            <ArrowLeft size={14} /> Back
           </button>
         )}
       </div>
@@ -205,21 +213,21 @@ export function Titlebar({
           onClick={() => window.agentDeck.window.minimize()}
           title="Minimize"
         >
-          {'\u2500'}
+          <Minus size={12} />
         </button>
         <button
           className="window-btn"
           onClick={() => window.agentDeck.window.maximize()}
           title="Maximize"
         >
-          {'\u25A1'}
+          <Square size={12} />
         </button>
         <button
           className="window-btn window-btn-close"
           onClick={() => window.agentDeck.window.close()}
           title="Close"
         >
-          {'\u2715'}
+          <X size={12} />
         </button>
       </div>
     </div>

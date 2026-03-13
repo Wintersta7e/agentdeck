@@ -8,6 +8,16 @@ import { getProjectAgents } from '../../../shared/agent-helpers'
 import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
 import { groupTemplates } from '../../utils/templateUtils'
 import { createBlankWorkflow } from '../../utils/workflowUtils'
+import {
+  ChevronRight,
+  Plus,
+  Settings,
+  ArrowLeft,
+  SquareCheck,
+  Square,
+  ClipboardList,
+  Hexagon,
+} from 'lucide-react'
 import './Sidebar.css'
 
 function badgeClass(badge: string): string {
@@ -225,7 +235,7 @@ export function Sidebar({
           >
             <span>
               <span className={`sidebar-chevron${sidebarSections.pinned ? ' open' : ''}`}>
-                {'\u25B6'}
+                <ChevronRight size={10} />
               </span>
               Pinned
             </span>
@@ -236,7 +246,7 @@ export function Sidebar({
                 openWizard()
               }}
             >
-              +
+              <Plus size={14} />
             </button>
           </div>
           {sidebarSections.pinned &&
@@ -272,7 +282,7 @@ export function Sidebar({
                   }}
                   title="Project settings"
                 >
-                  {'\u2699'}
+                  <Settings size={14} />
                 </button>
               </div>
             ))}
@@ -285,7 +295,10 @@ export function Sidebar({
           <div
             ref={menuRef}
             className="sidebar-context-menu"
-            style={{ top: contextMenu.y, left: contextMenu.x }}
+            style={{
+              top: Math.min(contextMenu.y, window.innerHeight - 200),
+              left: Math.min(contextMenu.x, window.innerWidth - 160),
+            }}
           >
             {contextMenu.projectId && !contextMenu.subMenu && (
               <>
@@ -293,7 +306,9 @@ export function Sidebar({
                   className="sidebar-context-item"
                   onClick={() => setContextMenu({ ...contextMenu, subMenu: 'agents' })}
                 >
-                  {'Launch with... \u25B8'}
+                  <>
+                    Launch with... <ChevronRight size={10} />
+                  </>
                 </button>
                 <button
                   className="sidebar-context-item"
@@ -314,7 +329,7 @@ export function Sidebar({
                     className="sidebar-ctx-back"
                     onClick={() => setContextMenu({ ...contextMenu, subMenu: undefined })}
                   >
-                    {'\u2190'}
+                    <ArrowLeft size={12} />
                   </button>
                   <span>Attach Templates</span>
                 </div>
@@ -334,7 +349,7 @@ export function Sidebar({
                               onClick={() => handleToggleTemplate(t.id)}
                             >
                               <span className={`sidebar-ctx-sub-check${checked ? ' on' : ''}`}>
-                                {checked ? '\u2611' : '\u2610'}
+                                {checked ? <SquareCheck size={14} /> : <Square size={14} />}
                               </span>
                               <span className="sidebar-ctx-sub-name">{t.name}</span>
                             </button>
@@ -359,7 +374,7 @@ export function Sidebar({
                         className="sidebar-ctx-back"
                         onClick={() => setContextMenu({ ...contextMenu, subMenu: undefined })}
                       >
-                        {'\u2190'}
+                        <ArrowLeft size={12} />
                       </button>
                       <span>Launch with...</span>
                     </div>
@@ -410,7 +425,7 @@ export function Sidebar({
           >
             <span>
               <span className={`sidebar-chevron${sidebarSections.templates ? ' open' : ''}`}>
-                {'\u25B6'}
+                <ChevronRight size={10} />
               </span>
               Templates
             </span>
@@ -421,7 +436,7 @@ export function Sidebar({
                 openTemplateEditor()
               }}
             >
-              +
+              <Plus size={14} />
             </button>
           </div>
           {sidebarSections.templates &&
@@ -430,7 +445,7 @@ export function Sidebar({
                 <div className="sidebar-group-label">{group.category}</div>
                 {group.templates.map((t) => (
                   <div key={t.id} className="sidebar-item" onClick={() => openTemplateEditor(t.id)}>
-                    <span style={{ fontSize: '11px' }}>{'\u{1F4CB}'}</span>
+                    <ClipboardList size={12} />
                     <div className="sidebar-item-info">
                       <div className="sidebar-item-name">{t.name}</div>
                       <div className="sidebar-item-sub">{t.description}</div>
@@ -449,7 +464,7 @@ export function Sidebar({
           >
             <span>
               <span className={`sidebar-chevron${sidebarSections.workflows ? ' open' : ''}`}>
-                {'\u25B6'}
+                <ChevronRight size={10} />
               </span>
               Workflows
             </span>
@@ -460,7 +475,7 @@ export function Sidebar({
                 createNewWorkflow()
               }}
             >
-              +
+              <Plus size={14} />
             </button>
           </div>
           {sidebarSections.workflows &&
@@ -508,10 +523,12 @@ export function Sidebar({
 
         <div className="sidebar-bottom">
           <button className="new-project-btn" onClick={openWizard}>
-            <span>+</span> New Project
+            <Plus size={14} /> New Project
           </button>
           <button className="sidebar-new-wf" onClick={createNewWorkflow}>
-            {'\u2B21'} New Workflow
+            <>
+              <Hexagon size={12} /> New Workflow
+            </>
           </button>
         </div>
 
