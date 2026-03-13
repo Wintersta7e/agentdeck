@@ -13,6 +13,7 @@ import {
   saveWorkflow,
   renameWorkflow,
   deleteWorkflow,
+  seedWorkflows,
 } from './workflow-store'
 import { createWorkflowEngine, validateWorkflow } from './workflow-engine'
 import type { WorkflowEngine } from './workflow-engine'
@@ -551,17 +552,23 @@ function registerIpcHandlers(store: AppStore): void {
   )
 }
 
-app.whenReady().then(() => {
-  initLogger()
-  log.info('App ready')
-  appStore = createProjectStore()
-  seedTemplates(appStore)
-  seedRoles(appStore)
-  registerIpcHandlers(appStore)
+app
+  .whenReady()
+  .then(async () => {
+    initLogger()
+    log.info('App ready')
+    appStore = createProjectStore()
+    seedTemplates(appStore)
+    seedRoles(appStore)
+    await seedWorkflows(appStore)
+    registerIpcHandlers(appStore)
 
-  createWindow()
-  log.info('Window created')
-})
+    createWindow()
+    log.info('Window created')
+  })
+  .catch((err: unknown) => {
+    log.error('Startup failed', { err: String(err) })
+  })
 
 app.on('before-quit', () => {
   log.info('App quitting')
