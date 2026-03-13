@@ -499,7 +499,8 @@ export async function seedWorkflows(store: AppStore): Promise<void> {
     if (r.builtin) roleMap.set(r.name, r.id)
   }
 
-  if (currentVersion > 0 || rolesChanged) {
+  // Only delete old seed workflows on upgrade (not fresh install — nothing to delete)
+  if (currentVersion > 0) {
     const dir = getWorkflowsDir()
     const files = await fs.promises.readdir(dir)
     for (const f of files) {
