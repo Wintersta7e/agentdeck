@@ -114,12 +114,13 @@ export function WorkflowCanvas({
   const selectedChanged = selectedNodeId !== prev.selectedId
 
   if (workflowOrStatusesChanged || selectedChanged) {
+    // Merge into a single setState call to avoid two re-renders
     setPrev({ workflow, statuses: nodeStatuses, selectedId: selectedNodeId })
-    if (workflow) {
-      setLocalNodes(toFlowNodes(workflow, nodeStatuses, selectedNodeId, onUpdateNode, onDeleteNode))
-    } else {
-      setLocalNodes([])
-    }
+    setLocalNodes(
+      workflow
+        ? toFlowNodes(workflow, nodeStatuses, selectedNodeId, onUpdateNode, onDeleteNode)
+        : [],
+    )
   }
 
   // Edges are purely derived — memoize instead of setState-during-render

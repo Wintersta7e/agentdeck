@@ -32,10 +32,12 @@ export default function WorkflowNodeEditorPanel({
 
   // H7: Auto-clear orphan roleId when role has been deleted
   useEffect(() => {
-    if (node.roleId && !rolesMap.has(node.roleId)) {
+    if (!node.roleId) return
+    if (!rolesMap.has(node.roleId)) {
       onUpdateNode({ ...node, roleId: undefined })
     }
-  }, [node, rolesMap, onUpdateNode])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run when roleId or available roles change, not on every node object change
+  }, [node.roleId, rolesMap, onUpdateNode])
 
   const update = useCallback(
     (patch: Partial<WorkflowNode>) => {

@@ -276,8 +276,8 @@ export default function WorkflowLogPanel({
   // react-window v2 doesn't expose resetAfterIndex — re-scroll to force layout recalc.
   useEffect(() => {
     if (visible && rows.length > 0) {
-      // Dispatch a resize event so the List recalculates its container dimensions
-      window.dispatchEvent(new Event('resize'))
+      // Trigger react-window remeasure via scrollToRow (avoids global resize event
+      // which would also trigger xterm FitAddon in every open terminal pane)
       if (autoScrollRef.current) {
         listRef.current?.scrollToRow({ index: rows.length - 1, align: 'end' })
       }

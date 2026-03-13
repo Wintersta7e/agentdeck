@@ -48,7 +48,7 @@ async function initAndRender(): Promise<void> {
   )
 
   // Listen for version info updates (register before any checkUpdates call)
-  window.agentDeck.agents.onVersionInfo((info) => {
+  const unsubVersionInfo = window.agentDeck.agents.onVersionInfo((info) => {
     const { setAgentVersion, addNotification } = useAppStore.getState()
     setAgentVersion(info.agentId, {
       current: info.current,
@@ -61,6 +61,9 @@ async function initAndRender(): Promise<void> {
       addNotification('info', `Update available: ${name} ${info.current} \u2192 ${info.latest}`)
     }
   })
+
+  // Clean up version info listener on window unload
+  window.addEventListener('unload', () => unsubVersionInfo())
 
   // Fetch WSL data after render so the UI is interactive immediately.
   // On WSL cold boot the first call can take 15s+ while the VM starts.
