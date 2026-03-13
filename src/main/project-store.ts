@@ -55,6 +55,8 @@ export interface StoreSchema {
     rightPanelWidth?: number | undefined
     wfLogPanelWidth?: number | undefined
     rolesSeedVersion?: number | undefined
+    workflowSeedVersion?: number | undefined
+    workflowLastRolesVersion?: number | undefined
   }
 }
 
@@ -471,6 +473,11 @@ export function seedTemplates(store: AppStore): void {
   log.info(
     `Upgraded seed templates to v${String(SEED_VERSION)}: ${String(freshSeeds.length)} seeds + ${String(userTemplates.length)} user templates`,
   )
+}
+
+/** Read roles directly from the store (for use in main process only). */
+export function getRolesFromStore(store: AppStore): Role[] {
+  return store.get('roles')
 }
 
 export function seedRoles(store: AppStore): void {
