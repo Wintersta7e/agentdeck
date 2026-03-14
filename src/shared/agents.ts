@@ -14,7 +14,7 @@ export const AGENTS = [
     description: 'Anthropic AI coding agent',
     versionArgs: ['--version'],
     latestCmd: 'npm view @anthropic-ai/claude-code version 2>/dev/null',
-    updateCmd: 'npm update -g @anthropic-ai/claude-code',
+    updateCmd: 'npm install -g @anthropic-ai/claude-code@latest',
   },
   {
     id: 'codex',
@@ -25,7 +25,7 @@ export const AGENTS = [
     versionArgs: ['--version'],
     installedCmd: 'npm list -g @openai/codex --json 2>/dev/null',
     latestCmd: 'npm view @openai/codex version 2>/dev/null',
-    updateCmd: 'npm update -g @openai/codex',
+    updateCmd: 'npm install -g @openai/codex@latest',
   },
   {
     id: 'aider',
@@ -55,7 +55,7 @@ export const AGENTS = [
     description: 'Google AI terminal agent',
     versionArgs: ['--version'],
     latestCmd: 'npm view @google/gemini-cli version 2>/dev/null',
-    updateCmd: 'npm update -g @google/gemini-cli',
+    updateCmd: 'npm install -g @google/gemini-cli@latest',
   },
   {
     id: 'amazon-q',
@@ -65,7 +65,7 @@ export const AGENTS = [
     description: 'AWS AI developer assistant',
     versionArgs: ['--version'],
     latestCmd: 'npm view @amzn/amazon-q-developer-cli-autoinstall version 2>/dev/null',
-    updateCmd: 'npm update -g @amzn/amazon-q-developer-cli-autoinstall',
+    updateCmd: 'npm install -g @amzn/amazon-q-developer-cli-autoinstall@latest',
   },
   {
     id: 'opencode',
@@ -75,7 +75,7 @@ export const AGENTS = [
     description: 'Open-source terminal AI',
     versionArgs: ['version'],
     latestCmd: 'npm view opencode version 2>/dev/null',
-    updateCmd: 'npm update -g opencode',
+    updateCmd: 'npm install -g opencode@latest',
   },
 ] as const
 

@@ -520,8 +520,8 @@ describe('error scenarios', () => {
     engine.run(wf)
     await tick()
 
-    // Advance past idle timeout: 5 idle checks (5 * 30s = 150s > 120s)
-    for (let i = 0; i < 5; i++) {
+    // Advance past idle timeout: 11 idle checks (11 * 30s = 330s > 300s)
+    for (let i = 0; i < 11; i++) {
       await tick(30_000)
     }
 

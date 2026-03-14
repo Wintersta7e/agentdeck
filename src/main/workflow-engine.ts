@@ -48,16 +48,18 @@ const NODE_INIT =
     'true',
   ].join('; ') + '; '
 
-/** How long an agent node can be idle (no stdout/stderr) before being killed (ms) */
-export const AGENT_IDLE_TIMEOUT = 120_000 // 2 minutes of silence
+const MINUTES = 60_000
 
-/** How often to check whether an agent node has gone idle (ms) */
-const IDLE_CHECK_INTERVAL = 30_000
+/** How long an agent node can be idle (no stdout/stderr) before being killed */
+export const AGENT_IDLE_TIMEOUT = 5 * MINUTES
+
+/** How often to check whether an agent node has gone idle */
+const IDLE_CHECK_INTERVAL = 0.5 * MINUTES
 
 /** Max number of nodes to run concurrently within a single tier */
 const MAX_TIER_CONCURRENCY = 5
 
-/** How often to flush the line buffer even without a newline (ms) */
+/** How often to flush the line buffer even without a newline */
 const LINE_FLUSH_MS = 500
 
 /**

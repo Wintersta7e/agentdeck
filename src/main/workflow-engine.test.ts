@@ -362,8 +362,8 @@ describe('validateWorkflow', () => {
 // ── AGENT_IDLE_TIMEOUT ────────────────────────────────────
 
 describe('AGENT_IDLE_TIMEOUT', () => {
-  it('is exported and equals 120000 (2 minutes)', () => {
-    expect(AGENT_IDLE_TIMEOUT).toBe(120_000)
+  it('is exported and equals 300000 (5 minutes)', () => {
+    expect(AGENT_IDLE_TIMEOUT).toBe(300_000)
   })
 })
 
