@@ -15,6 +15,13 @@
 
 /* Scrollbar: wider and brighter than the global 4px default so it's visible against
    the dark terminal background. */
+/* Disable Chromium scroll anchoring — xterm.js manages its own scrollTop.
+   Without this, the browser re-anchors during buffer updates in long sessions
+   and resets scrollTop to 0 (visible as a "jump to top" on every write). */
+.terminal-container .xterm .xterm-viewport {
+  overflow-anchor: none;
+}
+
 .terminal-container .xterm .xterm-viewport::-webkit-scrollbar {
   width: 8px;
 }
