@@ -130,6 +130,7 @@ interface AppState {
   setWslUsername: (name: string) => void
   agentStatus: Record<string, boolean>
   setAgentStatus: (status: Record<string, boolean>) => void
+  agentRefreshing: boolean
   refreshAgentStatus: () => Promise<void>
 
   // Agent version info (populated by background checks)
@@ -614,14 +615,20 @@ export const useAppStore = create<AppState>((set, get) => ({
   setWslUsername: (name) => set({ wslUsername: name }),
   agentStatus: {},
   setAgentStatus: (status) => set({ agentStatus: status }),
+  agentRefreshing: false,
   refreshAgentStatus: async () => {
-    const status = await window.agentDeck.agents.check()
-    set({ agentStatus: status })
-    // Also trigger version checks for newly-found agents (handles cold-boot retry
-    // and manual refresh scenarios where initial check missed agents)
-    const hasInstalled = Object.values(status).some((v) => v)
-    if (hasInstalled) {
-      window.agentDeck.agents.checkUpdates(status)
+    set({ agentRefreshing: true })
+    try {
+      const status = await window.agentDeck.agents.check()
+      set({ agentStatus: status })
+      // Also trigger version checks for newly-found agents (handles cold-boot retry
+      // and manual refresh scenarios where initial check missed agents)
+      const hasInstalled = Object.values(status).some((v) => v)
+      if (hasInstalled) {
+        window.agentDeck.agents.checkUpdates(status)
+      }
+    } finally {
+      set({ agentRefreshing: false })
     }
   },
 
