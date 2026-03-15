@@ -93,7 +93,11 @@ export function App(): React.JSX.Element {
     (project: Project) => {
       const sessionId = `session-${project.id}-${Date.now()}`
       addSession(sessionId, project.id)
-      void updateProject({ ...project, lastOpened: Date.now() }).catch(() => {})
+      void updateProject({ ...project, lastOpened: Date.now() }).catch((err: unknown) => {
+        window.agentDeck.log.send('warn', 'app', 'Failed to update lastOpened', {
+          err: String(err),
+        })
+      })
     },
     [addSession, updateProject],
   )
@@ -108,7 +112,11 @@ export function App(): React.JSX.Element {
         overrides.agentFlagsOverride = agentConfig.agentFlags
       }
       addSession(sessionId, project.id, overrides)
-      void updateProject({ ...project, lastOpened: Date.now() }).catch(() => {})
+      void updateProject({ ...project, lastOpened: Date.now() }).catch((err: unknown) => {
+        window.agentDeck.log.send('warn', 'app', 'Failed to update lastOpened', {
+          err: String(err),
+        })
+      })
     },
     [addSession, updateProject],
   )
@@ -117,7 +125,9 @@ export function App(): React.JSX.Element {
     (sessionId: string) => {
       // Kill PTY immediately on explicit close — don't rely only on
       // TerminalPane cleanup which may race with React's unmount timing.
-      window.agentDeck.pty.kill(sessionId).catch(() => {})
+      window.agentDeck.pty.kill(sessionId).catch((err: unknown) => {
+        window.agentDeck.log.send('debug', 'pty', 'Kill failed', { err: String(err) })
+      })
       removeSession(sessionId)
     },
     [removeSession],
@@ -167,7 +177,9 @@ export function App(): React.JSX.Element {
         window.agentDeck.zoom
           .set(current + 0.1)
           .then((z) => useAppStore.getState().setZoomFactor(z))
-          .catch(() => {})
+          .catch((err: unknown) => {
+            window.agentDeck.log.send('warn', 'app', 'Zoom IPC failed', { err: String(err) })
+          })
         return
       }
       if (e.ctrlKey && e.key === '-') {
@@ -176,7 +188,9 @@ export function App(): React.JSX.Element {
         window.agentDeck.zoom
           .set(current - 0.1)
           .then((z) => useAppStore.getState().setZoomFactor(z))
-          .catch(() => {})
+          .catch((err: unknown) => {
+            window.agentDeck.log.send('warn', 'app', 'Zoom IPC failed', { err: String(err) })
+          })
         return
       }
       if (e.ctrlKey && e.key === '0') {
@@ -184,7 +198,9 @@ export function App(): React.JSX.Element {
         window.agentDeck.zoom
           .reset()
           .then((z) => useAppStore.getState().setZoomFactor(z))
-          .catch(() => {})
+          .catch((err: unknown) => {
+            window.agentDeck.log.send('warn', 'app', 'Zoom IPC failed', { err: String(err) })
+          })
         return
       }
       if (e.ctrlKey && e.key === 'k') {

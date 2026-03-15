@@ -2,20 +2,9 @@ import { execFile } from 'child_process'
 import type { BrowserWindow } from 'electron'
 import { AGENTS, AGENT_BINARY_MAP } from '../shared/agents'
 import { createLogger } from './logger'
+import { NODE_INIT } from './wsl-utils'
 
 const log = createLogger('agent-updater')
-
-/**
- * Prefix sourced before every WSL command in bash -lc (non-interactive).
- * Login shells don't source .bashrc, so nvm/fnm/volta aren't on PATH.
- * This explicitly initialises the most common node version managers.
- */
-const NODE_INIT =
-  [
-    '[ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh" 2>/dev/null',
-    'type fnm &>/dev/null && eval "$(fnm env --shell bash)" 2>/dev/null',
-    'true',
-  ].join('; ') + '; '
 
 /** Semver extraction pattern */
 const SEMVER_RE = /(\d+\.\d+\.\d+)/
@@ -148,10 +137,14 @@ export function checkAllUpdates(
   for (const agentId of Object.keys(installedAgents)) {
     if (!installedAgents[agentId]) continue
 
-    void checkAgentVersion(agentId).then((info) => {
-      if (!win.isDestroyed()) {
-        win.webContents.send('agents:versionInfo', info)
-      }
-    })
+    void checkAgentVersion(agentId)
+      .then((info) => {
+        if (!win.isDestroyed()) {
+          win.webContents.send('agents:versionInfo', info)
+        }
+      })
+      .catch((err) => {
+        log.warn(`Version check failed for ${agentId}`, { err: String(err) })
+      })
   }
 }

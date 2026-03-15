@@ -141,6 +141,9 @@ export function HomeScreen({
   } | null>(null)
   const cardMenuRef = useRef<HTMLDivElement>(null)
 
+  const dateStr = useMemo(() => formatDate(), [])
+  const greeting = useMemo(() => getGreeting(), [])
+
   const pinned = useMemo(() => projects.filter((p) => p.pinned), [projects])
 
   // O(1) template lookup map — avoids O(n) find() per pinned card
@@ -212,9 +215,9 @@ export function HomeScreen({
       </div>
       <div className="home-content">
         <div className="greeting">
-          <div className="greeting-eyebrow">{formatDate()}</div>
+          <div className="greeting-eyebrow">{dateStr}</div>
           <div className="greeting-headline">
-            {getGreeting()}, <span>{username || 'operator'}</span>.
+            {greeting}, <span>{username || 'operator'}</span>.
           </div>
           <div className="greeting-sub">
             {activeSessions} session{activeSessions !== 1 ? 's' : ''} running

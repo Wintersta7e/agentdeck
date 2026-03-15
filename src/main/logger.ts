@@ -42,6 +42,10 @@ export function initLogger(): void {
   rotate(logPath)
 
   stream = fs.createWriteStream(logPath, { flags: 'a' })
+  stream.on('error', (err) => {
+    console.error(`[logger] write stream error: ${String(err)}`)
+    stream = null
+  })
 }
 
 function write(level: LogLevel, mod: string, message: string, data?: unknown): void {

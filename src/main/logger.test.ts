@@ -14,6 +14,7 @@ vi.mock('fs', () => {
       chunks.push(line)
     }),
     end: vi.fn(),
+    on: vi.fn().mockReturnThis(),
   }
   return {
     mkdirSync: vi.fn(),
