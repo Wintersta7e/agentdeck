@@ -3,6 +3,7 @@ import type { IPty } from 'node-pty'
 import * as pty from 'node-pty'
 import { createLogger } from './logger'
 import { ptyBus } from './pty-bus'
+import { toWslPath } from './wsl-utils'
 import { AGENT_BINARY_MAP, SAFE_FLAGS_RE } from '../shared/agents'
 
 const log = createLogger('pty-manager')
@@ -15,23 +16,6 @@ const log = createLogger('pty-manager')
  */
 const NPM_AGENT_PACKAGES: Record<string, { pkg: string; binEntry: string }> = {
   codex: { pkg: '@openai/codex', binEntry: 'bin/codex.js' },
-}
-
-function toWslPath(p: string): string {
-  // Windows drive path: C:\foo\bar → /mnt/c/foo/bar
-  const driveMatch = p.match(/^([A-Za-z]):[/\\](.*)$/)
-  if (driveMatch && driveMatch[1] && driveMatch[2] !== undefined) {
-    const drive = driveMatch[1].toLowerCase()
-    const rest = driveMatch[2].replace(/\\/g, '/')
-    return `/mnt/${drive}/${rest}`
-  }
-  // UNC WSL path: \\wsl$\Distro\home\user\... or \\wsl.localhost\Distro\home\user\...
-  const uncMatch = p.match(/^[/\\]{2}(?:wsl\$|wsl\.localhost)[/\\][^/\\]+[/\\]?(.*)$/)
-  if (uncMatch) {
-    const rest = (uncMatch[1] ?? '').replace(/\\/g, '/')
-    return `/${rest}`
-  }
-  return p
 }
 
 export interface PtyManager {
@@ -281,8 +265,9 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
   }
 
   function killAll(): void {
-    log.info(`Killing all sessions (${sessions.size} active)`)
-    for (const [id] of sessions) {
+    const ids = [...sessions.keys()]
+    log.info(`Killing all sessions (${ids.length} active)`)
+    for (const id of ids) {
       kill(id)
     }
   }
