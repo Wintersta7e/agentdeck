@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Search,
-  ArrowLeft,
-  Check,
-  SquareCheck,
-  Square,
   Settings,
   Info,
   Keyboard,
@@ -24,6 +20,8 @@ import type { Project } from '../../../shared/types'
 import { createBlankWorkflow } from '../../utils/workflowUtils'
 import { PanelBox } from '../shared/PanelBox'
 import { HexGrid } from '../shared/HexGrid'
+import { ThemeSubmenu } from './ThemeSubmenu'
+import { AgentsSubmenu } from './AgentsSubmenu'
 import './CommandPalette.css'
 
 type ScopeTab = 'projects' | 'templates' | 'sessions' | 'tools'
@@ -430,6 +428,30 @@ function PaletteInner({
     setSelectedIndex(0)
   }, [])
 
+  // Sub-menu callbacks
+  const handleSubMenuBack = useCallback(() => {
+    setSubMenu(null)
+    setSelectedIndex(0)
+  }, [])
+
+  const handleThemeSelect = useCallback(
+    (themeId: string, x?: number, y?: number) => {
+      applyThemeWithTransition(themeId, () => setTheme(themeId), x, y)
+      closePalette()
+    },
+    [setTheme, closePalette],
+  )
+
+  const handleAgentToggle = useCallback(
+    (agentId: string) => {
+      const current = visibleAgentsRef.current ?? ALL_AGENTS.map((a) => a.id)
+      const isVisible = current.includes(agentId)
+      const updated = isVisible ? current.filter((id) => id !== agentId) : [...current, agentId]
+      setVisibleAgents(updated)
+    },
+    [setVisibleAgents],
+  )
+
   // Execute action for the selected item
   const executeItem = useCallback(
     (item: PaletteItem) => {
@@ -504,86 +526,11 @@ function PaletteInner({
     ],
   )
 
-  // Keyboard navigation
+  // Keyboard navigation (main palette only — submenus handle their own keys)
   useEffect(() => {
+    if (subMenu !== null) return
+
     function handleKeyDown(e: KeyboardEvent): void {
-      // Agents sub-menu keyboard handling
-      if (subMenuRef.current === 'agents') {
-        if (e.key === 'Escape') {
-          e.preventDefault()
-          e.stopPropagation()
-          setSubMenu(null)
-          setSelectedIndex(0)
-          return
-        }
-        if (e.key === 'ArrowDown') {
-          e.preventDefault()
-          setSelectedIndex((prev) => Math.min(prev + 1, ALL_AGENTS.length - 1))
-          return
-        }
-        if (e.key === 'ArrowUp') {
-          e.preventDefault()
-          setSelectedIndex((prev) => Math.max(prev - 1, 0))
-          return
-        }
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          const agent = ALL_AGENTS[selectedIndexRef.current]
-          if (agent) {
-            const current = visibleAgentsRef.current ?? ALL_AGENTS.map((a) => a.id)
-            const isVisible = current.includes(agent.id)
-            const updated = isVisible
-              ? current.filter((id) => id !== agent.id)
-              : [...current, agent.id]
-            setVisibleAgents(updated)
-          }
-          return
-        }
-        return
-      }
-
-      // Theme sub-menu keyboard handling
-      if (subMenuRef.current === 'theme') {
-        if (e.key === 'Escape') {
-          e.preventDefault()
-          e.stopPropagation()
-          document.documentElement.dataset.theme = previewOriginalRef.current
-          setSubMenu(null)
-          setSelectedIndex(0)
-          return
-        }
-        if (e.key === 'ArrowDown') {
-          e.preventDefault()
-          setSelectedIndex((prev) => {
-            const nextIdx = Math.min(prev + 1, ALL_THEMES.length - 1)
-            const nextTheme = ALL_THEMES[nextIdx]
-            if (nextTheme) document.documentElement.dataset.theme = nextTheme.id
-            return nextIdx
-          })
-          return
-        }
-        if (e.key === 'ArrowUp') {
-          e.preventDefault()
-          setSelectedIndex((prev) => {
-            const nextIdx = Math.max(prev - 1, 0)
-            const nextTheme = ALL_THEMES[nextIdx]
-            if (nextTheme) document.documentElement.dataset.theme = nextTheme.id
-            return nextIdx
-          })
-          return
-        }
-        if (e.key === 'Enter') {
-          e.preventDefault()
-          const selected = ALL_THEMES[selectedIndexRef.current]
-          if (selected) {
-            applyThemeWithTransition(selected.id, () => setTheme(selected.id))
-          }
-          closePalette()
-          return
-        }
-        return
-      }
-
       if (e.key === 'Escape') {
         e.preventDefault()
         e.stopPropagation()
@@ -618,7 +565,7 @@ function PaletteInner({
     // Use capture phase so Escape is caught before App's handler
     window.addEventListener('keydown', handleKeyDown, true)
     return () => window.removeEventListener('keydown', handleKeyDown, true)
-  }, [closePalette, flatItems, executeItem, setTheme, setVisibleAgents])
+  }, [subMenu, closePalette, flatItems, executeItem])
 
   // Scroll selected item into view
   useEffect(() => {
@@ -676,95 +623,25 @@ function PaletteInner({
 
         {/* Results */}
         {subMenu === 'agents' ? (
-          <div className="palette-results">
-            <div className="cp-submenu-header">
-              <button
-                className="cp-back-btn"
-                onClick={() => {
-                  setSubMenu(null)
-                  setSelectedIndex(0)
-                }}
-              >
-                <ArrowLeft size={12} /> back
-              </button>
-              <span>Pinned Agents</span>
-            </div>
-            {ALL_AGENTS.map((a, i) => {
-              const current = visibleAgents ?? ALL_AGENTS.map((ag) => ag.id)
-              const isVisible = current.includes(a.id)
-              return (
-                <div
-                  key={a.id}
-                  className={`cp-agent-item${selectedIndex === i ? ' selected' : ''}`}
-                  onClick={() => {
-                    const updated = isVisible
-                      ? current.filter((id) => id !== a.id)
-                      : [...current, a.id]
-                    setVisibleAgents(updated)
-                  }}
-                  onMouseEnter={() => setSelectedIndex(i)}
-                >
-                  <span className={`cp-agent-check${isVisible ? ' checked' : ''}`}>
-                    {isVisible ? <SquareCheck size={14} /> : <Square size={14} />}
-                  </span>
-                  <span className="cp-agent-label">{a.label}</span>
-                  <span className="cp-agent-desc">{a.desc}</span>
-                </div>
-              )
-            })}
-          </div>
+          <AgentsSubmenu
+            agents={ALL_AGENTS}
+            visibleAgents={visibleAgents}
+            selectedIndex={selectedIndex}
+            onSelectIndex={setSelectedIndex}
+            onToggle={handleAgentToggle}
+            onBack={handleSubMenuBack}
+          />
         ) : subMenu === 'theme' ? (
-          <div className="palette-results">
-            <div className="cp-submenu-header">
-              <button
-                className="cp-back-btn"
-                onClick={() => {
-                  document.documentElement.dataset.theme = previewOriginal
-                  setSubMenu(null)
-                  setSelectedIndex(0)
-                }}
-              >
-                <ArrowLeft size={12} /> back
-              </button>
-              <span>Change theme</span>
-            </div>
-            {THEME_GROUPS.map((group, gi) => {
-              const groupOffset = THEME_GROUPS.slice(0, gi).reduce(
-                (sum, g) => sum + g.themes.length,
-                0,
-              )
-              return (
-                <div key={group.label} className="cp-theme-group">
-                  <div className="cp-theme-group-label">{group.label}</div>
-                  {group.themes.map((t, ti) => {
-                    const flatIdx = groupOffset + ti
-                    return (
-                      <div
-                        key={t.id || 'default'}
-                        className={`cp-theme-item${selectedIndex === flatIdx ? ' selected' : ''}${theme === t.id ? ' active' : ''}`}
-                        onClick={(e) => {
-                          applyThemeWithTransition(t.id, () => setTheme(t.id), e.clientX, e.clientY)
-                          closePalette()
-                        }}
-                        onMouseEnter={() => {
-                          setSelectedIndex(flatIdx)
-                          document.documentElement.dataset.theme = t.id
-                        }}
-                      >
-                        <span className="cp-theme-swatch" style={{ background: t.accent }} />
-                        <span className="cp-theme-label">{t.label}</span>
-                        {theme === t.id && (
-                          <span className="cp-theme-check">
-                            <Check size={12} />
-                          </span>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              )
-            })}
-          </div>
+          <ThemeSubmenu
+            themeGroups={THEME_GROUPS}
+            allThemes={ALL_THEMES}
+            currentTheme={theme}
+            selectedIndex={selectedIndex}
+            onSelectIndex={setSelectedIndex}
+            onSelect={handleThemeSelect}
+            onBack={handleSubMenuBack}
+            previewOriginalRef={previewOriginalRef}
+          />
         ) : (
           <div className="palette-results" ref={resultsRef}>
             {flatItems.length === 0 && (
