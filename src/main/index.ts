@@ -5,7 +5,7 @@ import { join } from 'path'
 import { createPtyManager, type PtyManager } from './pty-manager'
 import { createProjectStore, seedRoles, seedTemplates, type AppStore } from './project-store'
 import { detectStack } from './detect-stack'
-import { getDefaultDistroAsync, wslPathToWindows } from './wsl-utils'
+import { getDefaultDistroAsync, toWslPath, wslPathToWindows } from './wsl-utils'
 import { initLogger, createLogger, closeLogger } from './logger'
 import {
   listWorkflows,
@@ -29,21 +29,6 @@ let workflowEngine: WorkflowEngine | null = null
 let appStore: AppStore | null = null
 
 const ALLOWED_FILES = new Set(['CLAUDE.md', 'AGENTS.md', 'README.md'])
-
-/** Convert a Windows path to WSL: C:\foo → /mnt/c/foo, \\wsl$\D\x → /x */
-function toWslPathMain(p: string): string {
-  const normalized = p.replace(/\\/g, '/')
-  const driveMatch = normalized.match(/^([A-Za-z]):\/(.*)$/)
-  if (driveMatch && driveMatch[1] && driveMatch[2] !== undefined) {
-    return `/mnt/${driveMatch[1].toLowerCase()}/${driveMatch[2]}`
-  }
-  // UNC WSL path: //wsl$/Distro/home/user/... or //wsl.localhost/Distro/...
-  const uncMatch = normalized.match(/^\/\/(?:wsl\$|wsl\.localhost)\/[^/]+\/?(.*)$/)
-  if (uncMatch) {
-    return `/${uncMatch[1] ?? ''}`
-  }
-  return normalized
-}
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -109,7 +94,7 @@ function createWindow(): void {
     if (!url.startsWith('file://')) return
     let pathname = decodeURIComponent(new URL(url).pathname)
     if (/^\/[A-Za-z]:/.test(pathname)) pathname = pathname.slice(1)
-    const wslPath = toWslPathMain(pathname)
+    const wslPath = toWslPath(pathname)
     log.info(`File drop intercepted: ${url} → ${wslPath}`)
     mainWindow?.webContents.send('file-dropped', [wslPath])
   }
@@ -142,15 +127,43 @@ function registerIpcHandlers(store: AppStore): void {
       agent?: string,
       agentFlags?: string,
     ) => {
-      ptyManager?.spawn(sessionId, cols, rows, projectPath, startupCommands, env, agent, agentFlags)
+      // C1: Sanitise renderer-supplied env — block keys that could hijack the PTY process
+      const BLOCKED_ENV = new Set([
+        'LD_PRELOAD',
+        'LD_LIBRARY_PATH',
+        'NODE_OPTIONS',
+        'ELECTRON_RUN_AS_NODE',
+        'ELECTRON_NO_ASAR',
+      ])
+      let safeEnv: Record<string, string> | undefined
+      if (env && typeof env === 'object') {
+        safeEnv = {}
+        for (const [k, v] of Object.entries(env)) {
+          if (typeof k === 'string' && typeof v === 'string' && !BLOCKED_ENV.has(k)) {
+            safeEnv[k] = v
+          }
+        }
+      }
+      ptyManager?.spawn(
+        sessionId,
+        cols,
+        rows,
+        projectPath,
+        startupCommands,
+        safeEnv,
+        agent,
+        agentFlags,
+      )
     },
   )
   ipcMain.on('pty:write', (_, sessionId: string, data: string) => {
+    if (typeof sessionId !== 'string' || !sessionId) return
     ptyManager?.write(sessionId, data)
   })
   // Note: resize rate-limiting is handled renderer-side (80ms debounced ResizeObserver).
   // No server-side guard — node-pty resize is cheap and idempotent.
   ipcMain.on('pty:resize', (_, sessionId: string, cols: number, rows: number) => {
+    if (typeof sessionId !== 'string' || !sessionId) return
     if (cols > 0 && rows > 0) ptyManager?.resize(sessionId, cols, rows)
   })
   ipcMain.handle('pty:kill', (_, sessionId: string) => {
@@ -342,7 +355,17 @@ function registerIpcHandlers(store: AppStore): void {
     const current = store.get('appPrefs')
     const filtered: Record<string, unknown> = {}
     for (const [k, v] of Object.entries(patch)) {
-      if (LAYOUT_KEYS.has(k)) filtered[k] = v
+      if (!LAYOUT_KEYS.has(k)) continue
+      if (k === 'sidebarOpen') {
+        if (typeof v !== 'boolean') continue
+      } else if (k === 'sidebarWidth' || k === 'rightPanelWidth' || k === 'wfLogPanelWidth') {
+        if (typeof v !== 'number' || !isFinite(v) || v < 0 || v > 5000) continue
+      } else if (k === 'sidebarSections') {
+        if (!v || typeof v !== 'object' || Array.isArray(v)) continue
+        if (!Object.values(v as Record<string, unknown>).every((val) => typeof val === 'boolean'))
+          continue
+      }
+      filtered[k] = v
     }
     store.set('appPrefs', { ...current, ...filtered })
   })
@@ -359,8 +382,10 @@ function registerIpcHandlers(store: AppStore): void {
   })
 
   /* -- Agent version checks (fire-and-forget) ---------------------- */
-  ipcMain.handle('agents:checkUpdates', (_, installedAgents: Record<string, boolean>) => {
-    if (mainWindow) checkAllUpdates(mainWindow, installedAgents)
+  ipcMain.handle('agents:checkUpdates', (_, installedAgents: unknown) => {
+    if (!installedAgents || typeof installedAgents !== 'object' || Array.isArray(installedAgents))
+      return
+    if (mainWindow) checkAllUpdates(mainWindow, installedAgents as Record<string, boolean>)
   })
 
   ipcMain.handle('agents:update', async (_, agentId: string) => {
@@ -465,7 +490,12 @@ function registerIpcHandlers(store: AppStore): void {
   ipcMain.handle('workflows:list', () => listWorkflows())
   ipcMain.handle('workflows:load', (_, id: string) => loadWorkflow(id))
   ipcMain.handle('workflows:save', (_, workflow: Workflow) => saveWorkflow(workflow))
-  ipcMain.handle('workflows:rename', (_, id: string, name: string) => renameWorkflow(id, name))
+  ipcMain.handle('workflows:rename', (_, id: string, name: string) => {
+    if (typeof id !== 'string' || !id) throw new Error('Invalid workflow id')
+    if (typeof name !== 'string' || !name.trim() || name.length > 200)
+      throw new Error('Invalid workflow name')
+    return renameWorkflow(id, name)
+  })
   ipcMain.handle('workflows:delete', async (_, id: string) => {
     // C6: Stop running workflow before deleting to avoid orphaned PTYs
     workflowEngine?.stop(id)
@@ -480,20 +510,26 @@ function registerIpcHandlers(store: AppStore): void {
     // C2: Validate workflow structure before execution
     validateWorkflow(workflow)
     // Convert Windows path to WSL if needed (projects store Windows paths)
-    const wslPath = projectPath ? toWslPathMain(projectPath) : undefined
-    // H1: Validate projectPath if provided (WSL absolute path, allow spaces, reject ..)
-    if (
-      wslPath !== undefined &&
-      (!/^\/[^\x00;|&`$<>\\]+$/.test(wslPath) || wslPath.includes('..'))
-    ) {
-      throw new Error(`Invalid project path: ${wslPath}`)
+    const wslPath = projectPath ? toWslPath(projectPath) : undefined
+    // C2: Validate projectPath — must be absolute WSL path, no traversal or shell metacharacters.
+    // The workflow engine's shellQuote handles safe quoting; this rejects obviously malicious input.
+    if (wslPath !== undefined) {
+      if (typeof wslPath !== 'string' || wslPath.length > 1024 || !wslPath.startsWith('/')) {
+        throw new Error(`Invalid project path: must be an absolute WSL path`)
+      }
+      if (wslPath.includes('..')) {
+        throw new Error(`Invalid project path: path traversal not allowed`)
+      }
     }
     workflowEngine.run(workflow, wslPath)
   })
   ipcMain.handle('workflow:stop', (_, workflowId: string) => {
+    if (typeof workflowId !== 'string' || !workflowId) return
     workflowEngine?.stop(workflowId)
   })
   ipcMain.handle('workflow:resume', (_, workflowId: string, nodeId: string) => {
+    if (typeof workflowId !== 'string' || !workflowId) return
+    if (typeof nodeId !== 'string' || !nodeId) return
     workflowEngine?.resume(workflowId, nodeId)
   })
 
@@ -519,7 +555,7 @@ function registerIpcHandlers(store: AppStore): void {
           const paths = stdout
             .trim()
             .split(/\r?\n/)
-            .map((p) => toWslPathMain(p.trim()))
+            .map((p) => toWslPath(p.trim()))
           log.info(`clipboard:readFilePaths → ${JSON.stringify(paths)}`)
           resolve(paths)
         },

@@ -176,6 +176,7 @@ contextBridge.exposeInMainWorld('agentDeck', {
     resume: (id: string, nodeId: string): Promise<void> =>
       ipcRenderer.invoke('workflow:resume', id, nodeId),
     onEvent: (workflowId: string, cb: (event: WorkflowEvent) => void): (() => void) => {
+      if (typeof workflowId !== 'string' || !/^[a-zA-Z0-9_-]+$/.test(workflowId)) return () => {}
       const ch = `workflow:event:${workflowId}`
       const handler = (_: unknown, e: WorkflowEvent): void => cb(e)
       ipcRenderer.on(ch, handler)
