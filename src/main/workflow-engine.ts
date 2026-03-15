@@ -11,6 +11,7 @@ import type {
   Role,
 } from '../shared/types'
 import { AGENT_BINARY_MAP, KNOWN_AGENT_IDS, SAFE_FLAGS_RE } from '../shared/agents'
+import { NODE_INIT } from './wsl-utils'
 
 const log = createLogger('workflow-engine')
 
@@ -35,18 +36,6 @@ const AGENT_PRINT_FLAGS: Record<string, string[]> = {
   'amazon-q': ['chat', '--no-interactive', '--trust-all-tools'],
   opencode: ['run'],
 }
-
-/**
- * Prefix sourced before every workflow command in bash -lc (non-interactive).
- * Login shells don't source .bashrc, so nvm/fnm/volta aren't on PATH.
- * This explicitly initialises the most common node version managers.
- */
-const NODE_INIT =
-  [
-    '[ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh" 2>/dev/null',
-    'type fnm &>/dev/null && eval "$(fnm env --shell bash)" 2>/dev/null',
-    'true',
-  ].join('; ') + '; '
 
 const MINUTES = 60_000
 
@@ -142,6 +131,15 @@ export function validateWorkflow(w: unknown): w is Workflow {
       throw new Error('Node roleId must be a string')
     if (typeof n.roleId === 'string' && n.roleId.length > MAX_NAME)
       throw new Error(`Node roleId exceeds ${MAX_NAME} chars`)
+    if (
+      n.timeout !== undefined &&
+      (typeof n.timeout !== 'number' ||
+        !isFinite(n.timeout) ||
+        n.timeout < 1000 ||
+        n.timeout > 86400000)
+    ) {
+      throw new Error('Node timeout must be between 1000ms and 86400000ms (24h)')
+    }
   }
 
   // C6: Validate edge references
@@ -243,6 +241,18 @@ export function createWorkflowEngine(
       roles: Map<string, Role>,
     ): Promise<void> {
       return new Promise<void>((resolve, reject) => {
+        let settled = false
+        const settleResolve = (): void => {
+          if (settled) return
+          settled = true
+          resolve()
+        }
+        const settleReject = (err: Error): void => {
+          if (settled) return
+          settled = true
+          reject(err)
+        }
+
         // Build prompt: [role persona] + [task prompt] + [output format] + [context]
         const role = node.roleId ? roles.get(node.roleId) : undefined
         const promptParts: string[] = []
@@ -253,7 +263,7 @@ export function createWorkflowEngine(
         const prompt = promptParts.join('\n\n')
 
         if (!prompt) {
-          resolve()
+          settleResolve()
           return
         }
 
@@ -361,7 +371,9 @@ export function createWorkflowEngine(
             clearInterval(idleCheckTimer)
             clearTimeout(absoluteTimer)
             activeChildProcesses.delete(child)
-            reject(new Error(`Agent ${bin} idle for ${Math.round(idleMs / 1000)}s — no output`))
+            settleReject(
+              new Error(`Agent ${bin} idle for ${Math.round(idleMs / 1000)}s — no output`),
+            )
           }
         }, IDLE_CHECK_INTERVAL)
 
@@ -378,7 +390,7 @@ export function createWorkflowEngine(
               clearInterval(flushTimer)
               clearInterval(idleCheckTimer)
               activeChildProcesses.delete(child)
-              reject(
+              settleReject(
                 new Error(
                   `Agent ${bin} timed out after ${(node.timeout ?? 0) / 1000}s (absolute limit)`,
                 ),
@@ -394,8 +406,8 @@ export function createWorkflowEngine(
           // Flush any remaining partial line
           const remaining = lineBuf.trim()
           if (remaining) emitLine(remaining)
-          if (code === 0 || code === null) resolve()
-          else reject(new Error(`Agent ${bin} exited with code ${code}`))
+          if (code === 0 || code === null) settleResolve()
+          else settleReject(new Error(`Agent ${bin} exited with code ${code}`))
         })
 
         child.on('error', (err: Error) => {
@@ -403,7 +415,7 @@ export function createWorkflowEngine(
           clearTimeout(absoluteTimer)
           clearInterval(flushTimer)
           activeChildProcesses.delete(child)
-          reject(err)
+          settleReject(err)
         })
       })
     }
@@ -517,7 +529,7 @@ export function createWorkflowEngine(
                   message: node.message ?? 'Waiting for user to continue...',
                 })
                 await onCheckpoint(node.id)
-                if (stopped) return
+                if (stopped) return // Don't emit node:resumed when workflow was stopped
                 push(workflow.id, {
                   type: 'node:resumed',
                   workflowId: workflow.id,
@@ -569,8 +581,14 @@ export function createWorkflowEngine(
           )
           await Promise.all(workers)
         }
-      } catch {
-        // Node errors propagate here via throw — already emitted as node:error above
+      } catch (err) {
+        // Node failures already emitted as node:error. Log anything unexpected.
+        if (err instanceof Error) {
+          log.error('Unexpected workflow engine error', {
+            workflowId: workflow.id,
+            err: err.message,
+          })
+        }
       }
 
       if (!stopped) {

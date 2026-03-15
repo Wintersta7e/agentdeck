@@ -95,9 +95,15 @@ const THEME_GROUPS: { label: string; themes: ThemeOption[] }[] = [
 
 const ALL_THEMES: ThemeOption[] = THEME_GROUPS.flatMap((g) => g.themes)
 
-function applyThemeWithTransition(themeId: string, x?: number, y?: number): void {
+function applyThemeWithTransition(
+  themeId: string,
+  onApply?: () => void,
+  x?: number,
+  y?: number,
+): void {
   const apply = (): void => {
     document.documentElement.dataset.theme = themeId
+    onApply?.()
   }
 
   if (!document.startViewTransition) {
@@ -201,6 +207,15 @@ function PaletteInner({
   useEffect(() => {
     previewOriginalRef.current = previewOriginal
   }, [previewOriginal])
+
+  // Restore theme on unmount if palette closes while theme preview is active
+  useEffect(() => {
+    return () => {
+      if (subMenuRef.current === 'theme') {
+        document.documentElement.dataset.theme = previewOriginalRef.current
+      }
+    }
+  }, [])
 
   const visibleAgentsRef = useRef(visibleAgents)
   useEffect(() => {
@@ -539,26 +554,29 @@ function PaletteInner({
         }
         if (e.key === 'ArrowDown') {
           e.preventDefault()
-          setSelectedIndex((prev) => Math.min(prev + 1, ALL_THEMES.length - 1))
-          const nextIndex = Math.min(selectedIndexRef.current + 1, ALL_THEMES.length - 1)
-          const nextTheme = ALL_THEMES[nextIndex]
-          if (nextTheme) document.documentElement.dataset.theme = nextTheme.id
+          setSelectedIndex((prev) => {
+            const nextIdx = Math.min(prev + 1, ALL_THEMES.length - 1)
+            const nextTheme = ALL_THEMES[nextIdx]
+            if (nextTheme) document.documentElement.dataset.theme = nextTheme.id
+            return nextIdx
+          })
           return
         }
         if (e.key === 'ArrowUp') {
           e.preventDefault()
-          setSelectedIndex((prev) => Math.max(prev - 1, 0))
-          const prevIndex = Math.max(selectedIndexRef.current - 1, 0)
-          const prevTheme = ALL_THEMES[prevIndex]
-          if (prevTheme) document.documentElement.dataset.theme = prevTheme.id
+          setSelectedIndex((prev) => {
+            const nextIdx = Math.max(prev - 1, 0)
+            const nextTheme = ALL_THEMES[nextIdx]
+            if (nextTheme) document.documentElement.dataset.theme = nextTheme.id
+            return nextIdx
+          })
           return
         }
         if (e.key === 'Enter') {
           e.preventDefault()
           const selected = ALL_THEMES[selectedIndexRef.current]
           if (selected) {
-            applyThemeWithTransition(selected.id)
-            setTheme(selected.id)
+            applyThemeWithTransition(selected.id, () => setTheme(selected.id))
           }
           closePalette()
           return
@@ -725,8 +743,7 @@ function PaletteInner({
                         key={t.id || 'default'}
                         className={`cp-theme-item${selectedIndex === flatIdx ? ' selected' : ''}${theme === t.id ? ' active' : ''}`}
                         onClick={(e) => {
-                          applyThemeWithTransition(t.id, e.clientX, e.clientY)
-                          setTheme(t.id)
+                          applyThemeWithTransition(t.id, () => setTheme(t.id), e.clientX, e.clientY)
                           closePalette()
                         }}
                         onMouseEnter={() => {

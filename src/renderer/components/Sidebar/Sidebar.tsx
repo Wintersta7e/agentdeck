@@ -158,6 +158,7 @@ export function Sidebar({
         window.agentDeck.log.send('error', 'sidebar', 'Failed to delete workflow', {
           err: String(err),
         })
+        useAppStore.getState().addNotification('error', 'Failed to delete workflow')
       })
     closeMenu()
   }
@@ -176,7 +177,8 @@ export function Sidebar({
   function commitRename(): void {
     if (!renamingWorkflowId) return
     const trimmed = renameValue.trim()
-    const wf = workflows.find((w) => w.id === renamingWorkflowId)
+    const current = useAppStore.getState().workflows
+    const wf = current.find((w) => w.id === renamingWorkflowId)
     if (!trimmed || !wf || trimmed === wf.name) {
       setRenamingWorkflowId(null)
       return
@@ -188,7 +190,7 @@ export function Sidebar({
       })
     })
     // Update Zustand store
-    setWorkflows(workflows.map((w) => (w.id === renamingWorkflowId ? { ...w, name: trimmed } : w)))
+    setWorkflows(current.map((w) => (w.id === renamingWorkflowId ? { ...w, name: trimmed } : w)))
     useAppStore.getState().updateWorkflowMeta(renamingWorkflowId, { name: trimmed })
     setRenamingWorkflowId(null)
   }
@@ -196,7 +198,8 @@ export function Sidebar({
   function handleRenameKeyDown(e: React.KeyboardEvent): void {
     if (e.key === 'Enter') {
       e.preventDefault()
-      commitRename()
+      ;(e.target as HTMLInputElement).blur() // This triggers onBlur → commitRename
+      return
     } else if (e.key === 'Escape') {
       setRenamingWorkflowId(null)
     }

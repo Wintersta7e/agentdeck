@@ -28,6 +28,8 @@ export interface EnvVar {
   key: string
   value: string
   secret: boolean
+  /** Set when decryption fails — preserves raw encrypted value so it isn't overwritten. */
+  _decryptFailed?: boolean | undefined
 }
 
 export interface ProjectIdentity {

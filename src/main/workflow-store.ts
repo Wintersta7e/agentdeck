@@ -502,13 +502,17 @@ export async function seedWorkflows(store: AppStore): Promise<void> {
   // Only delete old seed workflows on upgrade (not fresh install — nothing to delete)
   if (currentVersion > 0) {
     const dir = getWorkflowsDir()
-    const files = await fs.promises.readdir(dir)
-    for (const f of files) {
-      if (f.startsWith('seed-wf-') && f.endsWith('.json')) {
-        await fs.promises.rm(path.join(dir, f), { force: true })
+    try {
+      const files = await fs.promises.readdir(dir)
+      for (const f of files) {
+        if (f.startsWith('seed-wf-') && f.endsWith('.json')) {
+          await fs.promises.rm(path.join(dir, f), { force: true })
+        }
       }
+      log.info('Cleared old seed workflows for upgrade')
+    } catch (err) {
+      log.warn('Failed to clean old seed workflows during upgrade', { err: String(err) })
     }
-    log.info('Cleared old seed workflows for upgrade')
   }
 
   let count = 0
@@ -560,9 +564,12 @@ export async function seedWorkflows(store: AppStore): Promise<void> {
   log.info(`Seeded ${String(count)} built-in workflows (v${String(WORKFLOW_SEED_VERSION)})`)
 }
 
-/** Strip path separators and relative components to prevent path traversal */
+/** Validate id is safe for filesystem use — reject anything with non-alphanumeric chars */
 function safeId(id: string): string {
-  return id.replace(/[^a-zA-Z0-9_-]/g, '')
+  if (!id || !/^[a-zA-Z0-9_-]+$/.test(id)) {
+    throw new Error(`Invalid workflow id for filesystem use: ${id}`)
+  }
+  return id
 }
 
 // M4: Cache workflows directory path
@@ -571,7 +578,12 @@ let cachedWorkflowsDir: string | null = null
 function getWorkflowsDir(): string {
   if (cachedWorkflowsDir) return cachedWorkflowsDir
   const dir = path.join(app.getPath('userData'), 'workflows')
-  fs.mkdirSync(dir, { recursive: true })
+  try {
+    fs.mkdirSync(dir, { recursive: true })
+  } catch (err) {
+    log.error('Failed to create workflows directory', { err: String(err) })
+    throw new Error('Failed to create workflows storage directory')
+  }
   cachedWorkflowsDir = dir
   return dir
 }
@@ -658,7 +670,7 @@ export async function renameWorkflow(id: string, name: string): Promise<void> {
   const wf = await loadWorkflow(id)
   if (!wf) {
     log.warn('Cannot rename — workflow not found', { id })
-    return
+    throw new Error(`Workflow not found: ${id}`)
   }
   wf.name = name
   wf.updatedAt = Date.now()

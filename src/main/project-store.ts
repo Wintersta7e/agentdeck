@@ -32,8 +32,10 @@ function decryptEnvVars(envVars: EnvVar[] | undefined): EnvVar[] | undefined {
     try {
       return { ...v, value: safeStorage.decryptString(Buffer.from(v.value, 'base64')) }
     } catch (err) {
-      log.error(`Failed to decrypt env var "${v.key}", returning empty value`, { err: String(err) })
-      return { ...v, value: '' }
+      // C3: Preserve the raw encrypted value and flag the failure so the UI can warn.
+      // Returning '' would cause re-encryption of empty string on next save → permanent data loss.
+      log.error(`Failed to decrypt env var "${v.key}" — preserving raw value`, { err: String(err) })
+      return { ...v, _decryptFailed: true }
     }
   })
 }
@@ -78,8 +80,8 @@ export function createProjectStore(): Store<StoreSchema> {
     try {
       const storePath = path.join(app.getPath('userData'), 'config.json')
       fs.unlinkSync(storePath)
-    } catch {
-      // File may not exist or already deleted
+    } catch (deleteErr) {
+      log.warn('Failed to delete corrupt store file', { err: String(deleteErr) })
     }
     store = new Store<StoreSchema>({ defaults })
   }
@@ -136,6 +138,15 @@ export function createProjectStore(): Store<StoreSchema> {
       throw new Error('store:saveProject — name too long')
     if (typeof raw.path === 'string' && raw.path.length > 1024)
       throw new Error('store:saveProject — path too long')
+    if (Array.isArray(raw.envVars)) {
+      if (raw.envVars.length > 100) throw new Error('Too many environment variables (max 100)')
+      for (const ev of raw.envVars as { key?: unknown; value?: unknown }[]) {
+        if (typeof ev.key !== 'string') throw new Error('Env var key must be a string')
+        if (typeof ev.value !== 'string') throw new Error('Env var value must be a string')
+        if (ev.key.length > 256) throw new Error('Env var key too long (max 256)')
+        if (ev.value.length > 65536) throw new Error('Env var value too long (max 64KB)')
+      }
+    }
     const p = project as Partial<Project>
     const projects = store.get('projects')
     const id = p.id ?? randomUUID()
@@ -156,6 +167,7 @@ export function createProjectStore(): Store<StoreSchema> {
   })
 
   ipcMain.handle('store:deleteProject', (_, id: string) => {
+    if (typeof id !== 'string' || !id) throw new Error('Invalid id')
     const projects = store.get('projects').filter((p) => p.id !== id)
     store.set('projects', projects)
     log.info(`Project deleted`, { id })
@@ -192,6 +204,7 @@ export function createProjectStore(): Store<StoreSchema> {
   })
 
   ipcMain.handle('store:deleteTemplate', (_, id: string) => {
+    if (typeof id !== 'string' || !id) throw new Error('Invalid id')
     const templates = store.get('templates').filter((t) => t.id !== id)
     store.set('templates', templates)
   })
@@ -227,6 +240,7 @@ export function createProjectStore(): Store<StoreSchema> {
   })
 
   ipcMain.handle('store:deleteRole', (_, id: string) => {
+    if (typeof id !== 'string' || !id) throw new Error('Invalid id')
     const roles = store.get('roles').filter((r) => r.id !== id)
     store.set('roles', roles)
   })

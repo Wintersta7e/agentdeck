@@ -563,30 +563,42 @@ export const useAppStore = create<AppState>((set, get) => ({
       next = !state.sidebarOpen
       return { sidebarOpen: next }
     })
-    window.agentDeck.layout.set({ sidebarOpen: next })
+    window.agentDeck.layout.set({ sidebarOpen: next }).catch((err: unknown) => {
+      window.agentDeck.log.send('debug', 'layout', 'Layout persist failed', { err: String(err) })
+    })
   },
 
   setSidebarWidth: (w) => {
     set({ sidebarWidth: w })
-    window.agentDeck.layout.set({ sidebarWidth: w })
+    window.agentDeck.layout.set({ sidebarWidth: w }).catch((err: unknown) => {
+      window.agentDeck.log.send('debug', 'layout', 'Layout persist failed', { err: String(err) })
+    })
   },
 
   toggleSidebarSection: (key) => {
+    let sections: AppState['sidebarSections'] | undefined
     set((state) => {
-      const sections = { ...state.sidebarSections, [key]: !state.sidebarSections[key] }
-      window.agentDeck.layout.set({ sidebarSections: sections })
+      sections = { ...state.sidebarSections, [key]: !state.sidebarSections[key] }
       return { sidebarSections: sections }
     })
+    if (sections)
+      window.agentDeck.layout.set({ sidebarSections: sections }).catch((err: unknown) => {
+        window.agentDeck.log.send('debug', 'layout', 'Layout persist failed', { err: String(err) })
+      })
   },
 
   setRightPanelWidth: (w) => {
     set({ rightPanelWidth: w })
-    window.agentDeck.layout.set({ rightPanelWidth: w })
+    window.agentDeck.layout.set({ rightPanelWidth: w }).catch((err: unknown) => {
+      window.agentDeck.log.send('debug', 'layout', 'Layout persist failed', { err: String(err) })
+    })
   },
 
   setWfLogPanelWidth: (w) => {
     set({ wfLogPanelWidth: w })
-    window.agentDeck.layout.set({ wfLogPanelWidth: w })
+    window.agentDeck.layout.set({ wfLogPanelWidth: w }).catch((err: unknown) => {
+      window.agentDeck.log.send('debug', 'layout', 'Layout persist failed', { err: String(err) })
+    })
   },
 
   // Zoom
@@ -625,8 +637,15 @@ export const useAppStore = create<AppState>((set, get) => ({
       // and manual refresh scenarios where initial check missed agents)
       const hasInstalled = Object.values(status).some((v) => v)
       if (hasInstalled) {
-        window.agentDeck.agents.checkUpdates(status)
+        void window.agentDeck.agents.checkUpdates(status).catch((err: unknown) => {
+          console.warn('checkUpdates failed', err)
+        })
       }
+    } catch (err) {
+      get().addNotification('error', 'Failed to detect agents. Is WSL running?')
+      window.agentDeck.log.send('warn', 'appStore', 'refreshAgentStatus failed', {
+        err: String(err),
+      })
     } finally {
       set({ agentRefreshing: false })
     }
