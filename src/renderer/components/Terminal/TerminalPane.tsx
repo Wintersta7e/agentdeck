@@ -373,15 +373,15 @@ export function TerminalPane({
 
       // Ensure font metrics are correct after JetBrains Mono loads.
       // If the terminal measures cell width before the custom font is available,
-      // the WebGL texture atlas uses fallback metrics, causing characters to
-      // overlap once the real font renders.
-      const wgl = webglAddon // capture for async closure
+      // the renderer uses fallback font metrics, causing characters to overlap
+      // once the real font renders. Re-assigning fontFamily forces xterm.js to
+      // re-measure cell dimensions and rebuild the WebGL texture atlas cleanly.
       document.fonts.ready
         .then(() => {
           if (cancelled) return
           try {
-            if (wgl) wgl.clearTextureAtlas()
-            term.refresh(0, term.rows - 1)
+            const ff = term.options.fontFamily ?? "'JetBrains Mono', monospace"
+            term.options.fontFamily = ff
           } catch {
             /* terminal disposed before fonts loaded */
           }
