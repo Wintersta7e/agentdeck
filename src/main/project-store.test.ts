@@ -47,7 +47,8 @@ vi.mock('electron-store', () => {
   return { default: MockStore }
 })
 
-import { createProjectStore, seedTemplates, seedRoles } from './project-store'
+import { createProjectStore } from './project-store'
+import { seedTemplates, seedRoles } from './store-seeds'
 import { ipcMain, safeStorage } from 'electron'
 
 const handlers = (

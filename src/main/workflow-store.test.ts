@@ -51,13 +51,8 @@ vi.mock('fs', () => {
   }
 })
 
-import {
-  listWorkflows,
-  loadWorkflow,
-  saveWorkflow,
-  deleteWorkflow,
-  seedWorkflows,
-} from './workflow-store'
+import { listWorkflows, loadWorkflow, saveWorkflow, deleteWorkflow } from './workflow-store'
+import { seedWorkflows } from './workflow-seeds'
 import * as fs from 'fs'
 
 const testStore = (fs as unknown as { __testStore: Map<string, string> }).__testStore
