@@ -145,6 +145,28 @@ function safeFitAndResize(
   }
 }
 
+/**
+ * Write data to terminal while guarding against scroll-position jumps.
+ * In long sessions, buffer growth can cause the viewport scrollTop to shift
+ * even with overflow-anchor disabled — this detects jumps > 50px when the
+ * user has scrolled up and restores their position after the write completes.
+ */
+function writeWithScrollGuard(term: Terminal, data: string): void {
+  const viewport = term.element?.querySelector('.xterm-viewport') as HTMLElement | null
+  if (!viewport) {
+    term.write(data)
+    return
+  }
+  const prevScrollTop = viewport.scrollTop
+  const isAtBottom = viewport.scrollTop + viewport.clientHeight >= viewport.scrollHeight - 5
+  term.write(data, () => {
+    // Only restore if user was scrolled up and the position jumped significantly
+    if (!isAtBottom && Math.abs(viewport.scrollTop - prevScrollTop) > 50) {
+      viewport.scrollTop = prevScrollTop
+    }
+  })
+}
+
 /** Validate scrollback: enforce minimum of 1000, default to 5000 if unset/invalid. */
 function validScrollback(value: number | undefined): number {
   if (value === undefined || value === null) return 5000
@@ -223,6 +245,8 @@ export function TerminalPane({
     let webglAddon: WebglAddon | null = null
     let search: SearchAddon | null = null
     let isReattached = false
+    // M12: StrictMode double-spawn protection
+    let cancelled = false
 
     // ── Try to reclaim a cached terminal (tab switch back) ──
     const cached = terminalCache.get(sessionId)
@@ -340,9 +364,33 @@ export function TerminalPane({
           webglAddon = null
         })
         term.loadAddon(webglAddon)
-      } catch {
+      } catch (err: unknown) {
         webglAddon = null
+        window.agentDeck.log.send('warn', 'terminal', `WebGL addon failed for ${sessionId}`, {
+          err: String(err),
+        })
       }
+
+      // Ensure font metrics are correct after JetBrains Mono loads.
+      // If the terminal measures cell width before the custom font is available,
+      // the WebGL texture atlas uses fallback metrics, causing characters to
+      // overlap once the real font renders.
+      const wgl = webglAddon // capture for async closure
+      document.fonts.ready
+        .then(() => {
+          if (cancelled) return
+          try {
+            if (wgl) wgl.clearTextureAtlas()
+            term.refresh(0, term.rows - 1)
+          } catch {
+            /* terminal disposed before fonts loaded */
+          }
+        })
+        .catch((err: unknown) => {
+          window.agentDeck.log.send('debug', 'terminal', 'Font readiness check failed', {
+            err: String(err),
+          })
+        })
     }
 
     fit.fit()
@@ -352,11 +400,8 @@ export function TerminalPane({
 
     // Sync xterm theme when data-theme attribute changes (single global observer)
     const unsubTheme = subscribeTheme((t) => {
-      term.options.theme = getXtermTheme(t)
+      if (!cancelled) term.options.theme = getXtermTheme(t)
     })
-
-    // M12: StrictMode double-spawn protection
-    let cancelled = false
 
     // Only spawn on first mount — reattached terminals already have a live PTY
     if (!isReattached) {
@@ -389,10 +434,10 @@ export function TerminalPane({
       if (visibleRef.current) {
         const buf = hiddenBufferRef.current
         if (buf.length > 0) {
-          term.write(buf.join(''))
+          writeWithScrollGuard(term, buf.join(''))
           buf.length = 0
         }
-        term.write(data)
+        writeWithScrollGuard(term, data)
       } else {
         const buf = hiddenBufferRef.current
         buf.push(data)
@@ -422,8 +467,12 @@ export function TerminalPane({
       resizeTimeout = setTimeout(() => {
         try {
           safeFitAndResize(containerRef.current, fitRef.current, termRef.current, sessionId)
-        } catch {
-          // terminal may have been disposed
+        } catch (err) {
+          if (err instanceof Error && !err.message.includes('disposed')) {
+            window.agentDeck.log.send('warn', 'terminal', 'Unexpected resize error', {
+              err: err.message,
+            })
+          }
         }
       }, 80)
     })
@@ -434,8 +483,12 @@ export function TerminalPane({
       requestAnimationFrame(() => {
         try {
           safeFitAndResize(containerRef.current, fitRef.current, termRef.current, sessionId)
-        } catch {
-          // terminal disposed
+        } catch (err) {
+          if (err instanceof Error && !err.message.includes('disposed')) {
+            window.agentDeck.log.send('warn', 'terminal', 'Unexpected resize error', {
+              err: err.message,
+            })
+          }
         }
       })
     }
@@ -488,7 +541,9 @@ export function TerminalPane({
         } catch {
           /* host element already detached */
         }
-        window.agentDeck.pty.kill(sessionId).catch(() => {})
+        window.agentDeck.pty.kill(sessionId).catch((err: unknown) => {
+          window.agentDeck.log.send('debug', 'pty', 'Kill failed', { err: String(err) })
+        })
       }
     }
   }, [sessionId, setSessionStatus, removeSession])
@@ -507,15 +562,19 @@ export function TerminalPane({
     if (visible && termRef.current) {
       // Flush data that arrived while this pane was hidden
       if (hiddenBufferRef.current.length > 0) {
-        termRef.current.write(hiddenBufferRef.current.join(''))
+        writeWithScrollGuard(termRef.current, hiddenBufferRef.current.join(''))
         hiddenBufferRef.current.length = 0
       }
       // Re-fit + viewport sync after the pane is visible again
       requestAnimationFrame(() => {
         try {
           safeFitAndResize(containerRef.current, fitRef.current, termRef.current, sessionId)
-        } catch {
-          // terminal disposed
+        } catch (err) {
+          if (err instanceof Error && !err.message.includes('disposed')) {
+            window.agentDeck.log.send('warn', 'terminal', 'Unexpected resize error', {
+              err: err.message,
+            })
+          }
         }
       })
     }
@@ -545,8 +604,12 @@ export function TerminalPane({
           requestAnimationFrame(() => {
             try {
               safeFitAndResize(containerRef.current, fitRef.current, termRef.current, sessionId)
-            } catch {
-              // terminal disposed
+            } catch (err) {
+              if (err instanceof Error && !err.message.includes('disposed')) {
+                window.agentDeck.log.send('warn', 'terminal', 'Unexpected resize error', {
+                  err: err.message,
+                })
+              }
             }
           })
         }
