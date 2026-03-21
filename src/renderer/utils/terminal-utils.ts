@@ -6,10 +6,16 @@ import type { ITheme } from '@xterm/xterm'
 
 // ─── Minimal interfaces ──────────────────────────────────────────────
 
-/** Minimal terminal shape for writeWithScrollGuard */
-export interface WritableTerminal {
+/** Minimal terminal shape for writeWithScrollGuard (buffer-line scroll lock) */
+export interface ScrollGuardTerminal {
   write: (data: string, callback?: () => void) => void
-  element?: HTMLElement | null | undefined
+  scrollToLine: (line: number) => void
+  buffer: {
+    active: {
+      viewportY: number
+      baseY: number
+    }
+  }
 }
 
 /** Minimal terminal shape for safeFitAndResize */
@@ -152,28 +158,22 @@ export function validScrollback(value: number | undefined): number {
 }
 
 /**
- * Write data to terminal while guarding against scroll-position jumps.
- * In long sessions, buffer growth can cause the viewport scrollTop to shift
- * even with overflow-anchor disabled — this detects jumps > 50px when the
- * user has scrolled up and restores their position after the write completes.
+ * Write data to terminal while preserving scroll position when user is scrolled up.
+ * Uses xterm's buffer-line API (viewportY/baseY) + scrollToLine() instead of DOM
+ * scrollTop heuristics — this is reliable even during rapid agent output bursts
+ * because it works with xterm's internal scroll model, not against it.
+ *
+ * Pair with rAF-based write batching in the caller so that N chunks/frame
+ * coalesce into a single write+restore cycle.
  */
-export function writeWithScrollGuard(
-  term: WritableTerminal,
-  data: string,
-  cachedViewport?: HTMLElement | null,
-): void {
-  const viewport =
-    cachedViewport ?? (term.element?.querySelector('.xterm-viewport') as HTMLElement | null)
-  if (!viewport) {
-    term.write(data)
-    return
-  }
-  const prevScrollTop = viewport.scrollTop
-  const isAtBottom = viewport.scrollTop + viewport.clientHeight >= viewport.scrollHeight - 5
+export function writeWithScrollGuard(term: ScrollGuardTerminal, data: string): void {
+  const buf = term.buffer.active
+  const isScrolledUp = buf.viewportY < buf.baseY
+  const lockedLine = buf.viewportY
+
   term.write(data, () => {
-    // Only restore if user was scrolled up and the position jumped significantly
-    if (!isAtBottom && Math.abs(viewport.scrollTop - prevScrollTop) > 50) {
-      viewport.scrollTop = prevScrollTop
+    if (isScrolledUp) {
+      term.scrollToLine(lockedLine)
     }
   })
 }

@@ -14,6 +14,7 @@ import {
   safeFitAndResize,
   OSC_RESPONSE_RE,
   type FitCallbacks,
+  type ScrollGuardTerminal,
 } from '../../utils/terminal-utils'
 import { TerminalSearchBar } from './TerminalSearchBar'
 import './TerminalPane.css'
@@ -79,7 +80,6 @@ export function TerminalPane({
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
-  const viewportRef = useRef<HTMLElement | null>(null)
   const exitTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const projectPathRef = useRef(projectPath)
   const startupRef = useRef(startupCommands)
@@ -92,6 +92,10 @@ export function TerminalPane({
   const fitRafRef = useRef(0)
   const hiddenBufferRef = useRef<string[]>([])
   const fitCallbacksRef = useRef<FitCallbacks | null>(null)
+  // Write batching: coalesce PTY data chunks into one write per animation frame.
+  // Prevents scroll guard race conditions during rapid agent output bursts.
+  const writeBufferRef = useRef<string[]>([])
+  const writeRafRef = useRef(0)
   const setSessionStatus = useAppStore((s) => s.setSessionStatus)
   const removeSession = useAppStore((s) => s.removeSession)
 
@@ -138,6 +142,9 @@ export function TerminalPane({
     let isReattached = false
     // M12: StrictMode double-spawn protection
     let cancelled = false
+    // Capture write buffer ref for cleanup (avoids react-hooks/exhaustive-deps warning).
+    // The array reference stays stable — we push/splice in place, never reassign.
+    const writeBuffer = writeBufferRef.current
 
     // Prevent onData from writing before the visibility effect's rAF completes
     // fit+flush. Without this, visibleRef starts as true (from useRef init) and
@@ -171,8 +178,6 @@ export function TerminalPane({
       if (term.element) {
         containerRef.current.appendChild(term.element)
       }
-      viewportRef.current =
-        (term.element?.querySelector('.xterm-viewport') as HTMLElement | null) ?? null
       // Rebuild WebGL texture atlas for the new pane dimensions.
       // Cached terminals keep stale cell metrics from their previous pane slot.
       // Re-assigning fontFamily forces xterm.js to re-measure and rebuild.
@@ -259,8 +264,6 @@ export function TerminalPane({
       fit = new FitAddon()
       term.loadAddon(fit)
       term.open(containerRef.current)
-      viewportRef.current =
-        (term.element?.querySelector('.xterm-viewport') as HTMLElement | null) ?? null
 
       // Enable Unicode 11 for proper emoji & CJK character width
       try {
@@ -371,12 +374,27 @@ export function TerminalPane({
         })
     }
 
-    // Buffer data received while hidden, write directly when visible.
+    // Buffer data received while hidden, batch visible writes per animation frame.
     // The visibility effect (fit→flush→visibleRef=true) handles the transition,
     // so there is no gap where onData could write before the hidden buffer is flushed.
+    //
+    // Write batching: instead of calling writeWithScrollGuard on every PTY chunk,
+    // we accumulate chunks and flush once per rAF. This coalesces N chunks/frame
+    // into a single write+scroll-restore cycle, preventing the scroll guard race
+    // condition that causes viewport jumping during rapid agent output.
     const unsubData = window.agentDeck.pty.onData(sessionId, (data) => {
       if (visibleRef.current) {
-        writeWithScrollGuard(term, data, viewportRef.current)
+        writeBufferRef.current.push(data)
+        if (!writeRafRef.current) {
+          writeRafRef.current = requestAnimationFrame(() => {
+            writeRafRef.current = 0
+            const batched = writeBufferRef.current.join('')
+            writeBufferRef.current.length = 0
+            if (termRef.current) {
+              writeWithScrollGuard(termRef.current as ScrollGuardTerminal, batched)
+            }
+          })
+        }
       } else {
         const buf = hiddenBufferRef.current
         buf.push(data)
@@ -470,10 +488,24 @@ export function TerminalPane({
       cancelAnimationFrame(fitRafRef.current)
       fitPendingRef.current = false
 
+      // Cancel pending write batch rAF and flush any buffered data into the
+      // terminal before caching (rAF won't fire after cleanup, so unflushed
+      // chunks would be lost). term.write() works on xterm's internal buffer
+      // even after the DOM element is detached.
+      cancelAnimationFrame(writeRafRef.current)
+      writeRafRef.current = 0
+      if (writeBuffer.length > 0) {
+        try {
+          term.write(writeBuffer.join(''))
+        } catch {
+          /* terminal disposed */
+        }
+        writeBuffer.length = 0
+      }
+
       // Null out refs so stale async callbacks (rAF, setTimeout) can't use them
       termRef.current = null
       fitRef.current = null
-      viewportRef.current = null
       fitCallbacksRef.current = null
 
       // Guard against StrictMode double-invoke: only delete if this effect's
@@ -557,17 +589,13 @@ export function TerminalPane({
         }
       }
       // Flush data that arrived while this pane was hidden — AFTER fit.
-      // Uses writeWithScrollGuard with join to get correct scroll restoration
-      // via xterm's write callback (the callback fires after xterm commits the
-      // data to the buffer, at which point scrollTop is accurate). The 160MB
-      // worst-case from join is theoretical — typical agent output at 5000 chunks
-      // is a few MB. The scroll guard is essential to prevent jumping to bottom.
+      // Uses writeWithScrollGuard with join so the buffer-line scroll lock
+      // captures viewportY once and restores after the full flush completes.
       if (termRef.current && hiddenBufferRef.current.length > 0) {
         try {
           writeWithScrollGuard(
-            termRef.current,
+            termRef.current as ScrollGuardTerminal,
             hiddenBufferRef.current.join(''),
-            viewportRef.current,
           )
         } catch (err) {
           if (err instanceof Error && !err.message.includes('disposed')) {

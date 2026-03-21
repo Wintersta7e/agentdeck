@@ -1,117 +1,97 @@
 import { describe, it, expect, vi } from 'vitest'
 import { writeWithScrollGuard } from '../terminal-utils'
-import type { WritableTerminal } from '../terminal-utils'
+import type { ScrollGuardTerminal } from '../terminal-utils'
 
-/** Create a mock terminal that captures the write callback */
-function makeTerm(): WritableTerminal & { lastCallback: (() => void) | undefined } {
-  const mock: WritableTerminal & { lastCallback: (() => void) | undefined } = {
+/** Create a mock terminal with buffer-line scroll lock API */
+function makeTerm(): ScrollGuardTerminal & { lastCallback: (() => void) | undefined } {
+  const mock: ScrollGuardTerminal & { lastCallback: (() => void) | undefined } = {
     write: vi.fn(((_data: string, cb?: () => void) => {
       mock.lastCallback = cb
-    }) as WritableTerminal['write']),
-    element: null,
+    }) as ScrollGuardTerminal['write']),
+    scrollToLine: vi.fn(),
+    buffer: {
+      active: {
+        viewportY: 0,
+        baseY: 0,
+      },
+    },
     lastCallback: undefined,
   }
   return mock
 }
 
-/** Create a mock viewport element with configurable scroll properties */
-function makeViewport(scrollTop: number, clientHeight: number, scrollHeight: number): HTMLElement {
-  return {
-    scrollTop,
-    clientHeight,
-    scrollHeight,
-  } as unknown as HTMLElement
-}
-
 describe('writeWithScrollGuard', () => {
-  it('writes directly when no viewport is available', () => {
+  it('writes data through term.write', () => {
     const term = makeTerm()
     writeWithScrollGuard(term, 'hello')
-    expect(term.write).toHaveBeenCalledWith('hello')
-  })
-
-  it('does not restore scroll when at bottom', () => {
-    const term = makeTerm()
-    // scrollTop(995) + clientHeight(500) = 1495 >= scrollHeight(1500) - 5 = 1495
-    const viewport = makeViewport(995, 500, 1500)
-
-    writeWithScrollGuard(term, 'data', viewport)
     expect(term.write).toHaveBeenCalled()
-
-    // Simulate a scroll jump after write
-    viewport.scrollTop = 1100
-    term.lastCallback?.()
-
-    // Should NOT restore because user was at bottom
-    expect(viewport.scrollTop).toBe(1100)
+    const calls = (term.write as ReturnType<typeof vi.fn>).mock.calls
+    expect(calls[0]?.[0]).toBe('hello')
   })
 
-  it('does not restore scroll for small jumps (<=50px)', () => {
+  it('does not scroll when at bottom (viewportY === baseY)', () => {
     const term = makeTerm()
-    // User scrolled up: scrollTop(200) + clientHeight(500) = 700 < scrollHeight(2000) - 5 = 1995
-    const viewport = makeViewport(200, 500, 2000)
+    term.buffer.active.viewportY = 100
+    term.buffer.active.baseY = 100
 
-    writeWithScrollGuard(term, 'data', viewport)
-
-    // Small jump: 200 -> 230 = 30px
-    viewport.scrollTop = 230
+    writeWithScrollGuard(term, 'data')
+    // Simulate xterm processing — baseY grows
+    term.buffer.active.baseY = 105
     term.lastCallback?.()
 
-    // Should NOT restore because jump is <= 50px
-    expect(viewport.scrollTop).toBe(230)
+    expect(term.scrollToLine).not.toHaveBeenCalled()
   })
 
-  it('restores scroll for large jumps (>50px) when scrolled up', () => {
+  it('restores scroll when scrolled up (viewportY < baseY)', () => {
     const term = makeTerm()
-    // User scrolled up
-    const viewport = makeViewport(200, 500, 2000)
+    term.buffer.active.viewportY = 50
+    term.buffer.active.baseY = 100
 
-    writeWithScrollGuard(term, 'data', viewport)
-
-    // Large jump: 200 -> 300 = 100px
-    viewport.scrollTop = 300
+    writeWithScrollGuard(term, 'data')
+    // Simulate xterm processing — baseY grows, viewportY may drift
+    term.buffer.active.baseY = 110
+    term.buffer.active.viewportY = 60
     term.lastCallback?.()
 
-    // Should restore to original position
-    expect(viewport.scrollTop).toBe(200)
+    // Should restore to the captured position (50), not current (60)
+    expect(term.scrollToLine).toHaveBeenCalledWith(50)
   })
 
-  it('uses cached viewport when provided', () => {
+  it('captures viewportY at call time, not callback time', () => {
     const term = makeTerm()
-    const viewport = makeViewport(200, 500, 2000)
+    term.buffer.active.viewportY = 30
+    term.buffer.active.baseY = 100
 
-    writeWithScrollGuard(term, 'data', viewport)
+    writeWithScrollGuard(term, 'data')
 
-    // Large jump
-    viewport.scrollTop = 300
+    // Simulate xterm changing everything during write processing
+    term.buffer.active.viewportY = 100
+    term.buffer.active.baseY = 120
     term.lastCallback?.()
 
-    expect(viewport.scrollTop).toBe(200)
+    // Should restore to the captured position (30)
+    expect(term.scrollToLine).toHaveBeenCalledWith(30)
   })
 
-  it('does not restore for exactly 50px jump (threshold is >50)', () => {
+  it('does not scroll when viewportY equals baseY (zero scrollback)', () => {
     const term = makeTerm()
-    const viewport = makeViewport(200, 500, 2000)
+    term.buffer.active.viewportY = 0
+    term.buffer.active.baseY = 0
 
-    writeWithScrollGuard(term, 'data', viewport)
-
-    // Exactly 50px jump: |250 - 200| = 50, which is NOT > 50
-    viewport.scrollTop = 250
+    writeWithScrollGuard(term, 'first output')
     term.lastCallback?.()
 
-    expect(viewport.scrollTop).toBe(250)
+    expect(term.scrollToLine).not.toHaveBeenCalled()
   })
 
-  it('restores for 51px jump', () => {
+  it('handles viewportY at line 0 when scrolled to very top', () => {
     const term = makeTerm()
-    const viewport = makeViewport(200, 500, 2000)
+    term.buffer.active.viewportY = 0
+    term.buffer.active.baseY = 500
 
-    writeWithScrollGuard(term, 'data', viewport)
-
-    // 51px jump: |251 - 200| = 51, which IS > 50
-    viewport.scrollTop = 251
+    writeWithScrollGuard(term, 'data')
     term.lastCallback?.()
 
-    expect(viewport.scrollTop).toBe(200)
+    expect(term.scrollToLine).toHaveBeenCalledWith(0)
   })
 })
