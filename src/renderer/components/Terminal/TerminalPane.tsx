@@ -671,10 +671,17 @@ export function TerminalPane({
       // Flush data that arrived while this pane was hidden — AFTER fit.
       // Write chunks individually to avoid allocating a single huge string
       // (5000 chunks × 32KB = up to ~160MB with join('')).
+      // Guard scroll position once around the entire flush rather than per-chunk
+      // to avoid 5000 layout reflows from repeated scrollTop/scrollHeight reads.
       if (termRef.current && hiddenBufferRef.current.length > 0) {
         const vp = viewportRef.current
+        const prevScrollTop = vp ? vp.scrollTop : 0
+        const wasAtBottom = vp ? vp.scrollTop + vp.clientHeight >= vp.scrollHeight - 5 : true
         for (const chunk of hiddenBufferRef.current) {
-          writeWithScrollGuard(termRef.current, chunk, vp)
+          termRef.current.write(chunk)
+        }
+        if (vp && !wasAtBottom && Math.abs(vp.scrollTop - prevScrollTop) > 50) {
+          vp.scrollTop = prevScrollTop
         }
         hiddenBufferRef.current.length = 0
       }

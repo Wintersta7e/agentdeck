@@ -161,8 +161,17 @@ function registerIpcHandlers(store: AppStore): void {
   )
   ipcMain.on('pty:write', (_, sessionId: string, data: string) => {
     if (typeof sessionId !== 'string' || !sessionId) return
-    if (typeof data !== 'string' || data.length > 1_048_576) return
-    ptyManager?.write(sessionId, data)
+    if (typeof data !== 'string') return
+    // Chunk oversized writes to avoid locking the PTY with a single huge buffer.
+    // Normal keystrokes and small pastes go through the fast path.
+    const MAX_CHUNK = 1_048_576
+    if (data.length <= MAX_CHUNK) {
+      ptyManager?.write(sessionId, data)
+    } else {
+      for (let i = 0; i < data.length; i += MAX_CHUNK) {
+        ptyManager?.write(sessionId, data.slice(i, i + MAX_CHUNK))
+      }
+    }
   })
   // Note: resize rate-limiting is handled renderer-side (80ms debounced ResizeObserver).
   // No server-side guard — node-pty resize is cheap and idempotent.
