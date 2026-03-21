@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Terminal, type ITheme } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebglAddon } from '@xterm/addon-webgl'
@@ -133,8 +133,8 @@ function safeFitAndResize(
   // Only sync viewport and resize PTY when dimensions actually changed.
   // Calling syncScrollArea unconditionally causes visible scroll jumps
   // because it recalculates the viewport position on every invocation,
-  // and multiple observers (ResizeObserver, IntersectionObserver, visibility
-  // effect) can trigger this function in quick succession.
+  // and multiple observers (ResizeObserver, visibility effect, pane-resize-end)
+  // can trigger this function in quick succession.
   if (term.cols !== prevCols || term.rows !== prevRows) {
     // Force viewport scroll-area sync after fit — column-only changes can
     // leave the viewport stale, hiding the scrollbar (xterm.js #3504).
@@ -229,9 +229,33 @@ export function TerminalPane({
   const agentFlagsRef = useRef(agentFlags)
   const scrollbackRef = useRef(scrollback)
   const visibleRef = useRef(visible)
+  const fitPendingRef = useRef(false)
   const hiddenBufferRef = useRef<string[]>([])
   const setSessionStatus = useAppStore((s) => s.setSessionStatus)
   const removeSession = useAppStore((s) => s.removeSession)
+
+  /**
+   * Schedule a single coalesced fit in the next animation frame.
+   * Multiple callers (mount, pane-resize-end, ResizeObserver) within the
+   * same frame collapse into one fit call, preventing redundant
+   * syncViewport invocations that cause scroll jumping.
+   */
+  const scheduleFit = useCallback(() => {
+    if (fitPendingRef.current) return
+    fitPendingRef.current = true
+    requestAnimationFrame(() => {
+      fitPendingRef.current = false
+      try {
+        safeFitAndResize(containerRef.current, fitRef.current, termRef.current, sessionId)
+      } catch (err) {
+        if (err instanceof Error && !err.message.includes('disposed')) {
+          window.agentDeck.log.send('warn', 'terminal', 'Unexpected resize error', {
+            err: err.message,
+          })
+        }
+      }
+    })
+  }, [sessionId])
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -415,9 +439,7 @@ export function TerminalPane({
     // For reattached terminals, defer to rAF so the DOM has settled into its new
     // container and dimensions are accurate (not stale from the previous pane slot).
     if (isReattached) {
-      requestAnimationFrame(() => {
-        safeFitAndResize(containerRef.current, fitRef.current, termRef.current, sessionId)
-      })
+      scheduleFit()
     } else {
       safeFitAndResize(containerRef.current, fit, term, sessionId)
     }
@@ -506,17 +528,7 @@ export function TerminalPane({
 
     // Re-fit terminal when pane resize ends (divider drag / panel resize)
     const handlePaneResizeEnd = (): void => {
-      requestAnimationFrame(() => {
-        try {
-          safeFitAndResize(containerRef.current, fitRef.current, termRef.current, sessionId)
-        } catch (err) {
-          if (err instanceof Error && !err.message.includes('disposed')) {
-            window.agentDeck.log.send('warn', 'terminal', 'Unexpected resize error', {
-              err: err.message,
-            })
-          }
-        }
-      })
+      scheduleFit()
     }
     window.addEventListener('agentdeck:pane-resize-end', handlePaneResizeEnd)
 
@@ -572,7 +584,7 @@ export function TerminalPane({
         })
       }
     }
-  }, [sessionId, setSessionStatus, removeSession])
+  }, [sessionId, setSessionStatus, removeSession, scheduleFit])
 
   // Clear search decorations when search is dismissed via Ctrl+Shift+F toggle
   // (Escape already clears in the TerminalSearchBar component)
@@ -627,35 +639,6 @@ export function TerminalPane({
       term.blur()
     }
   }, [focused])
-
-  // Re-fit terminal when container becomes visible (display:none → flex)
-  // ResizeObserver won't fire if dimensions haven't changed.
-  useEffect(() => {
-    const container = containerRef.current
-    if (!container) return
-
-    const io = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0]
-        if (entry?.isIntersecting) {
-          requestAnimationFrame(() => {
-            try {
-              safeFitAndResize(containerRef.current, fitRef.current, termRef.current, sessionId)
-            } catch (err) {
-              if (err instanceof Error && !err.message.includes('disposed')) {
-                window.agentDeck.log.send('warn', 'terminal', 'Unexpected resize error', {
-                  err: err.message,
-                })
-              }
-            }
-          })
-        }
-      },
-      { threshold: 0.01 },
-    )
-    io.observe(container)
-    return () => io.disconnect()
-  }, [sessionId])
 
   const searchAddon = searchAddonMap.get(sessionId)
   return (
