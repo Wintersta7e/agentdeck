@@ -151,8 +151,13 @@ function safeFitAndResize(
  * even with overflow-anchor disabled — this detects jumps > 50px when the
  * user has scrolled up and restores their position after the write completes.
  */
-function writeWithScrollGuard(term: Terminal, data: string): void {
-  const viewport = term.element?.querySelector('.xterm-viewport') as HTMLElement | null
+function writeWithScrollGuard(
+  term: Terminal,
+  data: string,
+  cachedViewport?: HTMLElement | null,
+): void {
+  const viewport =
+    cachedViewport ?? (term.element?.querySelector('.xterm-viewport') as HTMLElement | null)
   if (!viewport) {
     term.write(data)
     return
@@ -194,6 +199,11 @@ const terminalCache = new Map<string, CachedTerminal>()
 // mutate useMemo results). The Map is populated in useEffect and read in JSX.
 const searchAddonMap = new Map<string, SearchAddon>()
 
+// Filter OSC color query responses (e.g. OSC 10/11) that leak as visible text
+// in some agents (Codex/crossterm). Hoisted to module scope to avoid per-mount
+// regex compilation and to match the ANSI_RE pattern in pty-manager.ts.
+const OSC_RESPONSE_RE = /\x1b\]\d+;[^\x07\x1b]*(?:\x07|\x1b\\)/g
+
 interface TerminalPaneProps {
   sessionId: string
   focused?: boolean | undefined
@@ -221,6 +231,7 @@ export function TerminalPane({
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
+  const viewportRef = useRef<HTMLElement | null>(null)
   const exitTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const projectPathRef = useRef(projectPath)
   const startupRef = useRef(startupCommands)
@@ -230,6 +241,7 @@ export function TerminalPane({
   const scrollbackRef = useRef(scrollback)
   const visibleRef = useRef(visible)
   const fitPendingRef = useRef(false)
+  const fitRafRef = useRef(0)
   const hiddenBufferRef = useRef<string[]>([])
   const setSessionStatus = useAppStore((s) => s.setSessionStatus)
   const removeSession = useAppStore((s) => s.removeSession)
@@ -243,7 +255,7 @@ export function TerminalPane({
   const scheduleFit = useCallback(() => {
     if (fitPendingRef.current) return
     fitPendingRef.current = true
-    requestAnimationFrame(() => {
+    fitRafRef.current = requestAnimationFrame(() => {
       fitPendingRef.current = false
       try {
         safeFitAndResize(containerRef.current, fitRef.current, termRef.current, sessionId)
@@ -272,6 +284,11 @@ export function TerminalPane({
     // M12: StrictMode double-spawn protection
     let cancelled = false
 
+    // Prevent onData from writing before the visibility effect's rAF completes
+    // fit+flush. Without this, visibleRef starts as true (from useRef init) and
+    // PTY data arriving before the rAF could render out-of-order with cached data.
+    visibleRef.current = false
+
     // ── Try to reclaim a cached terminal (tab switch back) ──
     const cached = terminalCache.get(sessionId)
     if (cached) {
@@ -290,6 +307,8 @@ export function TerminalPane({
       if (term.element) {
         containerRef.current.appendChild(term.element)
       }
+      viewportRef.current =
+        (term.element?.querySelector('.xterm-viewport') as HTMLElement | null) ?? null
       // Rebuild WebGL texture atlas for the new pane dimensions.
       // Cached terminals keep stale cell metrics from their previous pane slot.
       // Re-assigning fontFamily forces xterm.js to re-measure and rebuild.
@@ -358,7 +377,9 @@ export function TerminalPane({
             // No text on clipboard — check for copied files
             const paths = await window.agentDeck.clipboard.readFilePaths()
             if (paths.length > 0) {
-              const escaped = paths.map((p) => (p.includes(' ') ? `"${p}"` : p)).join(' ')
+              // Single-quote escaping (POSIX safe) — prevents injection via
+              // filenames containing ", $, `, \, or ! on shared filesystems.
+              const escaped = paths.map((p) => `'${p.replace(/'/g, "'\\''")}'`).join(' ')
               window.agentDeck.pty.write(sessionId, escaped)
             }
           })().catch((err: unknown) => {
@@ -374,6 +395,8 @@ export function TerminalPane({
       fit = new FitAddon()
       term.loadAddon(fit)
       term.open(containerRef.current)
+      viewportRef.current =
+        (term.element?.querySelector('.xterm-viewport') as HTMLElement | null) ?? null
 
       // Enable Unicode 11 for proper emoji & CJK character width
       try {
@@ -482,7 +505,7 @@ export function TerminalPane({
     // so there is no gap where onData could write before the hidden buffer is flushed.
     const unsubData = window.agentDeck.pty.onData(sessionId, (data) => {
       if (visibleRef.current) {
-        writeWithScrollGuard(term, data)
+        writeWithScrollGuard(term, data, viewportRef.current)
       } else {
         const buf = hiddenBufferRef.current
         buf.push(data)
@@ -498,7 +521,6 @@ export function TerminalPane({
     // Filter OSC color query responses from xterm.js before forwarding to PTY.
     // Apps like Codex send OSC 10/11 to detect terminal colors; xterm.js responds
     // correctly, but some apps don't consume the response and display it as text.
-    const OSC_RESPONSE_RE = /\x1b\]\d+;[^\x07\x1b]*(?:\x07|\x1b\\)/g
     const onDataDisposable = term.onData((data) => {
       const filtered = data.replace(OSC_RESPONSE_RE, '')
       if (filtered) window.agentDeck.pty.write(sessionId, filtered)
@@ -506,7 +528,26 @@ export function TerminalPane({
 
     const unsubExit = window.agentDeck.pty.onExit(sessionId, () => {
       setSessionStatus(sessionId, 'exited')
-      exitTimeoutRef.current = setTimeout(() => removeSession(sessionId), 800)
+      exitTimeoutRef.current = setTimeout(() => {
+        removeSession(sessionId)
+        // Evict from cache if the PTY exited while the terminal was hidden
+        // (unmounted and cached for reattachment). Without this, the cached
+        // Terminal + WebGL context leak indefinitely.
+        const stale = terminalCache.get(sessionId)
+        if (stale) {
+          terminalCache.delete(sessionId)
+          try {
+            stale.webgl?.dispose()
+          } catch {
+            /* WebGL context already lost */
+          }
+          try {
+            stale.term.dispose()
+          } catch {
+            /* host element already detached */
+          }
+        }
+      }, 800)
     })
 
     let resizeTimeout: ReturnType<typeof setTimeout> | undefined
@@ -543,9 +584,15 @@ export function TerminalPane({
       ro.disconnect()
       window.removeEventListener('agentdeck:pane-resize-end', handlePaneResizeEnd)
 
+      // Cancel any pending scheduleFit rAF and reset the coalescing flag so the
+      // next mount cycle's scheduleFit is not blocked by a stale true value.
+      cancelAnimationFrame(fitRafRef.current)
+      fitPendingRef.current = false
+
       // Null out refs so stale async callbacks (rAF, setTimeout) can't use them
       termRef.current = null
       fitRef.current = null
+      viewportRef.current = null
 
       // Guard against StrictMode double-invoke: only delete if this effect's
       // search instance is still the one in the map (prevents stale removal).
@@ -608,8 +655,10 @@ export function TerminalPane({
       visibleRef.current = true
       return
     }
-    // visible=true but defer visibleRef until after fit+flush
-    requestAnimationFrame(() => {
+    // visible=true but defer visibleRef until after fit+flush.
+    // The rAF handle is captured so cleanup can cancel it if visibility
+    // toggles back to false before it fires (prevents stale visibleRef=true).
+    const rafId = requestAnimationFrame(() => {
       try {
         safeFitAndResize(containerRef.current, fitRef.current, termRef.current, sessionId)
       } catch (err) {
@@ -619,14 +668,20 @@ export function TerminalPane({
           })
         }
       }
-      // Flush data that arrived while this pane was hidden — AFTER fit
+      // Flush data that arrived while this pane was hidden — AFTER fit.
+      // Write chunks individually to avoid allocating a single huge string
+      // (5000 chunks × 32KB = up to ~160MB with join('')).
       if (termRef.current && hiddenBufferRef.current.length > 0) {
-        writeWithScrollGuard(termRef.current, hiddenBufferRef.current.join(''))
+        const vp = viewportRef.current
+        for (const chunk of hiddenBufferRef.current) {
+          writeWithScrollGuard(termRef.current, chunk, vp)
+        }
         hiddenBufferRef.current.length = 0
       }
       // NOW mark as visible so onData writes directly
       visibleRef.current = true
     })
+    return () => cancelAnimationFrame(rafId)
   }, [visible, sessionId])
 
   // Sync xterm internal focus with pane focus state

@@ -161,6 +161,7 @@ function registerIpcHandlers(store: AppStore): void {
   )
   ipcMain.on('pty:write', (_, sessionId: string, data: string) => {
     if (typeof sessionId !== 'string' || !sessionId) return
+    if (typeof data !== 'string' || data.length > 1_048_576) return
     ptyManager?.write(sessionId, data)
   })
   // Note: resize rate-limiting is handled renderer-side (80ms debounced ResizeObserver).
