@@ -393,8 +393,16 @@ export function TerminalPane({
         })
     }
 
-    fit.fit()
-    syncViewport(term)
+    // Use safeFitAndResize which guards syncViewport behind dimension-change check.
+    // For reattached terminals, defer to rAF so the DOM has settled into its new
+    // container and dimensions are accurate (not stale from the previous pane slot).
+    if (isReattached) {
+      requestAnimationFrame(() => {
+        safeFitAndResize(containerRef.current, fitRef.current, termRef.current, sessionId)
+      })
+    } else {
+      safeFitAndResize(containerRef.current, fit, term, sessionId)
+    }
     termRef.current = term
     fitRef.current = fit
 
