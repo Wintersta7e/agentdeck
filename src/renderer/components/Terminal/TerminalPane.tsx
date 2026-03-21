@@ -477,20 +477,20 @@ export function TerminalPane({
         })
     }
 
-    // Buffer data received while hidden, flush when visible
+    // Buffer data received while hidden, write directly when visible.
+    // The visibility effect (fit→flush→visibleRef=true) handles the transition,
+    // so there is no gap where onData could write before the hidden buffer is flushed.
     const unsubData = window.agentDeck.pty.onData(sessionId, (data) => {
       if (visibleRef.current) {
-        const buf = hiddenBufferRef.current
-        if (buf.length > 0) {
-          writeWithScrollGuard(term, buf.join(''))
-          buf.length = 0
-        }
         writeWithScrollGuard(term, data)
       } else {
         const buf = hiddenBufferRef.current
         buf.push(data)
-        if (buf.length > 1000) {
-          buf.splice(0, buf.length - 500)
+        // Cap buffer to prevent unbounded memory growth.
+        // 5000 chunks ≈ 5000 setImmediate batches ≈ several minutes of output.
+        // Trim to 4000 to avoid re-trimming on every chunk at the boundary.
+        if (buf.length > 5000) {
+          buf.splice(0, buf.length - 4000)
         }
       }
     })
