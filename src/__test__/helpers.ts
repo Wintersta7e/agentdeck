@@ -26,7 +26,7 @@ export function makeProject(overrides: Partial<Project> = {}): Project {
   return {
     id: nextId('proj'),
     name: 'Test Project',
-    path: '/home/rooty/test-project',
+    path: '/home/testuser/test-project',
     ...overrides,
   }
 }

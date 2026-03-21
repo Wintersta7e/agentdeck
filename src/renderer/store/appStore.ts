@@ -127,7 +127,9 @@ interface AppState {
 
   // Cached HomeScreen data (fetched once at startup)
   wslUsername: string
+  wslDistro: string
   setWslUsername: (name: string) => void
+  setWslDistro: (distro: string) => void
   agentStatus: Record<string, boolean>
   setAgentStatus: (status: Record<string, boolean>) => void
   agentRefreshing: boolean
@@ -624,7 +626,9 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   // Cached HomeScreen data
   wslUsername: '',
+  wslDistro: '',
   setWslUsername: (name) => set({ wslUsername: name }),
+  setWslDistro: (distro) => set({ wslDistro: distro }),
   agentStatus: {},
   setAgentStatus: (status) => set({ agentStatus: status }),
   agentRefreshing: false,

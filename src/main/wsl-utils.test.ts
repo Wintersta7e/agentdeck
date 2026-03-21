@@ -31,8 +31,8 @@ describe('wslPathToWindows', () => {
   })
 
   it('converts /home/ paths to UNC paths with default distro', () => {
-    expect(wslPathToWindows('/home/rooty/project')).toBe(
-      '\\\\wsl.localhost\\Ubuntu-24.04\\home\\rooty\\project',
+    expect(wslPathToWindows('/home/user/project')).toBe(
+      '\\\\wsl.localhost\\Ubuntu\\home\\user\\project',
     )
   })
 

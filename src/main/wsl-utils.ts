@@ -3,7 +3,10 @@ import { createLogger } from './logger'
 
 const log = createLogger('wsl-utils')
 
-const FALLBACK_DISTRO = 'Ubuntu-24.04'
+// Generic fallback when wsl.exe detection fails. 'Ubuntu' (without version suffix)
+// is the most common default WSL distro name and works for Ubuntu 20.04, 22.04, 24.04.
+// Users on Debian, Arch, Fedora etc. will see a warning in the log.
+const FALLBACK_DISTRO = 'Ubuntu'
 
 /** Convert a Windows path to WSL: C:\foo → /mnt/c/foo, \\wsl$\D\x → /x */
 export function toWslPath(p: string): string {
@@ -32,6 +35,7 @@ export const NODE_INIT =
   [
     '[ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh" 2>/dev/null',
     'type fnm &>/dev/null && eval "$(fnm env --shell bash)" 2>/dev/null',
+    '[ -d "$HOME/.volta/bin" ] && export VOLTA_HOME="$HOME/.volta" && export PATH="$VOLTA_HOME/bin:$PATH" 2>/dev/null',
     'true',
   ].join('; ') + '; '
 

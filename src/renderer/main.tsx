@@ -71,7 +71,7 @@ async function initAndRender(): Promise<void> {
     username: string
     agents: Record<string, boolean>
   }> => {
-    const [username, agents] = await Promise.all([
+    const [username, agents, distro] = await Promise.all([
       window.agentDeck.app.wslUsername().catch((err: unknown) => {
         console.warn('WSL username fetch failed', err)
         return ''
@@ -80,8 +80,16 @@ async function initAndRender(): Promise<void> {
         console.warn('Agent check failed', err)
         return {} as Record<string, boolean>
       }),
+      window.agentDeck.projects.getDefaultDistro().catch((err: unknown) => {
+        console.warn('WSL distro fetch failed', err)
+        return ''
+      }),
     ])
-    useAppStore.setState({ wslUsername: username, agentStatus: agents })
+    useAppStore.setState({
+      wslUsername: username,
+      agentStatus: agents,
+      wslDistro: typeof distro === 'string' ? distro : '',
+    })
     return { username, agents }
   }
 

@@ -43,9 +43,11 @@ export const AGENTS = [
     icon: '🪿',
     name: 'Goose',
     description: 'Block open-source AI agent',
-    versionArgs: ['--version'],
-    latestCmd: 'pip index versions goose-ai 2>/dev/null | head -1',
-    updateCmd: 'pip install --upgrade goose-ai',
+    versionArgs: ['version'],
+    // Goose is installed via shell script (curl | bash), not pip.
+    // No reliable remote version check — leave empty to skip update notifications.
+    latestCmd: '',
+    updateCmd: 'curl -fsSL https://github.com/block/goose/raw/main/download.sh | bash',
   },
   {
     id: 'gemini-cli',

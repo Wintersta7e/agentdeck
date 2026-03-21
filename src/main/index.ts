@@ -315,8 +315,9 @@ function registerIpcHandlers(store: AppStore): void {
   })
 
   /* ── Project utilities ──────────────────────────────────────────── */
-  ipcMain.handle('projects:detectStack', (_, p: string, distro?: string) => {
-    return detectStack(p, distro)
+  ipcMain.handle('projects:detectStack', async (_, p: string, distro?: string) => {
+    const resolvedDistro = distro || (await getDefaultDistroAsync())
+    return detectStack(p, resolvedDistro)
   })
 
   ipcMain.handle('projects:getDefaultDistro', async () => {
@@ -488,6 +489,26 @@ app
   .then(async () => {
     initLogger()
     log.info('App ready')
+
+    // Check for WSL2 availability — show a helpful dialog if not installed
+    try {
+      const { execFileSync } = await import('child_process')
+      execFileSync('wsl.exe', ['--status'], { timeout: 10000, stdio: 'pipe' })
+    } catch {
+      log.warn('WSL2 not detected — showing setup dialog')
+      dialog.showMessageBoxSync({
+        type: 'warning',
+        title: 'WSL2 Required',
+        message: 'Windows Subsystem for Linux (WSL2) was not detected.',
+        detail:
+          'AgentDeck requires WSL2 to run terminal sessions.\n\n' +
+          'To install WSL2, open PowerShell as Administrator and run:\n' +
+          '  wsl --install\n\n' +
+          'Then restart your computer and launch AgentDeck again.\n\n' +
+          'The app will continue to load, but terminal features will not work.',
+      })
+    }
+
     appStore = createProjectStore()
     seedTemplates(appStore)
     seedRoles(appStore)

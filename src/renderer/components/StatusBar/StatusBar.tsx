@@ -34,6 +34,7 @@ export function StatusBar({ onAboutClick, onShortcutsClick }: StatusBarProps): R
   const rightPanelOpen = useAppStore((s) => s.rightPanelOpen)
   const openCommandPalette = useAppStore((s) => s.openCommandPalette)
   const zoomFactor = useAppStore((s) => s.zoomFactor)
+  const wslDistro = useAppStore((s) => s.wslDistro)
 
   const [appVersion, setAppVersion] = useState('')
 
@@ -59,7 +60,7 @@ export function StatusBar({ onAboutClick, onShortcutsClick }: StatusBarProps): R
         </span>
       </div>
       <span className="status-sep">|</span>
-      <div className="status-item">WSL2 &middot; Ubuntu-24.04</div>
+      <div className="status-item">WSL2{wslDistro ? ` \u00b7 ${wslDistro}` : ''}</div>
       {activeProjectName && (
         <>
           <span className="status-sep">|</span>
