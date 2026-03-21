@@ -564,28 +564,39 @@ export function TerminalPane({
     }
   }, [searchOpen, sessionId])
 
-  // Keep visibleRef in sync, flush buffered data, and re-fit on show
+  // Keep visibleRef in sync, re-fit on show, THEN flush buffered data.
+  // IMPORTANT: visibleRef is deferred to true INSIDE the rAF, after fit+flush.
+  // This prevents onData from writing new data before the hidden buffer is
+  // flushed, which would cause out-of-order terminal output.
   useEffect(() => {
-    visibleRef.current = visible
-    if (visible && termRef.current) {
-      // Flush data that arrived while this pane was hidden
-      if (hiddenBufferRef.current.length > 0) {
+    if (!visible) {
+      // Immediately start buffering when hidden
+      visibleRef.current = false
+      return
+    }
+    if (!termRef.current) {
+      visibleRef.current = true
+      return
+    }
+    // visible=true but defer visibleRef until after fit+flush
+    requestAnimationFrame(() => {
+      try {
+        safeFitAndResize(containerRef.current, fitRef.current, termRef.current, sessionId)
+      } catch (err) {
+        if (err instanceof Error && !err.message.includes('disposed')) {
+          window.agentDeck.log.send('warn', 'terminal', 'Unexpected resize error', {
+            err: err.message,
+          })
+        }
+      }
+      // Flush data that arrived while this pane was hidden — AFTER fit
+      if (termRef.current && hiddenBufferRef.current.length > 0) {
         writeWithScrollGuard(termRef.current, hiddenBufferRef.current.join(''))
         hiddenBufferRef.current.length = 0
       }
-      // Re-fit + viewport sync after the pane is visible again
-      requestAnimationFrame(() => {
-        try {
-          safeFitAndResize(containerRef.current, fitRef.current, termRef.current, sessionId)
-        } catch (err) {
-          if (err instanceof Error && !err.message.includes('disposed')) {
-            window.agentDeck.log.send('warn', 'terminal', 'Unexpected resize error', {
-              err: err.message,
-            })
-          }
-        }
-      })
-    }
+      // NOW mark as visible so onData writes directly
+      visibleRef.current = true
+    })
   }, [visible, sessionId])
 
   // Sync xterm internal focus with pane focus state
