@@ -46,6 +46,12 @@ const terminalCache = new Map<string, CachedTerminal>()
 // mutate useMemo results). The Map is populated in useEffect and read in JSX.
 const searchAddonMap = new Map<string, SearchAddon>()
 
+// Module-level exit timer map keyed by sessionId — allows a new mount to cancel
+// the previous instance's 800ms exit timer (exitTimeoutRef is per-instance and
+// cannot be accessed cross-mount). Prevents a stale timer from disposing a
+// terminal that was reclaimed by a new TerminalPane.
+const exitTimerMap = new Map<string, ReturnType<typeof setTimeout>>()
+
 interface TerminalPaneProps {
   sessionId: string
   focused?: boolean | undefined
@@ -139,6 +145,15 @@ export function TerminalPane({
     visibleRef.current = false
 
     // ── Try to reclaim a cached terminal (tab switch back) ──
+    // Cancel any pending exit timer from a previous mount cycle for this session.
+    // Without this, the stale timer could call removeSession and dispose the terminal
+    // we're about to reclaim.
+    const prevExitTimer = exitTimerMap.get(sessionId)
+    if (prevExitTimer) {
+      clearTimeout(prevExitTimer)
+      exitTimerMap.delete(sessionId)
+    }
+
     const cached = terminalCache.get(sessionId)
     if (cached) {
       terminalCache.delete(sessionId)
@@ -384,7 +399,8 @@ export function TerminalPane({
 
     const unsubExit = window.agentDeck.pty.onExit(sessionId, () => {
       setSessionStatus(sessionId, 'exited')
-      exitTimeoutRef.current = setTimeout(() => {
+      const timer = setTimeout(() => {
+        exitTimerMap.delete(sessionId)
         removeSession(sessionId)
         // Evict from cache if the PTY exited while the terminal was hidden
         // (unmounted and cached for reattachment). Without this, the cached
@@ -392,6 +408,7 @@ export function TerminalPane({
         const stale = terminalCache.get(sessionId)
         if (stale) {
           terminalCache.delete(sessionId)
+          searchAddonMap.delete(sessionId) // TERM-19: also evict search addon
           try {
             stale.webgl?.dispose()
           } catch {
@@ -404,6 +421,8 @@ export function TerminalPane({
           }
         }
       }, 800)
+      exitTimeoutRef.current = timer
+      exitTimerMap.set(sessionId, timer)
     })
 
     let resizeTimeout: ReturnType<typeof setTimeout> | undefined
@@ -538,19 +557,24 @@ export function TerminalPane({
         }
       }
       // Flush data that arrived while this pane was hidden — AFTER fit.
-      // Write chunks individually to avoid allocating a single huge string
-      // (5000 chunks × 32KB = up to ~160MB with join('')).
-      // Guard scroll position once around the entire flush rather than per-chunk
-      // to avoid 5000 layout reflows from repeated scrollTop/scrollHeight reads.
+      // Uses writeWithScrollGuard with join to get correct scroll restoration
+      // via xterm's write callback (the callback fires after xterm commits the
+      // data to the buffer, at which point scrollTop is accurate). The 160MB
+      // worst-case from join is theoretical — typical agent output at 5000 chunks
+      // is a few MB. The scroll guard is essential to prevent jumping to bottom.
       if (termRef.current && hiddenBufferRef.current.length > 0) {
-        const vp = viewportRef.current
-        const prevScrollTop = vp ? vp.scrollTop : 0
-        const wasAtBottom = vp ? vp.scrollTop + vp.clientHeight >= vp.scrollHeight - 5 : true
-        for (const chunk of hiddenBufferRef.current) {
-          termRef.current.write(chunk)
-        }
-        if (vp && !wasAtBottom && Math.abs(vp.scrollTop - prevScrollTop) > 50) {
-          vp.scrollTop = prevScrollTop
+        try {
+          writeWithScrollGuard(
+            termRef.current,
+            hiddenBufferRef.current.join(''),
+            viewportRef.current,
+          )
+        } catch (err) {
+          if (err instanceof Error && !err.message.includes('disposed')) {
+            window.agentDeck.log.send('warn', 'terminal', 'Hidden buffer flush failed', {
+              err: err.message,
+            })
+          }
         }
         hiddenBufferRef.current.length = 0
       }

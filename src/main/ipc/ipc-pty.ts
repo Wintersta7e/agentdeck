@@ -43,16 +43,9 @@ export function registerPtyHandlers(getPtyManager: () => PtyManager | null): voi
           }
         }
       }
-      getPtyManager()?.spawn(
-        sessionId,
-        cols,
-        rows,
-        projectPath,
-        startupCommands,
-        safeEnv,
-        agent,
-        agentFlags,
-      )
+      const mgr = getPtyManager()
+      if (!mgr) throw new Error('PTY manager not initialized')
+      mgr.spawn(sessionId, cols, rows, projectPath, startupCommands, safeEnv, agent, agentFlags)
     },
   )
 
@@ -61,11 +54,13 @@ export function registerPtyHandlers(getPtyManager: () => PtyManager | null): voi
     if (typeof data !== 'string') return
     // Chunk oversized writes to avoid locking the PTY with a single huge buffer.
     // Normal keystrokes and small pastes go through the fast path.
+    const mgr = getPtyManager()
+    if (!mgr) return
     if (data.length <= MAX_CHUNK) {
-      getPtyManager()?.write(sessionId, data)
+      mgr.write(sessionId, data)
     } else {
       for (let i = 0; i < data.length; i += MAX_CHUNK) {
-        getPtyManager()?.write(sessionId, data.slice(i, i + MAX_CHUNK))
+        mgr.write(sessionId, data.slice(i, i + MAX_CHUNK))
       }
     }
   })

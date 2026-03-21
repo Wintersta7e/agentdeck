@@ -49,7 +49,7 @@ export function registerAgentHandlers(
     const { execFile } = await import('child_process')
     const tryCmd = (args: string[]): Promise<string> =>
       new Promise((resolve) => {
-        execFile('wsl.exe', args, { timeout: 15000 }, (err, stdout) => {
+        execFile('wsl.exe', args, { timeout: 10000 }, (err, stdout) => {
           const out = stdout?.trim() ?? ''
           if (err || !out) {
             resolve('')
@@ -59,11 +59,14 @@ export function registerAgentHandlers(
         })
       })
 
-    // Try multiple approaches — some WSL configs fail on one but succeed on another
-    const result =
-      (await tryCmd(['--', 'bash', '-lc', 'whoami'])) ||
-      (await tryCmd(['--', 'whoami'])) ||
-      (await tryCmd(['--', 'bash', '-lc', 'echo $USER']))
+    // Race all approaches in parallel — first non-empty result wins.
+    // On cold WSL boot, sequential attempts can stall for 45s total.
+    const results = await Promise.all([
+      tryCmd(['--', 'bash', '-lc', 'whoami']),
+      tryCmd(['--', 'whoami']),
+      tryCmd(['--', 'bash', '-lc', 'echo $USER']),
+    ])
+    const result = results.find((r) => r !== '') ?? ''
     if (!result) log.warn('Failed to detect WSL username')
     return result
   })

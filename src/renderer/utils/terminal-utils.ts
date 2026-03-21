@@ -31,7 +31,7 @@ export interface FitCallbacks {
 
 // ─── Constants ───────────────────────────────────────────────────────
 
-export const BASE_XTERM_THEME: ITheme = {
+export const BASE_XTERM_THEME: Readonly<ITheme> = Object.freeze({
   background: '#0d0e0f',
   foreground: '#b8b4ae',
   cursor: '#0d0e0f',
@@ -53,9 +53,9 @@ export const BASE_XTERM_THEME: ITheme = {
   brightMagenta: '#9b72cf',
   brightCyan: '#5b9bd5',
   brightWhite: '#f0ede8',
-}
+})
 
-export const XTERM_THEME_OVERRIDES: Record<string, Partial<ITheme>> = {
+export const XTERM_THEME_OVERRIDES: Readonly<Record<string, Partial<ITheme>>> = Object.freeze({
   '': {},
   cyan: {
     background: '#080b14',
@@ -113,7 +113,7 @@ export const XTERM_THEME_OVERRIDES: Record<string, Partial<ITheme>> = {
     selectionBackground: 'rgba(13,148,136,0.25)',
     black: '#1a1916',
   },
-}
+})
 
 /**
  * Filter OSC color query responses (e.g. OSC 10/11) that leak as visible text
