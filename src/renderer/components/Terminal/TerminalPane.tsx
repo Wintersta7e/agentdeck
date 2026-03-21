@@ -266,6 +266,24 @@ export function TerminalPane({
       if (term.element) {
         containerRef.current.appendChild(term.element)
       }
+      // Rebuild WebGL texture atlas for the new pane dimensions.
+      // Cached terminals keep stale cell metrics from their previous pane slot.
+      // Re-assigning fontFamily forces xterm.js to re-measure and rebuild.
+      document.fonts.ready
+        .then(() => {
+          if (cancelled) return
+          try {
+            const ff = term.options.fontFamily ?? "'JetBrains Mono', monospace"
+            term.options.fontFamily = ff
+          } catch {
+            /* terminal disposed before fonts loaded */
+          }
+        })
+        .catch((err: unknown) => {
+          window.agentDeck.log.send('debug', 'terminal', 'Font readiness check failed', {
+            err: String(err),
+          })
+        })
     } else {
       // ── Create fresh terminal ──
       term = new Terminal({
