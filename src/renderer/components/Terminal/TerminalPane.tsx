@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Terminal, type ITheme } from '@xterm/xterm'
+import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebglAddon } from '@xterm/addon-webgl'
 import { Unicode11Addon } from '@xterm/addon-unicode11'
@@ -7,108 +7,16 @@ import { SearchAddon } from '@xterm/addon-search'
 import '@xterm/xterm/css/xterm.css'
 import { useAppStore } from '../../store/appStore'
 import { subscribeTheme } from '../../utils/themeObserver'
+import {
+  getXtermTheme,
+  validScrollback,
+  writeWithScrollGuard,
+  safeFitAndResize,
+  OSC_RESPONSE_RE,
+  type FitCallbacks,
+} from '../../utils/terminal-utils'
 import { TerminalSearchBar } from './TerminalSearchBar'
 import './TerminalPane.css'
-
-const BASE_XTERM_THEME: ITheme = {
-  background: '#0d0e0f',
-  foreground: '#b8b4ae',
-  cursor: '#0d0e0f',
-  cursorAccent: '#0d0e0f',
-  selectionBackground: 'rgba(245, 166, 35, 0.2)',
-  black: '#0d0e0f',
-  red: '#e05c5c',
-  green: '#4caf7d',
-  yellow: '#f5a623',
-  blue: '#5b9bd5',
-  magenta: '#9b72cf',
-  cyan: '#5b9bd5',
-  white: '#b8b4ae',
-  brightBlack: '#3d3b38',
-  brightRed: '#e05c5c',
-  brightGreen: '#4caf7d',
-  brightYellow: '#f5a623',
-  brightBlue: '#5b9bd5',
-  brightMagenta: '#9b72cf',
-  brightCyan: '#5b9bd5',
-  brightWhite: '#f0ede8',
-}
-
-const XTERM_THEME_OVERRIDES: Record<string, Partial<ITheme>> = {
-  '': {},
-  cyan: {
-    background: '#080b14',
-    foreground: '#a8b5cc',
-    cursor: '#080b14',
-    cursorAccent: '#080b14',
-    selectionBackground: 'rgba(0,212,255,0.20)',
-    black: '#080b14',
-  },
-  violet: {
-    background: '#0a0a12',
-    foreground: '#b0aacc',
-    cursor: '#0a0a12',
-    cursorAccent: '#0a0a12',
-    selectionBackground: 'rgba(167,139,250,0.20)',
-    black: '#0a0a12',
-  },
-  ice: {
-    background: '#0c0d10',
-    foreground: '#a8afc4',
-    cursor: '#0c0d10',
-    cursorAccent: '#0c0d10',
-    selectionBackground: 'rgba(96,165,250,0.20)',
-    black: '#0c0d10',
-  },
-  parchment: {
-    background: '#1a1510',
-    foreground: '#f0ede8',
-    cursor: '#1a1510',
-    cursorAccent: '#1a1510',
-    selectionBackground: 'rgba(200,120,0,0.25)',
-    black: '#1a1510',
-  },
-  fog: {
-    background: '#0f1f33',
-    foreground: '#e4eaf2',
-    cursor: '#0f1f33',
-    cursorAccent: '#0f1f33',
-    selectionBackground: 'rgba(37,99,235,0.25)',
-    black: '#0f1f33',
-  },
-  lavender: {
-    background: '#1a1030',
-    foreground: '#ece8f4',
-    cursor: '#1a1030',
-    cursorAccent: '#1a1030',
-    selectionBackground: 'rgba(109,40,217,0.25)',
-    black: '#1a1030',
-  },
-  stone: {
-    background: '#1a1916',
-    foreground: '#f2f1ef',
-    cursor: '#1a1916',
-    cursorAccent: '#1a1916',
-    selectionBackground: 'rgba(13,148,136,0.25)',
-    black: '#1a1916',
-  },
-}
-
-function getXtermTheme(themeId: string): ITheme {
-  const base = { ...BASE_XTERM_THEME, ...(XTERM_THEME_OVERRIDES[themeId] ?? {}) }
-  // Read accent colour from CSS for selection highlight. DO NOT read --terminal-bg here:
-  // that token is rgba (semi-transparent) for CSS glass effects, but xterm.js needs opaque
-  // colours — otherwise ANSI-black cells (e.g. Codex TUI) get double-composited and appear
-  // darker than the canvas background. Per-theme solid hex values above are the correct source.
-  if (typeof document !== 'undefined') {
-    const style = getComputedStyle(document.documentElement)
-    const accentRgb = style.getPropertyValue('--accent-rgb').trim()
-    if (accentRgb) {
-      base.selectionBackground = `rgba(${accentRgb}, 0.20)`
-    }
-  }
-  return base
-}
 
 // ─── Viewport sync helper ─────────────────────────────────────────────
 type XtermCore = { viewport?: { syncScrollArea: () => void } }
@@ -116,67 +24,6 @@ type XtermCore = { viewport?: { syncScrollArea: () => void } }
 function syncViewport(term: Terminal): void {
   const core = (term as unknown as { _core: XtermCore })._core
   core.viewport?.syncScrollArea()
-}
-
-/** Shared fit-and-resize logic — guards against zero dimensions and disposed terminals. */
-function safeFitAndResize(
-  container: HTMLDivElement | null,
-  fit: FitAddon | null,
-  term: Terminal | null,
-  sessionId: string,
-): void {
-  if (!container || !fit || !term) return
-  if (container.offsetWidth === 0 || container.offsetHeight === 0) return
-  const prevCols = term.cols
-  const prevRows = term.rows
-  fit.fit()
-  // Only sync viewport and resize PTY when dimensions actually changed.
-  // Calling syncScrollArea unconditionally causes visible scroll jumps
-  // because it recalculates the viewport position on every invocation,
-  // and multiple observers (ResizeObserver, visibility effect, pane-resize-end)
-  // can trigger this function in quick succession.
-  if (term.cols !== prevCols || term.rows !== prevRows) {
-    // Force viewport scroll-area sync after fit — column-only changes can
-    // leave the viewport stale, hiding the scrollbar (xterm.js #3504).
-    syncViewport(term)
-    if (term.cols > 0 && term.rows > 0) {
-      window.agentDeck.pty.resize(sessionId, term.cols, term.rows)
-    }
-  }
-}
-
-/**
- * Write data to terminal while guarding against scroll-position jumps.
- * In long sessions, buffer growth can cause the viewport scrollTop to shift
- * even with overflow-anchor disabled — this detects jumps > 50px when the
- * user has scrolled up and restores their position after the write completes.
- */
-function writeWithScrollGuard(
-  term: Terminal,
-  data: string,
-  cachedViewport?: HTMLElement | null,
-): void {
-  const viewport =
-    cachedViewport ?? (term.element?.querySelector('.xterm-viewport') as HTMLElement | null)
-  if (!viewport) {
-    term.write(data)
-    return
-  }
-  const prevScrollTop = viewport.scrollTop
-  const isAtBottom = viewport.scrollTop + viewport.clientHeight >= viewport.scrollHeight - 5
-  term.write(data, () => {
-    // Only restore if user was scrolled up and the position jumped significantly
-    if (!isAtBottom && Math.abs(viewport.scrollTop - prevScrollTop) > 50) {
-      viewport.scrollTop = prevScrollTop
-    }
-  })
-}
-
-/** Validate scrollback: enforce minimum of 1000, default to 5000 if unset/invalid. */
-function validScrollback(value: number | undefined): number {
-  if (value === undefined || value === null) return 5000
-  if (!Number.isFinite(value) || value < 1000) return 5000
-  return value
 }
 
 // ─── Terminal cache ───────────────────────────────────────────────────
@@ -198,11 +45,6 @@ const terminalCache = new Map<string, CachedTerminal>()
 // (can't read useRef.current in render) and react-hooks/immutability (can't
 // mutate useMemo results). The Map is populated in useEffect and read in JSX.
 const searchAddonMap = new Map<string, SearchAddon>()
-
-// Filter OSC color query responses (e.g. OSC 10/11) that leak as visible text
-// in some agents (Codex/crossterm). Hoisted to module scope to avoid per-mount
-// regex compilation and to match the ANSI_RE pattern in pty-manager.ts.
-const OSC_RESPONSE_RE = /\x1b\]\d+;[^\x07\x1b]*(?:\x07|\x1b\\)/g
 
 interface TerminalPaneProps {
   sessionId: string
@@ -243,6 +85,7 @@ export function TerminalPane({
   const fitPendingRef = useRef(false)
   const fitRafRef = useRef(0)
   const hiddenBufferRef = useRef<string[]>([])
+  const fitCallbacksRef = useRef<FitCallbacks | null>(null)
   const setSessionStatus = useAppStore((s) => s.setSessionStatus)
   const removeSession = useAppStore((s) => s.removeSession)
 
@@ -257,8 +100,14 @@ export function TerminalPane({
     fitPendingRef.current = true
     fitRafRef.current = requestAnimationFrame(() => {
       fitPendingRef.current = false
+      if (!fitCallbacksRef.current) return
       try {
-        safeFitAndResize(containerRef.current, fitRef.current, termRef.current, sessionId)
+        safeFitAndResize(
+          containerRef.current,
+          fitRef.current,
+          termRef.current,
+          fitCallbacksRef.current,
+        )
       } catch (err) {
         if (err instanceof Error && !err.message.includes('disposed')) {
           window.agentDeck.log.send('warn', 'terminal', 'Unexpected resize error', {
@@ -267,7 +116,7 @@ export function TerminalPane({
         }
       }
     })
-  }, [sessionId])
+  }, [])
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -458,13 +307,20 @@ export function TerminalPane({
         })
     }
 
+    // Build fit callbacks that close over this effect's `term` and `sessionId`
+    const fitCallbacks: FitCallbacks = {
+      syncViewport: () => syncViewport(term),
+      resizePty: (cols, rows) => window.agentDeck.pty.resize(sessionId, cols, rows),
+    }
+    fitCallbacksRef.current = fitCallbacks
+
     // Use safeFitAndResize which guards syncViewport behind dimension-change check.
     // For reattached terminals, defer to rAF so the DOM has settled into its new
     // container and dimensions are accurate (not stale from the previous pane slot).
     if (isReattached) {
       scheduleFit()
     } else {
-      safeFitAndResize(containerRef.current, fit, term, sessionId)
+      safeFitAndResize(containerRef.current, fit, term, fitCallbacks)
     }
     termRef.current = term
     fitRef.current = fit
@@ -554,8 +410,14 @@ export function TerminalPane({
     const ro = new ResizeObserver(() => {
       clearTimeout(resizeTimeout)
       resizeTimeout = setTimeout(() => {
+        if (!fitCallbacksRef.current) return
         try {
-          safeFitAndResize(containerRef.current, fitRef.current, termRef.current, sessionId)
+          safeFitAndResize(
+            containerRef.current,
+            fitRef.current,
+            termRef.current,
+            fitCallbacksRef.current,
+          )
         } catch (err) {
           if (err instanceof Error && !err.message.includes('disposed')) {
             window.agentDeck.log.send('warn', 'terminal', 'Unexpected resize error', {
@@ -593,6 +455,7 @@ export function TerminalPane({
       termRef.current = null
       fitRef.current = null
       viewportRef.current = null
+      fitCallbacksRef.current = null
 
       // Guard against StrictMode double-invoke: only delete if this effect's
       // search instance is still the one in the map (prevents stale removal).
@@ -659,8 +522,14 @@ export function TerminalPane({
     // The rAF handle is captured so cleanup can cancel it if visibility
     // toggles back to false before it fires (prevents stale visibleRef=true).
     const rafId = requestAnimationFrame(() => {
+      if (!fitCallbacksRef.current) return
       try {
-        safeFitAndResize(containerRef.current, fitRef.current, termRef.current, sessionId)
+        safeFitAndResize(
+          containerRef.current,
+          fitRef.current,
+          termRef.current,
+          fitCallbacksRef.current,
+        )
       } catch (err) {
         if (err instanceof Error && !err.message.includes('disposed')) {
           window.agentDeck.log.send('warn', 'terminal', 'Unexpected resize error', {

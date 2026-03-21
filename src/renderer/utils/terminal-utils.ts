@@ -1,0 +1,206 @@
+/**
+ * Pure terminal utility functions extracted from TerminalPane for testability.
+ * No React imports, no concrete xterm.js class dependencies — only `ITheme` type.
+ */
+import type { ITheme } from '@xterm/xterm'
+
+// ─── Minimal interfaces ──────────────────────────────────────────────
+
+/** Minimal terminal shape for writeWithScrollGuard */
+export interface WritableTerminal {
+  write: (data: string, callback?: () => void) => void
+  element?: HTMLElement | null | undefined
+}
+
+/** Minimal terminal shape for safeFitAndResize */
+export interface FittableTerminal {
+  cols: number
+  rows: number
+}
+
+/** Minimal fit addon shape */
+export interface FittableAddon {
+  fit: () => void
+}
+
+/** Side-effect callbacks injected by the caller */
+export interface FitCallbacks {
+  syncViewport: () => void
+  resizePty: (cols: number, rows: number) => void
+}
+
+// ─── Constants ───────────────────────────────────────────────────────
+
+export const BASE_XTERM_THEME: ITheme = {
+  background: '#0d0e0f',
+  foreground: '#b8b4ae',
+  cursor: '#0d0e0f',
+  cursorAccent: '#0d0e0f',
+  selectionBackground: 'rgba(245, 166, 35, 0.2)',
+  black: '#0d0e0f',
+  red: '#e05c5c',
+  green: '#4caf7d',
+  yellow: '#f5a623',
+  blue: '#5b9bd5',
+  magenta: '#9b72cf',
+  cyan: '#5b9bd5',
+  white: '#b8b4ae',
+  brightBlack: '#3d3b38',
+  brightRed: '#e05c5c',
+  brightGreen: '#4caf7d',
+  brightYellow: '#f5a623',
+  brightBlue: '#5b9bd5',
+  brightMagenta: '#9b72cf',
+  brightCyan: '#5b9bd5',
+  brightWhite: '#f0ede8',
+}
+
+export const XTERM_THEME_OVERRIDES: Record<string, Partial<ITheme>> = {
+  '': {},
+  cyan: {
+    background: '#080b14',
+    foreground: '#a8b5cc',
+    cursor: '#080b14',
+    cursorAccent: '#080b14',
+    selectionBackground: 'rgba(0,212,255,0.20)',
+    black: '#080b14',
+  },
+  violet: {
+    background: '#0a0a12',
+    foreground: '#b0aacc',
+    cursor: '#0a0a12',
+    cursorAccent: '#0a0a12',
+    selectionBackground: 'rgba(167,139,250,0.20)',
+    black: '#0a0a12',
+  },
+  ice: {
+    background: '#0c0d10',
+    foreground: '#a8afc4',
+    cursor: '#0c0d10',
+    cursorAccent: '#0c0d10',
+    selectionBackground: 'rgba(96,165,250,0.20)',
+    black: '#0c0d10',
+  },
+  parchment: {
+    background: '#1a1510',
+    foreground: '#f0ede8',
+    cursor: '#1a1510',
+    cursorAccent: '#1a1510',
+    selectionBackground: 'rgba(200,120,0,0.25)',
+    black: '#1a1510',
+  },
+  fog: {
+    background: '#0f1f33',
+    foreground: '#e4eaf2',
+    cursor: '#0f1f33',
+    cursorAccent: '#0f1f33',
+    selectionBackground: 'rgba(37,99,235,0.25)',
+    black: '#0f1f33',
+  },
+  lavender: {
+    background: '#1a1030',
+    foreground: '#ece8f4',
+    cursor: '#1a1030',
+    cursorAccent: '#1a1030',
+    selectionBackground: 'rgba(109,40,217,0.25)',
+    black: '#1a1030',
+  },
+  stone: {
+    background: '#1a1916',
+    foreground: '#f2f1ef',
+    cursor: '#1a1916',
+    cursorAccent: '#1a1916',
+    selectionBackground: 'rgba(13,148,136,0.25)',
+    black: '#1a1916',
+  },
+}
+
+/**
+ * Filter OSC color query responses (e.g. OSC 10/11) that leak as visible text
+ * in some agents (Codex/crossterm). Hoisted to module scope to avoid per-mount
+ * regex compilation and to match the ANSI_RE pattern in pty-manager.ts.
+ */
+export const OSC_RESPONSE_RE = /\x1b\]\d+;[^\x07\x1b]*(?:\x07|\x1b\\)/g
+
+// ─── Functions ───────────────────────────────────────────────────────
+
+/**
+ * Build a complete xterm.js ITheme by merging the base theme with per-theme
+ * overrides and reading the current CSS accent colour for selection highlight.
+ */
+export function getXtermTheme(themeId: string): ITheme {
+  const base = { ...BASE_XTERM_THEME, ...(XTERM_THEME_OVERRIDES[themeId] ?? {}) }
+  // Read accent colour from CSS for selection highlight. DO NOT read --terminal-bg here:
+  // that token is rgba (semi-transparent) for CSS glass effects, but xterm.js needs opaque
+  // colours — otherwise ANSI-black cells (e.g. Codex TUI) get double-composited and appear
+  // darker than the canvas background. Per-theme solid hex values above are the correct source.
+  if (typeof document !== 'undefined') {
+    const style = getComputedStyle(document.documentElement)
+    const accentRgb = style.getPropertyValue('--accent-rgb').trim()
+    if (accentRgb) {
+      base.selectionBackground = `rgba(${accentRgb}, 0.20)`
+    }
+  }
+  return base
+}
+
+/** Validate scrollback: enforce minimum of 1000, default to 5000 if unset/invalid. */
+export function validScrollback(value: number | undefined): number {
+  if (value === undefined || value === null) return 5000
+  if (!Number.isFinite(value) || value < 1000) return 5000
+  return value
+}
+
+/**
+ * Write data to terminal while guarding against scroll-position jumps.
+ * In long sessions, buffer growth can cause the viewport scrollTop to shift
+ * even with overflow-anchor disabled — this detects jumps > 50px when the
+ * user has scrolled up and restores their position after the write completes.
+ */
+export function writeWithScrollGuard(
+  term: WritableTerminal,
+  data: string,
+  cachedViewport?: HTMLElement | null,
+): void {
+  const viewport =
+    cachedViewport ?? (term.element?.querySelector('.xterm-viewport') as HTMLElement | null)
+  if (!viewport) {
+    term.write(data)
+    return
+  }
+  const prevScrollTop = viewport.scrollTop
+  const isAtBottom = viewport.scrollTop + viewport.clientHeight >= viewport.scrollHeight - 5
+  term.write(data, () => {
+    // Only restore if user was scrolled up and the position jumped significantly
+    if (!isAtBottom && Math.abs(viewport.scrollTop - prevScrollTop) > 50) {
+      viewport.scrollTop = prevScrollTop
+    }
+  })
+}
+
+/** Shared fit-and-resize logic — guards against zero dimensions and disposed terminals. */
+export function safeFitAndResize(
+  container: { offsetWidth: number; offsetHeight: number } | null,
+  fit: FittableAddon | null,
+  term: FittableTerminal | null,
+  callbacks: FitCallbacks,
+): void {
+  if (!container || !fit || !term) return
+  if (container.offsetWidth === 0 || container.offsetHeight === 0) return
+  const prevCols = term.cols
+  const prevRows = term.rows
+  fit.fit()
+  // Only sync viewport and resize PTY when dimensions actually changed.
+  // Calling syncScrollArea unconditionally causes visible scroll jumps
+  // because it recalculates the viewport position on every invocation,
+  // and multiple observers (ResizeObserver, visibility effect, pane-resize-end)
+  // can trigger this function in quick succession.
+  if (term.cols !== prevCols || term.rows !== prevRows) {
+    // Force viewport scroll-area sync after fit — column-only changes can
+    // leave the viewport stale, hiding the scrollbar (xterm.js #3504).
+    callbacks.syncViewport()
+    if (term.cols > 0 && term.rows > 0) {
+      callbacks.resizePty(term.cols, term.rows)
+    }
+  }
+}
