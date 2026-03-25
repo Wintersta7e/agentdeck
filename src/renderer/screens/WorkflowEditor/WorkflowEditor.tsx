@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import type {
   Workflow,
   WorkflowNode,
+  WorkflowEdge as WfEdge,
   WorkflowNodeType,
   WorkflowNodeStatus,
   WorkflowStatus,
@@ -231,7 +232,7 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
   )
 
   const handleConnect = useCallback(
-    (fromId: string, toId: string) => {
+    (fromId: string, toId: string, branch?: 'true' | 'false') => {
       setWorkflow((prev) => {
         if (!prev) return prev
         // Prevent duplicate edges
@@ -239,9 +240,13 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
         if (exists) return prev
 
         const edgeId = `edge-${Date.now()}`
+        const newEdge: WfEdge = { id: edgeId, fromNodeId: fromId, toNodeId: toId }
+        if (branch) {
+          newEdge.branch = branch
+        }
         const updated: Workflow = {
           ...prev,
-          edges: [...prev.edges, { id: edgeId, fromNodeId: fromId, toNodeId: toId }],
+          edges: [...prev.edges, newEdge],
           updatedAt: Date.now(),
         }
         autoSave(updated)
