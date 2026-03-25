@@ -8,6 +8,7 @@ import { topoSort } from '../shared/workflow-utils'
 export { validateWorkflow, topoSort } from '../shared/workflow-utils'
 import { createScheduler } from './edge-scheduler'
 import { NODE_INIT } from './wsl-utils'
+import { substituteVariables } from './variable-substitution'
 
 const log = createLogger('workflow-engine')
 
@@ -102,10 +103,15 @@ export function createWorkflowEngine(
   }
 
   function runWorkflow(
-    workflow: Workflow,
+    inputWorkflow: Workflow,
     projectPath?: string | undefined,
-    _variables?: Record<string, string> | undefined,
+    variables?: Record<string, string> | undefined,
   ): void {
+    // Substitute {{VAR}} placeholders in node fields before execution
+    const workflow =
+      variables && Object.keys(variables).length > 0
+        ? substituteVariables(inputWorkflow, variables)
+        : inputWorkflow
     // C5: Guard against concurrent runs of the same workflow
     if (activeRuns.has(workflow.id)) {
       log.warn('Workflow already running, ignoring duplicate run', { id: workflow.id })
