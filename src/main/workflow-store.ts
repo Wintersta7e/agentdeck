@@ -86,7 +86,10 @@ export async function saveWorkflow(workflow: Workflow): Promise<Workflow> {
     }
 
     // C2: Validate before persisting to disk
-    validateWorkflow(w)
+    const validation = validateWorkflow(w)
+    if (validation.errors.length > 0) {
+      throw new Error(`Invalid workflow: ${validation.errors.join('; ')}`)
+    }
 
     // H5: Atomic write — write to .tmp then rename
     const file = path.join(getWorkflowsDir(), `${safeId(w.id)}.json`)

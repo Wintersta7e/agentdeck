@@ -40,7 +40,10 @@ export function registerWorkflowHandlers(getWorkflowEngine: () => WorkflowEngine
     const engine = getWorkflowEngine()
     if (!engine) throw new Error('Workflow engine not initialized')
     // C2: Validate workflow structure before execution
-    validateWorkflow(workflow)
+    const validation = validateWorkflow(workflow)
+    if (validation.errors.length > 0) {
+      throw new Error(`Invalid workflow: ${validation.errors.join('; ')}`)
+    }
     // Convert Windows path to WSL if needed (projects store Windows paths)
     const wslPath = projectPath ? toWslPath(projectPath) : undefined
     // C2: Validate projectPath — must be absolute WSL path, no traversal or shell metacharacters.
