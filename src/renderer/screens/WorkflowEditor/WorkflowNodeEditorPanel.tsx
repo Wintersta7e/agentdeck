@@ -324,6 +324,46 @@ export default function WorkflowNodeEditorPanel({
             />
           </div>
         )}
+
+        {/* Retry config (agent + shell nodes only) */}
+        {(node.type === 'agent' || node.type === 'shell') && (
+          <details className="wf-ne-details">
+            <summary className="wf-ne-summary">Retry on Failure</summary>
+            <div className="wf-ne-field">
+              <label className="wf-ne-label">Retry Count (0 = no retry)</label>
+              <input
+                type="number"
+                className="wf-ne-input"
+                min={0}
+                max={5}
+                value={node.retryCount ?? 0}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value, 10)
+                  update({ retryCount: v > 0 ? v : undefined })
+                }}
+              />
+            </div>
+            {(node.retryCount ?? 0) > 0 && (
+              <div className="wf-ne-field">
+                <label className="wf-ne-label">Retry Delay (ms)</label>
+                <input
+                  type="number"
+                  className="wf-ne-input"
+                  min={100}
+                  max={60000}
+                  step={100}
+                  value={node.retryDelayMs ?? 2000}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10)
+                    update({
+                      retryDelayMs: isNaN(v) ? undefined : Math.max(100, Math.min(60000, v)),
+                    })
+                  }}
+                />
+              </div>
+            )}
+          </details>
+        )}
       </div>
     </div>
   )
