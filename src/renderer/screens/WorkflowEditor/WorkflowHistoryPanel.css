@@ -1,0 +1,276 @@
+/* ── WorkflowHistoryPanel ── */
+
+.wf-history-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  padding: 10px;
+  gap: 6px;
+}
+
+.wf-history-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--bg3);
+  margin-bottom: 2px;
+  flex-shrink: 0;
+}
+
+.wf-history-toolbar-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text2);
+  font-weight: 600;
+}
+
+.wf-history-refresh-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid var(--bg3);
+  border-radius: var(--r);
+  background: none;
+  color: var(--text2);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  cursor: pointer;
+  transition:
+    color 0.12s,
+    border-color 0.12s;
+}
+
+.wf-history-refresh-btn:hover {
+  color: var(--text0);
+  border-color: var(--border-bright);
+}
+
+.wf-history-refresh-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ── Run card ── */
+
+.wf-history-run {
+  background: var(--bg1);
+  border: 1px solid var(--bg3);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+
+.wf-history-run-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.wf-history-run-header:hover {
+  background: var(--bg2);
+}
+
+.wf-history-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.wf-history-status-dot.done {
+  background: var(--green);
+}
+
+.wf-history-status-dot.error {
+  background: var(--red);
+}
+
+.wf-history-status-dot.stopped {
+  background: var(--accent-bg);
+}
+
+.wf-history-status-dot.idle,
+.wf-history-status-dot.running {
+  background: var(--text3);
+}
+
+.wf-history-run-time {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text1);
+  white-space: nowrap;
+}
+
+.wf-history-run-duration {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text2);
+  white-space: nowrap;
+}
+
+.wf-history-run-vars {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--purple);
+  background: var(--purple-dim);
+  border: 1px solid var(--purple-border);
+  padding: 1px 5px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+.wf-history-run-spacer {
+  flex: 1;
+}
+
+.wf-history-run-chevron {
+  color: var(--text3);
+  transition: transform 0.15s;
+}
+
+.wf-history-run-chevron.expanded {
+  transform: rotate(90deg);
+}
+
+.wf-history-run-chevron svg {
+  width: 14px;
+  height: 14px;
+}
+
+.wf-history-delete-btn {
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  border: none;
+  background: none;
+  color: var(--text3);
+  cursor: pointer;
+  border-radius: var(--r);
+  transition:
+    color 0.12s,
+    background 0.12s;
+}
+
+.wf-history-delete-btn:hover {
+  color: var(--red);
+  background: var(--red-dim);
+}
+
+.wf-history-delete-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* ── Node detail list (expanded) ── */
+
+.wf-history-nodes {
+  border-top: 1px solid var(--bg3);
+  padding: 6px 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wf-history-node {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: var(--r);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.wf-history-node-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.wf-history-node-dot.done {
+  background: var(--green);
+}
+
+.wf-history-node-dot.error {
+  background: var(--red);
+}
+
+.wf-history-node-dot.skipped {
+  background: var(--text3);
+}
+
+.wf-history-node-dot.idle,
+.wf-history-node-dot.running,
+.wf-history-node-dot.paused {
+  background: var(--text3);
+}
+
+.wf-history-node-name {
+  color: var(--text1);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wf-history-node-duration {
+  color: var(--text2);
+  white-space: nowrap;
+}
+
+.wf-history-node-badge {
+  font-size: 9px;
+  padding: 0 4px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.wf-history-node-badge.branch {
+  color: var(--blue);
+  background: var(--blue-dim);
+}
+
+.wf-history-node-badge.retry {
+  color: var(--accent-text);
+  background: var(--accent-dim);
+}
+
+.wf-history-node-badge.loop {
+  color: var(--purple);
+  background: var(--purple-dim);
+}
+
+/* ── Error tail block ── */
+
+.wf-history-error-tail {
+  background: var(--bg0);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  white-space: pre-wrap;
+  max-height: 150px;
+  overflow-y: auto;
+  padding: 6px 8px;
+  border-radius: var(--r);
+  color: var(--red);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+/* ── Empty state ── */
+
+.wf-history-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 40px 0;
+}

@@ -11,6 +11,7 @@ import type {
 import { useAppStore } from '../../store/appStore'
 import { WorkflowCanvas } from './WorkflowCanvas'
 import WorkflowLogPanel from './WorkflowLogPanel'
+import WorkflowHistoryPanel from './WorkflowHistoryPanel'
 import { PanelDivider } from '../../components/shared/PanelDivider'
 import AddNodeMenu from './AddNodeMenu'
 import WorkflowNodeEditorPanel from './WorkflowNodeEditorPanel'
@@ -52,7 +53,7 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
   const [addMenuOpen, setAddMenuOpen] = useState(false)
   const closeAddMenu = useCallback(() => setAddMenuOpen(false), [])
   const [detailNode, setDetailNode] = useState<WorkflowNode | null>(null)
-  const [rightTab, setRightTab] = useState<'editor' | 'log'>('editor')
+  const [rightTab, setRightTab] = useState<'editor' | 'log' | 'history'>('editor')
   const [isEditingName, setIsEditingName] = useState(false)
   const [editName, setEditName] = useState('')
   const [showRunDialog, setShowRunDialog] = useState(false)
@@ -543,6 +544,13 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
             >
               Execution Log
             </button>
+            <button
+              className={`wf-right-tab${rightTab === 'history' ? ' active' : ''}`}
+              onClick={() => setRightTab('history')}
+              type="button"
+            >
+              History
+            </button>
           </div>
 
           {/* Tab content */}
@@ -575,6 +583,12 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
               onClear={handleClearLogs}
               visible={rightTab === 'log'}
             />
+          </div>
+          <div
+            className={rightTab === 'history' ? 'wf-tab-visible' : 'wf-tab-hidden'}
+            style={{ flex: 1, minHeight: 0 }}
+          >
+            <WorkflowHistoryPanel workflowId={workflowId} />
           </div>
         </div>
       </div>
