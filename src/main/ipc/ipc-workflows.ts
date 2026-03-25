@@ -34,30 +34,52 @@ export function registerWorkflowHandlers(getWorkflowEngine: () => WorkflowEngine
   })
 
   /* ── Workflow Execution ────────────────────────────────────────── */
-  ipcMain.handle('workflow:run', async (_, workflowId: string, projectPath?: string) => {
-    const workflow = await loadWorkflow(workflowId)
-    if (!workflow) throw new Error(`Workflow not found: ${workflowId}`)
-    const engine = getWorkflowEngine()
-    if (!engine) throw new Error('Workflow engine not initialized')
-    // C2: Validate workflow structure before execution
-    const validation = validateWorkflow(workflow)
-    if (validation.errors.length > 0) {
-      throw new Error(`Invalid workflow: ${validation.errors.join('; ')}`)
-    }
-    // Convert Windows path to WSL if needed (projects store Windows paths)
-    const wslPath = projectPath ? toWslPath(projectPath) : undefined
-    // C2: Validate projectPath — must be absolute WSL path, no traversal or shell metacharacters.
-    // The workflow engine's shellQuote handles safe quoting; this rejects obviously malicious input.
-    if (wslPath !== undefined) {
-      if (typeof wslPath !== 'string' || wslPath.length > 1024 || !wslPath.startsWith('/')) {
-        throw new Error(`Invalid project path: must be an absolute WSL path`)
+  const VAR_NAME_RE = /^[A-Z_][A-Z0-9_]*$/
+
+  ipcMain.handle(
+    'workflow:run',
+    async (_, workflowId: string, projectPath?: string, variables?: Record<string, string>) => {
+      const workflow = await loadWorkflow(workflowId)
+      if (!workflow) throw new Error(`Workflow not found: ${workflowId}`)
+      const engine = getWorkflowEngine()
+      if (!engine) throw new Error('Workflow engine not initialized')
+      // C2: Validate workflow structure before execution
+      const validation = validateWorkflow(workflow)
+      if (validation.errors.length > 0) {
+        throw new Error(`Invalid workflow: ${validation.errors.join('; ')}`)
       }
-      if (wslPath.includes('..')) {
-        throw new Error(`Invalid project path: path traversal not allowed`)
+      // Convert Windows path to WSL if needed (projects store Windows paths)
+      const wslPath = projectPath ? toWslPath(projectPath) : undefined
+      // C2: Validate projectPath — must be absolute WSL path, no traversal or shell metacharacters.
+      // The workflow engine's shellQuote handles safe quoting; this rejects obviously malicious input.
+      if (wslPath !== undefined) {
+        if (typeof wslPath !== 'string' || wslPath.length > 1024 || !wslPath.startsWith('/')) {
+          throw new Error(`Invalid project path: must be an absolute WSL path`)
+        }
+        if (wslPath.includes('..')) {
+          throw new Error(`Invalid project path: path traversal not allowed`)
+        }
       }
-    }
-    engine.run(workflow, wslPath)
-  })
+      // Validate variables if provided
+      if (variables !== undefined && variables !== null) {
+        if (typeof variables !== 'object' || Array.isArray(variables)) {
+          throw new Error('Variables must be an object')
+        }
+        for (const [key, val] of Object.entries(variables)) {
+          if (typeof key !== 'string' || !VAR_NAME_RE.test(key)) {
+            throw new Error(`Invalid variable name: ${key}`)
+          }
+          if (typeof val !== 'string') {
+            throw new Error(`Variable ${key} must be a string value`)
+          }
+          if (val.length > 10000) {
+            throw new Error(`Variable ${key} value exceeds 10000 chars`)
+          }
+        }
+      }
+      engine.run(workflow, wslPath, variables ?? undefined)
+    },
+  )
 
   ipcMain.handle('workflow:stop', (_, workflowId: string) => {
     if (typeof workflowId !== 'string' || !workflowId) return

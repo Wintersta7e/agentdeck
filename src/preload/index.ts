@@ -171,7 +171,8 @@ contextBridge.exposeInMainWorld('agentDeck', {
     rename: (id: string, name: string): Promise<void> =>
       ipcRenderer.invoke('workflows:rename', id, name),
     delete: (id: string): Promise<void> => ipcRenderer.invoke('workflows:delete', id),
-    run: (id: string, path?: string): Promise<void> => ipcRenderer.invoke('workflow:run', id, path),
+    run: (id: string, path?: string, variables?: Record<string, string>): Promise<void> =>
+      ipcRenderer.invoke('workflow:run', id, path, variables),
     stop: (id: string): Promise<void> => ipcRenderer.invoke('workflow:stop', id),
     resume: (id: string, nodeId: string): Promise<void> =>
       ipcRenderer.invoke('workflow:resume', id, nodeId),

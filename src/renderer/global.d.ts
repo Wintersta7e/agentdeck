@@ -108,7 +108,7 @@ declare global {
         save(w: import('../shared/types').Workflow): Promise<import('../shared/types').Workflow>
         rename(id: string, name: string): Promise<void>
         delete(id: string): Promise<void>
-        run(id: string, path?: string): Promise<void>
+        run(id: string, path?: string, variables?: Record<string, string>): Promise<void>
         stop(id: string): Promise<void>
         resume(id: string, nodeId: string): Promise<void>
         onEvent(
