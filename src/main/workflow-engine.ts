@@ -7,7 +7,6 @@ import type {
   WorkflowNode,
   WorkflowEdge,
   WorkflowEvent,
-  WorkflowRun,
   WorkflowNodeRun,
   Role,
 } from '../shared/types'
@@ -15,29 +14,19 @@ import { topoSort } from '../shared/workflow-utils'
 export { validateWorkflow, topoSort } from '../shared/workflow-utils'
 import { createScheduler } from './edge-scheduler'
 import { substituteVariables } from './variable-substitution'
-import { saveRun } from './workflow-run-store'
 import {
   runAgentNode,
   runShellNode,
   forceKillTree,
-  stripAnsi,
   MAX_TIER_CONCURRENCY,
   type NodeRunnerDeps,
 } from './node-runners'
+import { createRunRecorder, getErrorTail } from './workflow-history'
 
 // Re-export for backward compat (tests + external importers)
 export { stripAnsi, shellQuote, AGENT_IDLE_TIMEOUT } from './node-runners'
 
 const log = createLogger('workflow-engine')
-
-/** Extract the last N non-empty lines from agent output for error diagnostics. */
-function getErrorTail(output: string | undefined, maxLines = 50): string[] | undefined {
-  if (!output) return undefined
-  const lines = stripAnsi(output)
-    .split('\n')
-    .filter((l) => l.trim())
-  return lines.length > 0 ? lines.slice(-maxLines) : undefined
-}
 
 export interface WorkflowEngine {
   run: (
@@ -108,19 +97,8 @@ export function createWorkflowEngine(
     // H10: Key checkpoints by workflowId:nodeId (scoped to this run)
     const runCheckpoints = new Map<string, () => void>()
 
-    // ── Run history stub ──────────────────────────────────────────
-    const run: WorkflowRun = {
-      id: crypto.randomUUID(),
-      workflowId: workflow.id,
-      workflowName: workflow.name,
-      status: 'running',
-      startedAt: Date.now(),
-      finishedAt: null,
-      durationMs: null,
-      projectPath: projectPath ?? null,
-      variables: variables ?? {},
-      nodes: [],
-    }
+    // ── Run history recorder ────────────────────────────────────────
+    const recorder = createRunRecorder(workflow, projectPath, variables ?? {})
     // Track how many times each node was executed (for loopIterations)
     const nodeExecCount = new Map<string, number>()
 
@@ -234,7 +212,7 @@ export function createWorkflowEngine(
         }
         const condExecN = nodeExecCount.get(node.id) ?? 1
         if (condExecN > 1) condNodeRun.loopIterations = condExecN
-        run.nodes.push(condNodeRun)
+        recorder.recordNode(condNodeRun)
 
         // Handle loop edges
         const condLoops = loopEdgesByCondition.get(node.id) ?? []
@@ -351,7 +329,7 @@ export function createWorkflowEngine(
           if (attempt > 1) doneNodeRun.retryAttempts = attempt
           const execN = nodeExecCount.get(node.id) ?? 1
           if (execN > 1) doneNodeRun.loopIterations = execN
-          run.nodes.push(doneNodeRun)
+          recorder.recordNode(doneNodeRun)
 
           return // success, no more retries
         } catch (err) {
@@ -387,7 +365,7 @@ export function createWorkflowEngine(
       if (maxAttempts > 1) errNodeRun.retryAttempts = maxAttempts
       const errExecN = nodeExecCount.get(node.id) ?? 1
       if (errExecN > 1) errNodeRun.loopIterations = errExecN
-      run.nodes.push(errNodeRun)
+      recorder.recordNode(errNodeRun)
 
       if (node.continueOnError) {
         scheduler.completeNode(node.id) // treat as done for scheduling
@@ -414,15 +392,7 @@ export function createWorkflowEngine(
           workflowId: workflow.id,
           message: String(err),
         })
-        run.status = 'error'
-        run.finishedAt = Date.now()
-        run.durationMs = run.finishedAt - run.startedAt
-        saveRun(run).catch((saveErr: unknown) => {
-          log.warn('Failed to save workflow run history', {
-            workflowId: workflow.id,
-            err: String(saveErr),
-          })
-        })
+        recorder.finalize('error')
         return
       }
 
@@ -473,7 +443,7 @@ export function createWorkflowEngine(
                 nodeId: n.id,
                 message: `${n.name} skipped (branch not taken)`,
               })
-              run.nodes.push({
+              recorder.recordNode({
                 nodeId: n.id,
                 nodeName: n.name,
                 status: 'skipped',
@@ -511,15 +481,7 @@ export function createWorkflowEngine(
       }
 
       // ── Flush run history to disk ────────────────────────────────
-      run.status = stopped ? 'stopped' : 'done'
-      run.finishedAt = Date.now()
-      run.durationMs = run.finishedAt - run.startedAt
-      saveRun(run).catch((err: unknown) => {
-        log.warn('Failed to save workflow run history', {
-          workflowId: workflow.id,
-          err: String(err),
-        })
-      })
+      recorder.finalize(stopped ? 'stopped' : 'done')
     }
 
     const handle = {
@@ -578,15 +540,7 @@ export function createWorkflowEngine(
           })
         }
         // Flush run history with error status
-        run.status = 'error'
-        run.finishedAt = Date.now()
-        run.durationMs = run.finishedAt - run.startedAt
-        saveRun(run).catch((saveErr: unknown) => {
-          log.warn('Failed to save workflow run history', {
-            workflowId: workflow.id,
-            err: String(saveErr),
-          })
-        })
+        recorder.finalize('error')
       })
       .finally(() => {
         activeRuns.delete(workflow.id)
