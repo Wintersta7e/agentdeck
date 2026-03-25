@@ -57,6 +57,11 @@
   animation: wf-node-flash-error 0.4s ease;
 }
 
+.wf-node-inner.skipped {
+  border-color: var(--border);
+  opacity: 0.55;
+}
+
 @keyframes wf-node-flash-done {
   0% {
     box-shadow: 0 0 0 0 rgba(var(--green-rgb), 0.5);
@@ -119,6 +124,10 @@
 
 .wf-node-inner.error .wf-node-type-icon {
   color: var(--red);
+}
+
+.wf-node-inner.skipped .wf-node-type-icon {
+  color: var(--text3);
 }
 
 @keyframes wf-node-icon-pulse {

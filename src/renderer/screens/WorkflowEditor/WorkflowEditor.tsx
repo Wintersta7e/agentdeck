@@ -172,6 +172,17 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
         case 'node:resumed':
           if (nid) s.setWorkflowNodeStatus(workflowId, nid, 'running')
           break
+        case 'node:skipped':
+          if (nid) s.setWorkflowNodeStatus(workflowId, nid, 'skipped')
+          break
+        case 'node:retry':
+          // Node is being retried — keep status as 'running'.
+          // The event is logged but status doesn't change.
+          break
+        case 'node:loopIteration':
+          // Log the loop iteration. Nodes in the loop will get new
+          // 'node:started' events when re-executed, so no status change needed.
+          break
       }
     })
 
