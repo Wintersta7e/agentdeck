@@ -117,6 +117,8 @@ declare global {
           warnings: string[]
         }>
         duplicate(id: string): Promise<import('../shared/types').Workflow>
+        listRuns(workflowId: string): Promise<import('../shared/types').WorkflowRun[]>
+        deleteRun(runId: string): Promise<void>
         run(id: string, path?: string, variables?: Record<string, string>): Promise<void>
         stop(id: string): Promise<void>
         resume(id: string, nodeId: string): Promise<void>

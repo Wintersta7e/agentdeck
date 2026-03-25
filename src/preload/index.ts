@@ -6,6 +6,7 @@ import type {
   WorkflowExport,
   WorkflowMeta,
   WorkflowEvent,
+  WorkflowRun,
 } from '../shared/types'
 
 // File drag-and-drop: accept drops visually (dragover), but let the default
@@ -190,6 +191,9 @@ contextBridge.exposeInMainWorld('agentDeck', {
       }>,
     duplicate: (id: string): Promise<Workflow> =>
       ipcRenderer.invoke('workflows:duplicate', id) as Promise<Workflow>,
+    listRuns: (workflowId: string): Promise<WorkflowRun[]> =>
+      ipcRenderer.invoke('workflows:listRuns', workflowId),
+    deleteRun: (runId: string): Promise<void> => ipcRenderer.invoke('workflows:deleteRun', runId),
     run: (id: string, path?: string, variables?: Record<string, string>): Promise<void> =>
       ipcRenderer.invoke('workflow:run', id, path, variables),
     stop: (id: string): Promise<void> => ipcRenderer.invoke('workflow:stop', id),

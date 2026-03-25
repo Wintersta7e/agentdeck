@@ -7,6 +7,7 @@ import {
   renameWorkflow,
   deleteWorkflow,
 } from '../workflow-store'
+import { listRuns, deleteRun } from '../workflow-run-store'
 import { validateWorkflow } from '../../shared/workflow-utils'
 import { toWslPath } from '../wsl-utils'
 import type { WorkflowEngine } from '../workflow-engine'
@@ -162,6 +163,23 @@ export function registerWorkflowHandlers(
       updatedAt: Date.now(),
     }
     return saveWorkflow(clone)
+  })
+
+  /* ── Workflow Run History ──────────────────────────────────────── */
+  const SAFE_ID_RE = /^[a-zA-Z0-9_-]+$/
+
+  ipcMain.handle('workflows:listRuns', async (_, workflowId: string) => {
+    if (typeof workflowId !== 'string' || !SAFE_ID_RE.test(workflowId)) {
+      throw new Error('Invalid workflow ID')
+    }
+    return listRuns(workflowId)
+  })
+
+  ipcMain.handle('workflows:deleteRun', async (_, runId: string) => {
+    if (typeof runId !== 'string' || !SAFE_ID_RE.test(runId)) {
+      throw new Error('Invalid run ID')
+    }
+    return deleteRun(runId)
   })
 
   /* ── Workflow Execution ────────────────────────────────────────── */
