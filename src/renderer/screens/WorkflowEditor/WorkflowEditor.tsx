@@ -13,6 +13,7 @@ import WorkflowLogPanel from './WorkflowLogPanel'
 import { PanelDivider } from '../../components/shared/PanelDivider'
 import AddNodeMenu from './AddNodeMenu'
 import WorkflowNodeEditorPanel from './WorkflowNodeEditorPanel'
+import WorkflowRunDialog from './WorkflowRunDialog'
 import './WorkflowEditor.css'
 
 interface WorkflowEditorProps {
@@ -53,6 +54,7 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
   const [rightTab, setRightTab] = useState<'editor' | 'log'>('editor')
   const [isEditingName, setIsEditingName] = useState(false)
   const [editName, setEditName] = useState('')
+  const [showRunDialog, setShowRunDialog] = useState(false)
   const nameInputRef = useRef<HTMLInputElement>(null)
 
   // M7: Instance-scoped counter instead of module-level
@@ -328,32 +330,44 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
 
   // ── Workflow execution ──
 
+  const runWorkflow = useCallback(
+    (variables?: Record<string, string>) => {
+      useAppStore.getState().resetWorkflowExecution(workflowId)
+      useAppStore.getState().setWorkflowStatus(workflowId, 'running')
+      // Resolve project path from workflow's projectId (if any)
+      const projectPath = workflow?.projectId
+        ? projects.find((p) => p.id === workflow.projectId)?.path
+        : undefined
+      // H8: Flush pending auto-save so engine reads latest, H9: catch errors
+      flushSave()
+        .then(() => window.agentDeck.workflows.run(workflowId, projectPath, variables))
+        .catch((err: unknown) => {
+          window.agentDeck.log.send('error', 'workflow-editor', 'Workflow run failed', {
+            err: String(err),
+            workflowId,
+          })
+          const s = useAppStore.getState()
+          s.setWorkflowStatus(workflowId, 'error')
+          s.addWorkflowLog(workflowId, {
+            id: `err-${Date.now()}`,
+            workflowId,
+            type: 'workflow:error',
+            message: `Run failed: ${String(err)}`,
+            timestamp: Date.now(),
+          })
+        })
+    },
+    [workflowId, flushSave, workflow, projects],
+  )
+
   const handleRun = useCallback(() => {
-    useAppStore.getState().resetWorkflowExecution(workflowId)
-    useAppStore.getState().setWorkflowStatus(workflowId, 'running')
-    // Resolve project path from workflow's projectId (if any)
-    const projectPath = workflow?.projectId
-      ? projects.find((p) => p.id === workflow.projectId)?.path
-      : undefined
-    // H8: Flush pending auto-save so engine reads latest, H9: catch errors
-    flushSave()
-      .then(() => window.agentDeck.workflows.run(workflowId, projectPath))
-      .catch((err: unknown) => {
-        window.agentDeck.log.send('error', 'workflow-editor', 'Workflow run failed', {
-          err: String(err),
-          workflowId,
-        })
-        const s = useAppStore.getState()
-        s.setWorkflowStatus(workflowId, 'error')
-        s.addWorkflowLog(workflowId, {
-          id: `err-${Date.now()}`,
-          workflowId,
-          type: 'workflow:error',
-          message: `Run failed: ${String(err)}`,
-          timestamp: Date.now(),
-        })
-      })
-  }, [workflowId, flushSave, workflow, projects])
+    // If workflow has variables, show dialog instead of running immediately
+    if (workflow?.variables && workflow.variables.length > 0) {
+      setShowRunDialog(true)
+      return
+    }
+    runWorkflow()
+  }, [workflow, runWorkflow])
 
   const handleStop = useCallback(() => {
     window.agentDeck.workflows.stop(workflowId)
@@ -559,6 +573,17 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
           </div>
         </div>
       </div>
+
+      {showRunDialog && workflow?.variables && (
+        <WorkflowRunDialog
+          variables={workflow.variables}
+          onStart={(vals) => {
+            setShowRunDialog(false)
+            runWorkflow(vals)
+          }}
+          onCancel={() => setShowRunDialog(false)}
+        />
+      )}
     </div>
   )
 }
