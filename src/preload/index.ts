@@ -1,5 +1,12 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { ActivityEvent, Role, Workflow, WorkflowMeta, WorkflowEvent } from '../shared/types'
+import type {
+  ActivityEvent,
+  Role,
+  Workflow,
+  WorkflowExport,
+  WorkflowMeta,
+  WorkflowEvent,
+} from '../shared/types'
 
 // File drag-and-drop: accept drops visually (dragover), but let the default
 // drop behavior trigger navigation to file:// URL. The main process intercepts
@@ -171,6 +178,18 @@ contextBridge.exposeInMainWorld('agentDeck', {
     rename: (id: string, name: string): Promise<void> =>
       ipcRenderer.invoke('workflows:rename', id, name),
     delete: (id: string): Promise<void> => ipcRenderer.invoke('workflows:delete', id),
+    export: (id: string): Promise<WorkflowExport> =>
+      ipcRenderer.invoke('workflows:export', id) as Promise<WorkflowExport>,
+    import: (
+      data: WorkflowExport,
+      roleStrategy: Record<string, 'skip' | 'copy'>,
+    ): Promise<{ workflow: Workflow; warnings: string[] }> =>
+      ipcRenderer.invoke('workflows:import', data, roleStrategy) as Promise<{
+        workflow: Workflow
+        warnings: string[]
+      }>,
+    duplicate: (id: string): Promise<Workflow> =>
+      ipcRenderer.invoke('workflows:duplicate', id) as Promise<Workflow>,
     run: (id: string, path?: string, variables?: Record<string, string>): Promise<void> =>
       ipcRenderer.invoke('workflow:run', id, path, variables),
     stop: (id: string): Promise<void> => ipcRenderer.invoke('workflow:stop', id),
