@@ -1,5 +1,5 @@
 import { BrowserWindow } from 'electron'
-import { spawn, execFile, type ChildProcess } from 'child_process'
+import type { ChildProcess } from 'child_process'
 import { createLogger } from './logger'
 import type { PtyManager } from './pty-manager'
 import type {
@@ -11,73 +11,24 @@ import type {
   WorkflowNodeRun,
   Role,
 } from '../shared/types'
-import { AGENT_BINARY_MAP, SAFE_FLAGS_RE } from '../shared/agents'
 import { topoSort } from '../shared/workflow-utils'
 export { validateWorkflow, topoSort } from '../shared/workflow-utils'
 import { createScheduler } from './edge-scheduler'
-import { NODE_INIT } from './wsl-utils'
 import { substituteVariables } from './variable-substitution'
 import { saveRun } from './workflow-run-store'
+import {
+  runAgentNode,
+  runShellNode,
+  forceKillTree,
+  stripAnsi,
+  MAX_TIER_CONCURRENCY,
+  type NodeRunnerDeps,
+} from './node-runners'
+
+// Re-export for backward compat (tests + external importers)
+export { stripAnsi, shellQuote, AGENT_IDLE_TIMEOUT } from './node-runners'
 
 const log = createLogger('workflow-engine')
-
-/** Non-interactive / print-mode CLI flags per agent (prompt follows as last arg) */
-const AGENT_PRINT_FLAGS: Record<string, string[]> = {
-  'claude-code': ['--print'],
-  codex: ['exec'],
-  aider: ['--message'],
-  goose: ['run', '-t'],
-  'gemini-cli': ['-p'],
-  'amazon-q': ['chat', '--no-interactive', '--trust-all-tools'],
-  opencode: ['run'],
-}
-
-const MINUTES = 60_000
-
-/** How long an agent node can be idle (no stdout/stderr) before being killed */
-export const AGENT_IDLE_TIMEOUT = 5 * MINUTES
-
-/** How often to check whether an agent node has gone idle */
-const IDLE_CHECK_INTERVAL = 0.5 * MINUTES
-
-/** Max number of nodes to run concurrently within a single tier */
-const MAX_TIER_CONCURRENCY = 5
-
-/** How often to flush the line buffer even without a newline */
-const LINE_FLUSH_MS = 500
-
-/**
- * Force-kill a child process tree on Windows.
- * `child.kill()` only terminates wsl.exe — the Linux process inside WSL
- * survives as an orphan. Use taskkill /F /T to kill the entire tree.
- */
-function forceKillTree(child: ChildProcess): void {
-  const pid = child.pid
-  if (pid === undefined || pid === null) {
-    child.kill('SIGKILL')
-    return
-  }
-  // pid is a numeric constant from the OS — safe for execFile args
-  execFile('taskkill', ['/F', '/T', '/PID', String(pid)], { timeout: 5000 }, (err) => {
-    if (err) {
-      // Fallback: process may already be dead
-      child.kill('SIGKILL')
-    }
-  })
-}
-
-/** Strip ANSI escape sequences and terminal control codes */
-const ANSI_STRIP_RE =
-  /\x1b\[[0-9;?]*[a-zA-Z~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[()#][A-Z0-9]|\x1b[=>NOMDEHc78]|\r/g
-
-export function stripAnsi(s: string): string {
-  return s.replace(ANSI_STRIP_RE, '')
-}
-
-/** Shell-safe single-quote escaping */
-export function shellQuote(s: string): string {
-  return "'" + s.replace(/'/g, "'\\''") + "'"
-}
 
 /** Extract the last N non-empty lines from agent output for error diagnostics. */
 function getErrorTail(output: string | undefined, maxLines = 50): string[] | undefined {
@@ -179,233 +130,16 @@ export function createWorkflowEngine(
       for (const r of getRoles()) rolesMap.set(r.id, r)
     }
 
-    function runAgentNode(
-      node: WorkflowNode,
-      contextSummary: string,
-      roles: Map<string, Role>,
-    ): Promise<void> {
-      return new Promise<void>((resolve, reject) => {
-        let settled = false
-        const settleResolve = (): void => {
-          if (settled) return
-          settled = true
-          resolve()
-        }
-        const settleReject = (err: Error): void => {
-          if (settled) return
-          settled = true
-          reject(err)
-        }
-
-        // Build prompt: [role persona] + [task prompt] + [output format] + [context]
-        const role = node.roleId ? roles.get(node.roleId) : undefined
-        const promptParts: string[] = []
-        if (role?.persona) promptParts.push(role.persona)
-        if (node.prompt) promptParts.push(node.prompt)
-        if (role?.outputFormat) promptParts.push(`Output format:\n${role.outputFormat}`)
-        if (contextSummary) promptParts.push(`Context from previous steps:\n${contextSummary}`)
-        const prompt = promptParts.join('\n\n')
-
-        if (!prompt) {
-          settleResolve()
-          return
-        }
-
-        const agentName = node.agent ?? 'claude-code'
-        const bin = AGENT_BINARY_MAP[agentName] ?? agentName
-        const printFlags = AGENT_PRINT_FLAGS[agentName] ?? ['--print']
-
-        let sanitizedFlags = ''
-        if (node.agentFlags) {
-          if (SAFE_FLAGS_RE.test(node.agentFlags)) {
-            sanitizedFlags = ` ${node.agentFlags}`
-          } else {
-            push(workflow.id, {
-              type: 'node:output',
-              workflowId: workflow.id,
-              nodeId: node.id,
-              message: `⚠ Agent flags rejected (unsafe): ${node.agentFlags}`,
-            })
-          }
-        }
-
-        // Build non-interactive command: cd to project, then run agent in print mode
-        const parts: string[] = []
-        if (projectPath) parts.push(`cd ${shellQuote(projectPath)}`)
-        const flagStr = printFlags.length > 0 ? printFlags.join(' ') + ' ' : ''
-        parts.push(`${shellQuote(bin)} ${flagStr}${shellQuote(prompt)}${sanitizedFlags}`)
-        const fullCmd = parts.join(' && ')
-
-        push(workflow.id, {
-          type: 'node:output',
-          workflowId: workflow.id,
-          nodeId: node.id,
-          message: `$ ${bin} ${flagStr}<prompt>\n`,
-        })
-
-        // Use spawn (not PTY) for non-interactive agent execution — no TUI escape codes.
-        // bash -lc (login, non-interactive) with explicit nvm/fnm init so WSL node
-        // binaries are found instead of broken Windows npm wrappers. We can't use
-        // -lic (interactive) because it dumps shell init noise into the output.
-        // stdin must be 'pipe' (not 'ignore') — WSL rejects /dev/null stdin with
-        // E_UNEXPECTED. We close the pipe immediately after spawn.
-        const child = spawn('wsl.exe', ['--', 'bash', '-lc', NODE_INIT + fullCmd], {
-          stdio: ['pipe', 'pipe', 'pipe'],
-        })
-        child.stdin?.end()
-        activeChildProcesses.add(child)
-
-        let output = ''
-        let lineBuf = ''
-        const emitLine = (text: string): void => {
-          push(workflow.id, {
-            type: 'node:output',
-            workflowId: workflow.id,
-            nodeId: node.id,
-            message: text,
-          })
-        }
-        const flushLines = (text: string): void => {
-          lineBuf += text
-          const parts = lineBuf.split('\n')
-          lineBuf = parts.pop() ?? ''
-          for (const line of parts) {
-            const trimmed = line.trim()
-            if (!trimmed) continue
-            emitLine(trimmed)
-          }
-        }
-        // Periodic flush: emit accumulated partial content even without newlines.
-        // Agents can stream long markdown/thinking without trailing newlines.
-        const flushTimer = setInterval(() => {
-          const pending = lineBuf.trim()
-          if (pending) {
-            emitLine(pending)
-            lineBuf = ''
-          }
-        }, LINE_FLUSH_MS)
-
-        // Activity tracking: kill agent only when idle (no output) for too long
-        let lastActivityTime = Date.now()
-
-        const handleData = (chunk: Buffer): void => {
-          const text = stripAnsi(chunk.toString())
-          if (!text) return
-          lastActivityTime = Date.now()
-          output = (output + text).slice(-8192)
-          nodeOutputs.set(node.id, output)
-          // WF-2: conditionOutputs stores up to 64KB for condition evaluation
-          const existing = conditionOutputs.get(node.id) ?? ''
-          conditionOutputs.set(node.id, (existing + text).slice(-65536))
-          flushLines(text)
-        }
-
-        child.stdout?.on('data', handleData)
-        child.stderr?.on('data', handleData)
-
-        // Idle timeout: kill agent if it produces no output for AGENT_IDLE_TIMEOUT ms
-        const idleCheckTimer = setInterval(() => {
-          const idleMs = Date.now() - lastActivityTime
-          if (idleMs >= AGENT_IDLE_TIMEOUT) {
-            log.warn('Agent node idle timeout', {
-              workflowId: workflow.id,
-              nodeId: node.id,
-              agent: bin,
-              idleMs,
-            })
-            forceKillTree(child)
-            clearInterval(flushTimer)
-            clearInterval(idleCheckTimer)
-            clearTimeout(absoluteTimer)
-            activeChildProcesses.delete(child)
-            settleReject(
-              new Error(`Agent ${bin} idle for ${Math.round(idleMs / 1000)}s — no output`),
-            )
-          }
-        }, IDLE_CHECK_INTERVAL)
-
-        // Optional absolute timeout: only if the user set node.timeout explicitly
-        const absoluteTimer = node.timeout
-          ? setTimeout(() => {
-              log.warn('Agent node absolute timeout', {
-                workflowId: workflow.id,
-                nodeId: node.id,
-                agent: bin,
-                timeoutMs: node.timeout,
-              })
-              forceKillTree(child)
-              clearInterval(flushTimer)
-              clearInterval(idleCheckTimer)
-              activeChildProcesses.delete(child)
-              settleReject(
-                new Error(
-                  `Agent ${bin} timed out after ${(node.timeout ?? 0) / 1000}s (absolute limit)`,
-                ),
-              )
-            }, node.timeout)
-          : undefined
-
-        child.on('close', (code) => {
-          clearInterval(idleCheckTimer)
-          clearTimeout(absoluteTimer)
-          clearInterval(flushTimer)
-          activeChildProcesses.delete(child)
-          nodeExitCodes.set(node.id, code ?? 1)
-          // Flush any remaining partial line
-          const remaining = lineBuf.trim()
-          if (remaining) emitLine(remaining)
-          if (code === 0 || code === null) settleResolve()
-          else settleReject(new Error(`Agent ${bin} exited with code ${code}`))
-        })
-
-        child.on('error', (err: Error) => {
-          clearInterval(idleCheckTimer)
-          clearTimeout(absoluteTimer)
-          clearInterval(flushTimer)
-          activeChildProcesses.delete(child)
-          settleReject(err)
-        })
-      })
-    }
-
-    function runShellNode(node: WorkflowNode): Promise<void> {
-      return new Promise<void>((resolve, reject) => {
-        // Convert literal \n sequences to real newlines so multi-line commands
-        // (e.g. python3 -c "def f():\n  return 1") execute correctly in bash.
-        const cmd = (node.command ?? '').replace(/\\n/g, '\n')
-        push(workflow.id, {
-          type: 'node:output',
-          workflowId: workflow.id,
-          nodeId: node.id,
-          message: `$ ${node.command ?? ''}\n`,
-        })
-
-        // M8: Use projectPath as cwd context for shell commands
-        const fullCmd = projectPath ? `cd ${shellQuote(projectPath)} && ${cmd}` : cmd
-
-        const child = execFile(
-          'wsl.exe',
-          ['--', 'bash', '-lc', NODE_INIT + fullCmd],
-          { timeout: node.timeout ?? 60000 },
-          (err, stdout, stderr) => {
-            activeChildProcesses.delete(child)
-            nodeExitCodes.set(node.id, err ? 1 : 0)
-            const out = stripAnsi(stdout + stderr)
-            nodeOutputs.set(node.id, out)
-            conditionOutputs.set(node.id, out.slice(-65536))
-            push(workflow.id, {
-              type: 'node:output',
-              workflowId: workflow.id,
-              nodeId: node.id,
-              message: out,
-            })
-            if (err) reject(err)
-            else resolve()
-          },
-        )
-        // C4: Track child process so stop() can kill it
-        activeChildProcesses.add(child)
-      })
+    // Dependency injection for extracted node runners
+    const deps: NodeRunnerDeps = {
+      workflowId: workflow.id,
+      projectPath,
+      push: (event) => push(workflow.id, event),
+      nodeOutputs,
+      conditionOutputs,
+      nodeExitCodes,
+      activeChildProcesses,
+      isStopped: () => stopped,
     }
 
     function onCheckpoint(nodeId: string): Promise<void> {
@@ -574,9 +308,9 @@ export function createWorkflowEngine(
 
         try {
           if (node.type === 'agent') {
-            await runAgentNode(node, contextSummary, rolesMap)
+            await runAgentNode(node, contextSummary, rolesMap, deps)
           } else if (node.type === 'shell') {
-            await runShellNode(node)
+            await runShellNode(node, deps)
           } else if (node.type === 'checkpoint') {
             push(workflow.id, {
               type: 'node:paused',
