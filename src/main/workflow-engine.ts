@@ -150,6 +150,8 @@ export function createWorkflowEngine(
     let stopped = false
     const nodeOutputs = new Map<string, string>()
     const nodeExitCodes = new Map<string, number>()
+    // WF-2: Full output (up to 64KB) for condition evaluation — nodeOutputs is truncated to 8KB
+    const conditionOutputs = new Map<string, string>()
     const activeChildProcesses = new Set<ChildProcess>()
     const runningNodeIds = new Set<string>()
     // H10: Key checkpoints by workflowId:nodeId (scoped to this run)
@@ -292,6 +294,9 @@ export function createWorkflowEngine(
           lastActivityTime = Date.now()
           output = (output + text).slice(-8192)
           nodeOutputs.set(node.id, output)
+          // WF-2: conditionOutputs stores up to 64KB for condition evaluation
+          const existing = conditionOutputs.get(node.id) ?? ''
+          conditionOutputs.set(node.id, (existing + text).slice(-65536))
           flushLines(text)
         }
 
@@ -345,7 +350,7 @@ export function createWorkflowEngine(
           clearTimeout(absoluteTimer)
           clearInterval(flushTimer)
           activeChildProcesses.delete(child)
-          nodeExitCodes.set(node.id, code ?? 0)
+          nodeExitCodes.set(node.id, code ?? 1)
           // Flush any remaining partial line
           const remaining = lineBuf.trim()
           if (remaining) emitLine(remaining)
@@ -387,6 +392,7 @@ export function createWorkflowEngine(
             nodeExitCodes.set(node.id, err ? 1 : 0)
             const out = stripAnsi(stdout + stderr)
             nodeOutputs.set(node.id, out)
+            conditionOutputs.set(node.id, out.slice(-65536))
             push(workflow.id, {
               type: 'node:output',
               workflowId: workflow.id,
@@ -422,8 +428,9 @@ export function createWorkflowEngine(
       }
 
       if (node.conditionMode === 'outputMatch') {
-        const output = nodeOutputs.get(upstreamId) ?? ''
-        if (!output) {
+        // WF-2: Read full output from conditionOutputs (64KB), falling back to nodeOutputs (8KB)
+        const fullOutput = conditionOutputs.get(upstreamId) ?? nodeOutputs.get(upstreamId) ?? ''
+        if (!fullOutput) {
           push(workflow.id, {
             type: 'node:output',
             workflowId: workflow.id,
@@ -432,8 +439,10 @@ export function createWorkflowEngine(
           })
           return 'false'
         }
+        // WF-4: Limit output to 100KB to mitigate regex DoS risk from user-provided patterns
+        const testOutput = fullOutput.slice(0, 102400)
         try {
-          return new RegExp(node.conditionPattern ?? '').test(output) ? 'true' : 'false'
+          return new RegExp(node.conditionPattern ?? '').test(testOutput) ? 'true' : 'false'
         } catch {
           return 'false'
         }

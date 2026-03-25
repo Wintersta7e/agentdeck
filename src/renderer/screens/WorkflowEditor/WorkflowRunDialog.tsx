@@ -59,7 +59,11 @@ export default function WorkflowRunDialog({
     async (name: string) => {
       const result = await window.agentDeck.pickFolder()
       if (result !== null) {
-        setValue(name, result)
+        // WF-3: Convert Windows paths (C:\...) to WSL format (/mnt/c/...)
+        const wslPath = result
+          .replace(/^([A-Za-z]):[/\\]/, (_, d: string) => `/mnt/${d.toLowerCase()}/`)
+          .replace(/\\/g, '/')
+        setValue(name, wslPath)
       }
     },
     [setValue],

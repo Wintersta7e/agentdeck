@@ -177,24 +177,28 @@ export function createScheduler(
 
     completeNode(nodeId: string): void {
       const state = getState(nodeId)
+      if (state.status !== 'running') return // WF-5: guard against double-complete
       state.status = 'done'
       activateOutgoing(nodeId)
     },
 
     failNode(nodeId: string): void {
       const state = getState(nodeId)
+      if (state.status !== 'running') return // WF-5: guard against double-fail
       state.status = 'error'
       // Do NOT activate outgoing edges — engine decides via continueOnError
     },
 
     skipNode(nodeId: string): void {
       const state = getState(nodeId)
+      if (state.status === 'done' || state.status === 'error') return // WF-5: already resolved
       state.status = 'skipped'
       propagateSkip(nodeId)
     },
 
     resolveCondition(nodeId: string, branch: 'true' | 'false'): void {
       const state = getState(nodeId)
+      if (state.status !== 'running') return // WF-5: guard against double-resolve
       state.status = 'done'
 
       const edges = outgoing.get(nodeId) ?? []
