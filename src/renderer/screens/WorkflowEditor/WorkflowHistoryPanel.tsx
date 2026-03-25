@@ -119,8 +119,8 @@ function RunCard({
 
       {expanded && run.nodes.length > 0 && (
         <div className="wf-history-nodes">
-          {run.nodes.map((node) => (
-            <div key={node.nodeId}>
+          {run.nodes.map((node, idx) => (
+            <div key={`${node.nodeId}-${idx}`}>
               <NodeRow node={node} />
               {node.status === 'error' &&
                 node.errorTail !== undefined &&

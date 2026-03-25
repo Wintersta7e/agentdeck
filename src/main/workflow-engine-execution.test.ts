@@ -836,3 +836,224 @@ describe('lifecycle events', () => {
     expect(hasEvent(sendSpy, 'wf-shell', 'workflow:done')).toBe(true)
   })
 })
+
+// ═══════════════════════════════════════════════════════════════════════
+// WF-10: Condition eval, retry, loop iteration, node:skipped
+// ═══════════════════════════════════════════════════════════════════════
+
+describe('condition node with exitCode branching', () => {
+  it('executes true branch and skips false branch when shell exits 0', async () => {
+    // shell → condition(exitCode) → true branch (agent A) + false branch (agent B)
+    mockExecFile.mockImplementation(
+      (cmd: string, _args: string[], _opts: unknown, cb?: (...a: unknown[]) => void) => {
+        if (cmd === 'wsl.exe' && typeof cb === 'function') {
+          // Shell node succeeds (exit 0)
+          process.nextTick(() => cb(null, 'shell output', ''))
+        } else if (typeof cb === 'function') {
+          cb(null, '', '')
+        }
+        return { pid: 999, kill: vi.fn() }
+      },
+    )
+    buildEngine()
+
+    const child = createMockChild()
+    mockSpawn.mockReturnValue(child)
+
+    const wf = makeWorkflow({
+      id: 'wf-cond1',
+      nodes: [
+        makeWorkflowNode({ id: 'shell1', type: 'shell', command: 'echo ok' }),
+        makeWorkflowNode({
+          id: 'cond1',
+          type: 'condition',
+          conditionMode: 'exitCode',
+        }),
+        makeWorkflowNode({ id: 'true-branch', type: 'agent', prompt: 'do true thing' }),
+        makeWorkflowNode({ id: 'false-branch', type: 'agent', prompt: 'do false thing' }),
+      ],
+      edges: [
+        makeWorkflowEdge('shell1', 'cond1'),
+        makeWorkflowEdge('cond1', 'true-branch', { branch: 'true' }),
+        makeWorkflowEdge('cond1', 'false-branch', { branch: 'false' }),
+      ],
+    })
+
+    engine.run(wf)
+    await tick(100) // shell node completes + condition evaluates
+
+    // Condition should resolve to 'true' (exit code 0)
+    const condDone = getEvents(sendSpy, 'wf-cond1', 'node:done')
+    const condWithBranch = condDone.find((e) => e.branch === 'true')
+    expect(condWithBranch).toBeDefined()
+
+    // True branch agent should have been spawned
+    expect(mockSpawn).toHaveBeenCalled()
+
+    // Complete the true branch
+    child.emit('close', 0)
+    await tick()
+
+    // False branch should be skipped
+    expect(hasEvent(sendSpy, 'wf-cond1', 'node:skipped')).toBe(true)
+    const skipped = getEvents(sendSpy, 'wf-cond1', 'node:skipped')
+    expect(skipped.some((e) => e.nodeId === 'false-branch')).toBe(true)
+
+    expect(hasEvent(sendSpy, 'wf-cond1', 'workflow:done')).toBe(true)
+  })
+
+  it('executes false branch when shell exits non-zero', async () => {
+    // shell (fails) → condition(exitCode) → true/false branches
+    mockExecFile.mockImplementation(
+      (cmd: string, _args: string[], _opts: unknown, cb?: (...a: unknown[]) => void) => {
+        if (cmd === 'wsl.exe' && typeof cb === 'function') {
+          // Shell node fails (exit 1)
+          const err = new Error('exit 1') as NodeJS.ErrnoException
+          err.code = '1'
+          process.nextTick(() => cb(err, 'shell output', 'error output'))
+        } else if (typeof cb === 'function') {
+          cb(null, '', '')
+        }
+        return { pid: 999, kill: vi.fn() }
+      },
+    )
+    buildEngine()
+
+    const child = createMockChild()
+    mockSpawn.mockReturnValue(child)
+
+    const wf = makeWorkflow({
+      id: 'wf-cond2',
+      nodes: [
+        makeWorkflowNode({
+          id: 'shell1',
+          type: 'shell',
+          command: 'exit 1',
+          continueOnError: true,
+        }),
+        makeWorkflowNode({
+          id: 'cond1',
+          type: 'condition',
+          conditionMode: 'exitCode',
+        }),
+        makeWorkflowNode({ id: 'true-branch', type: 'agent', prompt: 'true path' }),
+        makeWorkflowNode({ id: 'false-branch', type: 'agent', prompt: 'false path' }),
+      ],
+      edges: [
+        makeWorkflowEdge('shell1', 'cond1'),
+        makeWorkflowEdge('cond1', 'true-branch', { branch: 'true' }),
+        makeWorkflowEdge('cond1', 'false-branch', { branch: 'false' }),
+      ],
+    })
+
+    engine.run(wf)
+    await tick(100) // shell fails, condition evaluates
+
+    // Condition should resolve to 'false' (exit code != 0)
+    const condDone = getEvents(sendSpy, 'wf-cond2', 'node:done')
+    const condWithBranch = condDone.find((e) => e.branch === 'false')
+    expect(condWithBranch).toBeDefined()
+
+    // False branch agent should have been spawned
+    expect(mockSpawn).toHaveBeenCalled()
+
+    // Complete the false branch
+    child.emit('close', 0)
+    await tick()
+
+    // True branch should be skipped
+    const skipped = getEvents(sendSpy, 'wf-cond2', 'node:skipped')
+    expect(skipped.some((e) => e.nodeId === 'true-branch')).toBe(true)
+
+    expect(hasEvent(sendSpy, 'wf-cond2', 'workflow:done')).toBe(true)
+  })
+})
+
+describe('retry on failure then success', () => {
+  it('emits node:retry and succeeds on second attempt', async () => {
+    const children: MockChild[] = []
+    mockSpawn.mockImplementation(() => {
+      const child = createMockChild(8000 + children.length)
+      children.push(child)
+      return child
+    })
+
+    const wf = makeWorkflow({
+      id: 'wf-retry1',
+      nodes: [
+        makeWorkflowNode({
+          id: 'n1',
+          type: 'agent',
+          prompt: 'flaky task',
+          retryCount: 1,
+          retryDelayMs: 100,
+        }),
+      ],
+    })
+
+    engine.run(wf)
+    await tick()
+
+    // First attempt: fail
+    expect(children).toHaveLength(1)
+    children[0]?.emit('close', 1)
+    await tick(200) // wait past retryDelayMs
+
+    // node:retry event should have been emitted
+    expect(hasEvent(sendSpy, 'wf-retry1', 'node:retry')).toBe(true)
+    const retryEvents = getEvents(sendSpy, 'wf-retry1', 'node:retry')
+    expect(retryEvents).toHaveLength(1)
+    expect(retryEvents[0]?.attempt).toBe(2)
+
+    // Second attempt should have spawned
+    expect(children).toHaveLength(2)
+
+    // Second attempt: succeed
+    children[1]?.emit('close', 0)
+    await tick()
+
+    expect(hasEvent(sendSpy, 'wf-retry1', 'node:done')).toBe(true)
+    expect(hasEvent(sendSpy, 'wf-retry1', 'workflow:done')).toBe(true)
+  })
+
+  it('fails after exhausting all retry attempts', async () => {
+    const children: MockChild[] = []
+    mockSpawn.mockImplementation(() => {
+      const child = createMockChild(9000 + children.length)
+      children.push(child)
+      return child
+    })
+
+    const wf = makeWorkflow({
+      id: 'wf-retry2',
+      nodes: [
+        makeWorkflowNode({
+          id: 'n1',
+          type: 'agent',
+          prompt: 'always fails',
+          retryCount: 2,
+          retryDelayMs: 100,
+        }),
+      ],
+    })
+
+    engine.run(wf)
+    await tick()
+
+    // Attempt 1: fail
+    children[0]?.emit('close', 1)
+    await tick(200)
+
+    // Attempt 2: fail
+    children[1]?.emit('close', 1)
+    await tick(200)
+
+    // Attempt 3: fail (maxAttempts = retryCount + 1 = 3)
+    children[2]?.emit('close', 1)
+    await tick()
+
+    // All retries exhausted — node should error
+    expect(hasEvent(sendSpy, 'wf-retry2', 'node:error')).toBe(true)
+    expect(hasEvent(sendSpy, 'wf-retry2', 'workflow:stopped')).toBe(true)
+  })
+})

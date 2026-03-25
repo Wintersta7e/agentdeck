@@ -8,7 +8,7 @@ import {
   deleteWorkflow,
 } from '../workflow-store'
 import { listRuns, deleteRun } from '../workflow-run-store'
-import { validateWorkflow } from '../../shared/workflow-utils'
+import { validateWorkflow, validateRole } from '../../shared/workflow-utils'
 import { toWslPath } from '../wsl-utils'
 import type { WorkflowEngine } from '../workflow-engine'
 import type { Role, Workflow, WorkflowExport } from '../../shared/types'
@@ -72,7 +72,14 @@ export function registerWorkflowHandlers(
       if (!Array.isArray(d.roles)) throw new Error('Missing roles array')
 
       const importedWorkflow = d.workflow as Workflow
-      const importedRoles = d.roles as Role[]
+      const importedRoles = d.roles as unknown[]
+
+      // WF-6: Validate each imported role's fields before trusting them
+      for (const rawRole of importedRoles) {
+        const roleErr = validateRole(rawRole)
+        if (roleErr) throw new Error(`Invalid bundled role: ${roleErr}`)
+      }
+      const validatedRoles = importedRoles as Role[]
       const strategy =
         roleStrategy && typeof roleStrategy === 'object' && !Array.isArray(roleStrategy)
           ? (roleStrategy as Record<string, 'skip' | 'copy'>)
@@ -91,7 +98,7 @@ export function registerWorkflowHandlers(
       // Role remapping: oldId → newId
       const roleIdMap = new Map<string, string>()
 
-      for (const role of importedRoles) {
+      for (const role of validatedRoles) {
         if (role.builtin) {
           // Builtin: match by name to local builtin
           const local = existingRoles.find((r) => r.builtin && r.name === role.name)

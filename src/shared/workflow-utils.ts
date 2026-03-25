@@ -266,6 +266,22 @@ export function validateWorkflow(w: unknown): ValidationResult {
   return { errors, warnings }
 }
 
+/**
+ * Validate a single Role object loaded from an untrusted source (e.g. import).
+ * Returns null if valid, or an error message string.
+ */
+export function validateRole(role: unknown): string | null {
+  if (!role || typeof role !== 'object') return 'Role must be an object'
+  const r = role as Record<string, unknown>
+  if (typeof r.id !== 'string' || !r.id) return 'Role missing id'
+  if (typeof r.name !== 'string' || !r.name || r.name.length > MAX_NAME)
+    return 'Role missing or invalid name'
+  if (typeof r.persona !== 'string') return 'Role missing persona'
+  if (typeof r.builtin !== 'boolean') return 'Role missing builtin flag'
+  if (typeof r.icon !== 'string') return 'Role missing icon'
+  return null // valid
+}
+
 /** Topological sort -- returns array of tiers (each tier = parallel batch) */
 export function topoSort(nodes: WorkflowNode[], edges: WorkflowEdge[]): WorkflowNode[][] {
   // Loop-back edges are not part of the DAG -- exclude them so they don't

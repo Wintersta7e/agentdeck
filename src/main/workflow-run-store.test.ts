@@ -108,7 +108,8 @@ describe('saveRun', () => {
       await saveRun(run)
 
       // Override the mtime of the final file (after rename) for deterministic sorting
-      const filename = `wf-abc_${1000 + i}.json`
+      // WF-9: filename now includes run ID: workflowId_startedAt_runId.json
+      const filename = `wf-abc_${1000 + i}_run-${i}.json`
       const filepath = `/tmp/mock-electron/userData/workflow-runs/${filename}`
       testStats.set(filepath, { mtimeMs: 1000 + i })
 

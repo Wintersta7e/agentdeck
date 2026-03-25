@@ -33,29 +33,44 @@ function getRunsDir(): string {
   return dir
 }
 
+/** WF-8: Per-workflow write locks to prevent saveRun + pruneRuns races. */
+const writeLocks = new Map<string, Promise<void>>()
+
 /**
- * Build a deterministic filename from workflow ID and startedAt timestamp.
- * The timestamp ensures uniqueness per workflow.
+ * Build a deterministic filename from workflow ID, startedAt timestamp, and run ID.
+ * WF-9: Including run ID enables O(1) deletion by filename instead of scanning all files.
  */
-function runFilename(workflowId: string, startedAt: number): string {
-  return `${safeId(workflowId)}_${startedAt}.json`
+function runFilename(workflowId: string, startedAt: number, runId: string): string {
+  return `${safeId(workflowId)}_${startedAt}_${safeId(runId)}.json`
 }
 
 /** Save a completed workflow run to disk. Auto-prunes old runs. */
 export async function saveRun(run: WorkflowRun): Promise<void> {
-  const dir = getRunsDir()
-  const filename = runFilename(run.workflowId, run.startedAt)
-  const file = path.join(dir, filename)
-  const tmpFile = file + '.tmp'
+  // WF-8: Chain onto any pending write for this workflow to prevent races
+  const prev = writeLocks.get(run.workflowId) ?? Promise.resolve()
+  const task = prev
+    .catch(() => {})
+    .then(async () => {
+      const dir = getRunsDir()
+      const filename = runFilename(run.workflowId, run.startedAt, run.id)
+      const file = path.join(dir, filename)
+      const tmpFile = file + '.tmp'
 
-  // Atomic write: write to .tmp, then rename
-  await fs.promises.writeFile(tmpFile, JSON.stringify(run, null, 2), 'utf-8')
-  await fs.promises.rename(tmpFile, file)
+      // Atomic write: write to .tmp, then rename
+      await fs.promises.writeFile(tmpFile, JSON.stringify(run, null, 2), 'utf-8')
+      await fs.promises.rename(tmpFile, file)
 
-  log.info('Workflow run saved', { id: run.id, workflowId: run.workflowId })
+      log.info('Workflow run saved', { id: run.id, workflowId: run.workflowId })
 
-  // Prune: keep only the most recent MAX_RUNS_PER_WORKFLOW files per workflow
-  await pruneRuns(run.workflowId)
+      // Prune: keep only the most recent MAX_RUNS_PER_WORKFLOW files per workflow
+      await pruneRuns(run.workflowId)
+    })
+  writeLocks.set(run.workflowId, task)
+  try {
+    await task
+  } finally {
+    if (writeLocks.get(run.workflowId) === task) writeLocks.delete(run.workflowId)
+  }
 }
 
 /** Remove oldest run files beyond the retention limit. */
@@ -128,7 +143,7 @@ export async function listRuns(workflowId: string): Promise<WorkflowRun[]> {
   return runs
 }
 
-/** Delete a specific run by ID. Scans all files to find the matching run. */
+/** Delete a specific run by ID. WF-9: Finds file by run ID in filename instead of parsing all. */
 export async function deleteRun(runId: string): Promise<void> {
   safeId(runId)
   const dir = getRunsDir()
@@ -140,25 +155,13 @@ export async function deleteRun(runId: string): Promise<void> {
     return
   }
 
-  const jsonFiles = allFiles.filter((f) => f.endsWith('.json'))
-
-  for (const f of jsonFiles) {
-    try {
-      const raw = await fs.promises.readFile(path.join(dir, f), 'utf-8')
-      const parsed = JSON.parse(raw) as WorkflowRun
-      if (parsed.id === runId) {
-        await fs.promises.rm(path.join(dir, f), { force: true })
-        log.info('Workflow run deleted', { runId, file: f })
-        return
-      }
-    } catch (err) {
-      log.warn('Failed to read workflow run file during delete scan', {
-        file: f,
-        err: String(err),
-      })
-    }
+  // WF-9: Run ID is embedded in filename as the last segment before .json
+  const suffix = `_${runId}.json`
+  const target = allFiles.find((f) => f.endsWith(suffix))
+  if (target) {
+    await fs.promises.rm(path.join(dir, target), { force: true })
+    log.info('Workflow run deleted', { runId, file: target })
+  } else {
+    log.info('Workflow run not found for deletion', { runId })
   }
-
-  // No matching file found — no-op
-  log.info('Workflow run not found for deletion', { runId })
 }
