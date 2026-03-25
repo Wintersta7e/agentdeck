@@ -153,7 +153,7 @@ export function createProjectStore(): Store<StoreSchema> {
     const withId = { ...p, id, envVars: encryptEnvVars(p.envVars) } as Project
     const idx = projects.findIndex((existing) => existing.id === id)
     const existing = idx >= 0 ? projects[idx] : undefined
-    if (existing != null) {
+    if (existing !== undefined) {
       projects[idx] = { ...existing, ...withId }
     } else {
       projects.push(withId)
@@ -194,7 +194,7 @@ export function createProjectStore(): Store<StoreSchema> {
     const withId = { ...t, id } as Template
     const idx = templates.findIndex((existing) => existing.id === id)
     const existingTpl = idx >= 0 ? templates[idx] : undefined
-    if (existingTpl != null) {
+    if (existingTpl !== undefined) {
       templates[idx] = { ...existingTpl, ...withId }
     } else {
       templates.push(withId)
@@ -230,7 +230,7 @@ export function createProjectStore(): Store<StoreSchema> {
     const withId = { ...r, id } as Role
     const idx = roles.findIndex((existing) => existing.id === id)
     const existingRole = idx >= 0 ? roles[idx] : undefined
-    if (existingRole != null) {
+    if (existingRole !== undefined) {
       roles[idx] = { ...existingRole, ...withId }
     } else {
       roles.push(withId)

@@ -97,6 +97,10 @@ export async function checkAgentVersion(agentId: string): Promise<VersionInfo> {
 
 /**
  * Run the agent's update command and re-check the version afterward.
+ *
+ * For npm agents, resolves the exact latest version from the registry first
+ * and installs that specific version instead of relying on `@latest` dist-tag
+ * resolution, which can use stale npm packument cache.
  */
 export async function updateAgent(agentId: string): Promise<UpdateResult> {
   const agent = AGENTS.find((a) => a.id === agentId)
@@ -104,18 +108,53 @@ export async function updateAgent(agentId: string): Promise<UpdateResult> {
     return { agentId, success: false, newVersion: null, message: 'Unknown agent' }
   }
 
-  log.info(`Starting update for ${agentId}`)
+  // Resolve the actual latest version from the registry before installing.
+  // npm's @latest dist-tag resolution can use stale packument cache, so we
+  // resolve the version explicitly via `npm view` and install @<version>.
+  let targetVersion: string | null = null
+  if (agent.latestCmd) {
+    try {
+      const raw = await runWslCmd(agent.latestCmd)
+      const match = SEMVER_RE.exec(raw)
+      targetVersion = match?.[1] ?? null
+    } catch {
+      log.debug(`Failed to resolve latest version for ${agentId}, falling back to updateCmd`)
+    }
+  }
+
+  // Replace @latest with the specific version to bypass dist-tag cache
+  let updateCmd: string = agent.updateCmd
+  if (targetVersion && updateCmd.includes('@latest')) {
+    updateCmd = updateCmd.replace('@latest', `@${targetVersion}`)
+  }
+
+  log.info(`Starting update for ${agentId}`, { targetVersion, cmd: updateCmd })
 
   try {
-    await runWslCmd(agent.updateCmd, 60000)
+    await runWslCmd(updateCmd, 120_000)
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     log.warn(`Update failed for ${agentId}`, { message })
     return { agentId, success: false, newVersion: null, message }
   }
 
-  // Re-check version after update
+  // Re-check installed version after update
   const info = await checkAgentVersion(agentId)
+
+  // Verify the version actually changed to the target
+  if (targetVersion && info.current && info.current !== targetVersion) {
+    log.warn(`Update ran but version did not change`, {
+      expected: targetVersion,
+      actual: info.current,
+    })
+    return {
+      agentId,
+      success: false,
+      newVersion: info.current,
+      message: `Installed ${info.current} but registry has ${targetVersion}. The agent binary on PATH may differ from the npm global install.`,
+    }
+  }
+
   log.info(`Update complete for ${agentId}`, { newVersion: info.current })
 
   return {

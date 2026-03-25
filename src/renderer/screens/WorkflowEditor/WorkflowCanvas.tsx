@@ -27,7 +27,7 @@ interface WorkflowCanvasProps {
   selectedNodeId: string | null
   onSelectNode: (id: string | null) => void
   onMoveNode: (nodeId: string, x: number, y: number) => void
-  onConnect: (fromNodeId: string, toNodeId: string) => void
+  onConnect: (fromNodeId: string, toNodeId: string, branch?: 'true' | 'false') => void
   onUpdateNode: (node: WorkflowNode) => void
   onDeleteNode: (nodeId: string) => void
   onDeleteEdge: (edgeId: string) => void
@@ -75,10 +75,13 @@ function toFlowEdges(wf: Workflow, statuses: Record<string, WorkflowNodeStatus>)
   return wf.edges.map((e) => ({
     id: e.id,
     source: e.fromNodeId,
+    sourceHandle: e.branch ?? null,
     target: e.toNodeId,
     type: 'workflowEdge' as const,
     data: {
       state: getEdgeState(e, statuses),
+      branch: e.branch,
+      edgeType: e.edgeType,
     } satisfies WorkflowEdgeData,
   }))
 }
@@ -166,10 +169,16 @@ export function WorkflowCanvas({
   const handleConnect = useCallback(
     (connection: Connection) => {
       if (connection.source && connection.target) {
-        onConnect(connection.source, connection.target)
+        // Detect branch from sourceHandle when connecting from a condition node
+        const sourceNode = workflow?.nodes.find((n) => n.id === connection.source)
+        const branch =
+          sourceNode?.type === 'condition' && connection.sourceHandle
+            ? (connection.sourceHandle as 'true' | 'false')
+            : undefined
+        onConnect(connection.source, connection.target, branch)
       }
     },
-    [onConnect],
+    [onConnect, workflow],
   )
 
   const isValidConnection = useCallback(

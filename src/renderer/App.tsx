@@ -263,7 +263,7 @@ export function App(): React.JSX.Element {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  }, [handleNewTerminal])
 
   // Subscribe to PTY activity events for all active sessions (ref-based to avoid re-subscribing)
   const subscribedRef = useRef<Map<string, () => void>>(new Map())

@@ -111,7 +111,20 @@ function registerIpcHandlers(store: AppStore): void {
   registerWindowHandlers(() => mainWindow, store)
   registerAgentHandlers(() => mainWindow, store)
   registerProjectHandlers(() => mainWindow)
-  registerWorkflowHandlers(() => workflowEngine)
+  registerWorkflowHandlers(
+    () => workflowEngine,
+    () => store.get('roles') ?? [],
+    (role) => {
+      const roles = store.get('roles') ?? []
+      const idx = roles.findIndex((r) => r.id === role.id)
+      if (idx >= 0) {
+        roles[idx] = role
+      } else {
+        roles.push(role)
+      }
+      store.set('roles', roles)
+    },
+  )
   registerUtilHandlers()
 }
 

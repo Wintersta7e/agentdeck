@@ -65,9 +65,11 @@ function write(level: LogLevel, mod: string, message: string, data?: unknown): v
       console.warn(line.trimEnd())
       break
     case 'DEBUG':
+      // eslint-disable-next-line no-console -- logger is the sanctioned output channel
       console.debug(line.trimEnd())
       break
     default:
+      // eslint-disable-next-line no-console -- logger is the sanctioned output channel
       console.log(line.trimEnd())
   }
 }

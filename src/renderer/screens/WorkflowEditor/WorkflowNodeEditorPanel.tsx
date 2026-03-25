@@ -222,22 +222,59 @@ export default function WorkflowNodeEditorPanel({
           </div>
         )}
 
-        {/* Task prompt / Command / Message */}
-        <div className="wf-ne-field">
-          <label className="wf-ne-label">
-            {node.type === 'agent' ? 'Task Prompt' : node.type === 'shell' ? 'Command' : 'Message'}
-          </label>
-          <textarea
-            className="wf-ne-textarea"
-            value={node.prompt ?? node.command ?? node.message ?? ''}
-            rows={5}
-            onChange={(e) => {
-              if (node.type === 'agent') update({ prompt: e.target.value })
-              else if (node.type === 'shell') update({ command: e.target.value })
-              else update({ message: e.target.value })
-            }}
-          />
-        </div>
+        {/* Task prompt / Command / Message (not shown for condition nodes) */}
+        {node.type !== 'condition' && (
+          <div className="wf-ne-field">
+            <label className="wf-ne-label">
+              {node.type === 'agent'
+                ? 'Task Prompt'
+                : node.type === 'shell'
+                  ? 'Command'
+                  : 'Message'}
+            </label>
+            <textarea
+              className="wf-ne-textarea"
+              value={node.prompt ?? node.command ?? node.message ?? ''}
+              rows={5}
+              onChange={(e) => {
+                if (node.type === 'agent') update({ prompt: e.target.value })
+                else if (node.type === 'shell') update({ command: e.target.value })
+                else update({ message: e.target.value })
+              }}
+            />
+          </div>
+        )}
+
+        {/* Condition-specific fields */}
+        {node.type === 'condition' && (
+          <>
+            <div className="wf-ne-field">
+              <label className="wf-ne-label">Condition Mode</label>
+              <select
+                className="wf-ne-select"
+                value={node.conditionMode ?? 'exitCode'}
+                onChange={(e) =>
+                  update({ conditionMode: e.target.value as 'exitCode' | 'outputMatch' })
+                }
+              >
+                <option value="exitCode">Exit Code (0 = true)</option>
+                <option value="outputMatch">Output Match (regex)</option>
+              </select>
+            </div>
+            {(node.conditionMode ?? 'exitCode') === 'outputMatch' && (
+              <div className="wf-ne-field">
+                <label className="wf-ne-label">Regex Pattern</label>
+                <input
+                  type="text"
+                  className="wf-ne-input"
+                  value={node.conditionPattern ?? ''}
+                  onChange={(e) => update({ conditionPattern: e.target.value })}
+                  placeholder="e.g. PASS|SUCCESS|No errors"
+                />
+              </div>
+            )}
+          </>
+        )}
 
         {/* Output format preview (when role selected and form closed) */}
         {showRolePreviews && role.outputFormat && (
@@ -286,6 +323,46 @@ export default function WorkflowNodeEditorPanel({
               }}
             />
           </div>
+        )}
+
+        {/* Retry config (agent + shell nodes only) */}
+        {(node.type === 'agent' || node.type === 'shell') && (
+          <details className="wf-ne-details">
+            <summary className="wf-ne-summary">Retry on Failure</summary>
+            <div className="wf-ne-field">
+              <label className="wf-ne-label">Retry Count (0 = no retry)</label>
+              <input
+                type="number"
+                className="wf-ne-input"
+                min={0}
+                max={5}
+                value={node.retryCount ?? 0}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value, 10)
+                  update({ retryCount: v > 0 ? v : undefined })
+                }}
+              />
+            </div>
+            {(node.retryCount ?? 0) > 0 && (
+              <div className="wf-ne-field">
+                <label className="wf-ne-label">Retry Delay (ms)</label>
+                <input
+                  type="number"
+                  className="wf-ne-input"
+                  min={100}
+                  max={60000}
+                  step={100}
+                  value={node.retryDelayMs ?? 2000}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10)
+                    update({
+                      retryDelayMs: isNaN(v) ? undefined : Math.max(100, Math.min(60000, v)),
+                    })
+                  }}
+                />
+              </div>
+            )}
+          </details>
         )}
       </div>
     </div>

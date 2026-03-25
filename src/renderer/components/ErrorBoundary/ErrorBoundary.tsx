@@ -22,7 +22,7 @@ export class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error }
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+  override componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     const message = `${error.name}: ${error.message}\n${errorInfo.componentStack ?? ''}`
     window.agentDeck?.log?.send('error', 'ErrorBoundary', message).catch(() => {})
   }
@@ -31,7 +31,7 @@ export class ErrorBoundary extends Component<Props, State> {
     window.location.reload()
   }
 
-  render(): ReactNode {
+  override render(): ReactNode {
     if (this.state.hasError) {
       return (
         <div className="error-boundary">

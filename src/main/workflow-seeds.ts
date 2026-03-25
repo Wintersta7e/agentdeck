@@ -1,14 +1,14 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import { createLogger } from './logger'
-import type { Workflow, WorkflowNode, WorkflowEdge } from '../shared/types'
+import type { Workflow, WorkflowNode, WorkflowEdge, WorkflowVariable } from '../shared/types'
 import type { AppStore } from './project-store'
 import { getRolesFromStore } from './project-store'
 import { getWorkflowsDir, saveWorkflow } from './workflow-store'
 
 const log = createLogger('workflow-seeds')
 
-const WORKFLOW_SEED_VERSION = 1
+const WORKFLOW_SEED_VERSION = 2
 
 interface SeedNode {
   id: string
@@ -29,6 +29,7 @@ interface SeedWorkflowBlueprint {
   description: string
   nodes: SeedNode[]
   edges: WorkflowEdge[]
+  variables?: WorkflowVariable[] | undefined
 }
 
 const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
@@ -175,7 +176,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
         prompt:
-          "Read the ticket specification at `<TICKET_PATH>`. If it's a folder, read all files in it. Analyze the requirements and create a detailed implementation plan: list the files to create/modify, the components/functions needed, data flow, edge cases to handle, and a suggested build order.",
+          "Read the ticket specification at `{{TICKET_PATH}}`. If it's a folder, read all files in it. Analyze the requirements and create a detailed implementation plan: list the files to create/modify, the components/functions needed, data flow, edge cases to handle, and a suggested build order.",
         _roleName: 'Architect',
       },
       {
@@ -228,6 +229,9 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         toNodeId: 'seed-wf-feature-ticket-n4',
       },
     ],
+    variables: [
+      { name: 'TICKET_PATH', label: 'Path to ticket/spec file', type: 'path', required: true },
+    ],
   },
 
   // 4. Plan & Implement
@@ -245,7 +249,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
         prompt:
-          'Analyze the codebase and create a detailed implementation plan for the following feature: `<DESCRIBE YOUR FEATURE>`. Include: files to create/modify, components/functions needed, data flow, edge cases, and build order.',
+          'Analyze the codebase and create a detailed implementation plan for the following feature: `{{FEATURE_DESC}}`. Include: files to create/modify, components/functions needed, data flow, edge cases, and build order.',
         _roleName: 'Architect',
       },
       {
@@ -294,6 +298,14 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         id: 'seed-wf-plan-implement-e3',
         fromNodeId: 'seed-wf-plan-implement-n3',
         toNodeId: 'seed-wf-plan-implement-n4',
+      },
+    ],
+    variables: [
+      {
+        name: 'FEATURE_DESC',
+        label: 'Describe the feature to implement',
+        type: 'text',
+        required: true,
       },
     ],
   },
@@ -440,7 +452,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
         prompt:
-          'Investigate the following bug: `<DESCRIBE THE BUG>`. Trace the root cause through the codebase. Identify the affected code paths, the conditions that trigger it, and why it fails.',
+          'Investigate the following bug: `{{BUG_DESC}}`. Trace the root cause through the codebase. Identify the affected code paths, the conditions that trigger it, and why it fails.',
         _roleName: 'Debugger',
       },
       {
@@ -479,6 +491,9 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         fromNodeId: 'seed-wf-bug-triage-n2',
         toNodeId: 'seed-wf-bug-triage-n3',
       },
+    ],
+    variables: [
+      { name: 'BUG_DESC', label: 'Describe the bug to investigate', type: 'text', required: true },
     ],
   },
 ]
@@ -546,6 +561,7 @@ export async function seedWorkflows(store: AppStore): Promise<void> {
       description: blueprint.description,
       nodes,
       edges: blueprint.edges,
+      variables: blueprint.variables,
       createdAt: 0,
       updatedAt: 0,
     }

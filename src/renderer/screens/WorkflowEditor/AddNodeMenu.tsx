@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react'
-import { Hexagon, TerminalSquare, Pause } from 'lucide-react'
+import { Hexagon, TerminalSquare, GitBranch, Pause } from 'lucide-react'
 import type { WorkflowNodeType } from '../../../shared/types'
 import './AddNodeMenu.css'
 
@@ -31,6 +31,13 @@ const NODE_OPTIONS: NodeOption[] = [
     label: 'Shell',
     description: 'Executes a bash command in WSL',
     colorClass: 'wf-add-icon-shell',
+  },
+  {
+    type: 'condition',
+    icon: <GitBranch size={16} />,
+    label: 'Condition',
+    description: 'Branches on exit code or output pattern',
+    colorClass: 'wf-add-icon-condition',
   },
   {
     type: 'checkpoint',
