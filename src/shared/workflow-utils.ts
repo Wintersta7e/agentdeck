@@ -262,6 +262,10 @@ export function validateWorkflow(w: unknown): ValidationResult {
 
 /** Topological sort -- returns array of tiers (each tier = parallel batch) */
 export function topoSort(nodes: WorkflowNode[], edges: WorkflowEdge[]): WorkflowNode[][] {
+  // Loop-back edges are not part of the DAG -- exclude them so they don't
+  // inflate in-degrees and trigger false "circular dependency" errors.
+  const forwardEdges = edges.filter((e) => e.edgeType !== 'loop')
+
   const inDegree = new Map<string, number>()
   const downstream = new Map<string, string[]>()
 
@@ -269,7 +273,7 @@ export function topoSort(nodes: WorkflowNode[], edges: WorkflowEdge[]): Workflow
     inDegree.set(n.id, 0)
     downstream.set(n.id, [])
   }
-  for (const e of edges) {
+  for (const e of forwardEdges) {
     inDegree.set(e.toNodeId, (inDegree.get(e.toNodeId) ?? 0) + 1)
     downstream.get(e.fromNodeId)?.push(e.toNodeId)
   }

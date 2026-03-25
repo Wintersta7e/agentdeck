@@ -183,6 +183,29 @@ describe('topoSort', () => {
     expect(tiers[0]?.map((n) => n.id)).toEqual(['a'])
     expect(tiers[1]).toHaveLength(3)
   })
+
+  it('excludes loop edges from in-degree calculation', () => {
+    const a = makeWorkflowNode({ id: 'a', type: 'shell', command: 'echo' })
+    const cond = makeWorkflowNode({ id: 'c', type: 'condition', conditionMode: 'exitCode' })
+    const tiers = topoSort(
+      [a, cond],
+      [
+        makeWorkflowEdge('a', 'c'),
+        makeWorkflowEdge('c', 'a', { edgeType: 'loop', branch: 'false', maxIterations: 3 }),
+      ],
+    )
+    expect(tiers).toHaveLength(2)
+    expect(tiers[0]?.[0]?.id).toBe('a')
+    expect(tiers[1]?.[0]?.id).toBe('c')
+  })
+
+  it('still detects real cycles (non-loop edges)', () => {
+    const a = makeWorkflowNode({ id: 'a', type: 'shell', command: 'echo' })
+    const b = makeWorkflowNode({ id: 'b', type: 'shell', command: 'echo' })
+    expect(() =>
+      topoSort([a, b], [makeWorkflowEdge('a', 'b'), makeWorkflowEdge('b', 'a')]),
+    ).toThrow('Circular dependency')
+  })
 })
 
 // ── validateWorkflow ───────────────────────────────────────
