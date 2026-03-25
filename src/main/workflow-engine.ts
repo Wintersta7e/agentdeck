@@ -447,6 +447,13 @@ export function createWorkflowEngine(
           return 'false'
         }
       }
+      // WF-11: Unknown conditionMode — warn and evaluate as false
+      push(workflow.id, {
+        type: 'node:output',
+        workflowId: workflow.id,
+        nodeId: node.id,
+        message: `\u26a0 Unknown conditionMode "${String(node.conditionMode)}", evaluating as false`,
+      })
       return 'false'
     }
 
