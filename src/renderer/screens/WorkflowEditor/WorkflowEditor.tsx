@@ -1,12 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Download, Upload, Copy } from 'lucide-react'
 import type {
   Workflow,
   WorkflowNode,
   WorkflowEdge as WfEdge,
   WorkflowNodeType,
   WorkflowNodeStatus,
-  WorkflowStatus,
   WorkflowEvent,
 } from '../../../shared/types'
 import { useAppStore } from '../../store/appStore'
@@ -14,9 +12,10 @@ import { WorkflowCanvas } from './WorkflowCanvas'
 import WorkflowLogPanel from './WorkflowLogPanel'
 import WorkflowHistoryPanel from './WorkflowHistoryPanel'
 import { PanelDivider } from '../../components/shared/PanelDivider'
-import AddNodeMenu from './AddNodeMenu'
 import WorkflowNodeEditorPanel from './WorkflowNodeEditorPanel'
 import WorkflowRunDialog from './WorkflowRunDialog'
+import WorkflowToolbar from './WorkflowToolbar'
+import { useWorkflowActions } from './useWorkflowActions'
 import './WorkflowEditor.css'
 
 interface WorkflowEditorProps {
@@ -32,17 +31,8 @@ const NEW_NODE_X_OFFSET = 260
 const EMPTY_LOGS: WorkflowEvent[] = []
 const EMPTY_NODE_STATUSES: Record<string, WorkflowNodeStatus> = {}
 
-const STATUS_TEXT: Record<WorkflowStatus, string> = {
-  idle: 'Ready',
-  running: 'Running\u2026',
-  done: 'Complete',
-  error: 'Error',
-  stopped: 'Stopped',
-}
-
 export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): React.JSX.Element {
   const updateWorkflowMeta = useAppStore((s) => s.updateWorkflowMeta)
-  const addNotification = useAppStore((s) => s.addNotification)
   const projects = useAppStore((s) => s.projects)
   const wfLogPanelWidth = useAppStore((s) => s.wfLogPanelWidth)
   const setWfLogPanelWidth = useAppStore((s) => s.setWfLogPanelWidth)
@@ -56,10 +46,7 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
   const closeAddMenu = useCallback(() => setAddMenuOpen(false), [])
   const [detailNode, setDetailNode] = useState<WorkflowNode | null>(null)
   const [rightTab, setRightTab] = useState<'editor' | 'log' | 'history'>('editor')
-  const [isEditingName, setIsEditingName] = useState(false)
-  const [editName, setEditName] = useState('')
   const [showRunDialog, setShowRunDialog] = useState(false)
-  const nameInputRef = useRef<HTMLInputElement>(null)
 
   // M7: Instance-scoped counter instead of module-level
   const nodeCounterRef = useRef(0)
@@ -73,7 +60,6 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
   // ── Auto-save debounce ──
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const focusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // H8: Track latest workflow for flush-before-run
   const latestWorkflowRef = useRef<Workflow | null>(null)
 
@@ -105,7 +91,6 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
   useEffect(() => {
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
-      if (focusTimerRef.current) clearTimeout(focusTimerRef.current)
     }
   }, [])
 
@@ -349,34 +334,11 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
 
   // ── Workflow execution ──
 
-  const runWorkflow = useCallback(
-    (variables?: Record<string, string>) => {
-      useAppStore.getState().resetWorkflowExecution(workflowId)
-      useAppStore.getState().setWorkflowStatus(workflowId, 'running')
-      // Resolve project path from workflow's projectId (if any)
-      const projectPath = workflow?.projectId
-        ? projects.find((p) => p.id === workflow.projectId)?.path
-        : undefined
-      // H8: Flush pending auto-save so engine reads latest, H9: catch errors
-      flushSave()
-        .then(() => window.agentDeck.workflows.run(workflowId, projectPath, variables))
-        .catch((err: unknown) => {
-          window.agentDeck.log.send('error', 'workflow-editor', 'Workflow run failed', {
-            err: String(err),
-            workflowId,
-          })
-          const s = useAppStore.getState()
-          s.setWorkflowStatus(workflowId, 'error')
-          s.addWorkflowLog(workflowId, {
-            id: `err-${Date.now()}`,
-            workflowId,
-            type: 'workflow:error',
-            message: `Run failed: ${String(err)}`,
-            timestamp: Date.now(),
-          })
-        })
-    },
-    [workflowId, flushSave, workflow, projects],
+  const { runWorkflow, handleExport, handleImport, handleDuplicate } = useWorkflowActions(
+    workflowId,
+    workflow,
+    flushSave,
+    projects,
   )
 
   const handleRun = useCallback(() => {
@@ -400,96 +362,8 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
     useAppStore.getState().clearWorkflowLogs(workflowId)
   }, [workflowId])
 
-  // ── Export / Import / Duplicate ──
-
-  const handleExport = useCallback(async () => {
-    try {
-      const data = await window.agentDeck.workflows.export(workflowId)
-      const json = JSON.stringify(data, null, 2)
-      const blob = new Blob([json], { type: 'application/json' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${workflow?.name ?? 'workflow'}.agentdeck-workflow.json`
-      a.click()
-      URL.revokeObjectURL(url)
-      addNotification('info', 'Workflow exported')
-    } catch (err) {
-      addNotification('error', `Export failed: ${String(err)}`)
-    }
-  }, [workflowId, workflow, addNotification])
-
-  const handleImport = useCallback(async () => {
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = '.json'
-    input.onchange = async () => {
-      const file = input.files?.[0]
-      if (!file) return
-      try {
-        const text = await file.text()
-        const data: unknown = JSON.parse(text)
-
-        // Validate basic structure
-        if (
-          typeof data !== 'object' ||
-          data === null ||
-          !('formatVersion' in data) ||
-          (data as { formatVersion: unknown }).formatVersion !== 1 ||
-          !('workflow' in data) ||
-          !('roles' in data) ||
-          !Array.isArray((data as { roles: unknown }).roles)
-        ) {
-          addNotification('error', 'Invalid workflow file format')
-          return
-        }
-
-        const exportData = data as import('../../../shared/types').WorkflowExport
-
-        // Check for role conflicts — default to 'skip' for matching names
-        const existingRoles = await window.agentDeck.store.getRoles()
-        const existingNames = new Set(existingRoles.map((r) => r.name))
-        const roleStrategy: Record<string, 'skip' | 'copy'> = {}
-        for (const r of exportData.roles) {
-          if (!r.builtin && existingNames.has(r.name)) {
-            roleStrategy[r.id] = 'skip'
-          }
-        }
-
-        const result = await window.agentDeck.workflows.import(exportData, roleStrategy)
-        addNotification('info', `Imported "${result.workflow.name}"`)
-        if (result.warnings.length > 0) {
-          addNotification('info', `Warnings: ${result.warnings.join(', ')}`)
-        }
-
-        // Refresh workflow list and open the imported workflow
-        const workflows = await window.agentDeck.workflows.list()
-        useAppStore.getState().setWorkflows(workflows)
-        useAppStore.getState().openWorkflow(result.workflow.id)
-      } catch (err) {
-        addNotification('error', `Import failed: ${String(err)}`)
-      }
-    }
-    input.click()
-  }, [addNotification])
-
-  const handleDuplicate = useCallback(async () => {
-    try {
-      const newWf = await window.agentDeck.workflows.duplicate(workflowId)
-      addNotification('info', `Duplicated as "${newWf.name}"`)
-
-      // Refresh workflow list and open the new workflow
-      const workflows = await window.agentDeck.workflows.list()
-      useAppStore.getState().setWorkflows(workflows)
-      useAppStore.getState().openWorkflow(newWf.id)
-    } catch (err) {
-      addNotification('error', `Duplicate failed: ${String(err)}`)
-    }
-  }, [workflowId, addNotification])
-
   const handleProjectChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
-      const pid = e.target.value || undefined
+    (pid: string | undefined) => {
       setWorkflow((prev) => {
         if (!prev) return prev
         const updated: Workflow = { ...prev, projectId: pid, updatedAt: Date.now() }
@@ -500,130 +374,42 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
     [autoSave],
   )
 
-  // ── Workflow name editing ──
-
-  const startEditingName = useCallback(() => {
-    setEditName(workflow?.name ?? 'Workflow')
-    setIsEditingName(true)
-    // Focus input on next tick after render
-    focusTimerRef.current = setTimeout(() => nameInputRef.current?.select(), 0)
-  }, [workflow?.name])
-
-  const commitName = useCallback(() => {
-    const trimmed = editName.trim()
-    if (!trimmed || trimmed === workflow?.name) {
-      setIsEditingName(false)
-      return
-    }
-    setWorkflow((prev) => {
-      if (!prev) return prev
-      const updated: Workflow = { ...prev, name: trimmed, updatedAt: Date.now() }
-      autoSave(updated)
-      return updated
-    })
-    updateWorkflowMeta(workflowId, { name: trimmed })
-    setIsEditingName(false)
-  }, [editName, workflow?.name, autoSave, workflowId, updateWorkflowMeta])
-
-  const handleNameKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter') {
-        e.preventDefault()
-        commitName()
-      } else if (e.key === 'Escape') {
-        setIsEditingName(false)
-      }
+  const handleNameChange = useCallback(
+    (name: string) => {
+      setWorkflow((prev) => {
+        if (!prev) return prev
+        const updated: Workflow = { ...prev, name, updatedAt: Date.now() }
+        autoSave(updated)
+        return updated
+      })
+      updateWorkflowMeta(workflowId, { name })
     },
-    [commitName],
+    [autoSave, workflowId, updateWorkflowMeta],
   )
 
   // ── Render ──
 
-  const statusText = STATUS_TEXT[workflowStatus]
+  const toggleAddMenu = useCallback(() => setAddMenuOpen((prev) => !prev), [])
 
   return (
     <div className="wf-editor">
-      {/* Toolbar */}
-      <div className="wf-toolbar">
-        {isEditingName ? (
-          <input
-            ref={nameInputRef}
-            className="wf-name-input"
-            value={editName}
-            onChange={(e) => setEditName(e.target.value)}
-            onBlur={commitName}
-            onKeyDown={handleNameKeyDown}
-            maxLength={60}
-          />
-        ) : (
-          <span className="wf-name" onDoubleClick={startEditingName} title="Double-click to rename">
-            {workflow?.name ?? 'Workflow'}
-          </span>
-        )}
-        <span className="wf-name-badge">workflow</span>
-        <div className="wf-sep" />
-        <button
-          className={`wf-btn play${workflowStatus === 'running' ? ' running' : ''}`}
-          onClick={workflowStatus === 'running' ? handleStop : handleRun}
-          type="button"
-        >
-          <span className="wf-btn-icon">{workflowStatus === 'running' ? '\u25A0' : '\u25B6'}</span>
-          {workflowStatus === 'running' ? 'Stop' : 'Run Workflow'}
-        </button>
-        <div style={{ position: 'relative' }}>
-          <button
-            className="wf-btn add-node"
-            onClick={() => setAddMenuOpen(!addMenuOpen)}
-            type="button"
-          >
-            <span className="wf-btn-icon">{'\u2295'}</span> Add Node
-          </button>
-          <AddNodeMenu open={addMenuOpen} onAdd={handleAddNode} onClose={closeAddMenu} />
-        </div>
-        <div className="wf-sep" />
-        <button
-          className="wf-toolbar-btn"
-          onClick={handleExport}
-          title="Export workflow"
-          type="button"
-        >
-          <Download size={14} /> Export
-        </button>
-        <button
-          className="wf-toolbar-btn"
-          onClick={handleImport}
-          title="Import workflow"
-          type="button"
-        >
-          <Upload size={14} /> Import
-        </button>
-        <button
-          className="wf-toolbar-btn"
-          onClick={handleDuplicate}
-          title="Duplicate workflow"
-          type="button"
-        >
-          <Copy size={14} /> Duplicate
-        </button>
-        <div className="wf-sep" />
-        <select
-          className="wf-project-select"
-          value={workflow?.projectId ?? ''}
-          onChange={handleProjectChange}
-        >
-          <option value="">No project (cwd)</option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-        <div className="wf-spacer" />
-        <div className="wf-status">
-          <div className={`wf-status-dot ${workflowStatus}`} />
-          <span>{statusText}</span>
-        </div>
-      </div>
+      <WorkflowToolbar
+        workflowName={workflow?.name}
+        onNameChange={handleNameChange}
+        onAddNode={handleAddNode}
+        addMenuOpen={addMenuOpen}
+        onToggleAddMenu={toggleAddMenu}
+        onCloseAddMenu={closeAddMenu}
+        onExport={handleExport}
+        onImport={handleImport}
+        onDuplicate={handleDuplicate}
+        onRun={handleRun}
+        onStop={handleStop}
+        workflowStatus={workflowStatus}
+        projectId={workflow?.projectId}
+        onProjectChange={handleProjectChange}
+        projects={projects}
+      />
 
       {/* Content: canvas + right panel */}
       <div className="wf-content">
