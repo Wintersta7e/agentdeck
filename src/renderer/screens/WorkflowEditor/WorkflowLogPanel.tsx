@@ -49,6 +49,8 @@ function getSourceClass(nodeType: WorkflowNodeType | 'system'): string {
       return 'wf-log-src-shell'
     case 'checkpoint':
       return 'wf-log-src-checkpoint'
+    case 'condition':
+      return 'wf-log-src-condition'
     case 'system':
       return 'wf-log-src-system'
   }

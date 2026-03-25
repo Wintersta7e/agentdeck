@@ -188,6 +188,7 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
           agent: 'New Agent',
           shell: 'Shell Command',
           checkpoint: 'Checkpoint',
+          condition: 'Condition',
         }
 
         const newNode: WorkflowNode = {

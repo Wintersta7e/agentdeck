@@ -129,7 +129,7 @@ export interface DetectedStack {
 
 /* ── Workflow Types ─────────────────────────────── */
 
-export type WorkflowNodeType = 'agent' | 'shell' | 'checkpoint'
+export type WorkflowNodeType = 'agent' | 'shell' | 'checkpoint' | 'condition'
 
 export interface WorkflowNode {
   id: string
@@ -156,12 +156,22 @@ export interface WorkflowNode {
 
   // If true, workflow continues executing when this node fails
   continueOnError?: boolean | undefined
+
+  // Condition node fields
+  conditionMode?: 'exitCode' | 'outputMatch' | undefined
+  conditionPattern?: string | undefined
+  // Retry fields (agent + shell only)
+  retryCount?: number | undefined
+  retryDelayMs?: number | undefined
 }
 
 export interface WorkflowEdge {
   id: string
   fromNodeId: string
   toNodeId: string
+  branch?: 'true' | 'false' | undefined
+  edgeType?: 'normal' | 'loop' | undefined
+  maxIterations?: number | undefined
 }
 
 export interface Workflow {
@@ -170,6 +180,7 @@ export interface Workflow {
   description?: string | undefined
   nodes: WorkflowNode[]
   edges: WorkflowEdge[]
+  variables?: WorkflowVariable[] | undefined
   projectId?: string | undefined
   createdAt: number
   updatedAt: number
@@ -183,7 +194,7 @@ export interface WorkflowMeta {
   updatedAt: number
 }
 
-export type WorkflowNodeStatus = 'idle' | 'running' | 'done' | 'error' | 'paused'
+export type WorkflowNodeStatus = 'idle' | 'running' | 'done' | 'error' | 'paused' | 'skipped'
 export type WorkflowStatus = 'idle' | 'running' | 'done' | 'error' | 'stopped'
 
 export type WorkflowEventType =
@@ -197,6 +208,9 @@ export type WorkflowEventType =
   | 'node:error'
   | 'node:paused'
   | 'node:resumed'
+  | 'node:retry'
+  | 'node:skipped'
+  | 'node:loopIteration'
 
 export interface WorkflowEvent {
   id: string
@@ -205,4 +219,55 @@ export interface WorkflowEvent {
   nodeId?: string | undefined
   message: string
   timestamp: number
+  attempt?: number | undefined
+  maxAttempts?: number | undefined
+  iteration?: number | undefined
+  maxIterations?: number | undefined
+  branch?: 'true' | 'false' | undefined
+}
+
+export interface WorkflowVariable {
+  name: string
+  label?: string | undefined
+  type: 'string' | 'text' | 'path' | 'choice'
+  default?: string | undefined
+  required?: boolean | undefined
+  choices?: string[] | undefined
+}
+
+export interface WorkflowRun {
+  id: string
+  workflowId: string
+  workflowName: string
+  status: WorkflowStatus
+  startedAt: number
+  finishedAt: number | null
+  durationMs: number | null
+  projectPath: string | null
+  variables: Record<string, string>
+  nodes: WorkflowNodeRun[]
+}
+
+export interface WorkflowNodeRun {
+  nodeId: string
+  nodeName: string
+  status: WorkflowNodeStatus
+  startedAt: number | null
+  finishedAt: number | null
+  durationMs: number | null
+  errorTail?: string[] | undefined
+  branchTaken?: 'true' | 'false' | undefined
+  loopIterations?: number | undefined
+  retryAttempts?: number | undefined
+}
+
+export interface WorkflowExport {
+  formatVersion: 1
+  workflow: Workflow
+  roles: Role[]
+}
+
+export interface ValidationResult {
+  errors: string[]
+  warnings: string[]
 }
