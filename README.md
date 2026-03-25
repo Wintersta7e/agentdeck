@@ -102,8 +102,6 @@ All themes use CSS custom properties. View transitions provide smooth theme swit
 ### Setup
 
 ```bash
-cd agentdeck
-
 # Install dependencies (--no-bin-links required on Windows-mounted drives)
 npm install --no-bin-links
 ```
@@ -117,7 +115,7 @@ npm run dev
 # Build for production (validates TypeScript)
 npm run build
 
-# Run tests (250 tests)
+# Run tests (293 tests)
 npm test
 
 # Lint code
@@ -172,7 +170,7 @@ src/
 | [xterm.js 5](https://xtermjs.org) | Terminal emulator |
 | [node-pty](https://github.com/microsoft/node-pty) | Pseudo-terminal (WSL sessions) |
 | [Zustand](https://zustand-demo.pmnd.rs) | State management |
-| [Vitest 4](https://vitest.dev) | Testing framework (250 tests) |
+| [Vitest 4](https://vitest.dev) | Testing framework (293 tests) |
 | [ESLint 9](https://eslint.org) | Linting (flat config) |
 
 ## Documentation

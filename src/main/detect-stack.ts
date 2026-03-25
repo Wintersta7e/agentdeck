@@ -39,7 +39,7 @@ const CONTEXT_FILES = ['AGENTS.md', 'CLAUDE.md']
 
 export async function detectStack(
   projectPath: string,
-  distro = 'Ubuntu-24.04',
+  distro: string,
 ): Promise<DetectedStack | null> {
   // Detect if it's already a Windows path or a WSL path
   let windowsPath: string

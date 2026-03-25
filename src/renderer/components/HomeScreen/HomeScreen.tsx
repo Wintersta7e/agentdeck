@@ -132,6 +132,7 @@ export function HomeScreen({
   const addNotification = useAppStore((s) => s.addNotification)
   const username = useAppStore((s) => s.wslUsername)
   const refreshAgentStatus = useAppStore((s) => s.refreshAgentStatus)
+  const agentRefreshing = useAppStore((s) => s.agentRefreshing)
 
   const [cardMenu, setCardMenu] = useState<{
     x: number
@@ -139,6 +140,9 @@ export function HomeScreen({
     projectId: string
   } | null>(null)
   const cardMenuRef = useRef<HTMLDivElement>(null)
+
+  const dateStr = useMemo(() => formatDate(), [])
+  const greeting = useMemo(() => getGreeting(), [])
 
   const pinned = useMemo(() => projects.filter((p) => p.pinned), [projects])
 
@@ -211,9 +215,9 @@ export function HomeScreen({
       </div>
       <div className="home-content">
         <div className="greeting">
-          <div className="greeting-eyebrow">{formatDate()}</div>
+          <div className="greeting-eyebrow">{dateStr}</div>
           <div className="greeting-headline">
-            {getGreeting()}, <span>{username || 'operator'}</span>.
+            {greeting}, <span>{username || 'operator'}</span>.
           </div>
           <div className="greeting-sub">
             {activeSessions} session{activeSessions !== 1 ? 's' : ''} running
@@ -349,10 +353,20 @@ export function HomeScreen({
         <div className="section-header">
           <div className="section-title">Available Agents</div>
           <div className="section-actions">
-            <button className="section-action" onClick={() => void refreshAgentStatus()}>
-              <>
-                Refresh <RefreshCw size={12} />
-              </>
+            <button
+              className={`section-action${agentRefreshing ? ' refreshing' : ''}`}
+              onClick={() => void refreshAgentStatus()}
+              disabled={agentRefreshing}
+            >
+              {agentRefreshing ? (
+                <>
+                  Refreshing… <RefreshCw size={12} className="spin" />
+                </>
+              ) : (
+                <>
+                  Refresh <RefreshCw size={12} />
+                </>
+              )}
             </button>
             <button className="section-action" onClick={() => openCommandPalette('agents')}>
               <>
@@ -388,7 +402,7 @@ export function HomeScreen({
                   {installed && vInfo && (
                     <button
                       className={`agent-update-btn${vInfo.updateAvailable ? ' has-update' : ''}${vInfo.updating ? ' updating' : ''}`}
-                      disabled={vInfo.updating}
+                      disabled={vInfo.updating || !vInfo.updateAvailable}
                       onClick={() => void handleAgentUpdate(a.name)}
                       type="button"
                     >

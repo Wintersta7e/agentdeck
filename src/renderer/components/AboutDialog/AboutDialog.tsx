@@ -21,11 +21,15 @@ export function AboutDialog({ onClose }: AboutDialogProps): React.JSX.Element {
     window.agentDeck.app
       .version()
       .then(setAppVersion)
-      .catch(() => {})
+      .catch((err: unknown) => {
+        window.agentDeck.log.send('debug', 'about', 'Version fetch failed', { err: String(err) })
+      })
     window.agentDeck.app
       .versions()
       .then(setVersions)
-      .catch(() => {})
+      .catch((err: unknown) => {
+        window.agentDeck.log.send('debug', 'about', 'Version fetch failed', { err: String(err) })
+      })
   }, [])
 
   useEffect(() => {

@@ -1,25 +1,21 @@
-import { app, BrowserWindow, dialog, ipcMain, screen } from 'electron'
-import * as fs from 'fs'
-import * as path from 'path'
+import { app, BrowserWindow, dialog, screen } from 'electron'
 import { join } from 'path'
 import { createPtyManager, type PtyManager } from './pty-manager'
-import { createProjectStore, seedRoles, seedTemplates, type AppStore } from './project-store'
-import { detectStack } from './detect-stack'
-import { getDefaultDistroAsync, wslPathToWindows } from './wsl-utils'
+import { createProjectStore, type AppStore } from './project-store'
+import { seedTemplates, seedRoles } from './store-seeds'
+import { toWslPath } from './wsl-utils'
 import { initLogger, createLogger, closeLogger } from './logger'
-import {
-  listWorkflows,
-  loadWorkflow,
-  saveWorkflow,
-  renameWorkflow,
-  deleteWorkflow,
-  seedWorkflows,
-} from './workflow-store'
-import { createWorkflowEngine, validateWorkflow } from './workflow-engine'
+import { seedWorkflows } from './workflow-seeds'
+import { createWorkflowEngine } from './workflow-engine'
 import type { WorkflowEngine } from './workflow-engine'
-import type { Workflow } from '../shared/types'
-import { AGENT_BINARY_MAP, KNOWN_AGENT_IDS } from '../shared/agents'
-import { updateAgent, checkAllUpdates } from './agent-updater'
+import {
+  registerPtyHandlers,
+  registerWindowHandlers,
+  registerAgentHandlers,
+  registerProjectHandlers,
+  registerWorkflowHandlers,
+  registerUtilHandlers,
+} from './ipc'
 
 const log = createLogger('app')
 
@@ -27,23 +23,6 @@ let mainWindow: BrowserWindow | null = null
 let ptyManager: PtyManager | null = null
 let workflowEngine: WorkflowEngine | null = null
 let appStore: AppStore | null = null
-
-const ALLOWED_FILES = new Set(['CLAUDE.md', 'AGENTS.md', 'README.md'])
-
-/** Convert a Windows path to WSL: C:\foo → /mnt/c/foo, \\wsl$\D\x → /x */
-function toWslPathMain(p: string): string {
-  const normalized = p.replace(/\\/g, '/')
-  const driveMatch = normalized.match(/^([A-Za-z]):\/(.*)$/)
-  if (driveMatch && driveMatch[1] && driveMatch[2] !== undefined) {
-    return `/mnt/${driveMatch[1].toLowerCase()}/${driveMatch[2]}`
-  }
-  // UNC WSL path: //wsl$/Distro/home/user/... or //wsl.localhost/Distro/...
-  const uncMatch = normalized.match(/^\/\/(?:wsl\$|wsl\.localhost)\/[^/]+\/?(.*)$/)
-  if (uncMatch) {
-    return `/${uncMatch[1] ?? ''}`
-  }
-  return normalized
-}
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -109,7 +88,7 @@ function createWindow(): void {
     if (!url.startsWith('file://')) return
     let pathname = decodeURIComponent(new URL(url).pathname)
     if (/^\/[A-Za-z]:/.test(pathname)) pathname = pathname.slice(1)
-    const wslPath = toWslPathMain(pathname)
+    const wslPath = toWslPath(pathname)
     log.info(`File drop intercepted: ${url} → ${wslPath}`)
     mainWindow?.webContents.send('file-dropped', [wslPath])
   }
@@ -128,428 +107,25 @@ function createWindow(): void {
 }
 
 function registerIpcHandlers(store: AppStore): void {
-  /* ── PTY handlers ───────────────────────────────────────────────── */
-  ipcMain.handle(
-    'pty:spawn',
-    (
-      _,
-      sessionId: string,
-      cols: number,
-      rows: number,
-      projectPath?: string,
-      startupCommands?: string[],
-      env?: Record<string, string>,
-      agent?: string,
-      agentFlags?: string,
-    ) => {
-      ptyManager?.spawn(sessionId, cols, rows, projectPath, startupCommands, env, agent, agentFlags)
-    },
-  )
-  ipcMain.on('pty:write', (_, sessionId: string, data: string) => {
-    ptyManager?.write(sessionId, data)
-  })
-  // Note: resize rate-limiting is handled renderer-side (80ms debounced ResizeObserver).
-  // No server-side guard — node-pty resize is cheap and idempotent.
-  ipcMain.on('pty:resize', (_, sessionId: string, cols: number, rows: number) => {
-    if (cols > 0 && rows > 0) ptyManager?.resize(sessionId, cols, rows)
-  })
-  ipcMain.handle('pty:kill', (_, sessionId: string) => {
-    ptyManager?.kill(sessionId)
-  })
-
-  /* ── Window controls ────────────────────────────────────────────── */
-  ipcMain.handle('window:close', () => mainWindow?.close())
-  ipcMain.handle('window:minimize', () => mainWindow?.minimize())
-  ipcMain.handle('window:maximize', () => {
-    if (mainWindow?.isMaximized()) {
-      mainWindow.unmaximize()
-    } else {
-      mainWindow?.maximize()
-    }
-  })
-
-  /* ── Zoom ─────────────────────────────────────────────────────────── */
-  ipcMain.handle('zoom:get', () => store.get('appPrefs').zoomFactor)
-  ipcMain.handle('zoom:set', (_, factor: number) => {
-    const clamped = Math.round(Math.max(0.5, Math.min(2.5, factor)) * 10) / 10
-    store.set('appPrefs', { ...store.get('appPrefs'), zoomFactor: clamped })
-    mainWindow?.webContents.setZoomFactor(clamped)
-    return clamped
-  })
-  ipcMain.handle('zoom:reset', () => {
-    store.set('appPrefs', { ...store.get('appPrefs'), zoomFactor: 1.0 })
-    mainWindow?.webContents.setZoomFactor(1.0)
-    return 1.0
-  })
-
-  /* ── Theme ──────────────────────────────────────────────────────── */
-  ipcMain.handle('theme:get', () => store.get('appPrefs').theme ?? '')
-  ipcMain.handle('theme:set', (_, theme: string) => {
-    const valid = ['', 'cyan', 'violet', 'ice', 'parchment', 'fog', 'lavender', 'stone']
-    const safe = valid.includes(theme) ? theme : ''
-    store.set('appPrefs', { ...store.get('appPrefs'), theme: safe })
-    return safe
-  })
-
-  /* ── App info ─────────────────────────────────────────────────────── */
-  ipcMain.handle('app:version', () => app.getVersion())
-  ipcMain.handle('app:versions', () => ({
-    electron: process.versions.electron,
-    chrome: process.versions.chrome,
-    node: process.versions.node,
-  }))
-
-  /* ── Agent detection (async, non-blocking) ──────────────────────── */
-  ipcMain.handle('agents:check', async () => {
-    const { execFile } = await import('child_process')
-    const t0 = Date.now()
-
-    // Diagnostic: WSL environment info
-    const wslDiag = (label: string, args: string[]): Promise<string> =>
-      new Promise((resolve) => {
-        execFile('wsl.exe', args, { timeout: 10000 }, (err, stdout, stderr) => {
-          const out = stdout?.trim() ?? ''
-          const errMsg = err ? ` [err: ${(err as NodeJS.ErrnoException).code ?? err.message}]` : ''
-          const stderrMsg = stderr?.trim() ? ` [stderr: ${stderr.trim()}]` : ''
-          log.debug(`WSL diag ${label}: "${out}"${errMsg}${stderrMsg}`)
-          resolve(out)
-        })
-      })
-
-    // Run diagnostics in parallel with agent checks (diagnostics are for logging only,
-    // they don't gate the agent results)
-    const diagnosticsPromise = Promise.all([
-      wslDiag('distro', ['--status']),
-      wslDiag('default-shell', ['--', 'bash', '-c', 'echo $SHELL']),
-      wslDiag('bash-version', ['--', 'bash', '--version']),
-      wslDiag('PATH', ['--', 'bash', '-lic', 'echo "$PATH"']),
-      wslDiag('npm-global-bin', ['--', 'bash', '-lic', 'npm bin -g 2>/dev/null']),
-      wslDiag('node-version', ['--', 'bash', '-lic', 'node --version 2>/dev/null']),
-    ]).then(() => log.debug(`WSL diagnostics completed in ${Date.now() - t0}ms`))
-
-    // Check each agent binary — first via PATH, then search common locations
-    const check = (bin: string): Promise<boolean> =>
-      new Promise((resolve) => {
-        const t1 = Date.now()
-        // 1) Try command -v in login+interactive bash.
-        // -l (login) sources .profile which adds ~/.local/bin (standalone installer).
-        // -i (interactive) sources .bashrc which loads nvm/fnm/volta PATH.
-        // On Ubuntu, .profile also sources .bashrc, so -lic covers both.
-        execFile(
-          'wsl.exe',
-          ['--', 'bash', '-lic', `command -v ${bin}`],
-          { timeout: 15000 },
-          (err, stdout, stderr) => {
-            if (!err) {
-              log.info(`Agent check: ${bin} → found (${stdout.trim()}) (${Date.now() - t1}ms)`)
-              return resolve(true)
-            }
-            const errCode = (err as NodeJS.ErrnoException).code ?? err.message
-            log.debug(
-              `Agent check: ${bin} not in PATH [${errCode}]` +
-                `${stderr?.trim() ? ` [stderr: ${stderr.trim()}]` : ''}` +
-                ` — trying fallback search`,
-            )
-            // 2) Fallback: search common install locations.
-            // Uses -e (exists) not -x (executable) to also catch symlinks.
-            // Logs each path checked for diagnostics.
-            const searchScript = [
-              'found=""',
-              // Standalone installer (official: curl https://claude.ai/install.sh | bash)
-              // Symlink at ~/.local/bin, actual binary at ~/.local/share/<name>/versions/<ver>
-              `[ -z "$found" ] && [ -e "$HOME/.local/bin/${bin}" ] && found="$HOME/.local/bin/${bin}"`,
-              `[ -z "$found" ] && for f in "$HOME/.local/share/${bin}/versions/"*; do [ -f "$f" ] && found="$f" && break; done`,
-              `[ -z "$found" ] && [ -e "$HOME/.claude/bin/${bin}" ] && found="$HOME/.claude/bin/${bin}"`,
-              // nvm (any node version, not just active)
-              `[ -z "$found" ] && for f in "$HOME/.nvm/versions/node"/*/bin/${bin}; do [ -e "$f" ] && found="$f" && break; done`,
-              // System npm / custom npm prefix
-              `[ -z "$found" ] && [ -e "/usr/local/bin/${bin}" ] && found="/usr/local/bin/${bin}"`,
-              `[ -z "$found" ] && [ -e "$HOME/.npm-global/bin/${bin}" ] && found="$HOME/.npm-global/bin/${bin}"`,
-              // volta / fnm / homebrew
-              `[ -z "$found" ] && [ -e "$HOME/.volta/bin/${bin}" ] && found="$HOME/.volta/bin/${bin}"`,
-              `[ -z "$found" ] && for f in "$HOME/.fnm/node-versions"/*/installation/bin/${bin}; do [ -e "$f" ] && found="$f" && break; done`,
-              `[ -z "$found" ] && [ -e "/home/linuxbrew/.linuxbrew/bin/${bin}" ] && found="/home/linuxbrew/.linuxbrew/bin/${bin}"`,
-              // Windows-side npm global (accessible from WSL via /mnt/c)
-              `[ -z "$found" ] && for f in /mnt/c/Users/*/AppData/Roaming/npm/${bin}; do [ -e "$f" ] && found="$f" && break; done`,
-              `[ -z "$found" ] && for f in /mnt/c/Users/*/AppData/Roaming/npm/${bin}.cmd; do [ -e "$f" ] && found="$f" && break; done`,
-              // Windows standalone installer
-              `[ -z "$found" ] && for f in /mnt/c/Users/*/AppData/Local/Programs/${bin}/${bin}.exe; do [ -e "$f" ] && found="$f" && break; done`,
-              `[ -z "$found" ] && for f in /mnt/c/Users/*/.claude/local/${bin}.exe; do [ -e "$f" ] && found="$f" && break; done`,
-              // Result
-              `[ -n "$found" ] && echo "$found" && exit 0`,
-              `exit 1`,
-            ].join('; ')
-            execFile(
-              'wsl.exe',
-              ['--', 'bash', '-c', searchScript],
-              { timeout: 10000 },
-              (err2, stdout2) => {
-                const found = !err2 && !!stdout2.trim()
-                log.info(
-                  `Agent check: ${bin} → ${found ? `found via fallback (${stdout2.trim()})` : 'NOT FOUND anywhere'}` +
-                    ` (${Date.now() - t1}ms)`,
-                )
-                resolve(found)
-              },
-            )
-          },
-        )
-      })
-
-    // Limit concurrency to avoid spawning too many wsl.exe processes at once
-    // (each check can spawn 2 processes: PATH check + fallback search)
-    const MAX_CONCURRENT = 3
-    const entries = Object.entries(AGENT_BINARY_MAP)
-    const checkWithLimit = async (): Promise<boolean[]> => {
-      const results: boolean[] = new Array(entries.length)
-      let idx = 0
-      const run = async (): Promise<void> => {
-        while (idx < entries.length) {
-          const i = idx++
-          const entry = entries[i]
-          if (entry) results[i] = await check(entry[1])
-        }
-      }
-      await Promise.all(
-        Array.from({ length: Math.min(MAX_CONCURRENT, entries.length) }, () => run()),
-      )
-      return results
-    }
-    const [, results] = await Promise.all([diagnosticsPromise, checkWithLimit()])
-    log.info(`Agent detection total: ${Date.now() - t0}ms`)
-    return Object.fromEntries(entries.map(([name], i) => [name, results[i]]))
-  })
-
-  /* ── Layout persistence ───────────────────────────────────────── */
-  ipcMain.handle('layout:get', () => {
-    const p = store.get('appPrefs')
-    return {
-      sidebarOpen: p.sidebarOpen,
-      sidebarWidth: p.sidebarWidth,
-      sidebarSections: p.sidebarSections,
-      rightPanelWidth: p.rightPanelWidth,
-      wfLogPanelWidth: p.wfLogPanelWidth,
-    }
-  })
-  const LAYOUT_KEYS = new Set([
-    'sidebarOpen',
-    'sidebarWidth',
-    'sidebarSections',
-    'rightPanelWidth',
-    'wfLogPanelWidth',
-  ])
-  ipcMain.handle('layout:set', (_, patch: Record<string, unknown>) => {
-    const current = store.get('appPrefs')
-    const filtered: Record<string, unknown> = {}
-    for (const [k, v] of Object.entries(patch)) {
-      if (LAYOUT_KEYS.has(k)) filtered[k] = v
-    }
-    store.set('appPrefs', { ...current, ...filtered })
-  })
-
-  /* ── Agent visibility ─────────────────────────────────────────── */
-  ipcMain.handle('agents:getVisible', () => {
-    return store.get('appPrefs').visibleAgents ?? null
-  })
-  ipcMain.handle('agents:setVisible', (_, agents: string[]) => {
-    if (!Array.isArray(agents)) return store.get('appPrefs').visibleAgents ?? null
-    const safe = agents.filter((a) => typeof a === 'string' && KNOWN_AGENT_IDS.has(a))
-    store.set('appPrefs', { ...store.get('appPrefs'), visibleAgents: safe })
-    return safe
-  })
-
-  /* -- Agent version checks (fire-and-forget) ---------------------- */
-  ipcMain.handle('agents:checkUpdates', (_, installedAgents: Record<string, boolean>) => {
-    if (mainWindow) checkAllUpdates(mainWindow, installedAgents)
-  })
-
-  ipcMain.handle('agents:update', async (_, agentId: string) => {
-    if (!KNOWN_AGENT_IDS.has(agentId)) {
-      return { agentId, success: false, newVersion: null, message: 'Unknown agent' }
-    }
-    return updateAgent(agentId)
-  })
-
-  /* ── WSL username ─────────────────────────────────────────────── */
-  ipcMain.handle('app:wslUsername', async () => {
-    const { execFile } = await import('child_process')
-    const tryCmd = (args: string[]): Promise<string> =>
-      new Promise((resolve) => {
-        execFile('wsl.exe', args, { timeout: 15000 }, (err, stdout) => {
-          const out = stdout?.trim() ?? ''
-          if (err || !out) {
-            resolve('')
-            return
-          }
-          resolve(out)
-        })
-      })
-
-    // Try multiple approaches — some WSL configs fail on one but succeed on another
-    const result =
-      (await tryCmd(['--', 'bash', '-lc', 'whoami'])) ||
-      (await tryCmd(['--', 'whoami'])) ||
-      (await tryCmd(['--', 'bash', '-lc', 'echo $USER']))
-    if (!result) log.warn('Failed to detect WSL username')
-    return result
-  })
-
-  /* ── Project utilities ──────────────────────────────────────────── */
-  ipcMain.handle('projects:detectStack', (_, p: string, distro?: string) => {
-    return detectStack(p, distro)
-  })
-
-  ipcMain.handle('projects:getDefaultDistro', async () => {
-    return getDefaultDistroAsync()
-  })
-
-  ipcMain.handle('projects:readFile', async (_event, projectPath: string, filename: string) => {
-    if (!ALLOWED_FILES.has(filename)) {
-      throw new Error(`File not permitted: ${filename}`)
-    }
-    try {
-      // Determine the Windows-readable path
-      let windowsPath: string
-      if (/^[A-Za-z]:/.test(projectPath)) {
-        // Already a Windows path (e.g., E:\H\LocalAI)
-        windowsPath = projectPath
+  registerPtyHandlers(() => ptyManager)
+  registerWindowHandlers(() => mainWindow, store)
+  registerAgentHandlers(() => mainWindow, store)
+  registerProjectHandlers(() => mainWindow)
+  registerWorkflowHandlers(
+    () => workflowEngine,
+    () => store.get('roles') ?? [],
+    (role) => {
+      const roles = store.get('roles') ?? []
+      const idx = roles.findIndex((r) => r.id === role.id)
+      if (idx >= 0) {
+        roles[idx] = role
       } else {
-        // WSL path — convert to Windows
-        const distro = await getDefaultDistroAsync()
-        windowsPath = wslPathToWindows(projectPath, distro)
+        roles.push(role)
       }
-
-      // Try root path first, then .claude/ subdirectory (Claude Code convention)
-      const candidates = [
-        path.join(windowsPath, filename),
-        path.join(windowsPath, '.claude', filename),
-      ]
-
-      for (const filePath of candidates) {
-        try {
-          const content = await fs.promises.readFile(filePath, 'utf-8')
-          return content
-        } catch {
-          // If UNC path via wsl.localhost failed, try wsl$ fallback
-          if (filePath.startsWith('\\\\wsl.localhost\\')) {
-            try {
-              const fallbackFile = filePath.replace('\\\\wsl.localhost\\', '\\\\wsl$\\')
-              const content = await fs.promises.readFile(fallbackFile, 'utf-8')
-              return content
-            } catch {
-              // continue to next candidate
-            }
-          }
-          // continue to next candidate
-        }
-      }
-
-      log.debug(`${filename} not found in ${projectPath}`)
-      return null
-    } catch (err) {
-      log.error(`Failed to read ${filename} from ${projectPath}`, { err: String(err) })
-      return null
-    }
-  })
-
-  /* ── Dialogs ────────────────────────────────────────────────────── */
-  ipcMain.handle('dialog:pickFolder', async () => {
-    if (!mainWindow) return null
-    const result = await dialog.showOpenDialog(mainWindow, {
-      properties: ['openDirectory'],
-    })
-    return result.filePaths[0] ?? null
-  })
-
-  /* ── Workflow CRUD ──────────────────────────────────────────────── */
-  ipcMain.handle('workflows:list', () => listWorkflows())
-  ipcMain.handle('workflows:load', (_, id: string) => loadWorkflow(id))
-  ipcMain.handle('workflows:save', (_, workflow: Workflow) => saveWorkflow(workflow))
-  ipcMain.handle('workflows:rename', (_, id: string, name: string) => renameWorkflow(id, name))
-  ipcMain.handle('workflows:delete', async (_, id: string) => {
-    // C6: Stop running workflow before deleting to avoid orphaned PTYs
-    workflowEngine?.stop(id)
-    await deleteWorkflow(id)
-  })
-
-  /* ── Workflow Execution ────────────────────────────────────────── */
-  ipcMain.handle('workflow:run', async (_, workflowId: string, projectPath?: string) => {
-    const workflow = await loadWorkflow(workflowId)
-    if (!workflow) throw new Error(`Workflow not found: ${workflowId}`)
-    if (!workflowEngine) throw new Error('Workflow engine not initialized')
-    // C2: Validate workflow structure before execution
-    validateWorkflow(workflow)
-    // Convert Windows path to WSL if needed (projects store Windows paths)
-    const wslPath = projectPath ? toWslPathMain(projectPath) : undefined
-    // H1: Validate projectPath if provided (WSL absolute path, allow spaces, reject ..)
-    if (
-      wslPath !== undefined &&
-      (!/^\/[^\x00;|&`$<>\\]+$/.test(wslPath) || wslPath.includes('..'))
-    ) {
-      throw new Error(`Invalid project path: ${wslPath}`)
-    }
-    workflowEngine.run(workflow, wslPath)
-  })
-  ipcMain.handle('workflow:stop', (_, workflowId: string) => {
-    workflowEngine?.stop(workflowId)
-  })
-  ipcMain.handle('workflow:resume', (_, workflowId: string, nodeId: string) => {
-    workflowEngine?.resume(workflowId, nodeId)
-  })
-
-  /* ── Clipboard: read file paths from copied files ────────────── */
-  ipcMain.handle('clipboard:readFilePaths', async () => {
-    const { execFile } = await import('child_process')
-    return new Promise<string[]>((resolve) => {
-      execFile(
-        'powershell.exe',
-        [
-          '-NoProfile',
-          '-NoLogo',
-          '-Command',
-          'Get-Clipboard -Format FileDropList | ForEach-Object { $_.FullName }',
-        ],
-        { timeout: 5000 },
-        (err, stdout) => {
-          if (err || !stdout?.trim()) {
-            log.debug('clipboard:readFilePaths — no file paths found')
-            resolve([])
-            return
-          }
-          const paths = stdout
-            .trim()
-            .split(/\r?\n/)
-            .map((p) => toWslPathMain(p.trim()))
-          log.info(`clipboard:readFilePaths → ${JSON.stringify(paths)}`)
-          resolve(paths)
-        },
-      )
-    })
-  })
-
-  /* ── Renderer log relay ────────────────────────────────────────── */
-  const ALLOWED_LOG_LEVELS = new Set(['info', 'warn', 'error', 'debug'])
-  const MAX_MOD_LENGTH = 64
-  const MAX_MSG_LENGTH = 4096
-  const MAX_LOGGERS = 50
-  const rendererLoggers = new Map<string, ReturnType<typeof createLogger>>()
-  ipcMain.handle(
-    'log:renderer',
-    (_, level: string, mod: string, message: string, data?: unknown) => {
-      if (typeof level !== 'string' || !ALLOWED_LOG_LEVELS.has(level)) return
-      if (typeof mod !== 'string' || mod.length > MAX_MOD_LENGTH) return
-      if (typeof message !== 'string') return
-      const safeMod = mod.replace(/[^a-zA-Z0-9:_-]/g, '_').slice(0, MAX_MOD_LENGTH)
-      const safeMsg = message.slice(0, MAX_MSG_LENGTH)
-      let rendererLog = rendererLoggers.get(safeMod)
-      if (!rendererLog) {
-        if (rendererLoggers.size >= MAX_LOGGERS) return // prevent unbounded growth
-        rendererLog = createLogger(`renderer:${safeMod}`)
-        rendererLoggers.set(safeMod, rendererLog)
-      }
-      rendererLog[level as 'info' | 'warn' | 'error' | 'debug'](safeMsg, data)
+      store.set('roles', roles)
     },
   )
+  registerUtilHandlers()
 }
 
 app
@@ -557,6 +133,26 @@ app
   .then(async () => {
     initLogger()
     log.info('App ready')
+
+    // Check for WSL2 availability — show a helpful dialog if not installed
+    try {
+      const { execFileSync } = await import('child_process')
+      execFileSync('wsl.exe', ['--status'], { timeout: 10000, stdio: 'pipe' })
+    } catch {
+      log.warn('WSL2 not detected — showing setup dialog')
+      dialog.showMessageBoxSync({
+        type: 'warning',
+        title: 'WSL2 Required',
+        message: 'Windows Subsystem for Linux (WSL2) was not detected.',
+        detail:
+          'AgentDeck requires WSL2 to run terminal sessions.\n\n' +
+          'To install WSL2, open PowerShell as Administrator and run:\n' +
+          '  wsl --install\n\n' +
+          'Then restart your computer and launch AgentDeck again.\n\n' +
+          'The app will continue to load, but terminal features will not work.',
+      })
+    }
+
     appStore = createProjectStore()
     seedTemplates(appStore)
     seedRoles(appStore)

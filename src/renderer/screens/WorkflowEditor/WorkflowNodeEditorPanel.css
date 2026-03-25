@@ -386,3 +386,31 @@
 .wf-ne-role-form.creating {
   border-color: var(--green-border);
 }
+
+/* ─── Collapsible details section (retry config, etc.) ─── */
+.wf-ne-details {
+  border: 1px solid var(--bg3);
+  border-radius: var(--r);
+  margin-top: 8px;
+  padding: 0;
+}
+
+.wf-ne-details[open] {
+  padding-bottom: 8px;
+}
+
+.wf-ne-details .wf-ne-field {
+  padding: 0 8px;
+}
+
+.wf-ne-summary {
+  padding: 6px 8px;
+  font-size: 12px;
+  color: var(--text1);
+  cursor: pointer;
+  user-select: none;
+}
+
+.wf-ne-summary:hover {
+  color: var(--text0);
+}

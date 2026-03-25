@@ -49,8 +49,10 @@ export function NewProjectWizard({ onCreateProject }: NewProjectWizardProps): Re
         setDistro(d)
         setWizardData((prev) => ({ ...prev, wslDistro: d }))
       })
-      .catch(() => {
-        // Use default, notification not needed for this
+      .catch((err: unknown) => {
+        window.agentDeck.log.send('warn', 'wizard', 'WSL distro detection failed', {
+          err: String(err),
+        })
       })
   }, [])
 
@@ -85,8 +87,9 @@ export function NewProjectWizard({ onCreateProject }: NewProjectWizardProps): Re
             })),
           }))
         }
-      } catch {
+      } catch (err) {
         setDetectedStack(null)
+        window.agentDeck.log.send('warn', 'wizard', 'Stack detection failed', { err: String(err) })
       }
     },
     [distro],

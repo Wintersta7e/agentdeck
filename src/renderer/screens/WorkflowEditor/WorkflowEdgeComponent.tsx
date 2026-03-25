@@ -3,6 +3,8 @@ import { getBezierPath, type EdgeProps, type Edge } from '@xyflow/react'
 
 export interface WorkflowEdgeData {
   state: 'idle' | 'active' | 'done'
+  branch?: 'true' | 'false' | undefined
+  edgeType?: 'normal' | 'loop' | undefined
   [key: string]: unknown
 }
 
@@ -19,7 +21,7 @@ function WorkflowEdgeComponent({
   data,
   selected,
 }: EdgeProps<WfEdge>): React.JSX.Element {
-  const [edgePath] = getBezierPath({
+  const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
     sourceY,
     targetX,
@@ -29,9 +31,37 @@ function WorkflowEdgeComponent({
   })
 
   const state = data?.state ?? 'idle'
-  const strokeColor =
-    state === 'active' || state === 'done' ? 'var(--green)' : 'var(--border-bright)'
-  const dashArray = state === 'active' ? '6 4' : undefined
+  const branch = data?.branch
+  const isLoop = data?.edgeType === 'loop'
+
+  // Branch coloring: true = green, false = red, otherwise state-based
+  let strokeColor: string
+  if (branch === 'true') {
+    strokeColor = 'var(--green)'
+  } else if (branch === 'false') {
+    strokeColor = 'var(--red)'
+  } else if (state === 'active' || state === 'done') {
+    strokeColor = 'var(--green)'
+  } else {
+    strokeColor = 'var(--border-bright)'
+  }
+
+  // Dash pattern: loop edges always dashed, active edges animated dash
+  let dashArray: string | undefined
+  if (isLoop) {
+    dashArray = '8 4'
+  } else if (state === 'active') {
+    dashArray = '6 4'
+  }
+
+  const edgeClassName = [
+    'react-flow__edge-path',
+    `wf-edge-${state}`,
+    isLoop ? 'wf-edge-loop' : '',
+    selected ? 'wf-edge-selected' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   return (
     <>
@@ -44,7 +74,7 @@ function WorkflowEdgeComponent({
       />
       <path
         id={id}
-        className={`react-flow__edge-path wf-edge-${state}${selected ? ' wf-edge-selected' : ''}`}
+        className={edgeClassName}
         d={edgePath}
         fill="none"
         stroke={strokeColor}
@@ -52,6 +82,55 @@ function WorkflowEdgeComponent({
         strokeDasharray={dashArray}
         markerEnd={`url(#wf-arrowhead-${state})`}
       />
+      {/* Branch label (T/F) shown near the source of condition edges */}
+      {branch && (
+        <g transform={`translate(${labelX}, ${labelY})`}>
+          <rect
+            x={-9}
+            y={-9}
+            width={18}
+            height={18}
+            rx={4}
+            fill="var(--bg2)"
+            stroke={branch === 'true' ? 'var(--green)' : 'var(--red)'}
+            strokeWidth={1}
+          />
+          <text
+            textAnchor="middle"
+            dominantBaseline="central"
+            fill={branch === 'true' ? 'var(--green)' : 'var(--red)'}
+            fontSize={10}
+            fontWeight={700}
+            fontFamily="var(--font-mono)"
+          >
+            {branch === 'true' ? 'T' : 'F'}
+          </text>
+        </g>
+      )}
+      {/* Loop indicator icon */}
+      {isLoop && !branch && (
+        <g transform={`translate(${labelX}, ${labelY})`}>
+          <rect
+            x={-10}
+            y={-9}
+            width={20}
+            height={18}
+            rx={4}
+            fill="var(--bg2)"
+            stroke="var(--border-bright)"
+            strokeWidth={1}
+          />
+          <text
+            textAnchor="middle"
+            dominantBaseline="central"
+            fill="var(--text2)"
+            fontSize={9}
+            fontFamily="var(--font-mono)"
+          >
+            {'\u21BA'}
+          </text>
+        </g>
+      )}
       {state === 'active' && (
         <>
           <circle

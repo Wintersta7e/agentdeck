@@ -222,22 +222,59 @@ export default function WorkflowNodeEditorPanel({
           </div>
         )}
 
-        {/* Task prompt / Command / Message */}
-        <div className="wf-ne-field">
-          <label className="wf-ne-label">
-            {node.type === 'agent' ? 'Task Prompt' : node.type === 'shell' ? 'Command' : 'Message'}
-          </label>
-          <textarea
-            className="wf-ne-textarea"
-            value={node.prompt ?? node.command ?? node.message ?? ''}
-            rows={5}
-            onChange={(e) => {
-              if (node.type === 'agent') update({ prompt: e.target.value })
-              else if (node.type === 'shell') update({ command: e.target.value })
-              else update({ message: e.target.value })
-            }}
-          />
-        </div>
+        {/* Task prompt / Command / Message (not shown for condition nodes) */}
+        {node.type !== 'condition' && (
+          <div className="wf-ne-field">
+            <label className="wf-ne-label">
+              {node.type === 'agent'
+                ? 'Task Prompt'
+                : node.type === 'shell'
+                  ? 'Command'
+                  : 'Message'}
+            </label>
+            <textarea
+              className="wf-ne-textarea"
+              value={node.prompt ?? node.command ?? node.message ?? ''}
+              rows={5}
+              onChange={(e) => {
+                if (node.type === 'agent') update({ prompt: e.target.value })
+                else if (node.type === 'shell') update({ command: e.target.value })
+                else update({ message: e.target.value })
+              }}
+            />
+          </div>
+        )}
+
+        {/* Condition-specific fields */}
+        {node.type === 'condition' && (
+          <>
+            <div className="wf-ne-field">
+              <label className="wf-ne-label">Condition Mode</label>
+              <select
+                className="wf-ne-select"
+                value={node.conditionMode ?? 'exitCode'}
+                onChange={(e) =>
+                  update({ conditionMode: e.target.value as 'exitCode' | 'outputMatch' })
+                }
+              >
+                <option value="exitCode">Exit Code (0 = true)</option>
+                <option value="outputMatch">Output Match (regex)</option>
+              </select>
+            </div>
+            {(node.conditionMode ?? 'exitCode') === 'outputMatch' && (
+              <div className="wf-ne-field">
+                <label className="wf-ne-label">Regex Pattern</label>
+                <input
+                  type="text"
+                  className="wf-ne-input"
+                  value={node.conditionPattern ?? ''}
+                  onChange={(e) => update({ conditionPattern: e.target.value })}
+                  placeholder="e.g. PASS|SUCCESS|No errors"
+                />
+              </div>
+            )}
+          </>
+        )}
 
         {/* Output format preview (when role selected and form closed) */}
         {showRolePreviews && role.outputFormat && (
@@ -260,29 +297,72 @@ export default function WorkflowNodeEditorPanel({
           </div>
         )}
 
-        {/* Timeout (shell + agent nodes) */}
+        {/* Timeout (shell + agent nodes) — stored as ms, displayed as minutes */}
         {(node.type === 'shell' || node.type === 'agent') && (
           <div className="wf-ne-field">
             <label className="wf-ne-label">
-              {node.type === 'agent' ? 'Absolute Timeout (ms, optional)' : 'Timeout (ms)'}
+              {node.type === 'agent' ? 'Absolute Timeout (min, optional)' : 'Timeout (min)'}
             </label>
             <input
               className="wf-ne-input"
               type="number"
               min={0}
-              placeholder={node.type === 'agent' ? 'Idle timeout only (2 min silence)' : '60000'}
-              value={node.timeout ?? (node.type === 'shell' ? 60000 : '')}
+              step={1}
+              placeholder={node.type === 'agent' ? 'Idle timeout only (5 min silence)' : '1'}
+              value={
+                node.timeout ? Math.round(node.timeout / 60_000) : node.type === 'shell' ? 1 : ''
+              }
               onChange={(e) => {
-                const val = parseInt(e.target.value, 10)
+                const minutes = parseFloat(e.target.value)
+                const ms = Math.round(minutes * 60_000)
                 if (node.type === 'agent') {
-                  // Agent: 0 or empty = no absolute timeout (idle timeout handles stuck agents)
-                  update({ timeout: val > 0 ? val : undefined })
+                  update({ timeout: ms > 0 ? ms : undefined })
                 } else {
-                  update({ timeout: val > 0 ? val : 60000 })
+                  update({ timeout: ms > 0 ? ms : 60_000 })
                 }
               }}
             />
           </div>
+        )}
+
+        {/* Retry config (agent + shell nodes only) */}
+        {(node.type === 'agent' || node.type === 'shell') && (
+          <details className="wf-ne-details">
+            <summary className="wf-ne-summary">Retry on Failure</summary>
+            <div className="wf-ne-field">
+              <label className="wf-ne-label">Retry Count (0 = no retry)</label>
+              <input
+                type="number"
+                className="wf-ne-input"
+                min={0}
+                max={5}
+                value={node.retryCount ?? 0}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value, 10)
+                  update({ retryCount: v > 0 ? v : undefined })
+                }}
+              />
+            </div>
+            {(node.retryCount ?? 0) > 0 && (
+              <div className="wf-ne-field">
+                <label className="wf-ne-label">Retry Delay (ms)</label>
+                <input
+                  type="number"
+                  className="wf-ne-input"
+                  min={100}
+                  max={60000}
+                  step={100}
+                  value={node.retryDelayMs ?? 2000}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10)
+                    update({
+                      retryDelayMs: isNaN(v) ? undefined : Math.max(100, Math.min(60000, v)),
+                    })
+                  }}
+                />
+              </div>
+            )}
+          </details>
         )}
       </div>
     </div>

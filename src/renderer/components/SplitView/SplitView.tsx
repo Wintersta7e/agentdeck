@@ -111,6 +111,7 @@ export function SplitView(): React.JSX.Element {
     return () => {
       unsubs.forEach((u) => u())
       Object.values(pulseTimers.current).forEach(clearTimeout)
+      pulseTimers.current = {}
     }
   }, [paneLayout, paneSessions])
 

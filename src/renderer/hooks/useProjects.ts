@@ -28,6 +28,7 @@ export function useProjects(): UseProjectsReturn {
   const roles = useAppStore((s) => s.roles)
 
   useEffect(() => {
+    let cancelled = false
     async function load(): Promise<void> {
       if (useAppStore.getState().projects.length > 0 || loadingInFlight) return
       loadingInFlight = true
@@ -37,16 +38,29 @@ export function useProjects(): UseProjectsReturn {
           window.agentDeck.store.getTemplates(),
           window.agentDeck.store.getRoles(),
         ])
-        setProjects(p)
-        setTemplates(t)
-        setRoles(r)
+        if (!cancelled) {
+          setProjects(p)
+          setTemplates(t)
+          setRoles(r)
+        }
       } catch (err) {
-        useAppStore.getState().addNotification('error', `Failed to load projects: ${String(err)}`)
+        if (!cancelled) {
+          useAppStore
+            .getState()
+            .addNotification(
+              'error',
+              `Failed to load data: ${err instanceof Error ? err.message : String(err)}`,
+            )
+        }
       } finally {
         loadingInFlight = false
       }
     }
     void load()
+    return () => {
+      cancelled = true
+      loadingInFlight = false // Allow retry on StrictMode remount
+    }
   }, [setProjects, setTemplates, setRoles])
 
   const addProject = useCallback(

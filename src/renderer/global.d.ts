@@ -108,7 +108,18 @@ declare global {
         save(w: import('../shared/types').Workflow): Promise<import('../shared/types').Workflow>
         rename(id: string, name: string): Promise<void>
         delete(id: string): Promise<void>
-        run(id: string, path?: string): Promise<void>
+        export(id: string): Promise<import('../shared/types').WorkflowExport>
+        import(
+          data: import('../shared/types').WorkflowExport,
+          roleStrategy: Record<string, 'skip' | 'copy'>,
+        ): Promise<{
+          workflow: import('../shared/types').Workflow
+          warnings: string[]
+        }>
+        duplicate(id: string): Promise<import('../shared/types').Workflow>
+        listRuns(workflowId: string): Promise<import('../shared/types').WorkflowRun[]>
+        deleteRun(runId: string): Promise<void>
+        run(id: string, path?: string, variables?: Record<string, string>): Promise<void>
         stop(id: string): Promise<void>
         resume(id: string, nodeId: string): Promise<void>
         onEvent(

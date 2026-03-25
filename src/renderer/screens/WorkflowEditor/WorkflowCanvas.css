@@ -72,6 +72,11 @@
   }
 }
 
+/* Loop edge: always dashed */
+.wf-edge-loop {
+  animation: wf-dash 1s linear infinite;
+}
+
 /* ── Empty state ── */
 
 .wf-canvas-empty {

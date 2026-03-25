@@ -53,10 +53,16 @@
   border: 1px solid var(--green-border);
 }
 
-.wf-add-icon-checkpoint {
+.wf-add-icon-condition {
   background: var(--purple-dim);
   color: var(--purple);
   border: 1px solid var(--purple-border);
+}
+
+.wf-add-icon-checkpoint {
+  background: var(--blue-dim);
+  color: var(--blue);
+  border: 1px solid var(--blue-border);
 }
 
 /* Text */

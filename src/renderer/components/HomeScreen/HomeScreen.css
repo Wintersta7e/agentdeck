@@ -152,6 +152,18 @@
 .section-action:hover {
   color: var(--amber);
 }
+.section-action:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+.section-action .spin {
+  animation: agent-spin 1s linear infinite;
+}
+@keyframes agent-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 /* Stats row */
 .stats-row {

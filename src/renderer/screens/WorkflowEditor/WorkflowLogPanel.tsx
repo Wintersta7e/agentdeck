@@ -49,6 +49,8 @@ function getSourceClass(nodeType: WorkflowNodeType | 'system'): string {
       return 'wf-log-src-shell'
     case 'checkpoint':
       return 'wf-log-src-checkpoint'
+    case 'condition':
+      return 'wf-log-src-condition'
     case 'system':
       return 'wf-log-src-system'
   }
@@ -60,9 +62,12 @@ function getMessageClass(eventType: string): string {
   if (
     eventType === 'workflow:started' ||
     eventType === 'workflow:stopped' ||
-    eventType === 'node:started'
+    eventType === 'node:started' ||
+    eventType === 'node:skipped' ||
+    eventType === 'node:loopIteration'
   )
     return 'dim'
+  if (eventType === 'node:retry') return 'accent'
   return ''
 }
 
@@ -114,6 +119,7 @@ function getNodeHdrDotClass(
   if (status === 'running') return 'wf-log-node-hdr-dot run'
   if (status === 'done') return 'wf-log-node-hdr-dot done'
   if (status === 'error') return 'wf-log-node-hdr-dot err'
+  if (status === 'skipped') return 'wf-log-node-hdr-dot skipped'
   return 'wf-log-node-hdr-dot'
 }
 

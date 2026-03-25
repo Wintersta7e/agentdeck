@@ -71,11 +71,25 @@ async function initAndRender(): Promise<void> {
     username: string
     agents: Record<string, boolean>
   }> => {
-    const [username, agents] = await Promise.all([
-      window.agentDeck.app.wslUsername().catch(() => ''),
-      window.agentDeck.agents.check().catch(() => ({}) as Record<string, boolean>),
+    const [username, agents, distro] = await Promise.all([
+      window.agentDeck.app.wslUsername().catch((err: unknown) => {
+        console.warn('WSL username fetch failed', err)
+        return ''
+      }),
+      window.agentDeck.agents.check().catch((err: unknown) => {
+        console.warn('Agent check failed', err)
+        return {} as Record<string, boolean>
+      }),
+      window.agentDeck.projects.getDefaultDistro().catch((err: unknown) => {
+        console.warn('WSL distro fetch failed', err)
+        return ''
+      }),
     ])
-    useAppStore.setState({ wslUsername: username, agentStatus: agents })
+    useAppStore.setState({
+      wslUsername: username,
+      agentStatus: agents,
+      wslDistro: typeof distro === 'string' ? distro : '',
+    })
     return { username, agents }
   }
 
@@ -87,16 +101,24 @@ async function initAndRender(): Promise<void> {
     Object.keys(agentStatusResult).length === 0 || Object.values(agentStatusResult).every((v) => !v)
   if (!username && allMissing) {
     setTimeout(async () => {
-      const { agents: retryAgents } = await fetchWslData()
-      // Trigger update checks with the (now hopefully populated) result
-      const hasInstalled = Object.values(retryAgents).some((v) => v)
-      if (hasInstalled) {
-        window.agentDeck.agents.checkUpdates(retryAgents)
+      try {
+        const { agents: retryAgents } = await fetchWslData()
+        // Trigger update checks with the (now hopefully populated) result
+        const hasInstalled = Object.values(retryAgents).some((v) => v)
+        if (hasInstalled) {
+          void window.agentDeck.agents.checkUpdates(retryAgents).catch((err: unknown) => {
+            console.warn('checkUpdates failed', err)
+          })
+        }
+      } catch (err) {
+        window.agentDeck.log.send('warn', 'init', 'WSL retry also failed', { err: String(err) })
       }
     }, 5000)
   } else {
     // WSL was already warm — trigger update checks immediately
-    window.agentDeck.agents.checkUpdates(agentStatusResult)
+    void window.agentDeck.agents.checkUpdates(agentStatusResult).catch((err: unknown) => {
+      console.warn('checkUpdates failed', err)
+    })
   }
 }
 

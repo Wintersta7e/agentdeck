@@ -50,12 +50,21 @@ export function MemoryTab(): React.JSX.Element {
         }
         return
       }
-      const [claude, agents] = await Promise.all([
-        window.agentDeck.projects.readProjectFile(projectPath, 'CLAUDE.md'),
-        window.agentDeck.projects.readProjectFile(projectPath, 'AGENTS.md'),
-      ])
-      if (!cancelled) {
-        dispatch({ type: 'done', claudeMd: claude, agentsMd: agents })
+      try {
+        const [claude, agents] = await Promise.all([
+          window.agentDeck.projects.readProjectFile(projectPath, 'CLAUDE.md'),
+          window.agentDeck.projects.readProjectFile(projectPath, 'AGENTS.md'),
+        ])
+        if (!cancelled) {
+          dispatch({ type: 'done', claudeMd: claude, agentsMd: agents })
+        }
+      } catch (err) {
+        if (!cancelled) {
+          dispatch({ type: 'done', claudeMd: null, agentsMd: null })
+          window.agentDeck.log.send('warn', 'memory-tab', 'Failed to read project files', {
+            err: String(err),
+          })
+        }
       }
     }
     void fetchFiles()
@@ -66,7 +75,6 @@ export function MemoryTab(): React.JSX.Element {
   }, [projectPath, refreshKey])
 
   function handleRefresh(): void {
-    dispatch({ type: 'start' })
     setRefreshKey((k) => k + 1)
   }
 

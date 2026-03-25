@@ -51,13 +51,8 @@ vi.mock('fs', () => {
   }
 })
 
-import {
-  listWorkflows,
-  loadWorkflow,
-  saveWorkflow,
-  deleteWorkflow,
-  seedWorkflows,
-} from './workflow-store'
+import { listWorkflows, loadWorkflow, saveWorkflow, deleteWorkflow } from './workflow-store'
+import { seedWorkflows } from './workflow-seeds'
 import * as fs from 'fs'
 
 const testStore = (fs as unknown as { __testStore: Map<string, string> }).__testStore
@@ -229,13 +224,13 @@ describe('seedWorkflows', () => {
     expect(store.set).toHaveBeenCalledWith(
       'appPrefs',
       expect.objectContaining({
-        workflowSeedVersion: 1,
+        workflowSeedVersion: 2,
       }),
     )
   })
 
   it('skips seeding when version is current', async () => {
-    const store = createMockAppStore({ workflowSeedVersion: 1, workflowLastRolesVersion: 0 })
+    const store = createMockAppStore({ workflowSeedVersion: 2, workflowLastRolesVersion: 0 })
     await seedWorkflows(store)
     const workflows = await listWorkflows()
     expect(workflows).toHaveLength(0)

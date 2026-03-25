@@ -118,6 +118,30 @@
   font-size: 12px;
 }
 
+.wf-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid var(--bg3);
+  border-radius: var(--r);
+  background: var(--bg1);
+  color: var(--text1);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+
+.wf-toolbar-btn:hover {
+  background: var(--bg2);
+  color: var(--text0);
+  border-color: var(--border-bright);
+}
+
 .wf-project-select {
   font-family: var(--font-mono);
   font-size: 10px;

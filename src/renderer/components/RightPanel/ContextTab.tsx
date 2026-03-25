@@ -30,7 +30,7 @@ export function ContextTab(): React.JSX.Element {
       project
         ? (project.attachedTemplates ?? [])
             .map((tid) => templates.find((t) => t.id === tid))
-            .filter((t): t is Template => t != null)
+            .filter((t): t is Template => t !== undefined)
         : [],
     [project, templates],
   )

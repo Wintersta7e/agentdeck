@@ -139,9 +139,10 @@ describe('checkAgentVersion', () => {
 // ─── updateAgent ────────────────────────────────────────────────────
 
 describe('updateAgent', () => {
-  it('returns success when update command succeeds', async () => {
+  it('resolves latest version first and installs specific version', async () => {
     enqueue(
-      { stdout: 'updated\n' }, // update cmd
+      { stdout: '2.3.0\n' }, // resolve latest via npm view
+      { stdout: 'added 1 package\n' }, // update cmd (now @2.3.0)
       { stdout: '2.3.0\n' }, // re-check: version
       { stdout: '2.3.0\n' }, // re-check: latest
     )
@@ -154,11 +155,49 @@ describe('updateAgent', () => {
       newVersion: '2.3.0',
       message: 'Updated to 2.3.0',
     })
-    expect(mockExecFile).toHaveBeenCalledTimes(3)
+    expect(mockExecFile).toHaveBeenCalledTimes(4)
+    // Verify the install command uses the specific version, not @latest
+    const installCall = mockExecFile.mock.calls[1]
+    const installCmd = (installCall as unknown[])[1] as string[]
+    expect(installCmd[3]).toContain('@2.3.0')
+    expect(installCmd[3]).not.toContain('@latest')
+  })
+
+  it('falls back to @latest when version resolution fails', async () => {
+    enqueue(
+      { stdout: '', err: new Error('npm registry unreachable') }, // resolve latest fails
+      { stdout: 'updated\n' }, // update cmd (uses original @latest)
+      { stdout: '2.3.0\n' }, // re-check: version
+      { stdout: '2.3.0\n' }, // re-check: latest
+    )
+
+    const result = await updateAgent('claude-code')
+
+    expect(result.success).toBe(true)
+    expect(result.newVersion).toBe('2.3.0')
+  })
+
+  it('returns failure when installed version does not match target', async () => {
+    enqueue(
+      { stdout: '2.3.0\n' }, // resolve latest: 2.3.0
+      { stdout: 'added 1 package\n' }, // update cmd
+      { stdout: '2.1.0\n' }, // re-check: version (still old!)
+      { stdout: '2.3.0\n' }, // re-check: latest
+    )
+
+    const result = await updateAgent('claude-code')
+
+    expect(result.success).toBe(false)
+    expect(result.newVersion).toBe('2.1.0')
+    expect(result.message).toContain('2.1.0')
+    expect(result.message).toContain('2.3.0')
   })
 
   it('returns failure when update command errors', async () => {
-    enqueue({ stdout: '', err: new Error('permission denied') })
+    enqueue(
+      { stdout: '2.3.0\n' }, // resolve latest
+      { stdout: '', err: new Error('permission denied') }, // update fails
+    )
 
     const result = await updateAgent('claude-code')
 
@@ -184,9 +223,10 @@ describe('updateAgent', () => {
 
   it('succeeds when update has stderr noise but stdout is present', async () => {
     enqueue(
+      { stdout: '2.3.0\n' }, // resolve latest
       { stdout: 'added 1 package\n', stderr: 'fnm: command not found', err: new Error('exit 1') },
-      { stdout: '2.3.0\n' },
-      { stdout: '2.3.0\n' },
+      { stdout: '2.3.0\n' }, // re-check: version
+      { stdout: '2.3.0\n' }, // re-check: latest
     )
 
     const result = await updateAgent('claude-code')

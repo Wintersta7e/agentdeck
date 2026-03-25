@@ -37,6 +37,7 @@ coverage/
 # Claude Code local instructions
 CLAUDE.md
 .claude/
+.superpowers/
 
 # Plans, design docs, and mockups (local only)
 docs/

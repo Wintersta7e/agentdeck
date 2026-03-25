@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, memo } from 'react'
-import { Bot, TerminalSquare, CircleCheck, MoreHorizontal } from 'lucide-react'
+import { Bot, TerminalSquare, CircleCheck, GitBranch, MoreHorizontal } from 'lucide-react'
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react'
 import type {
   WorkflowNode as WorkflowNodeType,
@@ -26,30 +26,36 @@ const KNOWN_AGENTS: AgentType[] = AGENTS.map((a) => a.id)
 function getTypeBadgeClass(type: NodeType): string {
   if (type === 'agent') return 'wf-type-badge-agent'
   if (type === 'shell') return 'wf-type-badge-shell'
+  if (type === 'condition') return 'wf-type-badge-condition'
   return 'wf-type-badge-checkpoint'
 }
 
 function getTypeBadgeLabel(type: NodeType): string {
   if (type === 'agent') return 'Agent'
   if (type === 'shell') return 'Shell'
+  if (type === 'condition') return 'Cond'
   return 'Check'
 }
 
 function getNodeText(node: WorkflowNodeType): string {
   if (node.type === 'agent') return node.prompt ?? ''
   if (node.type === 'shell') return node.command ?? ''
+  if (node.type === 'condition')
+    return node.conditionPattern ?? (node.conditionMode === 'exitCode' ? 'Exit code check' : '')
   return node.message ?? ''
 }
 
 function getTextLabel(type: NodeType): string {
   if (type === 'agent') return 'Task'
   if (type === 'shell') return 'Command'
+  if (type === 'condition') return 'Condition'
   return 'Message'
 }
 
 function getTypeIcon(type: NodeType): React.ReactNode {
   if (type === 'agent') return <Bot size={14} />
   if (type === 'shell') return <TerminalSquare size={14} />
+  if (type === 'condition') return <GitBranch size={14} />
   return <CircleCheck size={14} />
 }
 
@@ -91,6 +97,8 @@ function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Ele
       updated.agent = editAgent
     } else if (node.type === 'shell') {
       updated.command = editRole
+    } else if (node.type === 'condition') {
+      updated.conditionPattern = editRole
     } else {
       updated.message = editRole
     }
@@ -252,7 +260,27 @@ function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Ele
         </div>
       )}
 
-      <Handle type="source" position={Position.Right} className="wf-handle" />
+      {/* Output handles: condition nodes get true/false split handles */}
+      {node.type === 'condition' ? (
+        <>
+          <Handle
+            type="source"
+            position={Position.Right}
+            id="true"
+            className="wf-handle wf-handle-true"
+            style={{ top: '35%', background: 'var(--green)' }}
+          />
+          <Handle
+            type="source"
+            position={Position.Right}
+            id="false"
+            className="wf-handle wf-handle-false"
+            style={{ top: '65%', background: 'var(--red)' }}
+          />
+        </>
+      ) : (
+        <Handle type="source" position={Position.Right} className="wf-handle" />
+      )}
     </div>
   )
 }

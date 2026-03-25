@@ -5,25 +5,21 @@ import type { PtyManager } from './pty-manager'
 import type {
   Workflow,
   WorkflowNode,
-  WorkflowNodeType,
   WorkflowEdge,
   WorkflowEvent,
+  WorkflowRun,
+  WorkflowNodeRun,
   Role,
 } from '../shared/types'
-import { AGENT_BINARY_MAP, KNOWN_AGENT_IDS, SAFE_FLAGS_RE } from '../shared/agents'
+import { AGENT_BINARY_MAP, SAFE_FLAGS_RE } from '../shared/agents'
+import { topoSort } from '../shared/workflow-utils'
+export { validateWorkflow, topoSort } from '../shared/workflow-utils'
+import { createScheduler } from './edge-scheduler'
+import { NODE_INIT } from './wsl-utils'
+import { substituteVariables } from './variable-substitution'
+import { saveRun } from './workflow-run-store'
 
 const log = createLogger('workflow-engine')
-
-const VALID_NODE_TYPES = new Set<WorkflowNodeType>(['agent', 'shell', 'checkpoint'])
-
-/** Max field lengths for workflow validation */
-const MAX_NAME = 200
-const MAX_DESCRIPTION = 2000
-const MAX_COMMAND = 10000
-const MAX_PROMPT = 10000
-const MAX_NODES = 100
-const MAX_EDGES = 500
-const SAFE_ID_RE = /^[a-zA-Z0-9_-]+$/
 
 /** Non-interactive / print-mode CLI flags per agent (prompt follows as last arg) */
 const AGENT_PRINT_FLAGS: Record<string, string[]> = {
@@ -36,28 +32,18 @@ const AGENT_PRINT_FLAGS: Record<string, string[]> = {
   opencode: ['run'],
 }
 
-/**
- * Prefix sourced before every workflow command in bash -lc (non-interactive).
- * Login shells don't source .bashrc, so nvm/fnm/volta aren't on PATH.
- * This explicitly initialises the most common node version managers.
- */
-const NODE_INIT =
-  [
-    '[ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh" 2>/dev/null',
-    'type fnm &>/dev/null && eval "$(fnm env --shell bash)" 2>/dev/null',
-    'true',
-  ].join('; ') + '; '
+const MINUTES = 60_000
 
-/** How long an agent node can be idle (no stdout/stderr) before being killed (ms) */
-export const AGENT_IDLE_TIMEOUT = 120_000 // 2 minutes of silence
+/** How long an agent node can be idle (no stdout/stderr) before being killed */
+export const AGENT_IDLE_TIMEOUT = 5 * MINUTES
 
-/** How often to check whether an agent node has gone idle (ms) */
-const IDLE_CHECK_INTERVAL = 30_000
+/** How often to check whether an agent node has gone idle */
+const IDLE_CHECK_INTERVAL = 0.5 * MINUTES
 
 /** Max number of nodes to run concurrently within a single tier */
 const MAX_TIER_CONCURRENCY = 5
 
-/** How often to flush the line buffer even without a newline (ms) */
+/** How often to flush the line buffer even without a newline */
 const LINE_FLUSH_MS = 500
 
 /**
@@ -67,7 +53,7 @@ const LINE_FLUSH_MS = 500
  */
 function forceKillTree(child: ChildProcess): void {
   const pid = child.pid
-  if (pid == null) {
+  if (pid === undefined || pid === null) {
     child.kill('SIGKILL')
     return
   }
@@ -93,8 +79,21 @@ export function shellQuote(s: string): string {
   return "'" + s.replace(/'/g, "'\\''") + "'"
 }
 
+/** Extract the last N non-empty lines from agent output for error diagnostics. */
+function getErrorTail(output: string | undefined, maxLines = 50): string[] | undefined {
+  if (!output) return undefined
+  const lines = stripAnsi(output)
+    .split('\n')
+    .filter((l) => l.trim())
+  return lines.length > 0 ? lines.slice(-maxLines) : undefined
+}
+
 export interface WorkflowEngine {
-  run: (workflow: Workflow, projectPath?: string | undefined) => void
+  run: (
+    workflow: Workflow,
+    projectPath?: string | undefined,
+    variables?: Record<string, string> | undefined,
+  ) => void
   stop: (workflowId: string) => void
   resume: (workflowId: string, nodeId: string) => void
   isRunning: (workflowId: string) => boolean
@@ -103,89 +102,6 @@ export interface WorkflowEngine {
 
 // Re-export for any external importers (backward compat)
 export { ptyBus } from './pty-bus'
-
-/**
- * Runtime validation of a workflow loaded from disk (C2).
- * Throws descriptive error if the structure is invalid or fields exceed limits.
- */
-export function validateWorkflow(w: unknown): w is Workflow {
-  if (!w || typeof w !== 'object') throw new Error('Workflow is not an object')
-  const wf = w as Record<string, unknown>
-  if (typeof wf.id !== 'string' || !SAFE_ID_RE.test(wf.id))
-    throw new Error(`Invalid workflow id: ${String(wf.id)}`)
-  if (typeof wf.name !== 'string') throw new Error('Workflow name must be a string')
-  if (wf.name.length > MAX_NAME) throw new Error(`Workflow name exceeds ${MAX_NAME} chars`)
-  if (wf.description !== undefined && typeof wf.description !== 'string')
-    throw new Error('Workflow description must be a string')
-  if (typeof wf.description === 'string' && wf.description.length > MAX_DESCRIPTION)
-    throw new Error(`Workflow description exceeds ${MAX_DESCRIPTION} chars`)
-  if (!Array.isArray(wf.nodes)) throw new Error('Workflow nodes must be an array')
-  if (wf.nodes.length > MAX_NODES) throw new Error(`Workflow exceeds ${MAX_NODES} nodes`)
-  if (!Array.isArray(wf.edges)) throw new Error('Workflow edges must be an array')
-  if ((wf.edges as unknown[]).length > MAX_EDGES)
-    throw new Error(`Workflow exceeds ${MAX_EDGES} edges`)
-  for (const n of wf.nodes as Record<string, unknown>[]) {
-    if (typeof n.id !== 'string') throw new Error('Node id must be a string')
-    if (!VALID_NODE_TYPES.has(n.type as WorkflowNodeType))
-      throw new Error(`Invalid node type: ${String(n.type)}`)
-    if (typeof n.name !== 'string') throw new Error('Node name must be a string')
-    if (n.name.length > MAX_NAME) throw new Error(`Node name exceeds ${MAX_NAME} chars`)
-    if (n.command !== undefined && typeof n.command === 'string' && n.command.length > MAX_COMMAND)
-      throw new Error(`Node command exceeds ${MAX_COMMAND} chars`)
-    if (n.prompt !== undefined && typeof n.prompt === 'string' && n.prompt.length > MAX_PROMPT)
-      throw new Error(`Node prompt exceeds ${MAX_PROMPT} chars`)
-    if (n.agent !== undefined && typeof n.agent === 'string' && !KNOWN_AGENT_IDS.has(n.agent))
-      throw new Error(`Unknown agent: ${n.agent}`)
-    if (n.roleId !== undefined && n.roleId !== null && typeof n.roleId !== 'string')
-      throw new Error('Node roleId must be a string')
-    if (typeof n.roleId === 'string' && n.roleId.length > MAX_NAME)
-      throw new Error(`Node roleId exceeds ${MAX_NAME} chars`)
-  }
-
-  // C6: Validate edge references
-  const nodeIds = new Set((wf.nodes as Record<string, unknown>[]).map((n) => n.id as string))
-  for (const e of wf.edges as { id: string; fromNodeId: string; toNodeId: string }[]) {
-    if (!nodeIds.has(e.fromNodeId))
-      throw new Error(`Edge ${e.id} references non-existent node: ${e.fromNodeId}`)
-    if (!nodeIds.has(e.toNodeId))
-      throw new Error(`Edge ${e.id} references non-existent node: ${e.toNodeId}`)
-  }
-
-  return true
-}
-
-/** Topological sort -- returns array of tiers (each tier = parallel batch) */
-export function topoSort(nodes: WorkflowNode[], edges: WorkflowEdge[]): WorkflowNode[][] {
-  const inDegree = new Map<string, number>()
-  const downstream = new Map<string, string[]>()
-
-  for (const n of nodes) {
-    inDegree.set(n.id, 0)
-    downstream.set(n.id, [])
-  }
-  for (const e of edges) {
-    inDegree.set(e.toNodeId, (inDegree.get(e.toNodeId) ?? 0) + 1)
-    downstream.get(e.fromNodeId)?.push(e.toNodeId)
-  }
-
-  const tiers: WorkflowNode[][] = []
-  let remaining = [...nodes]
-
-  while (remaining.length > 0) {
-    const tier = remaining.filter((n) => (inDegree.get(n.id) ?? 0) === 0)
-    if (tier.length === 0) throw new Error('Circular dependency detected in workflow')
-    tiers.push(tier)
-    for (const n of tier) {
-      for (const dep of downstream.get(n.id) ?? []) {
-        inDegree.set(dep, (inDegree.get(dep) ?? 0) - 1)
-      }
-    }
-    const tierIds = new Set(tier.map((n) => n.id))
-    remaining = remaining.filter((n) => !tierIds.has(n.id))
-  }
-
-  return tiers
-}
 
 export function createWorkflowEngine(
   _ptyManager: PtyManager,
@@ -204,7 +120,16 @@ export function createWorkflowEngine(
     })
   }
 
-  function runWorkflow(workflow: Workflow, projectPath?: string | undefined): void {
+  function runWorkflow(
+    inputWorkflow: Workflow,
+    projectPath?: string | undefined,
+    variables?: Record<string, string> | undefined,
+  ): void {
+    // Substitute {{VAR}} placeholders in node fields before execution
+    const workflow =
+      variables && Object.keys(variables).length > 0
+        ? substituteVariables(inputWorkflow, variables)
+        : inputWorkflow
     // C5: Guard against concurrent runs of the same workflow
     if (activeRuns.has(workflow.id)) {
       log.warn('Workflow already running, ignoring duplicate run', { id: workflow.id })
@@ -224,10 +149,29 @@ export function createWorkflowEngine(
 
     let stopped = false
     const nodeOutputs = new Map<string, string>()
+    const nodeExitCodes = new Map<string, number>()
+    // WF-2: Full output (up to 64KB) for condition evaluation — nodeOutputs is truncated to 8KB
+    const conditionOutputs = new Map<string, string>()
     const activeChildProcesses = new Set<ChildProcess>()
     const runningNodeIds = new Set<string>()
     // H10: Key checkpoints by workflowId:nodeId (scoped to this run)
     const runCheckpoints = new Map<string, () => void>()
+
+    // ── Run history stub ──────────────────────────────────────────
+    const run: WorkflowRun = {
+      id: crypto.randomUUID(),
+      workflowId: workflow.id,
+      workflowName: workflow.name,
+      status: 'running',
+      startedAt: Date.now(),
+      finishedAt: null,
+      durationMs: null,
+      projectPath: projectPath ?? null,
+      variables: variables ?? {},
+      nodes: [],
+    }
+    // Track how many times each node was executed (for loopIterations)
+    const nodeExecCount = new Map<string, number>()
 
     // Resolve roles for persona injection
     const rolesMap = new Map<string, Role>()
@@ -241,6 +185,18 @@ export function createWorkflowEngine(
       roles: Map<string, Role>,
     ): Promise<void> {
       return new Promise<void>((resolve, reject) => {
+        let settled = false
+        const settleResolve = (): void => {
+          if (settled) return
+          settled = true
+          resolve()
+        }
+        const settleReject = (err: Error): void => {
+          if (settled) return
+          settled = true
+          reject(err)
+        }
+
         // Build prompt: [role persona] + [task prompt] + [output format] + [context]
         const role = node.roleId ? roles.get(node.roleId) : undefined
         const promptParts: string[] = []
@@ -251,7 +207,7 @@ export function createWorkflowEngine(
         const prompt = promptParts.join('\n\n')
 
         if (!prompt) {
-          resolve()
+          settleResolve()
           return
         }
 
@@ -338,6 +294,9 @@ export function createWorkflowEngine(
           lastActivityTime = Date.now()
           output = (output + text).slice(-8192)
           nodeOutputs.set(node.id, output)
+          // WF-2: conditionOutputs stores up to 64KB for condition evaluation
+          const existing = conditionOutputs.get(node.id) ?? ''
+          conditionOutputs.set(node.id, (existing + text).slice(-65536))
           flushLines(text)
         }
 
@@ -359,7 +318,9 @@ export function createWorkflowEngine(
             clearInterval(idleCheckTimer)
             clearTimeout(absoluteTimer)
             activeChildProcesses.delete(child)
-            reject(new Error(`Agent ${bin} idle for ${Math.round(idleMs / 1000)}s — no output`))
+            settleReject(
+              new Error(`Agent ${bin} idle for ${Math.round(idleMs / 1000)}s — no output`),
+            )
           }
         }, IDLE_CHECK_INTERVAL)
 
@@ -376,7 +337,7 @@ export function createWorkflowEngine(
               clearInterval(flushTimer)
               clearInterval(idleCheckTimer)
               activeChildProcesses.delete(child)
-              reject(
+              settleReject(
                 new Error(
                   `Agent ${bin} timed out after ${(node.timeout ?? 0) / 1000}s (absolute limit)`,
                 ),
@@ -389,11 +350,12 @@ export function createWorkflowEngine(
           clearTimeout(absoluteTimer)
           clearInterval(flushTimer)
           activeChildProcesses.delete(child)
+          nodeExitCodes.set(node.id, code ?? 1)
           // Flush any remaining partial line
           const remaining = lineBuf.trim()
           if (remaining) emitLine(remaining)
-          if (code === 0 || code === null) resolve()
-          else reject(new Error(`Agent ${bin} exited with code ${code}`))
+          if (code === 0 || code === null) settleResolve()
+          else settleReject(new Error(`Agent ${bin} exited with code ${code}`))
         })
 
         child.on('error', (err: Error) => {
@@ -401,7 +363,7 @@ export function createWorkflowEngine(
           clearTimeout(absoluteTimer)
           clearInterval(flushTimer)
           activeChildProcesses.delete(child)
-          reject(err)
+          settleReject(err)
         })
       })
     }
@@ -427,8 +389,10 @@ export function createWorkflowEngine(
           { timeout: node.timeout ?? 60000 },
           (err, stdout, stderr) => {
             activeChildProcesses.delete(child)
+            nodeExitCodes.set(node.id, err ? 1 : 0)
             const out = stripAnsi(stdout + stderr)
             nodeOutputs.set(node.id, out)
+            conditionOutputs.set(node.id, out.slice(-65536))
             push(workflow.id, {
               type: 'node:output',
               workflowId: workflow.id,
@@ -450,6 +414,256 @@ export function createWorkflowEngine(
       })
     }
 
+    // ── Condition evaluation ──────────────────────────────────────
+    function evaluateCondition(node: WorkflowNode): 'true' | 'false' {
+      const incomingEdge = workflow.edges.find(
+        (e) => e.toNodeId === node.id && e.edgeType !== 'loop',
+      )
+      if (!incomingEdge) return 'false'
+      const upstreamId = incomingEdge.fromNodeId
+
+      if (node.conditionMode === 'exitCode') {
+        const code = nodeExitCodes.get(upstreamId)
+        return code === 0 ? 'true' : 'false'
+      }
+
+      if (node.conditionMode === 'outputMatch') {
+        // WF-2: Read full output from conditionOutputs (64KB), falling back to nodeOutputs (8KB)
+        const fullOutput = conditionOutputs.get(upstreamId) ?? nodeOutputs.get(upstreamId) ?? ''
+        if (!fullOutput) {
+          push(workflow.id, {
+            type: 'node:output',
+            workflowId: workflow.id,
+            nodeId: node.id,
+            message: '\u26a0 Upstream produced no output, evaluating as false',
+          })
+          return 'false'
+        }
+        // WF-4: Limit output to 100KB to mitigate regex DoS risk from user-provided patterns
+        const testOutput = fullOutput.slice(0, 102400)
+        try {
+          return new RegExp(node.conditionPattern ?? '').test(testOutput) ? 'true' : 'false'
+        } catch {
+          return 'false'
+        }
+      }
+      // WF-11: Unknown conditionMode — warn and evaluate as false
+      push(workflow.id, {
+        type: 'node:output',
+        workflowId: workflow.id,
+        nodeId: node.id,
+        message: `\u26a0 Unknown conditionMode "${String(node.conditionMode)}", evaluating as false`,
+      })
+      return 'false'
+    }
+
+    // ── Process a single node ──────────────────────────────────────
+    async function processNode(
+      node: WorkflowNode,
+      scheduler: ReturnType<typeof createScheduler>,
+      loopEdgesByCondition: Map<string, WorkflowEdge[]>,
+      loopCounters: Map<string, number>,
+    ): Promise<void> {
+      if (stopped) return
+
+      // Condition nodes: evaluate inline, no process spawned
+      if (node.type === 'condition') {
+        const condStartTime = Date.now()
+        nodeExecCount.set(node.id, (nodeExecCount.get(node.id) ?? 0) + 1)
+
+        push(workflow.id, {
+          type: 'node:started',
+          workflowId: workflow.id,
+          nodeId: node.id,
+          message: `Evaluating ${node.name}`,
+        })
+
+        const branch = evaluateCondition(node)
+        push(workflow.id, {
+          type: 'node:done',
+          workflowId: workflow.id,
+          nodeId: node.id,
+          message: `Condition: ${branch}`,
+          branch,
+        })
+        scheduler.resolveCondition(node.id, branch)
+
+        const condFinishTime = Date.now()
+        const condNodeRun: WorkflowNodeRun = {
+          nodeId: node.id,
+          nodeName: node.name,
+          status: 'done',
+          startedAt: condStartTime,
+          finishedAt: condFinishTime,
+          durationMs: condFinishTime - condStartTime,
+          branchTaken: branch,
+        }
+        const condExecN = nodeExecCount.get(node.id) ?? 1
+        if (condExecN > 1) condNodeRun.loopIterations = condExecN
+        run.nodes.push(condNodeRun)
+
+        // Handle loop edges
+        const condLoops = loopEdgesByCondition.get(node.id) ?? []
+        for (const le of condLoops) {
+          if (le.branch === branch) {
+            const count = (loopCounters.get(le.id) ?? 0) + 1
+            loopCounters.set(le.id, count)
+            if (count <= (le.maxIterations ?? 1)) {
+              push(workflow.id, {
+                type: 'node:loopIteration',
+                workflowId: workflow.id,
+                nodeId: node.id,
+                iteration: count,
+                maxIterations: le.maxIterations,
+                message: `Loop iteration ${String(count)}/${String(le.maxIterations)}`,
+              })
+              scheduler.resetLoopSubgraph(le.toNodeId, node.id)
+            }
+          }
+        }
+        return
+      }
+
+      // Build context summary from upstream node outputs
+      const upstreamEdges = workflow.edges.filter(
+        (e) => e.toNodeId === node.id && e.edgeType !== 'loop',
+      )
+      const contextSummary = upstreamEdges
+        .map((e) => {
+          const out = nodeOutputs.get(e.fromNodeId)
+          return out ? `[${e.fromNodeId}]: ${out.slice(-4000)}` : ''
+        })
+        .filter(Boolean)
+        .join('\n\n')
+
+      // Run with retry
+      const maxAttempts = (node.retryCount ?? 0) + 1
+      const retryDelay = node.retryDelayMs ?? 2000
+      let lastError: Error | undefined
+
+      const nodeStartTime = Date.now()
+      nodeExecCount.set(node.id, (nodeExecCount.get(node.id) ?? 0) + 1)
+
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        if (stopped) return
+        if (attempt > 1) {
+          push(workflow.id, {
+            type: 'node:retry',
+            workflowId: workflow.id,
+            nodeId: node.id,
+            attempt,
+            maxAttempts,
+            message: `Retry ${String(attempt)}/${String(maxAttempts)}`,
+          })
+          await new Promise<void>((r) => setTimeout(r, retryDelay))
+        }
+
+        runningNodeIds.add(node.id)
+        log.info('Node started', {
+          workflowId: workflow.id,
+          nodeId: node.id,
+          type: node.type,
+          agent: node.agent,
+        })
+        push(workflow.id, {
+          type: 'node:started',
+          workflowId: workflow.id,
+          nodeId: node.id,
+          message: `Starting ${node.name}`,
+        })
+
+        try {
+          if (node.type === 'agent') {
+            await runAgentNode(node, contextSummary, rolesMap)
+          } else if (node.type === 'shell') {
+            await runShellNode(node)
+          } else if (node.type === 'checkpoint') {
+            push(workflow.id, {
+              type: 'node:paused',
+              workflowId: workflow.id,
+              nodeId: node.id,
+              message: node.message ?? 'Waiting for user to continue...',
+            })
+            await onCheckpoint(node.id)
+            if (stopped) return
+            push(workflow.id, {
+              type: 'node:resumed',
+              workflowId: workflow.id,
+              nodeId: node.id,
+              message: 'Resumed',
+            })
+          }
+
+          runningNodeIds.delete(node.id)
+          log.info('Node completed', { workflowId: workflow.id, nodeId: node.id })
+          push(workflow.id, {
+            type: 'node:done',
+            workflowId: workflow.id,
+            nodeId: node.id,
+            message: `${node.name} completed`,
+          })
+          scheduler.completeNode(node.id)
+
+          // Record success in run history
+          const doneTime = Date.now()
+          const doneNodeRun: WorkflowNodeRun = {
+            nodeId: node.id,
+            nodeName: node.name,
+            status: 'done',
+            startedAt: nodeStartTime,
+            finishedAt: doneTime,
+            durationMs: doneTime - nodeStartTime,
+          }
+          if (attempt > 1) doneNodeRun.retryAttempts = attempt
+          const execN = nodeExecCount.get(node.id) ?? 1
+          if (execN > 1) doneNodeRun.loopIterations = execN
+          run.nodes.push(doneNodeRun)
+
+          return // success, no more retries
+        } catch (err) {
+          runningNodeIds.delete(node.id)
+          lastError = err instanceof Error ? err : new Error(String(err))
+          if (attempt < maxAttempts) continue // retry
+        }
+      }
+
+      // All attempts exhausted — node failed
+      log.warn('Node failed', {
+        workflowId: workflow.id,
+        nodeId: node.id,
+        err: String(lastError),
+      })
+      push(workflow.id, {
+        type: 'node:error',
+        workflowId: workflow.id,
+        nodeId: node.id,
+        message: String(lastError),
+      })
+      // Record failure in run history
+      const errTime = Date.now()
+      const errNodeRun: WorkflowNodeRun = {
+        nodeId: node.id,
+        nodeName: node.name,
+        status: 'error',
+        startedAt: nodeStartTime,
+        finishedAt: errTime,
+        durationMs: errTime - nodeStartTime,
+        errorTail: getErrorTail(nodeOutputs.get(node.id)),
+      }
+      if (maxAttempts > 1) errNodeRun.retryAttempts = maxAttempts
+      const errExecN = nodeExecCount.get(node.id) ?? 1
+      if (errExecN > 1) errNodeRun.loopIterations = errExecN
+      run.nodes.push(errNodeRun)
+
+      if (node.continueOnError) {
+        scheduler.completeNode(node.id) // treat as done for scheduling
+      } else {
+        scheduler.failNode(node.id)
+        stopped = true
+      }
+    }
+
+    // ── Main execution loop ────────────────────────────────────────
     async function execute(): Promise<void> {
       push(workflow.id, {
         type: 'workflow:started',
@@ -457,118 +671,93 @@ export function createWorkflowEngine(
         message: `Workflow "${workflow.name}" started`,
       })
 
-      let tiers: WorkflowNode[][]
+      // Validate DAG (catches cycles)
       try {
-        tiers = topoSort(workflow.nodes, workflow.edges)
+        topoSort(workflow.nodes, workflow.edges)
       } catch (err) {
         push(workflow.id, {
           type: 'workflow:error',
           workflowId: workflow.id,
           message: String(err),
         })
+        run.status = 'error'
+        run.finishedAt = Date.now()
+        run.durationMs = run.finishedAt - run.startedAt
+        saveRun(run).catch((saveErr: unknown) => {
+          log.warn('Failed to save workflow run history', {
+            workflowId: workflow.id,
+            err: String(saveErr),
+          })
+        })
         return
       }
 
+      const scheduler = createScheduler(workflow.nodes, workflow.edges)
+
+      // Build loop edge lookup: condition node → its loop edges
+      const loopEdges = workflow.edges.filter((e) => e.edgeType === 'loop')
+      const loopEdgesByCondition = new Map<string, WorkflowEdge[]>()
+      for (const le of loopEdges) {
+        const list = loopEdgesByCondition.get(le.fromNodeId) ?? []
+        list.push(le)
+        loopEdgesByCondition.set(le.fromNodeId, list)
+      }
+      const loopCounters = new Map<string, number>() // edgeId → iteration count
+
+      // Track which nodes we've emitted skip events for
+      const emittedSkipped = new Set<string>()
+
       try {
-        for (const tier of tiers) {
+        while (!scheduler.isDone()) {
           if (stopped) break
 
-          const contextSummary = workflow.edges
-            .filter((e) => tier.some((n) => n.id === e.toNodeId))
-            .map((e) => {
-              const out = nodeOutputs.get(e.fromNodeId)
-              return out ? `[${e.fromNodeId}]: ${out.slice(-4000)}` : ''
-            })
-            .filter(Boolean)
-            .join('\n\n')
+          const ready = scheduler.getReady()
+          if (ready.length === 0 && !scheduler.isDone()) break // deadlock
 
-          // H2: Run tier nodes with concurrency limit.
-          // runSingleNode accepts contextSummary as a parameter to avoid
-          // fragile closure-in-loop capture.
-          const runSingleNode = async (node: WorkflowNode, ctx: string): Promise<void> => {
-            if (stopped) return
-
-            runningNodeIds.add(node.id)
-            log.info('Node started', {
-              workflowId: workflow.id,
-              nodeId: node.id,
-              type: node.type,
-              agent: node.agent,
-            })
-            push(workflow.id, {
-              type: 'node:started',
-              workflowId: workflow.id,
-              nodeId: node.id,
-              message: `Starting ${node.name}`,
-            })
-
-            try {
-              if (node.type === 'agent') {
-                await runAgentNode(node, ctx, rolesMap)
-              } else if (node.type === 'shell') {
-                await runShellNode(node)
-              } else if (node.type === 'checkpoint') {
-                push(workflow.id, {
-                  type: 'node:paused',
-                  workflowId: workflow.id,
-                  nodeId: node.id,
-                  message: node.message ?? 'Waiting for user to continue...',
-                })
-                await onCheckpoint(node.id)
-                if (stopped) return
-                push(workflow.id, {
-                  type: 'node:resumed',
-                  workflowId: workflow.id,
-                  nodeId: node.id,
-                  message: 'Resumed',
-                })
-              }
-
-              runningNodeIds.delete(node.id)
-              log.info('Node completed', { workflowId: workflow.id, nodeId: node.id })
-              push(workflow.id, {
-                type: 'node:done',
-                workflowId: workflow.id,
-                nodeId: node.id,
-                message: `${node.name} completed`,
-              })
-            } catch (err) {
-              runningNodeIds.delete(node.id)
-              log.warn('Node failed', {
-                workflowId: workflow.id,
-                nodeId: node.id,
-                err: String(err),
-              })
-              push(workflow.id, {
-                type: 'node:error',
-                workflowId: workflow.id,
-                nodeId: node.id,
-                message: String(err),
-              })
-              // H1: continueOnError — don't stop workflow for non-critical nodes
-              if (!node.continueOnError) {
-                stopped = true
-                throw err
-              }
-            }
-          }
-
-          const queue = [...tier]
+          // Execute batch with concurrency limit
+          const queue = [...ready]
           const runNext = async (): Promise<void> => {
             let node = queue.shift()
             while (node) {
               if (stopped) return
-              await runSingleNode(node, contextSummary)
+              await processNode(node, scheduler, loopEdgesByCondition, loopCounters)
               node = queue.shift()
             }
           }
-          const workers = Array.from({ length: Math.min(MAX_TIER_CONCURRENCY, tier.length) }, () =>
+          const workers = Array.from({ length: Math.min(MAX_TIER_CONCURRENCY, ready.length) }, () =>
             runNext(),
           )
           await Promise.all(workers)
+
+          // Check for newly skipped nodes and emit events
+          for (const n of workflow.nodes) {
+            if (scheduler.getNodeStatus(n.id) === 'skipped' && !emittedSkipped.has(n.id)) {
+              emittedSkipped.add(n.id)
+              push(workflow.id, {
+                type: 'node:skipped',
+                workflowId: workflow.id,
+                nodeId: n.id,
+                message: `${n.name} skipped (branch not taken)`,
+              })
+              run.nodes.push({
+                nodeId: n.id,
+                nodeName: n.name,
+                status: 'skipped',
+                startedAt: null,
+                finishedAt: null,
+                durationMs: null,
+              })
+            }
+          }
         }
-      } catch {
-        // Node errors propagate here via throw — already emitted as node:error above
+      } catch (err) {
+        // Node failures already emitted as node:error. Log anything unexpected.
+        if (err instanceof Error) {
+          log.error('Unexpected workflow engine error', {
+            workflowId: workflow.id,
+            err: err.message,
+          })
+        }
       }
 
       if (!stopped) {
@@ -586,6 +775,17 @@ export function createWorkflowEngine(
           message: 'Workflow stopped',
         })
       }
+
+      // ── Flush run history to disk ────────────────────────────────
+      run.status = stopped ? 'stopped' : 'done'
+      run.finishedAt = Date.now()
+      run.durationMs = run.finishedAt - run.startedAt
+      saveRun(run).catch((err: unknown) => {
+        log.warn('Failed to save workflow run history', {
+          workflowId: workflow.id,
+          err: String(err),
+        })
+      })
     }
 
     const handle = {
@@ -643,6 +843,16 @@ export function createWorkflowEngine(
             message: String(err),
           })
         }
+        // Flush run history with error status
+        run.status = 'error'
+        run.finishedAt = Date.now()
+        run.durationMs = run.finishedAt - run.startedAt
+        saveRun(run).catch((saveErr: unknown) => {
+          log.warn('Failed to save workflow run history', {
+            workflowId: workflow.id,
+            err: String(saveErr),
+          })
+        })
       })
       .finally(() => {
         activeRuns.delete(workflow.id)

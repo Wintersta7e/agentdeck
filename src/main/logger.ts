@@ -42,6 +42,10 @@ export function initLogger(): void {
   rotate(logPath)
 
   stream = fs.createWriteStream(logPath, { flags: 'a' })
+  stream.on('error', (err) => {
+    console.error(`[logger] write stream error: ${String(err)}`)
+    stream = null
+  })
 }
 
 function write(level: LogLevel, mod: string, message: string, data?: unknown): void {
@@ -61,9 +65,11 @@ function write(level: LogLevel, mod: string, message: string, data?: unknown): v
       console.warn(line.trimEnd())
       break
     case 'DEBUG':
+      // eslint-disable-next-line no-console -- logger is the sanctioned output channel
       console.debug(line.trimEnd())
       break
     default:
+      // eslint-disable-next-line no-console -- logger is the sanctioned output channel
       console.log(line.trimEnd())
   }
 }
