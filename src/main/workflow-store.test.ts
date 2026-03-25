@@ -224,13 +224,13 @@ describe('seedWorkflows', () => {
     expect(store.set).toHaveBeenCalledWith(
       'appPrefs',
       expect.objectContaining({
-        workflowSeedVersion: 1,
+        workflowSeedVersion: 2,
       }),
     )
   })
 
   it('skips seeding when version is current', async () => {
-    const store = createMockAppStore({ workflowSeedVersion: 1, workflowLastRolesVersion: 0 })
+    const store = createMockAppStore({ workflowSeedVersion: 2, workflowLastRolesVersion: 0 })
     await seedWorkflows(store)
     const workflows = await listWorkflows()
     expect(workflows).toHaveLength(0)
