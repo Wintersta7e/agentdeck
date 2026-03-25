@@ -27,7 +27,7 @@ export const InputBar = memo(function InputBar({
     () =>
       attachedTemplateIds
         .map((tid) => templates.find((t) => t.id === tid))
-        .filter((t): t is NonNullable<typeof t> => t != null),
+        .filter((t): t is NonNullable<typeof t> => t !== undefined),
     [attachedTemplateIds, templates],
   )
 

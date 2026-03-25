@@ -12,9 +12,11 @@
     "build": "node node_modules/electron-vite/bin/electron-vite.js build",
     "dist": "node node_modules/electron-vite/bin/electron-vite.js build && node node_modules/electron-builder/out/cli/cli.js --win portable",
     "postinstall": "node node_modules/@electron/rebuild/lib/cli.js -f -w node-pty",
-    "lint": "node node_modules/eslint/bin/eslint.js src/",
-    "lint:fix": "node node_modules/eslint/bin/eslint.js src/ --fix",
+    "lint": "node node_modules/eslint/bin/eslint.js src/ --max-warnings=0",
+    "lint:fix": "node node_modules/eslint/bin/eslint.js src/ --fix --max-warnings=0",
+    "lint:check": "node node_modules/eslint/bin/eslint.js src/ --max-warnings=0",
     "format": "node node_modules/prettier/bin/prettier.cjs --write 'src/**/*.{ts,tsx,css}'",
+    "format:check": "node node_modules/prettier/bin/prettier.cjs --check 'src/**/*.{ts,tsx,css}'",
     "test": "node node_modules/vitest/vitest.mjs run",
     "test:watch": "node node_modules/vitest/vitest.mjs watch",
     "test:coverage": "node node_modules/vitest/vitest.mjs run --coverage",
@@ -25,7 +27,7 @@
   },
   "lint-staged": {
     "*.{ts,tsx}": [
-      "node node_modules/eslint/bin/eslint.js --fix",
+      "node node_modules/eslint/bin/eslint.js --fix --max-warnings=0",
       "node node_modules/prettier/bin/prettier.cjs --write"
     ],
     "*.css": [

@@ -64,12 +64,15 @@ describe('substituteVariables', () => {
     expect(firstNode(result).prompt).toBe('Fix {{UNKNOWN_VAR}}')
   })
 
+  // eslint-disable-next-line no-template-curly-in-string -- testing shell syntax literal
   it('replaces {{VAR}} even inside ${{VAR}} (shell syntax)', () => {
+    // eslint-disable-next-line no-template-curly-in-string -- testing shell syntax literal
+    const shellCmd = 'echo ${{GITHUB_TOKEN}} {{REAL_VAR}}'
     const wf = makeWorkflow({
       nodes: [
         makeWorkflowNode({
           type: 'shell',
-          command: 'echo ${{GITHUB_TOKEN}} {{REAL_VAR}}',
+          command: shellCmd,
         }),
       ],
     })

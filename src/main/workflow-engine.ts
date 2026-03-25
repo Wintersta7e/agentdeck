@@ -53,7 +53,7 @@ const LINE_FLUSH_MS = 500
  */
 function forceKillTree(child: ChildProcess): void {
   const pid = child.pid
-  if (pid == null) {
+  if (pid === undefined || pid === null) {
     child.kill('SIGKILL')
     return
   }
