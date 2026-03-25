@@ -13,7 +13,7 @@ AgentDeck provides a unified desktop environment for working with AI coding agen
 - **Multi-Agent Support** - 7 agents: Claude Code, Codex, Aider, Goose, Gemini CLI, Amazon Q, OpenCode
 - **Project Management** - Configure projects with paths, agents, prompt templates, and stack badges
 - **Split Terminal Views** - 1/2/3 pane layouts with independent sessions
-- **Agentic Workflows** - Visual node-graph editor for multi-step agent orchestration
+- **Agentic Workflows** - Visual node-graph editor with conditions, loops, variables, and execution history
 - **8 Themes** - 4 dark + 4 light themes with smooth view transitions
 - **Command Palette** - Quick access to projects, sessions, templates, and tools
 
@@ -45,11 +45,15 @@ AgentDeck provides a unified desktop environment for working with AI coding agen
 
 ### Agentic Workflows
 
-- **Visual Node Graph** - Drag-and-drop editor for agent/shell/checkpoint nodes
-- **Workflow Engine** - Topological sort with parallel tier execution
+- **Visual Node Graph** - Drag-and-drop editor for agent, shell, checkpoint, and condition nodes
+- **Edge-Activation Scheduler** - Ready-queue execution with branching, skip propagation, and loop support
+- **Conditional Branching** - Route execution based on exit codes or output pattern matching
+- **Loop/Retry** - Loop-back edges with max iterations, per-node retry with configurable delay
+- **Variables** - `{{VAR}}` substitution with typed pre-run dialog (string, text, path, choice)
 - **Roles** - 8 seed roles (Architect, Reviewer, etc.) with persona injection
 - **Checkpoints** - Pause/resume execution at designated points
-- **Concurrency** - Configurable parallel execution with MAX_TIER_CONCURRENCY
+- **Import/Export** - Share workflows as `.agentdeck-workflow.json` bundles with role remapping
+- **Execution History** - Per-run summaries with node timing, error tails, and a History tab
 
 ### Command Palette
 
@@ -61,7 +65,7 @@ AgentDeck provides a unified desktop environment for working with AI coding agen
 ### Agent Updates
 
 - **Version Checking** - Startup notification when agent updates are available
-- **One-Click Update** - Update agents directly from the home screen
+- **One-Click Update** - Update agents directly from the home screen (resolves exact version from registry)
 - **Automatic Detection** - Discovers installed agents via WSL PATH
 
 ### Theming
@@ -115,10 +119,10 @@ npm run dev
 # Build for production (validates TypeScript)
 npm run build
 
-# Run tests (293 tests)
+# Run tests (436 tests)
 npm test
 
-# Lint code
+# Lint code (zero-warning policy)
 npm run lint
 
 # Format code
@@ -139,11 +143,14 @@ Output: `dist/AgentDeck-{version}-portable.exe` (~89 MB)
 ```
 src/
 ├── main/                    # Electron main process
-│   ├── index.ts             # App lifecycle, IPC handlers, WSL integration
+│   ├── index.ts             # App lifecycle, IPC handler registration
+│   ├── ipc/                 # 6 IPC modules (pty, window, agents, projects, workflows, utils)
 │   ├── pty-manager.ts       # node-pty: spawn, resize, kill, activity parsing
+│   ├── workflow-engine.ts   # Edge-activation scheduler DAG execution
+│   ├── edge-scheduler.ts    # Pure scheduler: ready queue, branching, skip, loop reset
+│   ├── variable-substitution.ts # {{VAR}} replacement in workflow nodes
+│   ├── workflow-run-store.ts # Execution history persistence
 │   ├── agent-updater.ts     # Agent version checking and updating via WSL
-│   ├── workflow-engine.ts   # Workflow execution: topo sort, concurrency, timeouts
-│   ├── workflow-store.ts    # Workflow persistence with atomic writes
 │   └── project-store.ts     # electron-store: CRUD + safeStorage for API keys
 ├── preload/
 │   └── index.ts             # contextBridge: safe IPC surface (window.agentDeck)
@@ -156,7 +163,8 @@ src/
 │   └── styles/              # tokens.css (design system), global.css
 └── shared/
     ├── agents.ts            # Agent registry (7 agents with metadata)
-    └── types.ts             # Shared TypeScript interfaces
+    ├── types.ts             # Shared TypeScript interfaces
+    └── workflow-utils.ts    # Workflow validation + topological sort
 ```
 
 ## Tech Stack
@@ -170,8 +178,9 @@ src/
 | [xterm.js 5](https://xtermjs.org) | Terminal emulator |
 | [node-pty](https://github.com/microsoft/node-pty) | Pseudo-terminal (WSL sessions) |
 | [Zustand](https://zustand-demo.pmnd.rs) | State management |
-| [Vitest 4](https://vitest.dev) | Testing framework (293 tests) |
-| [ESLint 9](https://eslint.org) | Linting (flat config) |
+| [React Flow](https://reactflow.dev) | Visual workflow node editor |
+| [Vitest 4](https://vitest.dev) | Testing framework (436 tests) |
+| [ESLint 9](https://eslint.org) | Linting (flat config, zero-warning policy) |
 
 ## Documentation
 

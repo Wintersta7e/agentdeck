@@ -1,6 +1,6 @@
 # AgentDeck User Guide
 
-> **Version**: 4.3.0
+> **Version**: 4.5.0
 
 AgentDeck is a desktop command center for managing AI coding agents through WSL2 terminals. This guide covers every feature from first launch to advanced workflow automation.
 
@@ -18,7 +18,7 @@ AgentDeck is a desktop command center for managing AI coding agents through WSL2
 8. [Right Panel](#right-panel)
 9. [Sidebar](#sidebar)
 10. [Prompt Templates](#prompt-templates)
-11. [Agentic Workflows](#agentic-workflows)
+11. [Agentic Workflows](#agentic-workflows) (conditions, loops, variables, import/export, history)
 12. [Workflow Roles](#workflow-roles)
 13. [Command Palette](#command-palette)
 14. [Agent Updates](#agent-updates)
@@ -297,7 +297,7 @@ Two ways:
 
 ## Agentic Workflows
 
-Workflows let you chain multiple agents, shell commands, and manual checkpoints into automated pipelines.
+Workflows let you chain multiple agents, shell commands, conditions, and manual checkpoints into automated pipelines with branching, loops, and parameterized variables.
 
 ### Creating a Workflow
 
@@ -306,23 +306,26 @@ Workflows let you chain multiple agents, shell commands, and manual checkpoints 
 
 ### Node Types
 
-| Type | Icon | Description |
-|------|------|-------------|
-| Agent | :robot: | Runs an AI agent in non-interactive (print) mode |
-| Shell | :computer: | Executes a shell command in WSL |
-| Checkpoint | :white_check_mark: | Pauses execution until you click Resume |
+| Type | Icon | Badge Color | Description |
+|------|------|-------------|-------------|
+| Agent | Robot | Blue | Runs an AI agent in non-interactive (print) mode |
+| Shell | Terminal | Green | Executes a shell command in WSL |
+| Checkpoint | Check | Blue | Pauses execution until you click Resume |
+| Condition | Branch | Purple | Routes execution based on exit code or output pattern |
 
 ### Adding Nodes
 
 Click the node type buttons in the toolbar to add nodes to the canvas. Each node appears as a card with:
-- **Header** — Type icon, node name, type badge (Agent/Shell/Check)
-- **Body** — Labeled sections showing Role (if assigned), Agent name, and Task/Command preview
+- **Header** — Type icon, node name, type badge
+- **Body** — Preview of prompt/command/pattern and role (if assigned)
 
 ### Connecting Nodes
 
 1. Click the output port (right side) of a source node
 2. Click the input port (left side) of a target node
 3. An edge (arrow) connects them
+
+**Condition nodes** have two output ports: **True** (green, top) and **False** (red, bottom). Connect each to different downstream nodes to create branches.
 
 Press **Escape** to cancel a pending connection.
 
@@ -334,9 +337,10 @@ Two ways to edit:
 
 ### Node Editor Panel
 
-The right panel has two tabs:
+The right panel has three tabs:
 - **Node Editor** (default) — Full editing interface for the selected node
 - **Execution Log** — Shows per-node output during workflow runs
+- **History** — Past run summaries with timing and error details
 
 The Node Editor shows different fields based on node type:
 
@@ -347,41 +351,115 @@ The Node Editor shows different fields based on node type:
 | Agent | Dropdown to select which agent runs this node |
 | Role | Dropdown to assign a persona (see Workflow Roles) |
 | Persona preview | Read-only display of the role's system prompt |
-| Task Prompt | Your specific instructions for this step |
+| Task Prompt | Your specific instructions (supports `{{VAR}}` variables) |
 | Output Format preview | Read-only display of the role's expected output structure |
-| Agent Flags | Optional CLI flags |
+| Agent Flags | Optional CLI flags (supports `{{VAR}}` variables) |
+| Retry on Failure | Retry count (0-5) and delay (collapsible section) |
 
 **Shell nodes:**
 | Field | Description |
 |-------|-------------|
 | Name | Display name |
-| Command | Shell command to execute |
+| Command | Shell command to execute (supports `{{VAR}}` variables) |
 | Timeout | Maximum execution time in milliseconds (default: 60000) |
+| Retry on Failure | Retry count (0-5) and delay (collapsible section) |
 
 **Checkpoint nodes:**
 | Field | Description |
 |-------|-------------|
 | Name | Display name |
-| Message | Text shown while waiting for user to resume |
+| Message | Text shown while waiting for user to resume (supports `{{VAR}}` variables) |
+
+**Condition nodes:**
+| Field | Description |
+|-------|-------------|
+| Name | Display name |
+| Condition Mode | **Exit Code** (0 = true, non-zero = false) or **Output Match** (regex) |
+| Regex Pattern | Pattern to test against upstream output (shown when Output Match selected) |
+
+### Workflow Variables
+
+Workflows can define variables that are filled in before each run. Variables use `{{VAR_NAME}}` syntax in node prompts, commands, messages, and agent flags.
+
+**Defining variables:** In the workflow editor, variables are part of the workflow definition. Seed workflows come with pre-defined variables (e.g., `{{TICKET_PATH}}`, `{{FEATURE_DESC}}`).
+
+**Pre-run dialog:** When you click "Run" on a workflow with variables, a dialog appears with typed input fields:
+- **String** — Single-line text input
+- **Text** — Multi-line textarea (for descriptions, prompts)
+- **Path** — Text input with a "Browse" button for folder selection
+- **Choice** — Dropdown from predefined options
+
+Required variables must be filled before the workflow can start. Variables with defaults are pre-filled.
+
+### Conditional Branching
+
+Condition nodes evaluate the output of their upstream node and route execution down the **True** or **False** branch:
+
+- **Exit Code mode** — Exit code 0 = true, non-zero = false. Works for both shell and agent nodes. The upstream node must have `continueOnError` enabled for the condition to evaluate a failure.
+- **Output Match mode** — Tests a regex pattern against the upstream node's output. If the pattern matches, takes the true branch.
+
+Nodes on an unmatched branch are marked **skipped** (dimmed on the canvas). Skipped nodes do not block downstream joins — a join node runs as soon as all its non-skipped inputs complete.
+
+### Loops
+
+Loop-back edges connect a condition node's output back to an earlier node, creating an iteration cycle. For example: Fix → Test → Condition → (if test fails) loop back to Fix.
+
+**Creating a loop:**
+1. Add a condition node after the step you want to evaluate
+2. Connect the condition's False (or True) output back to the loop entry node
+3. Set **Max Iterations** on the loop edge (1-20) to prevent infinite loops
+
+When max iterations is reached, execution continues past the loop.
+
+### Retry on Failure
+
+Agent and shell nodes can be configured to retry on failure:
+- **Retry Count** — Number of retries (1-5, 0 = no retry)
+- **Retry Delay** — Milliseconds between retries (default: 2000)
+
+If all retries exhaust and `continueOnError` is set, the workflow continues past the failed node.
 
 ### Running a Workflow
 
 1. Click "Run Workflow" in the toolbar
-2. The right panel auto-switches to the **Execution Log** tab
-3. Nodes execute in topological order — nodes with no dependencies run in parallel
-4. Each node shows status: idle, running (green pulse), done (green), error (red)
-5. Checkpoint nodes pause and show a "Resume" button
+2. If the workflow has variables, a dialog appears — fill in values and click "Start"
+3. The right panel auto-switches to the **Execution Log** tab
+4. Nodes execute based on the edge-activation scheduler — nodes become ready when all inputs are satisfied
+5. Each node shows status: idle, running (green pulse), done (green), error (red), skipped (dimmed)
+6. Checkpoint nodes pause and show a "Resume" button
+7. Condition nodes show which branch was taken
 
 ### How Execution Works
 
-1. **Topological sort** — Nodes are sorted into tiers based on edge connections
-2. **Parallel tiers** — All nodes in a tier run simultaneously via `Promise.all`
-3. **Context passing** — Output from upstream nodes is passed as context to downstream nodes
+1. **Edge-activation scheduler** — Each node tracks pending incoming edges. When all are satisfied, it enters the ready queue.
+2. **Concurrent execution** — Up to 5 nodes run simultaneously when ready.
+3. **Context passing** — Output from upstream nodes is passed as context to downstream nodes.
 4. **Agent prompt assembly** — For agent nodes with a role: `[persona] + [task prompt] + [output format] + [upstream context]`
+5. **Branching** — Condition nodes activate only the matching branch; unmatched branches propagate as "skipped."
+6. **Loops** — When a loop condition fires, only the loop subgraph is re-executed.
+
+### Execution History
+
+The **History** tab in the right panel shows past runs for the current workflow:
+- **Run list** — Status badge (green/red/yellow), timestamp, duration
+- **Click to expand** — Node-by-node summary with timing, branch taken, retry count, loop iterations
+- **Error details** — Failed nodes show the last ~50 lines of output
+- **Delete** — Remove individual run records
+
+Up to 20 runs are kept per workflow (older runs are pruned automatically).
 
 ### Stopping a Workflow
 
 Click "Stop" in the toolbar. All running agent processes and pending checkpoints are immediately terminated.
+
+### Import / Export
+
+- **Export** — Click "Export" in the toolbar to save the workflow as a `.agentdeck-workflow.json` file. Referenced roles are bundled in the export.
+- **Import** — Click "Import" in the toolbar to load a workflow file. If the file references roles that conflict with existing ones, you'll be asked whether to skip (use existing) or import as a copy.
+
+### Duplicate
+
+Click "Duplicate" in the toolbar to create a copy of the current workflow with a new name.
 
 ### Managing Workflows
 
