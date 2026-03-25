@@ -581,4 +581,119 @@ describe('edge-scheduler', () => {
       expect(sched.getNodeStatus('A')).toBe('done')
     })
   })
+
+  // ── Additional edge cases (from scheduler review) ────────
+
+  describe('additional edge cases', () => {
+    it('resetLoopSubgraph does NOT pre-decrement for error-state external sources', () => {
+      // Setup → A → Cond (loop target=A), with Setup as external source to a join
+      // Setup fails → its edge to join was never activated
+      // After loop reset, join should still wait for Setup's edge
+      const setup = makeWorkflowNode({ id: 'setup', type: 'shell', command: 'echo' })
+      const a = makeWorkflowNode({ id: 'a', type: 'shell', command: 'echo' })
+      const cond = makeWorkflowNode({ id: 'cond', type: 'condition', conditionMode: 'exitCode' })
+      const join = makeWorkflowNode({ id: 'join', type: 'shell', command: 'echo' })
+      const sched = createScheduler(
+        [setup, a, cond, join],
+        [
+          makeWorkflowEdge('setup', 'join'),
+          makeWorkflowEdge('a', 'cond'),
+          makeWorkflowEdge('cond', 'join', { branch: 'true' }),
+          makeWorkflowEdge('cond', 'a', { edgeType: 'loop', branch: 'false', maxIterations: 3 }),
+        ],
+      )
+      // Run setup and a
+      sched.getReady() // setup, a
+      sched.failNode('setup') // setup fails — edge to join NOT activated
+      sched.completeNode('a')
+      sched.getReady() // cond
+      sched.resolveCondition('cond', 'false') // take loop branch
+      // Reset loop subgraph
+      sched.resetLoopSubgraph('a', 'cond')
+      // join should NOT be ready — setup's error edge was never activated
+      sched.getReady() // a (re-enqueued)
+      sched.completeNode('a')
+      sched.getReady() // cond
+      sched.resolveCondition('cond', 'true') // take true branch this time
+      // join still should NOT be ready — setup failed, its edge is still unresolved
+      expect(sched.getNodeStatus('join')).toBe('idle')
+    })
+
+    it('status guards prevent double-complete from re-activating edges', () => {
+      const a = makeWorkflowNode({ id: 'a', type: 'shell', command: 'echo' })
+      const b = makeWorkflowNode({ id: 'b', type: 'shell', command: 'echo' })
+      const sched = createScheduler([a, b], [makeWorkflowEdge('a', 'b')])
+      sched.getReady() // a → running
+      sched.completeNode('a') // a → done, b enqueued
+      // Double-complete should be a no-op (guard: status !== 'running')
+      sched.completeNode('a')
+      const ready = sched.getReady() // b
+      expect(ready).toHaveLength(1)
+      expect(ready[0]?.id).toBe('b')
+    })
+
+    it('disconnected island node appears in getReady and blocks isDone', () => {
+      const a = makeWorkflowNode({ id: 'a', type: 'shell', command: 'echo' })
+      const island = makeWorkflowNode({ id: 'island', type: 'shell', command: 'echo' })
+      const sched = createScheduler([a, island], [])
+      const ready = sched.getReady()
+      expect(ready.map((n) => n.id).sort()).toEqual(['a', 'island'])
+      sched.completeNode('a')
+      expect(sched.isDone()).toBe(false) // island still running
+      sched.completeNode('island')
+      expect(sched.isDone()).toBe(true)
+    })
+
+    it('explicit skipNode propagates to all outgoing branches', () => {
+      const a = makeWorkflowNode({ id: 'a', type: 'shell', command: 'echo' })
+      const b = makeWorkflowNode({ id: 'b', type: 'shell', command: 'echo' })
+      const c = makeWorkflowNode({ id: 'c', type: 'shell', command: 'echo' })
+      const sched = createScheduler(
+        [a, b, c],
+        [makeWorkflowEdge('a', 'b'), makeWorkflowEdge('a', 'c')],
+      )
+      sched.getReady() // a
+      sched.skipNode('a')
+      expect(sched.getNodeStatus('b')).toBe('skipped')
+      expect(sched.getNodeStatus('c')).toBe('skipped')
+      expect(sched.isDone()).toBe(true)
+    })
+
+    it('third loop iteration resets cleanly', () => {
+      const a = makeWorkflowNode({ id: 'a', type: 'shell', command: 'echo' })
+      const cond = makeWorkflowNode({ id: 'cond', type: 'condition', conditionMode: 'exitCode' })
+      const after = makeWorkflowNode({ id: 'after', type: 'shell', command: 'echo' })
+      const sched = createScheduler(
+        [a, cond, after],
+        [
+          makeWorkflowEdge('a', 'cond'),
+          makeWorkflowEdge('cond', 'after', { branch: 'true' }),
+          makeWorkflowEdge('cond', 'a', { edgeType: 'loop', branch: 'false', maxIterations: 5 }),
+        ],
+      )
+      // Iteration 1
+      sched.getReady() // a
+      sched.completeNode('a')
+      sched.getReady() // cond
+      sched.resolveCondition('cond', 'false')
+      sched.resetLoopSubgraph('a', 'cond')
+      // Iteration 2
+      sched.getReady() // a
+      sched.completeNode('a')
+      sched.getReady() // cond
+      sched.resolveCondition('cond', 'false')
+      sched.resetLoopSubgraph('a', 'cond')
+      // Iteration 3
+      let ready = sched.getReady() // a
+      expect(ready.map((n) => n.id)).toEqual(['a'])
+      sched.completeNode('a')
+      ready = sched.getReady() // cond
+      expect(ready.map((n) => n.id)).toEqual(['cond'])
+      sched.resolveCondition('cond', 'true') // exit loop
+      ready = sched.getReady() // after
+      expect(ready.map((n) => n.id)).toEqual(['after'])
+      sched.completeNode('after')
+      expect(sched.isDone()).toBe(true)
+    })
+  })
 })

@@ -297,8 +297,9 @@ export function createScheduler(
             if (!source) continue
             if (
               source.status === 'done' ||
-              source.status === 'error' ||
               source.status === 'skipped'
+              // Note: 'error' is excluded — failNode deliberately does NOT
+              // activate outgoing edges, so those edges were never decremented.
             ) {
               target.pending = Math.max(0, target.pending - 1)
               // If source was skipped, propagate skip info
