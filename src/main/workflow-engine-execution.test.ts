@@ -40,6 +40,10 @@ vi.mock('./logger', () => ({
   }),
 }))
 
+vi.mock('./workflow-run-store', () => ({
+  saveRun: vi.fn().mockResolvedValue(undefined),
+}))
+
 const { createWorkflowEngine } = await import('./workflow-engine')
 
 // ── Helpers ──────────────────────────────────────────────────────────
