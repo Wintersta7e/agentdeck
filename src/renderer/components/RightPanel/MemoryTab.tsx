@@ -39,21 +39,33 @@ export function MemoryTab(): React.JSX.Element {
     loading: true,
   })
   const [refreshKey, setRefreshKey] = useState(0)
-  const [skills, setSkills] = useState<SkillInfo[]>([])
+  // SK-R5: Track previous projectPath to clear stale skills on change.
+  // Uses [skills, prevPath] tuple so we can detect path changes during
+  // render and reset synchronously without a ref.
+  const [skillState, setSkillState] = useState<{
+    skills: SkillInfo[]
+    forPath: string | null
+  }>({ skills: [], forPath: projectPath })
+
+  // If path changed, reset skills synchronously during render
+  if (skillState.forPath !== projectPath) {
+    setSkillState({ skills: [], forPath: projectPath })
+  }
+
+  const skills = skillState.skills
 
   useEffect(() => {
     let cancelled = false
 
     async function fetchSkills(): Promise<void> {
       if (!projectPath) {
-        if (!cancelled) setSkills([])
         return
       }
       try {
         const result = await window.agentDeck.skills.list({ projectPath, includeGlobal: true })
-        if (!cancelled) setSkills(result)
+        if (!cancelled) setSkillState({ skills: result, forPath: projectPath })
       } catch {
-        if (!cancelled) setSkills([])
+        if (!cancelled) setSkillState({ skills: [], forPath: projectPath })
       }
     }
     void fetchSkills()

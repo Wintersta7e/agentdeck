@@ -41,6 +41,7 @@ interface SkillCache {
 // ── Cache state ────────────────────────────────────────────────────
 
 let globalCache: SkillCache | null = null
+let cachedHomePath: string | null = null
 const projectCache = new Map<string, SkillCache>()
 const inFlight = new Map<string, Promise<SkillCache>>()
 
@@ -72,6 +73,16 @@ function wslExec(cmd: string, distro?: string): Promise<string | null> {
       },
     )
   })
+}
+
+// ── Cached $HOME resolution ───────────────────────────────────────
+
+async function resolveHomePath(distro: string): Promise<string | null> {
+  if (cachedHomePath) return cachedHomePath
+  const output = await wslExec('echo $HOME', distro)
+  const home = output?.trim() ?? null
+  if (home) cachedHomePath = home
+  return home
 }
 
 // ── Frontmatter parsing ───────────────────────────────────────────
@@ -246,10 +257,8 @@ export async function getGlobalSkills(
 
   const resolvedDistro = distro ?? (await getDefaultDistroAsync())
 
-  // Resolve $HOME first so we can use it as a stable cache key
-  const homeCmd = 'echo $HOME'
-  const homeOutput = await wslExec(homeCmd, resolvedDistro)
-  const homePath = homeOutput?.trim()
+  // Resolve $HOME (cached after first success) for stable cache key
+  const homePath = await resolveHomePath(resolvedDistro)
 
   if (!homePath) {
     log.warn('Could not resolve $HOME for global skill scan')
@@ -274,7 +283,9 @@ export async function getGlobalSkills(
       skipped: scanResult.skipped,
       timestamp: Date.now(),
     }
-    globalCache = cache
+    if (scanResult.status !== 'failed') {
+      globalCache = cache
+    }
     return cache
   })()
 
@@ -295,6 +306,7 @@ export async function getProjectSkills(
 
   const cached = projectCache.get(key)
   if (cached && isFresh(cached, PROJECT_TTL_MS)) {
+    cached.timestamp = Date.now() // refresh recency for LRU
     return cached
   }
 
@@ -315,8 +327,8 @@ export async function getProjectSkills(
     }
     // Only cache successful scans — failed scans may recover on retry
     if (scanResult.status !== 'failed') {
-      // Evict oldest entry if cache is full
-      if (projectCache.size >= MAX_PROJECT_CACHE_SIZE) {
+      // Evict oldest entry if cache is full and this is a new key
+      if (!projectCache.has(key) && projectCache.size >= MAX_PROJECT_CACHE_SIZE) {
         let oldestKey: string | null = null
         let oldestTs = Infinity
         for (const [k, v] of projectCache) {
@@ -397,6 +409,7 @@ export function invalidateProjectCache(projectPath: string): void {
 
 export function invalidateAllCaches(): void {
   globalCache = null
+  cachedHomePath = null
   projectCache.clear()
   inFlight.clear()
 }

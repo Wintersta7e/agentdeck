@@ -89,6 +89,19 @@ export function shellQuote(s: string): string {
   return "'" + s.replace(/'/g, "'\\''") + "'"
 }
 
+// ── Skill prefix extraction ──────────────────────────────────────────
+
+/**
+ * Extract the Codex skill invocation prefix from a compound skillId.
+ * Returns the prefix string (e.g. "$lint-fix ") or null if invalid/not applicable.
+ */
+export function extractSkillPrefix(skillId: string | undefined, agentName: string): string | null {
+  if (!skillId || agentName !== 'codex') return null
+  const name = skillId.split(':').pop() ?? ''
+  if (SAFE_SKILL_RE.test(name) && name.length > 0) return `$${name} `
+  return null
+}
+
 // ── NodeRunnerDeps ───────────────────────────────────────────────────
 
 /** Dependency injection interface for runAgentNode / runShellNode. */
@@ -135,18 +148,17 @@ export function runAgentNode(
 
     // Prepend Codex skill invocation if skillId is set (codex-only feature)
     const agentName = node.agent ?? 'claude-code'
-    if (node.skillId && agentName === 'codex') {
-      const skillName = node.skillId.split(':').pop() ?? ''
-      if (SAFE_SKILL_RE.test(skillName) && skillName.length > 0) {
-        prompt = `$${skillName} ${prompt}`
-      } else {
-        deps.push({
-          type: 'node:output',
-          workflowId: deps.workflowId,
-          nodeId: node.id,
-          message: '\u26a0 Skill name rejected (unsafe): ' + skillName,
-        })
-      }
+    const skillPrefix = extractSkillPrefix(node.skillId, agentName)
+    if (skillPrefix) {
+      prompt = skillPrefix + prompt
+    } else if (node.skillId && agentName === 'codex') {
+      // Skill name failed validation
+      deps.push({
+        type: 'node:output',
+        workflowId: deps.workflowId,
+        nodeId: node.id,
+        message: '\u26a0 Skill name rejected (unsafe): ' + (node.skillId.split(':').pop() ?? ''),
+      })
     }
 
     if (!prompt) {

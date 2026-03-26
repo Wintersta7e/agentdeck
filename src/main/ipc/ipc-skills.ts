@@ -15,6 +15,17 @@ export function registerSkillHandlers(): void {
         typeof opts?.projectPath === 'string' && opts.projectPath.length > 0
           ? opts.projectPath
           : undefined
+
+      if (projectPath) {
+        if (
+          !projectPath.startsWith('/') ||
+          projectPath.includes('..') ||
+          projectPath.length > 500
+        ) {
+          throw new Error('skills:list: invalid projectPath')
+        }
+      }
+
       const includeGlobal = opts?.includeGlobal !== false
       log.debug('skills:list', { projectPath, includeGlobal })
       return listSkills({ projectPath, includeGlobal })
