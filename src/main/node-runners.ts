@@ -133,8 +133,9 @@ export function runAgentNode(
     if (contextSummary) promptParts.push(`Context from previous steps:\n${contextSummary}`)
     let prompt = promptParts.join('\n\n')
 
-    // Prepend Codex skill invocation if skillId is set
-    if (node.skillId) {
+    // Prepend Codex skill invocation if skillId is set (codex-only feature)
+    const agentName = node.agent ?? 'claude-code'
+    if (node.skillId && agentName === 'codex') {
       const skillName = node.skillId.split(':').pop() ?? ''
       if (SAFE_SKILL_RE.test(skillName) && skillName.length > 0) {
         prompt = `$${skillName} ${prompt}`
@@ -153,7 +154,6 @@ export function runAgentNode(
       return
     }
 
-    const agentName = node.agent ?? 'claude-code'
     const bin = AGENT_BINARY_MAP[agentName] ?? agentName
     const printFlags = AGENT_PRINT_FLAGS[agentName] ?? ['--print']
 

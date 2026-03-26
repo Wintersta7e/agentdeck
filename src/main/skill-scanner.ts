@@ -13,6 +13,7 @@ export const SAFE_SKILL_RE = /^[a-zA-Z0-9_-]+$/
 const GLOBAL_TTL_MS = 60_000
 const PROJECT_TTL_MS = 30_000
 const WSL_TIMEOUT_MS = 15_000
+const MAX_PROJECT_CACHE_SIZE = 50
 
 /** Separator emitted between SKILL.md blocks in WSL find output */
 const BLOCK_SEPARATOR = '---SKILL-BLOCK---'
@@ -54,14 +55,22 @@ function shellQuote(s: string): string {
 function wslExec(cmd: string, distro?: string): Promise<string | null> {
   return new Promise((resolve) => {
     const args = distro ? ['-d', distro, '--', 'bash', '-lc', cmd] : ['--', 'bash', '-lc', cmd]
-    execFile('wsl.exe', args, { timeout: WSL_TIMEOUT_MS, encoding: 'utf-8' }, (err, stdout) => {
-      if (err) {
-        log.warn('wslExec failed', { cmd: cmd.slice(0, 120), err: String(err) })
-        resolve(null)
-        return
-      }
-      resolve(stdout)
-    })
+    execFile(
+      'wsl.exe',
+      args,
+      { timeout: WSL_TIMEOUT_MS, encoding: 'utf-8' },
+      (err, stdout, stderr) => {
+        if (err) {
+          log.warn('wslExec failed', { cmd: cmd.slice(0, 120), err: String(err) })
+          resolve(null)
+          return
+        }
+        if (stderr.trim()) {
+          log.debug('wslExec stderr', { cmd: cmd.slice(0, 120), stderr: stderr.slice(0, 500) })
+        }
+        resolve(stdout)
+      },
+    )
   })
 }
 
@@ -144,7 +153,7 @@ export async function scanSkillDirectory(
   const quotedRoot = shellQuote(rootPath)
   const cmd = [
     `if [ ! -d ${quotedRoot} ]; then echo '__DIR_MISSING__'; exit 0; fi`,
-    `find ${quotedRoot} -maxdepth 3 -name SKILL.md -type f | while IFS= read -r f; do`,
+    `find ${quotedRoot} -maxdepth 3 -name SKILL.md -type f | sort | while IFS= read -r f; do`,
     `  echo '${BLOCK_SEPARATOR}'`,
     `  echo "$f"`,
     `  echo "$(basename "$(dirname "$f")")"`,
@@ -228,8 +237,6 @@ function cacheKey(scope: string, path: string, distro: string): string {
 
 // ── Public API ─────────────────────────────────────────────────────
 
-const GLOBAL_SKILLS_DIR = '/home'
-
 export async function getGlobalSkills(
   distro?: string,
 ): Promise<{ skills: SkillInfo[]; skipped: number; timestamp: number }> {
@@ -238,7 +245,20 @@ export async function getGlobalSkills(
   }
 
   const resolvedDistro = distro ?? (await getDefaultDistroAsync())
-  const key = cacheKey('global', GLOBAL_SKILLS_DIR, resolvedDistro)
+
+  // Resolve $HOME first so we can use it as a stable cache key
+  const homeCmd = 'echo $HOME'
+  const homeOutput = await wslExec(homeCmd, resolvedDistro)
+  const homePath = homeOutput?.trim()
+
+  if (!homePath) {
+    log.warn('Could not resolve $HOME for global skill scan')
+    // Don't cache — WSL may come back later
+    return { skills: [], skipped: 0, timestamp: Date.now() }
+  }
+
+  const globalSkillsPath = `${homePath}/.codex/skills`
+  const key = cacheKey('global', globalSkillsPath, resolvedDistro)
 
   // Deduplicate in-flight requests
   const existing = inFlight.get(key)
@@ -247,19 +267,6 @@ export async function getGlobalSkills(
   }
 
   const promise = (async (): Promise<SkillCache> => {
-    // Scan ~/.skills (user home) for global skills
-    const homeCmd = 'echo $HOME'
-    const homeOutput = await wslExec(homeCmd, resolvedDistro)
-    const homePath = homeOutput?.trim()
-
-    if (!homePath) {
-      log.warn('Could not resolve $HOME for global skill scan')
-      const result: SkillCache = { skills: [], skipped: 0, timestamp: Date.now() }
-      globalCache = result
-      return result
-    }
-
-    const globalSkillsPath = `${homePath}/.skills`
     const scanResult = await scanSkillDirectory(globalSkillsPath, 'global', resolvedDistro)
 
     const cache: SkillCache = {
@@ -298,7 +305,7 @@ export async function getProjectSkills(
   }
 
   const promise = (async (): Promise<SkillCache> => {
-    const skillsDir = `${projectPath}/.skills`
+    const skillsDir = `${projectPath}/.agents/skills`
     const scanResult = await scanSkillDirectory(skillsDir, 'project', resolvedDistro)
 
     const cache: SkillCache = {
@@ -306,7 +313,22 @@ export async function getProjectSkills(
       skipped: scanResult.skipped,
       timestamp: Date.now(),
     }
-    projectCache.set(key, cache)
+    // Only cache successful scans — failed scans may recover on retry
+    if (scanResult.status !== 'failed') {
+      // Evict oldest entry if cache is full
+      if (projectCache.size >= MAX_PROJECT_CACHE_SIZE) {
+        let oldestKey: string | null = null
+        let oldestTs = Infinity
+        for (const [k, v] of projectCache) {
+          if (v.timestamp < oldestTs) {
+            oldestTs = v.timestamp
+            oldestKey = k
+          }
+        }
+        if (oldestKey) projectCache.delete(oldestKey)
+      }
+      projectCache.set(key, cache)
+    }
     return cache
   })()
 
@@ -362,12 +384,12 @@ export async function listSkills(opts: {
 export function invalidateProjectCache(projectPath: string): void {
   // Remove all entries matching this project path (any distro)
   for (const key of projectCache.keys()) {
-    if (key.includes(`:${projectPath}`)) {
+    if (key.endsWith(`:${projectPath}`)) {
       projectCache.delete(key)
     }
   }
   for (const key of inFlight.keys()) {
-    if (key.includes(`:${projectPath}`)) {
+    if (key.endsWith(`:${projectPath}`)) {
       inFlight.delete(key)
     }
   }

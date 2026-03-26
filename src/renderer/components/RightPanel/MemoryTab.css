@@ -43,7 +43,7 @@
   color: var(--text3);
   background: var(--bg2);
   padding: 1px 5px;
-  border-radius: 3px;
+  border-radius: var(--r);
 }
 .memory-skill-desc {
   color: var(--text2);

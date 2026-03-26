@@ -108,7 +108,13 @@ export function registerProjectHandlers(
     // 1. Check which context files exist
     const contextFiles: string[] = []
     const filesToCheck = ['CLAUDE.md', 'AGENTS.md']
-    if (project.contextFile && !filesToCheck.includes(project.contextFile)) {
+    if (
+      project.contextFile &&
+      !filesToCheck.includes(project.contextFile) &&
+      !project.contextFile.includes('/') &&
+      !project.contextFile.includes('\\') &&
+      !project.contextFile.includes('..')
+    ) {
       filesToCheck.push(project.contextFile)
     }
     for (const filename of filesToCheck) {

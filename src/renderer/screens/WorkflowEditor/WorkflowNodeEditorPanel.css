@@ -394,7 +394,7 @@
   gap: 4px;
   background: var(--bg2);
   border: 1px solid var(--accent);
-  border-radius: 12px;
+  border-radius: calc(var(--r) * 3);
   padding: 2px 8px 2px 10px;
   margin-bottom: 6px;
   font-size: 12px;
