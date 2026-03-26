@@ -162,6 +162,7 @@ export function runAgentNode(
     // -lic (interactive) because it dumps shell init noise into the output.
     // stdin must be 'pipe' (not 'ignore') — WSL rejects /dev/null stdin with
     // E_UNEXPECTED. We close the pipe immediately after spawn.
+    const startTime = Date.now()
     const child = spawn('wsl.exe', ['--', 'bash', '-lc', NODE_INIT + fullCmd], {
       stdio: ['pipe', 'pipe', 'pipe'],
     })
@@ -266,7 +267,14 @@ export function runAgentNode(
       const remaining = lineBuf.trim()
       if (remaining) emitLine(remaining)
       if (code === 0 || code === null) settleResolve()
-      else settleReject(new Error(`Agent ${bin} exited with code ${code}`))
+      else {
+        const elapsed = Date.now() - startTime
+        const hint =
+          elapsed < 2000 && !output
+            ? ' (exited immediately — check that the agent is installed and a project directory is selected)'
+            : ''
+        settleReject(new Error(`Agent ${bin} exited with code ${code}${hint}`))
+      }
     })
 
     child.on('error', (err: Error) => {

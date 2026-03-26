@@ -342,6 +342,15 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
   )
 
   const handleRun = useCallback(() => {
+    // Warn if workflow has agent nodes but no project selected
+    const hasAgentNodes = workflow?.nodes.some((n) => n.type === 'agent')
+    if (hasAgentNodes && !workflow?.projectId) {
+      const confirmed = window.confirm(
+        'This workflow has agent nodes but no project is selected.\nAgents need a project directory to review/modify code.\n\nRun anyway?',
+      )
+      if (!confirmed) return
+    }
+
     // If workflow has variables, show dialog instead of running immediately
     if (workflow?.variables && workflow.variables.length > 0) {
       setShowRunDialog(true)
