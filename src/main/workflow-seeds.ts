@@ -8,7 +8,7 @@ import { getWorkflowsDir, saveWorkflow } from './workflow-store'
 
 const log = createLogger('workflow-seeds')
 
-const WORKFLOW_SEED_VERSION = 3
+const WORKFLOW_SEED_VERSION = 4
 
 interface SeedNode {
   id: string
@@ -21,6 +21,7 @@ interface SeedNode {
   prompt?: string | undefined
   message?: string | undefined
   command?: string | undefined
+  _roleName?: string | undefined
 }
 
 interface SeedWorkflowBlueprint {
@@ -47,6 +48,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Reviewer',
         prompt:
           "Goal: Run this project's linter and type-checker. Report every error and warning with file path and line number.\nConstraints: If no linter config exists, detect the language and use its standard linter (eslint, ruff, clippy, etc.). Don't fix anything yet.\nDone when: Complete list of all errors and warnings.",
       },
@@ -58,6 +60,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Developer',
         prompt:
           "Goal: Fix every lint and type error from the previous step.\nConstraints: Make minimal changes \u2014 fix only the reported errors. Don't refactor, rename, or improve surrounding code.\nDone when: All reported errors are fixed.",
       },
@@ -69,6 +72,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Reviewer',
         prompt:
           "Goal: Re-run the linter and type-checker.\nConstraints: Report only \u2014 don't make any changes.\nDone when: Confirm zero errors, or list any remaining issues.",
       },
@@ -101,6 +105,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Reviewer',
         prompt:
           'Goal: Review the codebase for bugs, security issues, and performance problems.\nConstraints: Focus on actual bugs and security risks, not style or formatting. Rate each finding as critical/high/medium/low. Include file path, line number, and a concrete fix suggestion.\nDone when: Complete findings list with severity ratings.',
       },
@@ -121,6 +126,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Developer',
         prompt:
           "Goal: Fix all issues from the approved review findings.\nConstraints: Address critical and high severity first. Make minimal, targeted changes. Don't refactor beyond what's needed for the fix.\nDone when: All approved findings are addressed.",
       },
@@ -132,6 +138,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Tester',
         prompt:
           "Goal: Run the full test suite.\nConstraints: Don't modify any tests \u2014 just run them and report.\nDone when: Report passes/failures/skips with details on any failures.",
       },
@@ -169,6 +176,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Architect',
         prompt:
           "Goal: Read the spec at `{{TICKET_PATH}}` and create an implementation plan.\nConstraints: Plan should include: files to create/modify, key design decisions, build order, edge cases to handle. Don't write code yet.\nDone when: Detailed step-by-step implementation plan.",
       },
@@ -188,6 +196,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Developer',
         prompt:
           "Goal: Implement the approved plan.\nConstraints: Follow the plan's build order. Handle all specified edge cases. Write clean, production-ready code.\nDone when: All planned changes are implemented and the code compiles.",
       },
@@ -199,6 +208,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Tester',
         prompt:
           "Goal: Write tests covering the new feature and run the full test suite.\nConstraints: Cover happy paths, edge cases, and error paths. Use the project's existing test framework.\nDone when: All new tests pass and no existing tests are broken.",
       },
@@ -239,6 +249,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Architect',
         prompt:
           "Goal: Create an implementation plan for: `{{FEATURE_DESC}}`.\nConstraints: Analyze the existing codebase first. Plan should cover: files to create/modify, component design, data flow, and testing strategy. Don't write code yet.\nDone when: Complete plan with file list, build order, and test strategy.",
       },
@@ -258,6 +269,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Developer',
         prompt:
           "Goal: Implement the approved plan step by step.\nConstraints: Follow the build order exactly. Keep changes focused \u2014 don't add features beyond the plan.\nDone when: All planned changes implemented and compiling.",
       },
@@ -269,6 +281,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Tester',
         prompt:
           "Goal: Write tests for the new feature and run the full suite.\nConstraints: Match the project's existing test patterns. Cover success and failure paths.\nDone when: All tests pass.",
       },
@@ -314,6 +327,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Security Auditor',
         prompt:
           'Goal: Audit this project for security vulnerabilities.\nConstraints: Check for: injection (SQL, XSS, command), hardcoded secrets, insecure dependencies, authentication/authorization flaws, data exposure, CSRF, path traversal. Rate each as critical/high/medium/low with file path and line.\nDone when: Complete vulnerability report.',
       },
@@ -325,6 +339,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Developer',
         prompt:
           "Goal: Fix all critical and high severity findings.\nConstraints: For each fix, explain what was vulnerable and how the fix addresses it. Don't downgrade severity \u2014 fix or document a mitigation.\nDone when: All critical and high issues resolved.",
       },
@@ -336,6 +351,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Tester',
         prompt:
           "Goal: Run the full test suite to verify fixes don't break anything.\nDone when: All tests pass.",
       },
@@ -368,6 +384,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Refactorer',
         prompt:
           "Goal: Analyze the codebase for refactoring opportunities.\nConstraints: Look for: duplicated code, functions >50 lines, poor naming, missing abstractions, dead code, inconsistent patterns. Prioritize by impact. Don't make changes yet.\nDone when: Prioritized list of refactoring opportunities with effort estimates.",
       },
@@ -387,6 +404,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Refactorer',
         prompt:
           'Goal: Execute the approved refactoring.\nConstraints: One change at a time. Update all imports, references, and tests after each change. Preserve all existing behavior \u2014 no functional changes.\nDone when: All approved refactoring complete.',
       },
@@ -398,6 +416,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Tester',
         prompt:
           'Goal: Run the full test suite.\nDone when: All tests pass, confirming no regressions.',
       },
@@ -435,6 +454,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Debugger',
         prompt:
           'Goal: Investigate this bug: `{{BUG_DESC}}`.\nConstraints: Trace the root cause through the code. Identify: affected code paths, trigger conditions, expected vs actual behavior, and the specific line(s) where the bug occurs.\nDone when: Root cause identified with a clear explanation.',
       },
@@ -446,6 +466,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Developer',
         prompt:
           'Goal: Fix the root cause identified above.\nConstraints: Minimal change \u2014 fix the bug without refactoring surrounding code.\nDone when: Bug is fixed.',
       },
@@ -457,6 +478,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Tester',
         prompt:
           'Goal: Write a test that reproduces the original bug and verifies the fix, then run the full suite.\nDone when: Regression test passes and no existing tests break.',
       },
@@ -492,6 +514,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Tester',
         prompt:
           'Goal: Identify code paths with no test coverage.\nConstraints: Focus on business logic, not boilerplate. List each untested function/method with file path and why it matters. Prioritize by risk.\nDone when: Prioritized list of untested code paths.',
       },
@@ -503,6 +526,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Tester',
         prompt:
           "Goal: Write tests for the gaps identified above.\nConstraints: Start with the highest-risk paths. Use the project's existing test framework and patterns. Cover success paths, edge cases, and error handling.\nDone when: Tests written for all identified gaps.",
       },
@@ -514,6 +538,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Tester',
         prompt:
           'Goal: Run the full test suite and report coverage.\nDone when: Test results and coverage summary reported. List any remaining critical gaps.',
       },
@@ -546,6 +571,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Reviewer',
         prompt:
           'Goal: List all outdated dependencies with current vs latest versions.\nConstraints: Check both direct and dev dependencies. Flag any with breaking changes (major version bumps) or security advisories.\nDone when: Complete list with version diffs and risk assessment.',
       },
@@ -565,6 +591,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Developer',
         prompt:
           'Goal: Update the approved dependencies.\nConstraints: Update one at a time. For major version bumps, check the changelog for breaking changes and fix any.\nDone when: All approved dependencies updated, lockfile regenerated.',
       },
@@ -576,6 +603,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Tester',
         prompt:
           'Goal: Run the full test suite and build.\nDone when: All tests pass and build succeeds.',
       },
@@ -613,6 +641,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Documentation Writer',
         prompt:
           "Goal: Identify public APIs, functions, and modules missing documentation.\nConstraints: Focus on exported functions, class methods, and module-level docs. Don't flag internal/private helpers.\nDone when: List of undocumented public interfaces with file paths.",
       },
@@ -624,6 +653,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Documentation Writer',
         prompt:
           "Goal: Write documentation for the identified gaps.\nConstraints: Match the project's existing doc style (JSDoc, docstrings, README sections, etc.). Be accurate \u2014 read the implementation before documenting. Don't document implementation details, only the public contract.\nDone when: All identified gaps documented.",
       },
@@ -635,6 +665,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Reviewer',
         prompt:
           'Goal: Review all generated documentation for accuracy.\nConstraints: Cross-check each doc comment against the actual implementation. Flag any inaccuracies.\nDone when: All docs verified as accurate.',
       },
@@ -667,6 +698,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Reviewer',
         prompt:
           'Goal: Identify performance bottlenecks in this codebase.\nConstraints: Look for: O(n\u00B2) loops, unnecessary re-renders, blocking I/O, missing caching, large bundle imports, memory leaks. Rate each by impact (high/medium/low) with file path and line.\nDone when: Prioritized list of performance issues.',
       },
@@ -686,6 +718,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Developer',
         prompt:
           "Goal: Implement the approved performance optimizations.\nConstraints: One optimization at a time. Measure or explain the expected improvement. Don't sacrifice readability for micro-optimizations.\nDone when: All approved optimizations implemented.",
       },
@@ -697,6 +730,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Tester',
         prompt:
           'Goal: Run tests and any available benchmarks.\nDone when: All tests pass. Report any measurable improvements.',
       },
@@ -742,6 +776,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Documentation Writer',
         prompt:
           'Goal: Generate a changelog from the git log above.\nConstraints: Group changes by category (features, fixes, refactoring, docs). Use conventional commit format if the project follows it. Be concise \u2014 one line per change.\nDone when: Complete changelog for the release.',
       },
@@ -753,6 +788,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
+        _roleName: 'Tester',
         prompt:
           "Goal: Run the full test suite, linter, and build.\nConstraints: Report any failures. Don't fix anything \u2014 just report.\nDone when: Clean build/test/lint report, or list of issues that need attention.",
       },
@@ -834,6 +870,15 @@ export async function seedWorkflows(store: AppStore): Promise<void> {
       if (n.prompt !== undefined) node.prompt = n.prompt
       if (n.message !== undefined) node.message = n.message
       if (n.command !== undefined) node.command = n.command
+      if (n._roleName !== undefined) {
+        const roleId = roleMap.get(n._roleName)
+        if (roleId) node.roleId = roleId
+        else
+          log.warn('Seed workflow references unknown role', {
+            role: n._roleName,
+            workflow: blueprint.id,
+          })
+      }
       return node
     })
 

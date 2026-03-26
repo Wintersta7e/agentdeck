@@ -10,6 +10,13 @@ vi.mock('./project-store', () => ({
     { id: 'role-uuid-security', name: 'Security Auditor', builtin: true, icon: '', persona: '' },
     { id: 'role-uuid-refactorer', name: 'Refactorer', builtin: true, icon: '', persona: '' },
     { id: 'role-uuid-debugger', name: 'Debugger', builtin: true, icon: '', persona: '' },
+    {
+      id: 'role-uuid-docwriter',
+      name: 'Documentation Writer',
+      builtin: true,
+      icon: '',
+      persona: '',
+    },
   ]),
 }))
 
@@ -224,26 +231,29 @@ describe('seedWorkflows', () => {
     expect(store.set).toHaveBeenCalledWith(
       'appPrefs',
       expect.objectContaining({
-        workflowSeedVersion: 3,
+        workflowSeedVersion: 4,
       }),
     )
   })
 
   it('skips seeding when version is current', async () => {
-    const store = createMockAppStore({ workflowSeedVersion: 3, workflowLastRolesVersion: 0 })
+    const store = createMockAppStore({ workflowSeedVersion: 4, workflowLastRolesVersion: 0 })
     await seedWorkflows(store)
     const workflows = await listWorkflows()
     expect(workflows).toHaveLength(0)
   })
 
-  it('seed nodes have no roleId (roles removed for Codex)', async () => {
+  it('agent nodes with _roleName get resolved roleId after seeding', async () => {
     const store = createMockAppStore()
     await seedWorkflows(store)
     const lintFix = await loadWorkflow('seed-wf-lint-fix')
     expect(lintFix).not.toBeNull()
-    const lintFixWf = lintFix ?? { nodes: [] as { name: string; roleId?: string }[] }
+    const lintFixWf = lintFix ?? { nodes: [] as { type: string; name: string; roleId?: string }[] }
     for (const node of lintFixWf.nodes) {
-      expect(node.roleId).toBeUndefined()
+      if (node.type === 'agent') {
+        expect(node.roleId).toBeDefined()
+        expect(node.roleId).toMatch(/^role-uuid-/)
+      }
     }
   })
 

@@ -33,6 +33,12 @@ const AGENT_CD_FLAG: Record<string, string> = {
   'claude-code': '--directory',
 }
 
+/** Extra flags injected by the engine (not user-configured).
+ *  These handle workflow-specific needs like non-git project dirs. */
+const AGENT_ENGINE_FLAGS: Record<string, string[]> = {
+  codex: ['--skip-git-repo-check'],
+}
+
 const MINUTES = 60_000
 
 /** How long an agent node can be idle (no stdout/stderr) before being killed */
@@ -150,13 +156,18 @@ export function runAgentNode(
     }
 
     // Build non-interactive command: run agent in print mode with project directory
+    // For agents with native --cd (codex -C, claude --directory), the flag goes AFTER
+    // the subcommand (e.g. `codex exec -C /path '<prompt>'`), not before it.
     const parts: string[] = []
     const cdFlag = AGENT_CD_FLAG[agentName]
-    // Prefer native --cd flag when available (more reliable than shell cd)
     if (deps.projectPath && !cdFlag) parts.push(`cd ${shellQuote(deps.projectPath)}`)
-    const cdFlagStr = deps.projectPath && cdFlag ? `${cdFlag} ${shellQuote(deps.projectPath)} ` : ''
     const flagStr = printFlags.length > 0 ? printFlags.join(' ') + ' ' : ''
-    parts.push(`${shellQuote(bin)} ${cdFlagStr}${flagStr}${shellQuote(prompt)}${sanitizedFlags}`)
+    const cdFlagStr = deps.projectPath && cdFlag ? `${cdFlag} ${shellQuote(deps.projectPath)} ` : ''
+    const engineFlags = AGENT_ENGINE_FLAGS[agentName]
+    const engineFlagStr = engineFlags ? engineFlags.join(' ') + ' ' : ''
+    parts.push(
+      `${shellQuote(bin)} ${flagStr}${cdFlagStr}${engineFlagStr}${shellQuote(prompt)}${sanitizedFlags}`,
+    )
     const fullCmd = parts.join(' && ')
 
     deps.push({
