@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import type {
   Workflow,
   WorkflowNode,
@@ -398,6 +398,12 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
 
   // ── Render ──
 
+  // SK-8: Resolve project path for the workflow's selected project
+  const workflowProjectPath = useMemo(
+    () => projects.find((p) => p.id === workflow?.projectId)?.path,
+    [projects, workflow?.projectId],
+  )
+
   const toggleAddMenu = useCallback(() => setAddMenuOpen((prev) => !prev), [])
 
   return (
@@ -486,6 +492,7 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
                   setDetailNode(null)
                   setSelectedNodeId(null)
                 }}
+                projectPath={workflowProjectPath}
               />
             ) : (
               <div className="wf-right-empty">Select a node to edit</div>

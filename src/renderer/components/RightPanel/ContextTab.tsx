@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import type { SkillInfo, Template } from '../../../shared/types'
 import { ClipboardList, File, Zap } from 'lucide-react'
@@ -38,6 +38,16 @@ export function ContextTab(): React.JSX.Element {
   const projectPath = project?.path ?? null
 
   const [skills, setSkills] = useState<SkillInfo[]>([])
+
+  // SK-9: Clear stale skills when projectPath changes so previous project's
+  // skills don't linger while the new fetch is in progress.
+  const prevPathRef = useRef(projectPath)
+  if (prevPathRef.current !== projectPath) {
+    prevPathRef.current = projectPath
+    if (skills.length > 0) {
+      setSkills([])
+    }
+  }
 
   useEffect(() => {
     if (!projectPath) {

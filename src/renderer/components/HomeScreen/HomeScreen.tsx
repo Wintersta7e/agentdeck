@@ -172,6 +172,8 @@ export function HomeScreen({
     }
   }, [cardMenu])
 
+  const setProjects = useAppStore((s) => s.setProjects)
+
   const handleRefreshMeta = useCallback(
     async (e: React.MouseEvent, projectId: string) => {
       e.stopPropagation()
@@ -179,6 +181,13 @@ export function HomeScreen({
       setRefreshingId(projectId)
       try {
         const meta = await window.agentDeck.projects.refreshMeta(projectId)
+
+        // SK-4: Refresh Zustand store so badge + meta appear immediately.
+        // The main process may have updated both `meta` and `badge`, so re-fetch
+        // the full project list from the persistent store.
+        const freshProjects = await window.agentDeck.store.getProjects()
+        setProjects(freshProjects)
+
         const parts: string[] = []
         if (meta.contextFiles.length > 0) parts.push(meta.contextFiles.join(', '))
         if (meta.skills.length > 0) {
@@ -202,7 +211,7 @@ export function HomeScreen({
         setRefreshingId(null)
       }
     },
-    [refreshingId, addNotification],
+    [refreshingId, addNotification, setProjects],
   )
 
   const handleAgentUpdate = useCallback(
