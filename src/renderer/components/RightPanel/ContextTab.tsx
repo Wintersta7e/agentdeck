@@ -1,7 +1,7 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
-import type { Template } from '../../../shared/types'
-import { File, ClipboardList } from 'lucide-react'
+import type { SkillInfo, Template } from '../../../shared/types'
+import { ClipboardList, File, Zap } from 'lucide-react'
 import './ContextTab.css'
 
 export function ContextTab(): React.JSX.Element {
@@ -35,6 +35,28 @@ export function ContextTab(): React.JSX.Element {
     [project, templates],
   )
 
+  const projectPath = project?.path ?? null
+
+  const [skills, setSkills] = useState<SkillInfo[]>([])
+
+  useEffect(() => {
+    if (!projectPath) {
+      return
+    }
+    let cancelled = false
+    void window.agentDeck.skills
+      .list({ projectPath, includeGlobal: true })
+      .then((result) => {
+        if (!cancelled) setSkills(result)
+      })
+      .catch(() => {
+        if (!cancelled) setSkills([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [projectPath])
+
   if (!project) {
     return <div className="panel-placeholder">No active session</div>
   }
@@ -62,6 +84,40 @@ export function ContextTab(): React.JSX.Element {
           <div className="context-path">{file.path}</div>
         </div>
       ))}
+
+      {/* Codex Skills */}
+      {skills.length > 0 && (
+        <>
+          <div className="panel-section-header">Codex Skills ({String(skills.length)})</div>
+          {skills.map((s) => (
+            <div key={s.id} className="context-item">
+              <div className="context-item-header">
+                <span className="context-icon">
+                  <Zap size={14} />
+                </span>
+                <span className="context-name">{s.name}</span>
+                <span className="context-tag">{s.scope}</span>
+              </div>
+              <div className="context-path">
+                {s.description.length > 80 ? s.description.slice(0, 77) + '...' : s.description}
+              </div>
+            </div>
+          ))}
+        </>
+      )}
+      {skills.length === 0 && project?.meta?.scanStatus === 'failed' && (
+        <div className="panel-placeholder">
+          Skill scan failed: {project.meta.scanError ?? 'unknown error'}
+        </div>
+      )}
+      {skills.length === 0 && project?.meta?.scanStatus === 'partial' && (
+        <div className="panel-placeholder">Some skills could not be parsed</div>
+      )}
+      {skills.length === 0 && !project?.meta && project?.path && (
+        <div className="panel-placeholder panel-placeholder--hint">
+          Use refresh to scan for Codex skills
+        </div>
+      )}
 
       <div className="panel-section-header">
         Attached templates

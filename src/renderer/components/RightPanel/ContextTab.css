@@ -11,3 +11,8 @@
 .context-notes {
   padding: 4px 0;
 }
+
+.panel-placeholder--hint {
+  font-style: italic;
+  color: var(--text3);
+}
