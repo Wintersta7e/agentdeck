@@ -203,8 +203,8 @@
   letter-spacing: 0.08em;
 }
 
-/* Pinned grid */
-.pinned-grid {
+/* Projects grid */
+.projects-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
@@ -213,10 +213,10 @@
   overflow-y: auto;
   padding-right: 4px;
 }
-.pinned-grid::-webkit-scrollbar {
+.projects-grid::-webkit-scrollbar {
   width: 3px;
 }
-.pinned-grid::-webkit-scrollbar-thumb {
+.projects-grid::-webkit-scrollbar-thumb {
   background: var(--bg4);
   border-radius: 2px;
 }
@@ -351,6 +351,33 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
+}
+
+.card-refresh {
+  background: none;
+  border: none;
+  color: var(--text3);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--r);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+.card-refresh:hover {
+  color: var(--accent);
+}
+.card-refresh.spinning svg {
+  animation: card-refresh-spin 0.8s linear infinite;
+}
+@keyframes card-refresh-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .card-name {
