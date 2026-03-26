@@ -119,6 +119,17 @@ export function validateWorkflow(w: unknown): ValidationResult {
       }
     }
 
+    // ── Skill validation (Codex-only) ─────────────────────────
+    if (n.skillId !== undefined && typeof n.skillId === 'string' && n.skillId.length > 0) {
+      if (n.type !== 'agent') {
+        warnings.push(`Node "${String(n.id)}": skillId is set but node is not an agent node`)
+      } else if (typeof n.agent === 'string' && n.agent !== 'codex') {
+        warnings.push(
+          `Node "${String(n.id)}": skillId is set but agent is not codex (agent="${String(n.agent)}")`,
+        )
+      }
+    }
+
     // ── Condition node validation ────────────────────────────
     if (n.type === 'condition') {
       const validModes = ['exitCode', 'outputMatch']

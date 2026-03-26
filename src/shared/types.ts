@@ -64,6 +64,7 @@ export interface Project {
   scrollbackLines?: number | undefined
   fontSize?: number | undefined
   shell?: string | undefined
+  meta?: ProjectMeta | undefined
 }
 
 export type TemplateCategory =
@@ -163,6 +164,8 @@ export interface WorkflowNode {
   // Retry fields (agent + shell only)
   retryCount?: number | undefined
   retryDelayMs?: number | undefined
+  // Codex skill ID (scope:name format, e.g. "global:lint-fix")
+  skillId?: string | undefined
 }
 
 export interface WorkflowEdge {
@@ -270,4 +273,29 @@ export interface WorkflowExport {
 export interface ValidationResult {
   errors: string[]
   warnings: string[]
+}
+
+/* ── Skill Discovery Types ────────────────────────── */
+
+/** Lightweight skill reference — frontmatter only, no file contents */
+export interface SkillInfo {
+  /** Stable identifier: `${scope}:${name}` (e.g. "global:lint-fix") */
+  id: string
+  name: string
+  description: string
+  path: string
+  scope: 'global' | 'project'
+}
+
+/** Scan outcome — distinguishes "no skills found" from "scan failed" */
+export type ScanStatus = 'ok' | 'partial' | 'failed'
+
+/** Auto-discovered project metadata — refreshed on demand, never user-edited */
+export interface ProjectMeta {
+  contextFiles: string[]
+  skills: SkillInfo[]
+  scanStatus: ScanStatus
+  scanError?: string | undefined
+  skippedSkills?: number | undefined
+  lastScanned: number
 }

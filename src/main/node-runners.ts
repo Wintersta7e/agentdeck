@@ -10,6 +10,7 @@ import { createLogger } from './logger'
 import type { WorkflowNode, WorkflowEvent, Role } from '../shared/types'
 import { AGENT_BINARY_MAP, SAFE_FLAGS_RE } from '../shared/agents'
 import { NODE_INIT } from './wsl-utils'
+import { SAFE_SKILL_RE } from './skill-scanner'
 
 const log = createLogger('node-runners')
 
@@ -130,14 +131,29 @@ export function runAgentNode(
     if (node.prompt) promptParts.push(node.prompt)
     if (role?.outputFormat) promptParts.push(`Output format:\n${role.outputFormat}`)
     if (contextSummary) promptParts.push(`Context from previous steps:\n${contextSummary}`)
-    const prompt = promptParts.join('\n\n')
+    let prompt = promptParts.join('\n\n')
+
+    // Prepend Codex skill invocation if skillId is set (codex-only feature)
+    const agentName = node.agent ?? 'claude-code'
+    if (node.skillId && agentName === 'codex') {
+      const skillName = node.skillId.split(':').pop() ?? ''
+      if (SAFE_SKILL_RE.test(skillName) && skillName.length > 0) {
+        prompt = `$${skillName} ${prompt}`
+      } else {
+        deps.push({
+          type: 'node:output',
+          workflowId: deps.workflowId,
+          nodeId: node.id,
+          message: '\u26a0 Skill name rejected (unsafe): ' + skillName,
+        })
+      }
+    }
 
     if (!prompt) {
       settleResolve()
       return
     }
 
-    const agentName = node.agent ?? 'claude-code'
     const bin = AGENT_BINARY_MAP[agentName] ?? agentName
     const printFlags = AGENT_PRINT_FLAGS[agentName] ?? ['--print']
 

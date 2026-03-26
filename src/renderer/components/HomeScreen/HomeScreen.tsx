@@ -134,6 +134,7 @@ export function HomeScreen({
   const refreshAgentStatus = useAppStore((s) => s.refreshAgentStatus)
   const agentRefreshing = useAppStore((s) => s.agentRefreshing)
 
+  const [refreshingId, setRefreshingId] = useState<string | null>(null)
   const [cardMenu, setCardMenu] = useState<{
     x: number
     y: number
@@ -170,6 +171,48 @@ export function HomeScreen({
       document.removeEventListener('keydown', handleKey)
     }
   }, [cardMenu])
+
+  const setProjects = useAppStore((s) => s.setProjects)
+
+  const handleRefreshMeta = useCallback(
+    async (e: React.MouseEvent, projectId: string) => {
+      e.stopPropagation()
+      if (refreshingId) return // one at a time
+      setRefreshingId(projectId)
+      try {
+        const meta = await window.agentDeck.projects.refreshMeta(projectId)
+
+        // SK-4: Refresh Zustand store so badge + meta appear immediately.
+        // The main process may have updated both `meta` and `badge`, so re-fetch
+        // the full project list from the persistent store.
+        const freshProjects = await window.agentDeck.store.getProjects()
+        setProjects(freshProjects)
+
+        const parts: string[] = []
+        if (meta.contextFiles.length > 0) parts.push(meta.contextFiles.join(', '))
+        if (meta.skills.length > 0) {
+          parts.push(`${String(meta.skills.length)} skill${meta.skills.length !== 1 ? 's' : ''}`)
+        }
+        if (meta.scanStatus === 'partial') {
+          addNotification(
+            'info',
+            `Project metadata updated (${String(meta.skippedSkills ?? 0)} skills skipped)`,
+          )
+        } else if (meta.scanStatus === 'failed') {
+          addNotification('error', `Scan failed: ${meta.scanError ?? 'unknown error'}`)
+        } else if (parts.length > 0) {
+          addNotification('info', `Project metadata updated \u2014 found ${parts.join(', ')}`)
+        } else {
+          addNotification('info', 'Project metadata is up to date')
+        }
+      } catch (err) {
+        addNotification('error', `Failed to scan project metadata: ${String(err)}`)
+      } finally {
+        setRefreshingId(null)
+      }
+    },
+    [refreshingId, addNotification, setProjects],
+  )
 
   const handleAgentUpdate = useCallback(
     async (agentId: string) => {
@@ -266,14 +309,14 @@ export function HomeScreen({
         {pinned.length > 0 && (
           <>
             <div className="section-header">
-              <div className="section-title">Pinned Projects</div>
+              <div className="section-title">Projects</div>
               <button className="section-action" onClick={openWizard}>
                 <>
                   <Plus size={12} /> New <ArrowRight size={12} />
                 </>
               </button>
             </div>
-            <div className="pinned-grid">
+            <div className="projects-grid">
               {pinned.map((p, index) => {
                 const status = getProjectStatus(p.id)
                 const tNames = (p.attachedTemplates ?? [])
@@ -296,6 +339,14 @@ export function HomeScreen({
                         >
                           {(p.badge && BADGE_ICONS[p.badge]) ?? '\u25C8'}
                         </div>
+                        <button
+                          className={`card-refresh${refreshingId === p.id ? ' spinning' : ''}`}
+                          onClick={(e) => void handleRefreshMeta(e, p.id)}
+                          title="Refresh project metadata"
+                          type="button"
+                        >
+                          <RefreshCw size={14} />
+                        </button>
                         <div className={`card-status ${statusColorClass(status)}`}>
                           <div
                             className={`card-status-dot ${statusColorClass(status)}`}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { WorkflowNode, WorkflowNodeStatus, AgentType } from '../../../shared/types'
+import type { WorkflowNode, WorkflowNodeStatus, AgentType, SkillInfo } from '../../../shared/types'
 import { AGENTS } from '../../../shared/agents'
 import { useAppStore } from '../../store/appStore'
 import { useRolesMap } from '../../hooks/useRolesMap'
@@ -12,6 +12,7 @@ interface Props {
   nodeStatuses: Record<string, WorkflowNodeStatus>
   onUpdateNode: (node: WorkflowNode) => void
   onClose: () => void
+  projectPath?: string | undefined
 }
 
 const KNOWN_AGENTS: AgentType[] = AGENTS.map((a) => a.id)
@@ -22,6 +23,7 @@ export default function WorkflowNodeEditorPanel({
   nodeStatuses,
   onUpdateNode,
   onClose,
+  projectPath,
 }: Props): React.JSX.Element {
   const roles = useAppStore((s) => s.roles)
   const rolesMap = useRolesMap()
@@ -29,6 +31,29 @@ export default function WorkflowNodeEditorPanel({
   const role = node.roleId ? rolesMap.get(node.roleId) : undefined
 
   const [roleFormMode, setRoleFormMode] = useState<'edit' | 'create' | null>(null)
+  const [skills, setSkills] = useState<SkillInfo[]>([])
+
+  // Fetch available skills when agent is codex (SK-8: include project-local skills)
+  useEffect(() => {
+    if (node.type !== 'agent' || node.agent !== 'codex') {
+      setSkills([])
+      return
+    }
+    let cancelled = false
+    const listOpts: { projectPath?: string; includeGlobal?: boolean } = { includeGlobal: true }
+    if (projectPath) listOpts.projectPath = projectPath
+    void window.agentDeck.skills
+      .list(listOpts)
+      .then((result) => {
+        if (!cancelled) setSkills(result)
+      })
+      .catch(() => {
+        if (!cancelled) setSkills([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [node.type, node.agent, projectPath])
 
   // H7: Auto-clear orphan roleId when role has been deleted
   useEffect(() => {
@@ -153,13 +178,73 @@ export default function WorkflowNodeEditorPanel({
             <select
               className="wf-ne-select"
               value={node.agent ?? 'claude-code'}
-              onChange={(e) => update({ agent: e.target.value as AgentType })}
+              onChange={(e) => {
+                const newAgent = e.target.value as AgentType
+                const patch: Partial<typeof node> = { agent: newAgent }
+                if (newAgent !== 'codex' && node.skillId) {
+                  patch.skillId = undefined
+                }
+                update(patch)
+              }}
             >
               {KNOWN_AGENTS.map((a) => (
                 <option key={a} value={a}>
                   {a}
                 </option>
               ))}
+            </select>
+          </div>
+        )}
+
+        {/* Skill dropdown (codex agent nodes only) */}
+        {node.type === 'agent' && node.agent === 'codex' && (
+          <div className="wf-ne-field">
+            <label className="wf-ne-label">Skill</label>
+            {node.skillId && (
+              <div className="wf-ne-skill-chip">
+                <span className="wf-ne-skill-chip-text">#{node.skillId.split(':').pop()}</span>
+                <button
+                  className="wf-ne-skill-chip-clear"
+                  type="button"
+                  onClick={() => update({ skillId: undefined })}
+                  title="Remove skill"
+                >
+                  {'\u00D7'}
+                </button>
+              </div>
+            )}
+            <select
+              className="wf-ne-select"
+              value={node.skillId ?? ''}
+              onChange={(e) => update({ skillId: e.target.value || undefined })}
+            >
+              <option value="">None</option>
+              {(() => {
+                const projectSkills = skills.filter((s) => s.scope === 'project')
+                const globalSkills = skills.filter((s) => s.scope === 'global')
+                return (
+                  <>
+                    {projectSkills.length > 0 && (
+                      <optgroup label="Project Skills">
+                        {projectSkills.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name} — {s.description.slice(0, 60)}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {globalSkills.length > 0 && (
+                      <optgroup label="Global Skills">
+                        {globalSkills.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name} — {s.description.slice(0, 60)}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </>
+                )
+              })()}
             </select>
           </div>
         )}

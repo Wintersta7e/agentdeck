@@ -15,6 +15,7 @@ import {
   registerProjectHandlers,
   registerWorkflowHandlers,
   registerUtilHandlers,
+  registerSkillHandlers,
 } from './ipc'
 
 const log = createLogger('app')
@@ -110,7 +111,11 @@ function registerIpcHandlers(store: AppStore): void {
   registerPtyHandlers(() => ptyManager)
   registerWindowHandlers(() => mainWindow, store)
   registerAgentHandlers(() => mainWindow, store)
-  registerProjectHandlers(() => mainWindow)
+  registerProjectHandlers(
+    () => mainWindow,
+    () => appStore,
+  )
+  registerSkillHandlers()
   registerWorkflowHandlers(
     () => workflowEngine,
     () => store.get('roles') ?? [],
