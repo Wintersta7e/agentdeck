@@ -158,6 +158,14 @@ contextBridge.exposeInMainWorld('agentDeck', {
     getDefaultDistro: () => ipcRenderer.invoke('projects:getDefaultDistro'),
     readProjectFile: (projectPath: string, filename: string) =>
       ipcRenderer.invoke('projects:readFile', projectPath, filename) as Promise<string | null>,
+    refreshMeta: (projectId: string) =>
+      ipcRenderer.invoke('projects:refreshMeta', projectId) as Promise<
+        import('../shared/types').ProjectMeta
+      >,
+  },
+  skills: {
+    list: (opts: { projectPath?: string; includeGlobal?: boolean }) =>
+      ipcRenderer.invoke('skills:list', opts) as Promise<import('../shared/types').SkillInfo[]>,
   },
   pickFolder: () => ipcRenderer.invoke('dialog:pickFolder'),
   log: {

@@ -1,4 +1,12 @@
-import type { ActivityEvent, DetectedStack, Project, Role, Template } from '../shared/types'
+import type {
+  ActivityEvent,
+  DetectedStack,
+  Project,
+  ProjectMeta,
+  Role,
+  SkillInfo,
+  Template,
+} from '../shared/types'
 
 declare global {
   interface Window {
@@ -93,6 +101,10 @@ declare global {
         detectStack: (path: string, distro?: string) => Promise<DetectedStack | null>
         getDefaultDistro: () => Promise<string>
         readProjectFile: (projectPath: string, filename: string) => Promise<string | null>
+        refreshMeta: (projectId: string) => Promise<ProjectMeta>
+      }
+      skills: {
+        list: (opts: { projectPath?: string; includeGlobal?: boolean }) => Promise<SkillInfo[]>
       }
       pickFolder: () => Promise<string | null>
       log: {
