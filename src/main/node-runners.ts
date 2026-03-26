@@ -26,6 +26,13 @@ export const AGENT_PRINT_FLAGS: Record<string, string[]> = {
   opencode: ['run'],
 }
 
+/** Agents that support a native --cd / -C flag for setting working directory.
+ *  These use the flag instead of shell `cd`, which is more reliable. */
+const AGENT_CD_FLAG: Record<string, string> = {
+  codex: '-C',
+  'claude-code': '--directory',
+}
+
 const MINUTES = 60_000
 
 /** How long an agent node can be idle (no stdout/stderr) before being killed */
@@ -142,11 +149,14 @@ export function runAgentNode(
       }
     }
 
-    // Build non-interactive command: cd to project, then run agent in print mode
+    // Build non-interactive command: run agent in print mode with project directory
     const parts: string[] = []
-    if (deps.projectPath) parts.push(`cd ${shellQuote(deps.projectPath)}`)
+    const cdFlag = AGENT_CD_FLAG[agentName]
+    // Prefer native --cd flag when available (more reliable than shell cd)
+    if (deps.projectPath && !cdFlag) parts.push(`cd ${shellQuote(deps.projectPath)}`)
+    const cdFlagStr = deps.projectPath && cdFlag ? `${cdFlag} ${shellQuote(deps.projectPath)} ` : ''
     const flagStr = printFlags.length > 0 ? printFlags.join(' ') + ' ' : ''
-    parts.push(`${shellQuote(bin)} ${flagStr}${shellQuote(prompt)}${sanitizedFlags}`)
+    parts.push(`${shellQuote(bin)} ${cdFlagStr}${flagStr}${shellQuote(prompt)}${sanitizedFlags}`)
     const fullCmd = parts.join(' && ')
 
     deps.push({
