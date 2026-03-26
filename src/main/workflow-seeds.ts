@@ -8,7 +8,7 @@ import { getWorkflowsDir, saveWorkflow } from './workflow-store'
 
 const log = createLogger('workflow-seeds')
 
-const WORKFLOW_SEED_VERSION = 2
+const WORKFLOW_SEED_VERSION = 3
 
 interface SeedNode {
   id: string
@@ -20,7 +20,7 @@ interface SeedNode {
   agentFlags?: string | undefined
   prompt?: string | undefined
   message?: string | undefined
-  _roleName?: string | undefined
+  command?: string | undefined
 }
 
 interface SeedWorkflowBlueprint {
@@ -48,8 +48,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
         prompt:
-          "Run this project's linter and type-checker. Report every error and warning with file paths and line numbers. If no linter config exists, identify the project language/framework and use the standard linter for it.",
-        _roleName: 'Reviewer',
+          "Goal: Run this project's linter and type-checker. Report every error and warning with file path and line number.\nConstraints: If no linter config exists, detect the language and use its standard linter (eslint, ruff, clippy, etc.). Don't fix anything yet.\nDone when: Complete list of all errors and warnings.",
       },
       {
         id: 'seed-wf-lint-fix-n2',
@@ -60,8 +59,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
         prompt:
-          'Fix every lint and type error reported in the previous step. Make minimal changes \u2014 fix the errors without refactoring surrounding code.',
-        _roleName: 'Developer',
+          "Goal: Fix every lint and type error from the previous step.\nConstraints: Make minimal changes \u2014 fix only the reported errors. Don't refactor, rename, or improve surrounding code.\nDone when: All reported errors are fixed.",
       },
       {
         id: 'seed-wf-lint-fix-n3',
@@ -72,8 +70,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
         prompt:
-          "Re-run the project's linter and type-checker. Confirm all previously reported issues are resolved. Report any remaining errors.",
-        _roleName: 'Reviewer',
+          "Goal: Re-run the linter and type-checker.\nConstraints: Report only \u2014 don't make any changes.\nDone when: Confirm zero errors, or list any remaining issues.",
       },
     ],
     edges: [
@@ -105,8 +102,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
         prompt:
-          'Review the codebase for bugs, security vulnerabilities, performance problems, and code quality issues. List each finding with: severity (critical/high/medium/low), file path, line number, description, and suggested fix.',
-        _roleName: 'Reviewer',
+          'Goal: Review the codebase for bugs, security issues, and performance problems.\nConstraints: Focus on actual bugs and security risks, not style or formatting. Rate each finding as critical/high/medium/low. Include file path, line number, and a concrete fix suggestion.\nDone when: Complete findings list with severity ratings.',
       },
       {
         id: 'seed-wf-code-review-n2',
@@ -115,7 +111,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         x: 350,
         y: 200,
         message:
-          'Review the findings above. Remove or adjust any items you disagree with before proceeding to auto-fix.',
+          'Review the findings above. Remove or adjust any you disagree with before proceeding.',
       },
       {
         id: 'seed-wf-code-review-n3',
@@ -126,8 +122,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
         prompt:
-          'Fix all issues identified in the code review. Address them in order of severity \u2014 critical first, then high, medium, low.',
-        _roleName: 'Developer',
+          "Goal: Fix all issues from the approved review findings.\nConstraints: Address critical and high severity first. Make minimal, targeted changes. Don't refactor beyond what's needed for the fix.\nDone when: All approved findings are addressed.",
       },
       {
         id: 'seed-wf-code-review-n4',
@@ -138,8 +133,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
         prompt:
-          "Run this project's full test suite. Report the results \u2014 number of tests passed, failed, and skipped. If any tests fail, report which tests and why.",
-        _roleName: 'Tester',
+          "Goal: Run the full test suite.\nConstraints: Don't modify any tests \u2014 just run them and report.\nDone when: Report passes/failures/skips with details on any failures.",
       },
     ],
     edges: [
@@ -176,8 +170,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
         prompt:
-          "Read the ticket specification at `{{TICKET_PATH}}`. If it's a folder, read all files in it. Analyze the requirements and create a detailed implementation plan: list the files to create/modify, the components/functions needed, data flow, edge cases to handle, and a suggested build order.",
-        _roleName: 'Architect',
+          "Goal: Read the spec at `{{TICKET_PATH}}` and create an implementation plan.\nConstraints: Plan should include: files to create/modify, key design decisions, build order, edge cases to handle. Don't write code yet.\nDone when: Detailed step-by-step implementation plan.",
       },
       {
         id: 'seed-wf-feature-ticket-n2',
@@ -196,8 +189,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
         prompt:
-          'Implement the plan from the previous step. Follow the build order and handle all specified edge cases.',
-        _roleName: 'Developer',
+          "Goal: Implement the approved plan.\nConstraints: Follow the plan's build order. Handle all specified edge cases. Write clean, production-ready code.\nDone when: All planned changes are implemented and the code compiles.",
       },
       {
         id: 'seed-wf-feature-ticket-n4',
@@ -208,8 +200,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
         prompt:
-          'Write comprehensive tests for the new feature \u2014 cover happy paths, edge cases, and error paths. Then run the full test suite and report results.',
-        _roleName: 'Tester',
+          "Goal: Write tests covering the new feature and run the full test suite.\nConstraints: Cover happy paths, edge cases, and error paths. Use the project's existing test framework.\nDone when: All new tests pass and no existing tests are broken.",
       },
     ],
     edges: [
@@ -249,8 +240,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
         prompt:
-          'Analyze the codebase and create a detailed implementation plan for the following feature: `{{FEATURE_DESC}}`. Include: files to create/modify, components/functions needed, data flow, edge cases, and build order.',
-        _roleName: 'Architect',
+          "Goal: Create an implementation plan for: `{{FEATURE_DESC}}`.\nConstraints: Analyze the existing codebase first. Plan should cover: files to create/modify, component design, data flow, and testing strategy. Don't write code yet.\nDone when: Complete plan with file list, build order, and test strategy.",
       },
       {
         id: 'seed-wf-plan-implement-n2',
@@ -258,7 +248,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         name: 'Approve Plan',
         x: 350,
         y: 200,
-        message: 'Review the plan before implementation begins.',
+        message: 'Review the plan and adjust before implementation.',
       },
       {
         id: 'seed-wf-plan-implement-n3',
@@ -268,8 +258,8 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
-        prompt: 'Implement the plan from the previous step. Follow the build order.',
-        _roleName: 'Developer',
+        prompt:
+          "Goal: Implement the approved plan step by step.\nConstraints: Follow the build order exactly. Keep changes focused \u2014 don't add features beyond the plan.\nDone when: All planned changes implemented and compiling.",
       },
       {
         id: 'seed-wf-plan-implement-n4',
@@ -279,8 +269,8 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
-        prompt: 'Write tests for the new feature and run the full test suite. Report results.',
-        _roleName: 'Tester',
+        prompt:
+          "Goal: Write tests for the new feature and run the full suite.\nConstraints: Match the project's existing test patterns. Cover success and failure paths.\nDone when: All tests pass.",
       },
     ],
     edges: [
@@ -319,14 +309,13 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
       {
         id: 'seed-wf-security-audit-n1',
         type: 'agent',
-        name: 'Scan Vulnerabilities',
+        name: 'Scan',
         x: 100,
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
         prompt:
-          'Scan this project for security vulnerabilities. Check for: OWASP top 10 (injection, XSS, CSRF, etc.), hardcoded secrets/API keys, insecure dependencies, improper error handling that leaks info, insecure file permissions, authentication/authorization flaws. Rank each finding by severity: critical, high, medium, low.',
-        _roleName: 'Security Auditor',
+          'Goal: Audit this project for security vulnerabilities.\nConstraints: Check for: injection (SQL, XSS, command), hardcoded secrets, insecure dependencies, authentication/authorization flaws, data exposure, CSRF, path traversal. Rate each as critical/high/medium/low with file path and line.\nDone when: Complete vulnerability report.',
       },
       {
         id: 'seed-wf-security-audit-n2',
@@ -337,8 +326,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
         prompt:
-          'Fix all critical and high severity security findings from the previous step. For each fix, explain what was vulnerable and how the fix addresses it. Do not fix medium/low findings \u2014 leave those for manual review.',
-        _roleName: 'Developer',
+          "Goal: Fix all critical and high severity findings.\nConstraints: For each fix, explain what was vulnerable and how the fix addresses it. Don't downgrade severity \u2014 fix or document a mitigation.\nDone when: All critical and high issues resolved.",
       },
       {
         id: 'seed-wf-security-audit-n3',
@@ -349,8 +337,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
         prompt:
-          "Run the project's full test suite to verify the security fixes don't break existing functionality. Report results.",
-        _roleName: 'Tester',
+          "Goal: Run the full test suite to verify fixes don't break anything.\nDone when: All tests pass.",
       },
     ],
     edges: [
@@ -376,22 +363,21 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
       {
         id: 'seed-wf-refactor-pass-n1',
         type: 'agent',
-        name: 'Analyze Code',
+        name: 'Analyze',
         x: 100,
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
         prompt:
-          'Analyze this codebase for refactoring opportunities: duplicated code, overly complex functions, poor naming, missing abstractions, dead code, inconsistent patterns. For each finding, describe the current problem and the proposed improvement. Prioritize by impact.',
-        _roleName: 'Refactorer',
+          "Goal: Analyze the codebase for refactoring opportunities.\nConstraints: Look for: duplicated code, functions >50 lines, poor naming, missing abstractions, dead code, inconsistent patterns. Prioritize by impact. Don't make changes yet.\nDone when: Prioritized list of refactoring opportunities with effort estimates.",
       },
       {
         id: 'seed-wf-refactor-pass-n2',
         type: 'checkpoint',
-        name: 'Approve Refactoring',
+        name: 'Approve',
         x: 350,
         y: 200,
-        message: "Review the refactoring proposal. Remove any changes you don't want applied.",
+        message: "Review the refactoring proposals. Remove any you don't want.",
       },
       {
         id: 'seed-wf-refactor-pass-n3',
@@ -402,8 +388,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
         prompt:
-          'Execute the approved refactoring from the previous step. Make each change cleanly \u2014 ensure imports, references, and tests are updated accordingly.',
-        _roleName: 'Developer',
+          'Goal: Execute the approved refactoring.\nConstraints: One change at a time. Update all imports, references, and tests after each change. Preserve all existing behavior \u2014 no functional changes.\nDone when: All approved refactoring complete.',
       },
       {
         id: 'seed-wf-refactor-pass-n4',
@@ -414,8 +399,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
         prompt:
-          "Run the full test suite to confirm the refactoring hasn't broken anything. Report results.",
-        _roleName: 'Tester',
+          'Goal: Run the full test suite.\nDone when: All tests pass, confirming no regressions.',
       },
     ],
     edges: [
@@ -446,26 +430,24 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
       {
         id: 'seed-wf-bug-triage-n1',
         type: 'agent',
-        name: 'Investigate Bug',
+        name: 'Investigate',
         x: 100,
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
         prompt:
-          'Investigate the following bug: `{{BUG_DESC}}`. Trace the root cause through the codebase. Identify the affected code paths, the conditions that trigger it, and why it fails.',
-        _roleName: 'Debugger',
+          'Goal: Investigate this bug: `{{BUG_DESC}}`.\nConstraints: Trace the root cause through the code. Identify: affected code paths, trigger conditions, expected vs actual behavior, and the specific line(s) where the bug occurs.\nDone when: Root cause identified with a clear explanation.',
       },
       {
         id: 'seed-wf-bug-triage-n2',
         type: 'agent',
-        name: 'Fix Bug',
+        name: 'Fix',
         x: 350,
         y: 200,
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
         prompt:
-          "Implement a fix for the root cause identified in the previous step. Make the minimal change needed \u2014 don't refactor surrounding code.",
-        _roleName: 'Developer',
+          'Goal: Fix the root cause identified above.\nConstraints: Minimal change \u2014 fix the bug without refactoring surrounding code.\nDone when: Bug is fixed.',
       },
       {
         id: 'seed-wf-bug-triage-n3',
@@ -476,8 +458,7 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         agent: 'codex',
         agentFlags: '--full-auto --ephemeral',
         prompt:
-          'Write a regression test that reproduces the original bug and verifies the fix. Then run the full test suite and report results.',
-        _roleName: 'Tester',
+          'Goal: Write a test that reproduces the original bug and verifies the fix, then run the full suite.\nDone when: Regression test passes and no existing tests break.',
       },
     ],
     edges: [
@@ -494,6 +475,315 @@ const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
     ],
     variables: [
       { name: 'BUG_DESC', label: 'Describe the bug to investigate', type: 'text', required: true },
+    ],
+  },
+
+  // 8. Test Coverage Expansion
+  {
+    id: 'seed-wf-test-coverage',
+    name: 'Test Coverage Expansion',
+    description: 'Find untested code, write tests, and verify coverage improvement.',
+    nodes: [
+      {
+        id: 'seed-wf-test-coverage-n1',
+        type: 'agent',
+        name: 'Analyze Gaps',
+        x: 100,
+        y: 200,
+        agent: 'codex',
+        agentFlags: '--full-auto --ephemeral',
+        prompt:
+          'Goal: Identify code paths with no test coverage.\nConstraints: Focus on business logic, not boilerplate. List each untested function/method with file path and why it matters. Prioritize by risk.\nDone when: Prioritized list of untested code paths.',
+      },
+      {
+        id: 'seed-wf-test-coverage-n2',
+        type: 'agent',
+        name: 'Write Tests',
+        x: 350,
+        y: 200,
+        agent: 'codex',
+        agentFlags: '--full-auto --ephemeral',
+        prompt:
+          "Goal: Write tests for the gaps identified above.\nConstraints: Start with the highest-risk paths. Use the project's existing test framework and patterns. Cover success paths, edge cases, and error handling.\nDone when: Tests written for all identified gaps.",
+      },
+      {
+        id: 'seed-wf-test-coverage-n3',
+        type: 'agent',
+        name: 'Verify Coverage',
+        x: 600,
+        y: 200,
+        agent: 'codex',
+        agentFlags: '--full-auto --ephemeral',
+        prompt:
+          'Goal: Run the full test suite and report coverage.\nDone when: Test results and coverage summary reported. List any remaining critical gaps.',
+      },
+    ],
+    edges: [
+      {
+        id: 'seed-wf-test-coverage-e1',
+        fromNodeId: 'seed-wf-test-coverage-n1',
+        toNodeId: 'seed-wf-test-coverage-n2',
+      },
+      {
+        id: 'seed-wf-test-coverage-e2',
+        fromNodeId: 'seed-wf-test-coverage-n2',
+        toNodeId: 'seed-wf-test-coverage-n3',
+      },
+    ],
+  },
+
+  // 9. Dependency Update
+  {
+    id: 'seed-wf-dep-update',
+    name: 'Dependency Update',
+    description: 'Check for outdated dependencies, update them, and verify nothing breaks.',
+    nodes: [
+      {
+        id: 'seed-wf-dep-update-n1',
+        type: 'agent',
+        name: 'Check Outdated',
+        x: 100,
+        y: 200,
+        agent: 'codex',
+        agentFlags: '--full-auto --ephemeral',
+        prompt:
+          'Goal: List all outdated dependencies with current vs latest versions.\nConstraints: Check both direct and dev dependencies. Flag any with breaking changes (major version bumps) or security advisories.\nDone when: Complete list with version diffs and risk assessment.',
+      },
+      {
+        id: 'seed-wf-dep-update-n2',
+        type: 'checkpoint',
+        name: 'Approve Updates',
+        x: 350,
+        y: 200,
+        message: "Review the dependency list. Remove any you don't want updated.",
+      },
+      {
+        id: 'seed-wf-dep-update-n3',
+        type: 'agent',
+        name: 'Update Dependencies',
+        x: 600,
+        y: 200,
+        agent: 'codex',
+        agentFlags: '--full-auto --ephemeral',
+        prompt:
+          'Goal: Update the approved dependencies.\nConstraints: Update one at a time. For major version bumps, check the changelog for breaking changes and fix any.\nDone when: All approved dependencies updated, lockfile regenerated.',
+      },
+      {
+        id: 'seed-wf-dep-update-n4',
+        type: 'agent',
+        name: 'Run Tests',
+        x: 850,
+        y: 200,
+        agent: 'codex',
+        agentFlags: '--full-auto --ephemeral',
+        prompt:
+          'Goal: Run the full test suite and build.\nDone when: All tests pass and build succeeds.',
+      },
+    ],
+    edges: [
+      {
+        id: 'seed-wf-dep-update-e1',
+        fromNodeId: 'seed-wf-dep-update-n1',
+        toNodeId: 'seed-wf-dep-update-n2',
+      },
+      {
+        id: 'seed-wf-dep-update-e2',
+        fromNodeId: 'seed-wf-dep-update-n2',
+        toNodeId: 'seed-wf-dep-update-n3',
+      },
+      {
+        id: 'seed-wf-dep-update-e3',
+        fromNodeId: 'seed-wf-dep-update-n3',
+        toNodeId: 'seed-wf-dep-update-n4',
+      },
+    ],
+  },
+
+  // 10. Documentation Pass
+  {
+    id: 'seed-wf-docs',
+    name: 'Documentation Pass',
+    description: 'Analyze code for missing docs, generate them, and verify accuracy.',
+    nodes: [
+      {
+        id: 'seed-wf-docs-n1',
+        type: 'agent',
+        name: 'Analyze',
+        x: 100,
+        y: 200,
+        agent: 'codex',
+        agentFlags: '--full-auto --ephemeral',
+        prompt:
+          "Goal: Identify public APIs, functions, and modules missing documentation.\nConstraints: Focus on exported functions, class methods, and module-level docs. Don't flag internal/private helpers.\nDone when: List of undocumented public interfaces with file paths.",
+      },
+      {
+        id: 'seed-wf-docs-n2',
+        type: 'agent',
+        name: 'Generate Docs',
+        x: 350,
+        y: 200,
+        agent: 'codex',
+        agentFlags: '--full-auto --ephemeral',
+        prompt:
+          "Goal: Write documentation for the identified gaps.\nConstraints: Match the project's existing doc style (JSDoc, docstrings, README sections, etc.). Be accurate \u2014 read the implementation before documenting. Don't document implementation details, only the public contract.\nDone when: All identified gaps documented.",
+      },
+      {
+        id: 'seed-wf-docs-n3',
+        type: 'agent',
+        name: 'Verify',
+        x: 600,
+        y: 200,
+        agent: 'codex',
+        agentFlags: '--full-auto --ephemeral',
+        prompt:
+          'Goal: Review all generated documentation for accuracy.\nConstraints: Cross-check each doc comment against the actual implementation. Flag any inaccuracies.\nDone when: All docs verified as accurate.',
+      },
+    ],
+    edges: [
+      {
+        id: 'seed-wf-docs-e1',
+        fromNodeId: 'seed-wf-docs-n1',
+        toNodeId: 'seed-wf-docs-n2',
+      },
+      {
+        id: 'seed-wf-docs-e2',
+        fromNodeId: 'seed-wf-docs-n2',
+        toNodeId: 'seed-wf-docs-n3',
+      },
+    ],
+  },
+
+  // 11. Performance Audit
+  {
+    id: 'seed-wf-perf-audit',
+    name: 'Performance Audit',
+    description: 'Profile the codebase for performance issues, optimize, and benchmark.',
+    nodes: [
+      {
+        id: 'seed-wf-perf-audit-n1',
+        type: 'agent',
+        name: 'Profile',
+        x: 100,
+        y: 200,
+        agent: 'codex',
+        agentFlags: '--full-auto --ephemeral',
+        prompt:
+          'Goal: Identify performance bottlenecks in this codebase.\nConstraints: Look for: O(n\u00B2) loops, unnecessary re-renders, blocking I/O, missing caching, large bundle imports, memory leaks. Rate each by impact (high/medium/low) with file path and line.\nDone when: Prioritized list of performance issues.',
+      },
+      {
+        id: 'seed-wf-perf-audit-n2',
+        type: 'checkpoint',
+        name: 'Approve',
+        x: 350,
+        y: 200,
+        message: "Review the findings. Remove optimizations you don't want.",
+      },
+      {
+        id: 'seed-wf-perf-audit-n3',
+        type: 'agent',
+        name: 'Optimize',
+        x: 600,
+        y: 200,
+        agent: 'codex',
+        agentFlags: '--full-auto --ephemeral',
+        prompt:
+          "Goal: Implement the approved performance optimizations.\nConstraints: One optimization at a time. Measure or explain the expected improvement. Don't sacrifice readability for micro-optimizations.\nDone when: All approved optimizations implemented.",
+      },
+      {
+        id: 'seed-wf-perf-audit-n4',
+        type: 'agent',
+        name: 'Benchmark',
+        x: 850,
+        y: 200,
+        agent: 'codex',
+        agentFlags: '--full-auto --ephemeral',
+        prompt:
+          'Goal: Run tests and any available benchmarks.\nDone when: All tests pass. Report any measurable improvements.',
+      },
+    ],
+    edges: [
+      {
+        id: 'seed-wf-perf-audit-e1',
+        fromNodeId: 'seed-wf-perf-audit-n1',
+        toNodeId: 'seed-wf-perf-audit-n2',
+      },
+      {
+        id: 'seed-wf-perf-audit-e2',
+        fromNodeId: 'seed-wf-perf-audit-n2',
+        toNodeId: 'seed-wf-perf-audit-n3',
+      },
+      {
+        id: 'seed-wf-perf-audit-e3',
+        fromNodeId: 'seed-wf-perf-audit-n3',
+        toNodeId: 'seed-wf-perf-audit-n4',
+      },
+    ],
+  },
+
+  // 12. Release Prep
+  {
+    id: 'seed-wf-release-prep',
+    name: 'Release Prep',
+    description: 'Generate changelog, bump version, run final checks, and prepare for release.',
+    nodes: [
+      {
+        id: 'seed-wf-release-prep-n1',
+        type: 'shell',
+        name: 'Git Log',
+        x: 100,
+        y: 200,
+        command: 'git log --oneline --since="1 month ago"',
+      },
+      {
+        id: 'seed-wf-release-prep-n2',
+        type: 'agent',
+        name: 'Generate Changelog',
+        x: 350,
+        y: 200,
+        agent: 'codex',
+        agentFlags: '--full-auto --ephemeral',
+        prompt:
+          'Goal: Generate a changelog from the git log above.\nConstraints: Group changes by category (features, fixes, refactoring, docs). Use conventional commit format if the project follows it. Be concise \u2014 one line per change.\nDone when: Complete changelog for the release.',
+      },
+      {
+        id: 'seed-wf-release-prep-n3',
+        type: 'agent',
+        name: 'Final Checks',
+        x: 600,
+        y: 200,
+        agent: 'codex',
+        agentFlags: '--full-auto --ephemeral',
+        prompt:
+          "Goal: Run the full test suite, linter, and build.\nConstraints: Report any failures. Don't fix anything \u2014 just report.\nDone when: Clean build/test/lint report, or list of issues that need attention.",
+      },
+      {
+        id: 'seed-wf-release-prep-n4',
+        type: 'checkpoint',
+        name: 'Approve Release',
+        x: 850,
+        y: 200,
+        message: 'Review the changelog and check results. Proceed to tag the release?',
+      },
+    ],
+    edges: [
+      {
+        id: 'seed-wf-release-prep-e1',
+        fromNodeId: 'seed-wf-release-prep-n1',
+        toNodeId: 'seed-wf-release-prep-n2',
+      },
+      {
+        id: 'seed-wf-release-prep-e2',
+        fromNodeId: 'seed-wf-release-prep-n2',
+        toNodeId: 'seed-wf-release-prep-n3',
+      },
+      {
+        id: 'seed-wf-release-prep-e3',
+        fromNodeId: 'seed-wf-release-prep-n3',
+        toNodeId: 'seed-wf-release-prep-n4',
+      },
+    ],
+    variables: [
+      { name: 'VERSION', label: 'Release version (e.g. 1.2.0)', type: 'string', required: true },
     ],
   },
 ]
@@ -543,15 +833,7 @@ export async function seedWorkflows(store: AppStore): Promise<void> {
       if (n.agentFlags !== undefined) node.agentFlags = n.agentFlags
       if (n.prompt !== undefined) node.prompt = n.prompt
       if (n.message !== undefined) node.message = n.message
-      if (n._roleName !== undefined) {
-        const roleId = roleMap.get(n._roleName)
-        if (roleId) node.roleId = roleId
-        else
-          log.warn('Seed workflow references unknown role', {
-            role: n._roleName,
-            workflow: blueprint.id,
-          })
-      }
+      if (n.command !== undefined) node.command = n.command
       return node
     })
 
