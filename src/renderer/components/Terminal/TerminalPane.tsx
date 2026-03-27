@@ -693,10 +693,11 @@ export function TerminalPane({
           term.selectAll()
           break
         case 'clear':
-          // Clear scrollback history only. The visible viewport belongs to
-          // the running process (agent/shell) — we can't clear it without
-          // the process losing its display state.
-          term.clear()
+          // Reset terminal: clear screen + scrollback + home cursor.
+          // The running process doesn't know the screen was cleared, so
+          // its next output will start fresh. This matches VS Code's
+          // "Terminal: Clear" behavior.
+          term.reset()
           break
         case 'search':
           setSearchOpen(true)
