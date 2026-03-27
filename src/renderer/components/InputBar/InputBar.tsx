@@ -59,7 +59,7 @@ export const InputBar = memo(function InputBar({
           ref={inputRef}
           className="input-field"
           type="text"
-          placeholder="Send a message..."
+          placeholder="Type a message or paste file paths..."
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}

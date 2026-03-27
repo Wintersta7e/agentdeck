@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Plus,
   Settings,
+  MoreVertical,
   ArrowLeft,
   SquareCheck,
   Square,
@@ -281,11 +282,12 @@ export function Sidebar({
                   className="sidebar-item-gear"
                   onClick={(e) => {
                     e.stopPropagation()
-                    openSettings(p.id)
+                    handleContextMenu(e, p.id)
                   }}
-                  title="Project settings"
+                  aria-label="Project options"
+                  title="Project options"
                 >
-                  <Settings size={14} />
+                  <MoreVertical size={14} />
                 </button>
               </div>
             ))}
@@ -318,6 +320,15 @@ export function Sidebar({
                   onClick={() => setContextMenu({ ...contextMenu, subMenu: 'templates' })}
                 >
                   Attach Templates
+                </button>
+                <button
+                  className="sidebar-context-item"
+                  onClick={() => {
+                    if (contextMenu.projectId) openSettings(contextMenu.projectId)
+                    setContextMenu(null)
+                  }}
+                >
+                  <Settings size={12} /> Settings
                 </button>
                 <div className="sidebar-context-divider" />
                 <button className="sidebar-context-item danger" onClick={handleRemoveProject}>
