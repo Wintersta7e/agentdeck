@@ -36,3 +36,52 @@
 .terminal-container .xterm .xterm-viewport::-webkit-scrollbar-track {
   background: transparent;
 }
+
+/* ── Terminal context menu ─────────────────────────────────── */
+
+.term-context-menu {
+  position: fixed;
+  z-index: 2000;
+  background: var(--bg1);
+  border: 1px solid var(--bg3);
+  border-radius: var(--r);
+  padding: 4px 0;
+  min-width: 180px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.term-ctx-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text1);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.term-ctx-item:hover:not(:disabled) {
+  background: rgba(var(--accent-rgb), 0.1);
+  color: var(--text0);
+}
+
+.term-ctx-item:disabled {
+  color: var(--text3);
+  cursor: default;
+}
+
+.term-ctx-hint {
+  font-size: 10px;
+  color: var(--text3);
+  margin-left: 16px;
+}
+
+.term-ctx-sep {
+  height: 1px;
+  background: var(--bg3);
+  margin: 4px 0;
+}

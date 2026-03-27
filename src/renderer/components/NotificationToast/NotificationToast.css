@@ -23,7 +23,7 @@
   color: var(--text1);
   cursor: pointer;
   animation: toastSlideIn 0.2s ease-out;
-  max-width: 360px;
+  max-width: 400px;
 }
 
 .toast-error {
@@ -49,6 +49,45 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.toast-expanded .toast-message {
+  white-space: normal;
+  word-break: break-word;
+}
+
+.toast-copy,
+.toast-close {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: none;
+  color: var(--text3);
+  cursor: pointer;
+  border-radius: 2px;
+  padding: 0;
+  opacity: 0;
+  transition:
+    opacity 150ms ease,
+    color 150ms ease;
+}
+
+.toast:hover .toast-copy,
+.toast:hover .toast-close,
+.toast-expanded .toast-copy,
+.toast-expanded .toast-close {
+  opacity: 1;
+}
+
+.toast-copy:hover,
+.toast-close:hover {
+  color: var(--text0);
 }
 
 @keyframes toastSlideIn {

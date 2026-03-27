@@ -153,6 +153,23 @@
   color: var(--text3);
   font-size: 10px;
   font-style: italic;
-  padding: 20px 0;
+  padding: 20px 12px;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.panel-placeholder-title {
+  font-size: 11px;
+  font-weight: 600;
+  font-style: normal;
+  color: var(--text2);
+}
+
+.panel-placeholder-desc {
+  font-size: 10px;
+  line-height: 1.4;
+  max-width: 220px;
 }

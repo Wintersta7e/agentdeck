@@ -1,5 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Search, ArrowRight, RefreshCw, Check, X, Star, Plus } from 'lucide-react'
+import {
+  Search,
+  ArrowRight,
+  RefreshCw,
+  Check,
+  X,
+  Star,
+  Plus,
+  FolderOpen,
+  Bot,
+  Terminal,
+} from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import { PanelBox } from '../shared/PanelBox'
 import { ParticleField } from './ParticleField'
@@ -308,6 +319,44 @@ export function HomeScreen({
             <div className="stat-label">Errored</div>
           </div>
         </div>
+
+        {pinned.length === 0 && projects.length === 0 && (
+          <PanelBox corners="all" glow="none" className="home-card welcome-card">
+            <div className="welcome-inner">
+              <div className="welcome-headline">Get started</div>
+              <div className="welcome-steps">
+                <div className="welcome-step">
+                  <div className="welcome-step-icon">
+                    <FolderOpen size={20} />
+                  </div>
+                  <div className="welcome-step-num">1</div>
+                  <div className="welcome-step-title">Pick a folder</div>
+                  <div className="welcome-step-desc">Point AgentDeck at your project</div>
+                </div>
+                <div className="welcome-step">
+                  <div className="welcome-step-icon">
+                    <Bot size={20} />
+                  </div>
+                  <div className="welcome-step-num">2</div>
+                  <div className="welcome-step-title">Choose an agent</div>
+                  <div className="welcome-step-desc">7 agents supported, from Claude to Codex</div>
+                </div>
+                <div className="welcome-step">
+                  <div className="welcome-step-icon">
+                    <Terminal size={20} />
+                  </div>
+                  <div className="welcome-step-num">3</div>
+                  <div className="welcome-step-title">Start coding</div>
+                  <div className="welcome-step-desc">Launch a session and go</div>
+                </div>
+              </div>
+              <button className="welcome-cta" onClick={openWizard} type="button">
+                Create Project <ArrowRight size={14} />
+              </button>
+              <div className="welcome-hint">or press Ctrl+N anytime</div>
+            </div>
+          </PanelBox>
+        )}
 
         {pinned.length > 0 && (
           <>

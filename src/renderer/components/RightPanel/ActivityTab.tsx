@@ -82,7 +82,14 @@ export function ActivityTab(): React.JSX.Element {
   const rowProps = useMemo<ActivityRowProps>(() => ({ events }), [events])
 
   if (events.length === 0) {
-    return <div className="panel-placeholder">No activity yet</div>
+    return (
+      <div className="panel-placeholder">
+        <div className="panel-placeholder-title">No activity yet</div>
+        <div className="panel-placeholder-desc">
+          Activity events appear when the agent reads files, writes code, or runs commands.
+        </div>
+      </div>
+    )
   }
 
   // react-window v2: List auto-sizes from CSS. The container class

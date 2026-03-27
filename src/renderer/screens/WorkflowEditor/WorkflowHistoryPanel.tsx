@@ -224,7 +224,14 @@ export default function WorkflowHistoryPanel({
         </button>
       </div>
 
-      {!loading && runs.length === 0 && <div className="wf-history-empty">No runs yet</div>}
+      {!loading && runs.length === 0 && (
+        <div className="wf-history-empty">
+          <div className="wf-history-empty-title">No runs yet</div>
+          <div className="wf-history-empty-desc">
+            Run this workflow to see execution history here.
+          </div>
+        </div>
+      )}
 
       {runs.map((run) => (
         <RunCard

@@ -77,6 +77,8 @@ export function TerminalPane({
   scrollback,
 }: TerminalPaneProps): React.JSX.Element {
   const [searchOpen, setSearchOpen] = useState(false)
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null)
+  const ctxMenuRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
@@ -623,15 +625,111 @@ export function TerminalPane({
     }
   }, [focused])
 
+  // ── Context menu dismiss ──────────────────────────────────
+  useEffect(() => {
+    if (!ctxMenu) return
+    function handleClick(e: MouseEvent): void {
+      if (ctxMenuRef.current && !ctxMenuRef.current.contains(e.target as Node)) {
+        setCtxMenu(null)
+      }
+    }
+    function handleKey(e: KeyboardEvent): void {
+      if (e.key === 'Escape') setCtxMenu(null)
+    }
+    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [ctxMenu])
+
+  const [ctxHasSelection, setCtxHasSelection] = useState(false)
+
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setCtxHasSelection(termRef.current?.hasSelection() ?? false)
+    setCtxMenu({
+      x: Math.min(e.clientX, window.innerWidth - 200),
+      y: Math.min(e.clientY, window.innerHeight - 220),
+    })
+  }, [])
+
+  const handleCtxAction = useCallback(
+    (action: 'copy' | 'paste' | 'selectAll' | 'clear' | 'search') => {
+      setCtxMenu(null)
+      const term = termRef.current
+      if (!term) return
+      switch (action) {
+        case 'copy':
+          if (term.hasSelection()) {
+            navigator.clipboard.writeText(term.getSelection()).catch(() => {})
+          }
+          break
+        case 'paste':
+          navigator.clipboard
+            .readText()
+            .then((text) => {
+              if (text) window.agentDeck.pty.write(sessionId, text)
+            })
+            .catch(() => {})
+          break
+        case 'selectAll':
+          term.selectAll()
+          break
+        case 'clear':
+          term.clear()
+          break
+        case 'search':
+          setSearchOpen(true)
+          break
+      }
+    },
+    [sessionId],
+  )
+
   const searchAddon = searchAddonMap.get(sessionId)
+
   return (
-    <div ref={containerRef} className="terminal-container">
+    <div ref={containerRef} className="terminal-container" onContextMenu={handleContextMenu}>
       {searchAddon && (
         <TerminalSearchBar
           searchAddon={searchAddon}
           visible={searchOpen}
           onClose={() => setSearchOpen(false)}
         />
+      )}
+      {ctxMenu && (
+        <div
+          ref={ctxMenuRef}
+          className="term-context-menu"
+          style={{ top: ctxMenu.y, left: ctxMenu.x }}
+        >
+          <button
+            className="term-ctx-item"
+            disabled={!ctxHasSelection}
+            onClick={() => handleCtxAction('copy')}
+          >
+            Copy
+            <span className="term-ctx-hint">Ctrl+Shift+C</span>
+          </button>
+          <button className="term-ctx-item" onClick={() => handleCtxAction('paste')}>
+            Paste
+            <span className="term-ctx-hint">Ctrl+V</span>
+          </button>
+          <button className="term-ctx-item" onClick={() => handleCtxAction('selectAll')}>
+            Select All
+          </button>
+          <div className="term-ctx-sep" />
+          <button className="term-ctx-item" onClick={() => handleCtxAction('clear')}>
+            Clear Buffer
+          </button>
+          <div className="term-ctx-sep" />
+          <button className="term-ctx-item" onClick={() => handleCtxAction('search')}>
+            Search
+            <span className="term-ctx-hint">Ctrl+Shift+F</span>
+          </button>
+        </div>
       )}
     </div>
   )
