@@ -298,6 +298,33 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
     [autoSave, workflowId, updateWorkflowMeta],
   )
 
+  const handleDuplicateNode = useCallback(
+    (nodeId: string) => {
+      setWorkflow((prev) => {
+        if (!prev) return prev
+        const source = prev.nodes.find((n) => n.id === nodeId)
+        if (!source) return prev
+        const newId = crypto.randomUUID()
+        const clone = {
+          ...(JSON.parse(JSON.stringify(source)) as typeof source),
+          id: newId,
+          name: `${source.name} (copy)`,
+          x: source.x + 30,
+          y: source.y + 30,
+        }
+        const updated: Workflow = {
+          ...prev,
+          nodes: [...prev.nodes, clone],
+          updatedAt: Date.now(),
+        }
+        autoSave(updated)
+        updateWorkflowMeta(workflowId, { nodeCount: updated.nodes.length })
+        return updated
+      })
+    },
+    [autoSave, workflowId, updateWorkflowMeta],
+  )
+
   const handleDeleteEdge = useCallback(
     (edgeId: string) => {
       setWorkflow((prev) => {
@@ -438,6 +465,7 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
             onConnect={handleConnect}
             onUpdateNode={handleUpdateNode}
             onDeleteNode={handleDeleteNode}
+            onDuplicateNode={handleDuplicateNode}
             onDeleteEdge={handleDeleteEdge}
           />
         </div>

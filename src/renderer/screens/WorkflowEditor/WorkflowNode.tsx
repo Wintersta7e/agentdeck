@@ -16,6 +16,7 @@ export interface WorkflowNodeData {
   status: WorkflowNodeStatus
   onUpdateNode: (node: WorkflowNodeType) => void
   onDeleteNode: (nodeId: string) => void
+  onDuplicateNode: (nodeId: string) => void
   [key: string]: unknown
 }
 
@@ -60,7 +61,7 @@ function getTypeIcon(type: NodeType): React.ReactNode {
 }
 
 function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Element {
-  const { node, status, onUpdateNode, onDeleteNode } = data
+  const { node, status, onUpdateNode, onDeleteNode, onDuplicateNode } = data
   const rolesMap = useRolesMap()
   const role = node.roleId ? rolesMap.get(node.roleId) : undefined
 
@@ -151,6 +152,11 @@ function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Ele
     enterEditMode()
   }, [enterEditMode])
 
+  const handleMenuDuplicate = useCallback(() => {
+    setMenuOpen(false)
+    onDuplicateNode(node.id)
+  }, [onDuplicateNode, node.id])
+
   const handleMenuDelete = useCallback(() => {
     setMenuOpen(false)
     onDeleteNode(node.id)
@@ -184,6 +190,13 @@ function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Ele
         <div className="wf-node-dropdown" ref={menuRef}>
           <button className="wf-node-dropdown-item nodrag" onClick={handleMenuEdit} type="button">
             Edit
+          </button>
+          <button
+            className="wf-node-dropdown-item nodrag"
+            onClick={handleMenuDuplicate}
+            type="button"
+          >
+            Duplicate
           </button>
           <button
             className="wf-node-dropdown-item danger nodrag"
