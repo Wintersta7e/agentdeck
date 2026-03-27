@@ -6,6 +6,41 @@
   overflow: hidden;
 }
 
+/* Breadcrumb */
+.settings-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 28px;
+  font-size: 11px;
+  color: var(--text3);
+  background: var(--bg1);
+  border-bottom: 1px solid var(--bg2);
+  flex-shrink: 0;
+}
+
+.settings-breadcrumb-link {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0;
+}
+
+.settings-breadcrumb-link:hover {
+  text-decoration: underline;
+}
+
+.settings-breadcrumb-sep {
+  color: var(--text3);
+  opacity: 0.5;
+}
+
+.settings-breadcrumb-current {
+  color: var(--text2);
+}
+
 /* Project header */
 .project-header {
   padding: 20px 28px 0;
