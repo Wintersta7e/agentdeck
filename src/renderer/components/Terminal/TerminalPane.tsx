@@ -693,6 +693,10 @@ export function TerminalPane({
           term.selectAll()
           break
         case 'clear':
+          // Clear visible screen + scrollback. \x1b[2J clears screen,
+          // \x1b[3J clears scrollback, \x1b[H moves cursor home.
+          // term.clear() alone only clears scrollback, leaving viewport dirty.
+          term.write('\x1b[2J\x1b[3J\x1b[H')
           term.clear()
           break
         case 'search':
