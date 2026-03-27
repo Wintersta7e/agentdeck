@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 import { PanelBox } from '../shared/PanelBox'
+import { useFocusTrap } from '../../hooks/useFocusTrap'
 import './AboutDialog.css'
 
 interface AboutDialogProps {
@@ -14,6 +15,7 @@ interface VersionInfo {
 }
 
 export function AboutDialog({ onClose }: AboutDialogProps): React.JSX.Element {
+  const trapRef = useFocusTrap<HTMLDivElement>()
   const [appVersion, setAppVersion] = useState('')
   const [versions, setVersions] = useState<VersionInfo | null>(null)
 
@@ -52,7 +54,14 @@ export function AboutDialog({ onClose }: AboutDialogProps): React.JSX.Element {
   )
 
   return (
-    <div className="about-overlay" onClick={handleOverlayClick}>
+    <div
+      className="about-overlay"
+      onClick={handleOverlayClick}
+      ref={trapRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="About AgentDeck"
+    >
       <PanelBox corners="all" glow="none" className="about-dialog">
         <button className="about-close" onClick={onClose} aria-label="Close about dialog">
           <X size={16} />

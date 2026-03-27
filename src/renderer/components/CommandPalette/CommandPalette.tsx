@@ -590,7 +590,13 @@ function PaletteInner({
   let globalIndex = 0
 
   return (
-    <div className="palette-overlay" onClick={handleOverlayClick}>
+    <div
+      className="palette-overlay"
+      onClick={handleOverlayClick}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Command palette"
+    >
       <HexGrid rotation={15} opacity={0.01} />
       <PanelBox corners="all" glow="none" className="palette">
         {/* Search input */}

@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import type { WorkflowVariable } from '../../../shared/types'
 import { FolderOpen } from 'lucide-react'
+import { useFocusTrap } from '../../hooks/useFocusTrap'
 import './WorkflowRunDialog.css'
 
 interface WorkflowRunDialogProps {
@@ -27,7 +28,7 @@ export default function WorkflowRunDialog({
   onCancel,
 }: WorkflowRunDialogProps): React.JSX.Element {
   const [values, setValues] = useState<Record<string, string>>(() => buildDefaults(variables))
-  const backdropRef = useRef<HTMLDivElement>(null)
+  const trapRef = useFocusTrap<HTMLDivElement>()
 
   const setValue = useCallback((name: string, value: string) => {
     setValues((prev) => ({ ...prev, [name]: value }))
@@ -48,7 +49,7 @@ export default function WorkflowRunDialog({
   // Click on backdrop closes dialog
   const handleBackdropClick = useCallback(
     (e: React.MouseEvent) => {
-      if (e.target === backdropRef.current) {
+      if (e.target === e.currentTarget) {
         onCancel()
       }
     },
@@ -82,7 +83,14 @@ export default function WorkflowRunDialog({
   )
 
   return (
-    <div className="wf-run-dialog-backdrop" ref={backdropRef} onClick={handleBackdropClick}>
+    <div
+      className="wf-run-dialog-backdrop"
+      ref={trapRef}
+      onClick={handleBackdropClick}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Configure workflow variables"
+    >
       <form className="wf-run-dialog" onSubmit={handleSubmit}>
         <div className="wf-run-dialog-header">
           <h3 className="wf-run-dialog-title">Configure Variables</h3>

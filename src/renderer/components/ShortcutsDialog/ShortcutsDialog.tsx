@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { PanelBox } from '../shared/PanelBox'
+import { useFocusTrap } from '../../hooks/useFocusTrap'
 import './ShortcutsDialog.css'
 
 interface ShortcutsDialogProps {
@@ -74,6 +75,8 @@ const SHORTCUT_SECTIONS: ShortcutSection[] = [
 ]
 
 export function ShortcutsDialog({ onClose }: ShortcutsDialogProps): React.JSX.Element {
+  const trapRef = useFocusTrap<HTMLDivElement>()
+
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent): void {
       if (e.key === 'Escape') {
@@ -94,7 +97,14 @@ export function ShortcutsDialog({ onClose }: ShortcutsDialogProps): React.JSX.El
   )
 
   return (
-    <div className="shortcuts-overlay" onClick={handleOverlayClick}>
+    <div
+      className="shortcuts-overlay"
+      onClick={handleOverlayClick}
+      ref={trapRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Keyboard shortcuts"
+    >
       <PanelBox corners="all" glow="none" className="shortcuts-dialog">
         <button className="shortcuts-close" onClick={onClose} aria-label="Close shortcuts dialog">
           <X size={16} />
