@@ -693,11 +693,13 @@ export function TerminalPane({
           term.selectAll()
           break
         case 'clear':
-          // Reset terminal: clear screen + scrollback + home cursor.
-          // The running process doesn't know the screen was cleared, so
-          // its next output will start fresh. This matches VS Code's
-          // "Terminal: Clear" behavior.
-          term.reset()
+          // 1. Wipe the visible screen + scrollback via ANSI sequences
+          // 2. Then clear xterm.js internal scrollback buffer
+          // 3. Then send Ctrl+L to the PTY so the running agent redraws
+          //    its UI on the now-clean screen
+          term.write('\x1b[2J\x1b[3J\x1b[H')
+          term.clear()
+          window.agentDeck.pty.write(sessionId, '\x0c')
           break
         case 'search':
           setSearchOpen(true)
