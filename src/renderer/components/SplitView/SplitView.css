@@ -48,8 +48,13 @@
   pointer-events: none;
 }
 
-.split-divider:hover::after {
+.split-divider:hover::after,
+.split-divider--active::after {
   color: var(--amber);
+}
+
+.split-divider--active {
+  background: rgba(var(--accent-rgb), 0.3);
 }
 
 .split-pane-placeholder {

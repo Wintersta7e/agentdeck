@@ -82,6 +82,8 @@ export function SplitView(): React.JSX.Element {
   const setPaneLayout = useAppStore((s) => s.setPaneLayout)
   const setFocusedPane = useAppStore((s) => s.setFocusedPane)
 
+  const [draggingDivider, setDraggingDivider] = useState<number | null>(null)
+
   // Activity-driven pulse state for PanelBox
   const [pulseState, setPulseState] = useState<Record<number, boolean>>({})
   const pulseTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({})
@@ -151,6 +153,7 @@ export function SplitView(): React.JSX.Element {
 
     if (!leftPane || !rightPane) return
 
+    setDraggingDivider(dividerIndex)
     const startX = e.clientX
     const startLeftWidth = leftPane.getBoundingClientRect().width
     const startRightWidth = rightPane.getBoundingClientRect().width
@@ -196,6 +199,7 @@ export function SplitView(): React.JSX.Element {
 
     function onMouseUp(): void {
       if (rafId) cancelAnimationFrame(rafId)
+      setDraggingDivider(null)
       dragCleanupRef.current = null
       document.body.style.cursor = savedCursor
       document.body.style.userSelect = savedUserSelect
@@ -264,7 +268,7 @@ export function SplitView(): React.JSX.Element {
             {/* Divider before pane (except pane 0) */}
             {paneIndex > 0 && (
               <div
-                className={`split-divider${isVisible ? '' : ' split-pane--hidden'}`}
+                className={`split-divider${isVisible ? '' : ' split-pane--hidden'}${draggingDivider === paneIndex - 1 ? ' split-divider--active' : ''}`}
                 onMouseDown={(e) => handleDividerMouseDown(paneIndex - 1, e)}
               />
             )}
