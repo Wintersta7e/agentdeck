@@ -693,13 +693,10 @@ export function TerminalPane({
           term.selectAll()
           break
         case 'clear':
-          // Clear scrollback, then send Ctrl+L to the PTY so the running
-          // process (agent/shell) redraws its UI on a clean screen.
-          // term.clear() alone leaves the active viewport; writing raw ANSI
-          // escapes wipes the agent's interface without giving it a chance
-          // to redraw.
+          // Clear scrollback history only. The visible viewport belongs to
+          // the running process (agent/shell) — we can't clear it without
+          // the process losing its display state.
           term.clear()
-          window.agentDeck.pty.write(sessionId, '\x0c')
           break
         case 'search':
           setSearchOpen(true)
@@ -750,7 +747,7 @@ export function TerminalPane({
           </button>
           <div className="term-ctx-sep" />
           <button className="term-ctx-item" onClick={() => handleCtxAction('clear')}>
-            Clear Buffer
+            Clear Scrollback
           </button>
           <div className="term-ctx-sep" />
           <button className="term-ctx-item" onClick={() => handleCtxAction('search')}>
