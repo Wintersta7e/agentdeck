@@ -77,6 +77,7 @@ export function TerminalPane({
   scrollback,
 }: TerminalPaneProps): React.JSX.Element {
   const [searchOpen, setSearchOpen] = useState(false)
+  const [showWatermark, setShowWatermark] = useState(true)
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null)
   const ctxMenuRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -385,6 +386,7 @@ export function TerminalPane({
     // into a single write+scroll-restore cycle, preventing the scroll guard race
     // condition that causes viewport jumping during rapid agent output.
     const unsubData = window.agentDeck.pty.onData(sessionId, (data) => {
+      setShowWatermark(false)
       if (visibleRef.current) {
         writeBufferRef.current.push(data)
         if (!writeRafRef.current) {
@@ -692,6 +694,12 @@ export function TerminalPane({
 
   return (
     <div ref={containerRef} className="terminal-container" onContextMenu={handleContextMenu}>
+      {showWatermark && (
+        <div className="term-watermark">
+          <div className="term-watermark-label">{agent ?? 'Terminal'}</div>
+          <div className="term-watermark-status">Starting\u2026</div>
+        </div>
+      )}
       {searchAddon && (
         <TerminalSearchBar
           searchAddon={searchAddon}
