@@ -479,6 +479,21 @@ export function HomeScreen({
           </div>
         </div>
         <div className="agent-grid">
+          {Object.keys(agentStatus).length === 0 &&
+            Array.from({ length: 4 }, (_, i) => (
+              <PanelBox
+                key={`skel-${String(i)}`}
+                corners={['tl', 'br']}
+                glow="none"
+                className="home-card"
+              >
+                <div className="agent-card agent-card-skeleton">
+                  <div className="skeleton-line skeleton-icon" />
+                  <div className="skeleton-line skeleton-name" />
+                  <div className="skeleton-line skeleton-desc" />
+                </div>
+              </PanelBox>
+            ))}
           {AGENTS.filter((a) => !visibleAgents || visibleAgents.includes(a.name)).map((a) => {
             const vInfo = agentVersions[a.name]
             const installed = agentStatus[a.name]
@@ -503,24 +518,27 @@ export function HomeScreen({
                     </div>
                   )}
                   {installed && vInfo && (
-                    <button
-                      className={`agent-update-btn${vInfo.updateAvailable ? ' has-update' : ''}${vInfo.updating ? ' updating' : ''}`}
-                      disabled={vInfo.updating || !vInfo.updateAvailable}
-                      onClick={() => void handleAgentUpdate(a.name)}
-                      type="button"
-                    >
-                      {vInfo.updating ? (
-                        'Updating\u2026'
-                      ) : vInfo.updateAvailable ? (
-                        <>
-                          Update <ArrowRight size={12} /> {vInfo.latest}
-                        </>
-                      ) : (
-                        <>
-                          <Check size={12} /> Up to date
-                        </>
-                      )}
-                    </button>
+                    <>
+                      <button
+                        className={`agent-update-btn${vInfo.updateAvailable ? ' has-update' : ''}${vInfo.updating ? ' updating' : ''}`}
+                        disabled={vInfo.updating || !vInfo.updateAvailable}
+                        onClick={() => void handleAgentUpdate(a.name)}
+                        type="button"
+                      >
+                        {vInfo.updating ? (
+                          'Updating\u2026'
+                        ) : vInfo.updateAvailable ? (
+                          <>
+                            Update <ArrowRight size={12} /> {vInfo.latest}
+                          </>
+                        ) : (
+                          <>
+                            <Check size={12} /> Up to date
+                          </>
+                        )}
+                      </button>
+                      {vInfo.updating && <div className="agent-update-progress" />}
+                    </>
                   )}
                 </div>
               </PanelBox>

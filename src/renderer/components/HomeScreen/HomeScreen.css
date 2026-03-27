@@ -516,6 +516,37 @@
   cursor: wait;
 }
 
+.agent-update-progress {
+  width: 100%;
+  height: 2px;
+  margin-top: 6px;
+  border-radius: 1px;
+  background: rgba(var(--accent-rgb), 0.15);
+  overflow: hidden;
+  position: relative;
+}
+
+.agent-update-progress::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40%;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 1px;
+  animation: indeterminate 1.2s ease-in-out infinite;
+}
+
+@keyframes indeterminate {
+  0% {
+    left: -40%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
 /* Add-agent card text overrides */
 .agent-add-icon {
   color: var(--text3);
@@ -776,4 +807,51 @@
 .welcome-hint {
   font-size: 11px;
   color: var(--text3);
+}
+
+/* ── Skeleton loading cards ────────────────────────────────── */
+
+.agent-card-skeleton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 12px;
+}
+
+.skeleton-line {
+  border-radius: var(--r);
+  background: linear-gradient(
+    90deg,
+    rgba(var(--accent-rgb), 0.04) 25%,
+    rgba(var(--accent-rgb), 0.1) 50%,
+    rgba(var(--accent-rgb), 0.04) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.skeleton-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+
+.skeleton-name {
+  width: 72px;
+  height: 12px;
+}
+
+.skeleton-desc {
+  width: 100px;
+  height: 10px;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
