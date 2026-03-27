@@ -65,6 +65,40 @@
   color: var(--text3);
 }
 
+/* ── Copy flash badge ─────────────────────────────────────── */
+
+.term-copy-flash {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--bg0);
+  background: var(--accent);
+  border-radius: var(--r);
+  pointer-events: none;
+  z-index: 2;
+  animation: copyFlashIn 1.2s ease-out forwards;
+}
+
+@keyframes copyFlashIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 /* ── Terminal context menu ─────────────────────────────────── */
 
 .term-context-menu {

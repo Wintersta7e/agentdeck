@@ -78,6 +78,7 @@ export function TerminalPane({
 }: TerminalPaneProps): React.JSX.Element {
   const [searchOpen, setSearchOpen] = useState(false)
   const [showWatermark, setShowWatermark] = useState(true)
+  const [copyFlash, setCopyFlash] = useState(false)
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null)
   const ctxMenuRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -223,11 +224,17 @@ export function TerminalPane({
         }
         // Ctrl+Shift+C or Ctrl+C with selection → copy
         if (e.ctrlKey && e.key === 'c' && (e.shiftKey || term.hasSelection())) {
-          navigator.clipboard.writeText(term.getSelection()).catch((err: unknown) => {
-            window.agentDeck.log.send('warn', 'terminal', 'Clipboard copy failed', {
-              err: String(err),
+          navigator.clipboard
+            .writeText(term.getSelection())
+            .then(() => {
+              setCopyFlash(true)
+              setTimeout(() => setCopyFlash(false), 1200)
             })
-          })
+            .catch((err: unknown) => {
+              window.agentDeck.log.send('warn', 'terminal', 'Clipboard copy failed', {
+                err: String(err),
+              })
+            })
           term.clearSelection()
           return false
         }
@@ -665,7 +672,13 @@ export function TerminalPane({
       switch (action) {
         case 'copy':
           if (term.hasSelection()) {
-            navigator.clipboard.writeText(term.getSelection()).catch(() => {})
+            navigator.clipboard
+              .writeText(term.getSelection())
+              .then(() => {
+                setCopyFlash(true)
+                setTimeout(() => setCopyFlash(false), 1200)
+              })
+              .catch(() => {})
           }
           break
         case 'paste':
@@ -700,6 +713,7 @@ export function TerminalPane({
           <div className="term-watermark-status">Starting\u2026</div>
         </div>
       )}
+      {copyFlash && <div className="term-copy-flash">Copied!</div>}
       {searchAddon && (
         <TerminalSearchBar
           searchAddon={searchAddon}

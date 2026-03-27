@@ -183,7 +183,11 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
 
         nodeCounterRef.current += 1
         const id = `node-${Date.now()}-${nodeCounterRef.current}`
-        const maxX = prev.nodes.reduce((mx, n) => Math.max(mx, n.x), 0)
+        // Place new nodes near the center of existing nodes, offset slightly
+        const avgX =
+          prev.nodes.length > 0
+            ? prev.nodes.reduce((sum, n) => sum + n.x, 0) / prev.nodes.length
+            : 100
         const maxY = prev.nodes.reduce((mx, n) => Math.max(mx, n.y), 0)
 
         const defaultNames: Record<WorkflowNodeType, string> = {
@@ -197,7 +201,7 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
           id,
           type,
           name: defaultNames[type],
-          x: maxX + NEW_NODE_X_OFFSET,
+          x: Math.round(avgX) + NEW_NODE_X_OFFSET,
           y: maxY > 0 ? 100 : 140,
         }
 
