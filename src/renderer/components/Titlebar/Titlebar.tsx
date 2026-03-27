@@ -143,6 +143,7 @@ export function Titlebar({
               {getProjectName(s)}
               <button
                 className="tab-close"
+                aria-label="Close session tab"
                 onClick={(e) => {
                   e.stopPropagation()
                   animateCloseSession(s.id)
@@ -164,6 +165,7 @@ export function Titlebar({
               {workflowNameMap.get(wfId) ?? 'Workflow'}
               <button
                 className="tab-close"
+                aria-label="Close workflow tab"
                 onClick={(e) => {
                   e.stopPropagation()
                   animateCloseWorkflow(wfId)
@@ -173,7 +175,7 @@ export function Titlebar({
               </button>
             </div>
           ))}
-          <div className="tab-add" onClick={onAddTab}>
+          <div className="tab-add" onClick={onAddTab} role="button" aria-label="New tab">
             <Plus size={14} />
           </div>
         </div>

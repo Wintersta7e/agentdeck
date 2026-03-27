@@ -54,7 +54,7 @@ export function AboutDialog({ onClose }: AboutDialogProps): React.JSX.Element {
   return (
     <div className="about-overlay" onClick={handleOverlayClick}>
       <PanelBox corners="all" glow="none" className="about-dialog">
-        <button className="about-close" onClick={onClose}>
+        <button className="about-close" onClick={onClose} aria-label="Close about dialog">
           <X size={16} />
         </button>
         <div className="about-name">AgentDeck</div>

@@ -170,7 +170,12 @@ function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Ele
         <span className={`wf-node-type-badge ${getTypeBadgeClass(node.type)}`}>
           {getTypeBadgeLabel(node.type)}
         </span>
-        <button className="wf-node-menu nodrag" onClick={handleMenuClick} type="button">
+        <button
+          className="wf-node-menu nodrag"
+          onClick={handleMenuClick}
+          type="button"
+          aria-label="Open node menu"
+        >
           <MoreHorizontal size={14} />
         </button>
       </div>

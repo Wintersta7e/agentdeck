@@ -96,7 +96,7 @@ export function ShortcutsDialog({ onClose }: ShortcutsDialogProps): React.JSX.El
   return (
     <div className="shortcuts-overlay" onClick={handleOverlayClick}>
       <PanelBox corners="all" glow="none" className="shortcuts-dialog">
-        <button className="shortcuts-close" onClick={onClose}>
+        <button className="shortcuts-close" onClick={onClose} aria-label="Close shortcuts dialog">
           <X size={16} />
         </button>
         <div className="shortcuts-title">Keyboard Shortcuts</div>
