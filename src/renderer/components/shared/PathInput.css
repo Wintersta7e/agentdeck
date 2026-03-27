@@ -47,3 +47,24 @@
   color: var(--amber);
   border-color: var(--amber);
 }
+
+.path-input-error {
+  border-color: var(--red);
+}
+
+.path-input-error:focus {
+  border-color: var(--red);
+}
+
+.path-input-hint {
+  position: absolute;
+  bottom: -18px;
+  left: 0;
+  font-size: 10px;
+  color: var(--red);
+  white-space: nowrap;
+}
+
+.path-input {
+  position: relative;
+}

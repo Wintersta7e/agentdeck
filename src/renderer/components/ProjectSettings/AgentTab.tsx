@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { SquareCheck, Square, Star, ChevronUp, ChevronDown } from 'lucide-react'
-import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
+import { AGENTS as SHARED_AGENTS, SAFE_FLAGS_RE } from '../../../shared/agents'
 import type { Project, AgentType } from '../../../shared/types'
 import { getProjectAgents } from '../../../shared/agent-helpers'
 
@@ -124,12 +124,16 @@ export function AgentTab({ draft, onChange }: TabProps): React.JSX.Element {
                       <div className="form-control-col">
                         <input
                           type="text"
-                          className="settings-input"
+                          className={`settings-input${getAgentFlags(agentDef.id) && !SAFE_FLAGS_RE.test(getAgentFlags(agentDef.id)) ? ' settings-input-error' : ''}`}
                           value={getAgentFlags(agentDef.id)}
                           onChange={(e) => updateAgentFlags(agentDef.id, e.target.value)}
                           maxLength={200}
                           placeholder="e.g. --model claude-opus-4-5"
                         />
+                        {getAgentFlags(agentDef.id) &&
+                          !SAFE_FLAGS_RE.test(getAgentFlags(agentDef.id)) && (
+                            <div className="form-field-error">Contains unsafe characters</div>
+                          )}
                       </div>
                     </div>
                   </div>

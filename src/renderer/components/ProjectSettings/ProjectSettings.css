@@ -301,6 +301,20 @@
   color: var(--text3);
 }
 
+.settings-input-error {
+  border-color: var(--red);
+}
+
+.settings-input-error:focus {
+  border-color: var(--red);
+}
+
+.form-field-error {
+  font-size: 10px;
+  color: var(--red);
+  margin-top: 3px;
+}
+
 /* Select */
 .select-input {
   width: 100%;
