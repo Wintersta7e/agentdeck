@@ -66,8 +66,11 @@ export const AGENTS = [
     name: 'Amazon Q',
     description: 'AWS AI developer assistant',
     versionArgs: ['--version'],
-    latestCmd: 'npm view @amzn/amazon-q-developer-cli-autoinstall version 2>/dev/null',
-    updateCmd: 'npm install -g @amzn/amazon-q-developer-cli-autoinstall@latest',
+    // Amazon Q CLI moved from npm (@amzn/amazon-q-developer-cli-autoinstall, now 404)
+    // to a standalone installer. No reliable npm version check available.
+    latestCmd: '',
+    updateCmd:
+      'q update 2>/dev/null || echo "Run: curl -sSf https://desktop-release.codewhisperer.us-east-1.amazonaws.com/latest/q-x86_64-linux.zip -o /tmp/q.zip && unzip -o /tmp/q.zip -d /tmp/q && /tmp/q/q-x86_64-linux/install.sh"',
   },
   {
     id: 'opencode',
@@ -76,8 +79,9 @@ export const AGENTS = [
     name: 'OpenCode',
     description: 'Open-source terminal AI',
     versionArgs: ['version'],
-    latestCmd: 'npm view opencode version 2>/dev/null',
-    updateCmd: 'npm install -g opencode@latest',
+    // Package renamed from 'opencode' to 'opencode-ai' on npm
+    latestCmd: 'npm view opencode-ai version 2>/dev/null',
+    updateCmd: 'npm install -g opencode-ai@latest',
   },
 ] as const
 

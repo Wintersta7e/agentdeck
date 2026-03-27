@@ -139,12 +139,23 @@ describe('checkAgentVersion', () => {
 // ─── updateAgent ────────────────────────────────────────────────────
 
 describe('updateAgent', () => {
+  // New call sequence (post safety-fix):
+  //   1. pre-flight checkAgentVersion (version cmd + latest cmd)  = 2 calls
+  //   2. resolve latest version (npm view)                        = 1 call
+  //   3. run update cmd                                           = 1 call
+  //   4. binary existence check (command -v)                      = 1 call
+  //   5. post-flight checkAgentVersion (version cmd + latest cmd) = 2 calls
+  // Total for success path: 7 calls
+
   it('resolves latest version first and installs specific version', async () => {
     enqueue(
+      { stdout: '2.1.0\n' }, // pre-flight: version
+      { stdout: '2.3.0\n' }, // pre-flight: latest
       { stdout: '2.3.0\n' }, // resolve latest via npm view
       { stdout: 'added 1 package\n' }, // update cmd (now @2.3.0)
-      { stdout: '2.3.0\n' }, // re-check: version
-      { stdout: '2.3.0\n' }, // re-check: latest
+      { stdout: '/usr/local/bin/claude\n' }, // binary check: command -v
+      { stdout: '2.3.0\n' }, // post-flight: version
+      { stdout: '2.3.0\n' }, // post-flight: latest
     )
 
     const result = await updateAgent('claude-code')
@@ -155,9 +166,9 @@ describe('updateAgent', () => {
       newVersion: '2.3.0',
       message: 'Updated to 2.3.0',
     })
-    expect(mockExecFile).toHaveBeenCalledTimes(4)
+    expect(mockExecFile).toHaveBeenCalledTimes(7)
     // Verify the install command uses the specific version, not @latest
-    const installCall = mockExecFile.mock.calls[1]
+    const installCall = mockExecFile.mock.calls[3]
     const installCmd = (installCall as unknown[])[1] as string[]
     expect(installCmd[3]).toContain('@2.3.0')
     expect(installCmd[3]).not.toContain('@latest')
@@ -165,10 +176,13 @@ describe('updateAgent', () => {
 
   it('falls back to @latest when version resolution fails', async () => {
     enqueue(
+      { stdout: '2.1.0\n' }, // pre-flight: version
+      { stdout: '2.3.0\n' }, // pre-flight: latest
       { stdout: '', err: new Error('npm registry unreachable') }, // resolve latest fails
       { stdout: 'updated\n' }, // update cmd (uses original @latest)
-      { stdout: '2.3.0\n' }, // re-check: version
-      { stdout: '2.3.0\n' }, // re-check: latest
+      { stdout: '/usr/local/bin/claude\n' }, // binary check
+      { stdout: '2.3.0\n' }, // post-flight: version
+      { stdout: '2.3.0\n' }, // post-flight: latest
     )
 
     const result = await updateAgent('claude-code')
@@ -179,10 +193,13 @@ describe('updateAgent', () => {
 
   it('returns failure when installed version does not match target', async () => {
     enqueue(
+      { stdout: '2.1.0\n' }, // pre-flight: version
+      { stdout: '2.3.0\n' }, // pre-flight: latest
       { stdout: '2.3.0\n' }, // resolve latest: 2.3.0
       { stdout: 'added 1 package\n' }, // update cmd
-      { stdout: '2.1.0\n' }, // re-check: version (still old!)
-      { stdout: '2.3.0\n' }, // re-check: latest
+      { stdout: '/usr/local/bin/claude\n' }, // binary check
+      { stdout: '2.1.0\n' }, // post-flight: version (still old!)
+      { stdout: '2.3.0\n' }, // post-flight: latest
     )
 
     const result = await updateAgent('claude-code')
@@ -195,6 +212,8 @@ describe('updateAgent', () => {
 
   it('returns failure when update command errors', async () => {
     enqueue(
+      { stdout: '2.1.0\n' }, // pre-flight: version
+      { stdout: '2.3.0\n' }, // pre-flight: latest
       { stdout: '2.3.0\n' }, // resolve latest
       { stdout: '', err: new Error('permission denied') }, // update fails
     )
@@ -223,16 +242,78 @@ describe('updateAgent', () => {
 
   it('succeeds when update has stderr noise but stdout is present', async () => {
     enqueue(
+      { stdout: '2.1.0\n' }, // pre-flight: version
+      { stdout: '2.3.0\n' }, // pre-flight: latest
       { stdout: '2.3.0\n' }, // resolve latest
       { stdout: 'added 1 package\n', stderr: 'fnm: command not found', err: new Error('exit 1') },
-      { stdout: '2.3.0\n' }, // re-check: version
-      { stdout: '2.3.0\n' }, // re-check: latest
+      { stdout: '/usr/local/bin/claude\n' }, // binary check
+      { stdout: '2.3.0\n' }, // post-flight: version
+      { stdout: '2.3.0\n' }, // post-flight: latest
     )
 
     const result = await updateAgent('claude-code')
 
     expect(result.success).toBe(true)
     expect(result.newVersion).toBe('2.3.0')
+  })
+
+  it('auto-repairs missing npm bin symlink', async () => {
+    enqueue(
+      { stdout: '2.1.0\n' }, // pre-flight: version
+      { stdout: '2.3.0\n' }, // pre-flight: latest
+      { stdout: '2.3.0\n' }, // resolve latest
+      { stdout: 'added 1 package\n' }, // update cmd
+      { stdout: '', err: new Error('not found') }, // binary check: GONE!
+      { stdout: 'repaired\n' }, // bin link repair: success
+      { stdout: '/usr/local/bin/claude\n' }, // re-check binary: found
+      { stdout: '2.3.0\n' }, // post-flight: version
+      { stdout: '2.3.0\n' }, // post-flight: latest
+    )
+
+    const result = await updateAgent('claude-code')
+
+    expect(result.success).toBe(true)
+    expect(result.newVersion).toBe('2.3.0')
+  })
+
+  it('detects binary deletion and attempts rollback when repair fails', async () => {
+    enqueue(
+      { stdout: '2.1.0\n' }, // pre-flight: version (had v2.1.0)
+      { stdout: '2.3.0\n' }, // pre-flight: latest
+      { stdout: '2.3.0\n' }, // resolve latest
+      { stdout: 'added 1 package\n' }, // update cmd
+      { stdout: '', err: new Error('not found') }, // binary check: GONE!
+      { stdout: '', err: new Error('file not found') }, // bin link repair: fails
+      { stdout: 'added 1 package\n' }, // rollback install
+      { stdout: '/usr/local/bin/claude\n' }, // rollback binary check: recovered
+    )
+
+    const result = await updateAgent('claude-code')
+
+    expect(result.success).toBe(false)
+    expect(result.newVersion).toBe('2.1.0')
+    expect(result.message).toContain('removed the claude binary')
+    expect(result.message).toContain('Rolled back to v2.1.0')
+  })
+
+  it('reports unrecoverable deletion when repair and rollback both fail', async () => {
+    enqueue(
+      { stdout: '2.1.0\n' }, // pre-flight: version
+      { stdout: '2.3.0\n' }, // pre-flight: latest
+      { stdout: '2.3.0\n' }, // resolve latest
+      { stdout: 'added 1 package\n' }, // update cmd
+      { stdout: '', err: new Error('not found') }, // binary check: GONE!
+      { stdout: '', err: new Error('file not found') }, // bin link repair: fails
+      { stdout: '', err: new Error('npm error') }, // rollback also fails
+    )
+
+    const result = await updateAgent('claude-code')
+
+    expect(result.success).toBe(false)
+    expect(result.newVersion).toBeNull()
+    expect(result.message).toContain('removed the claude binary')
+    expect(result.message).toContain('Rollback was attempted but failed')
+    expect(result.message).toContain('reinstall manually')
   })
 })
 

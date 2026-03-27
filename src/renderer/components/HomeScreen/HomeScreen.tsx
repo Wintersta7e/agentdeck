@@ -234,9 +234,12 @@ export function HomeScreen({
         addNotification('error', `Update error: ${String(err)}`)
       } finally {
         setAgentUpdating(agentId, false)
+        // Always re-detect agent availability after update to reflect real state.
+        // An update can remove a binary (npm package rename, failed install, etc.)
+        void refreshAgentStatus()
       }
     },
-    [setAgentUpdating, setAgentVersion, addNotification],
+    [setAgentUpdating, setAgentVersion, addNotification, refreshAgentStatus],
   )
 
   function getProjectStatus(projectId: string): string {
