@@ -175,6 +175,16 @@ contextBridge.exposeInMainWorld('agentDeck', {
   clipboard: {
     readFilePaths: () => ipcRenderer.invoke('clipboard:readFilePaths') as Promise<string[]>,
   },
+  wsl: {
+    onStatus: (cb: (data: { available: boolean; error?: string }) => void) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        data: { available: boolean; error?: string },
+      ): void => cb(data)
+      ipcRenderer.on('wsl:status', listener)
+      return () => ipcRenderer.removeListener('wsl:status', listener)
+    },
+  },
   onFileDrop: (cb: (wslPaths: string[]) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, wslPaths: string[]): void => cb(wslPaths)
     ipcRenderer.on('file-dropped', listener)

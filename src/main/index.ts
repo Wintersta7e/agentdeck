@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, screen } from 'electron'
+import { app, BrowserWindow, screen } from 'electron'
 import { join } from 'path'
 import { createPtyManager, type PtyManager } from './pty-manager'
 import { createProjectStore, type AppStore } from './project-store'
@@ -24,6 +24,19 @@ let mainWindow: BrowserWindow | null = null
 let ptyManager: PtyManager | null = null
 let workflowEngine: WorkflowEngine | null = null
 let appStore: AppStore | null = null
+
+// --- Crash cleanup handlers (REL-4) ---
+process.on('uncaughtException', (err) => {
+  log.error('Uncaught exception', { error: err.message, stack: err.stack })
+  if (workflowEngine) workflowEngine.stopAll()
+  if (ptyManager) ptyManager.killAll()
+  closeLogger()
+  process.exit(1)
+})
+
+process.on('unhandledRejection', (reason) => {
+  log.error('Unhandled rejection', { reason: String(reason) })
+})
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -75,11 +88,13 @@ function createWindow(): void {
   }
 
   mainWindow.on('closed', () => {
+    workflowEngine?.stopAll()
     ptyManager?.killAll()
     mainWindow = null
   })
 
   mainWindow.webContents.on('render-process-gone', () => {
+    workflowEngine?.stopAll()
     ptyManager?.killAll()
   })
 
@@ -139,25 +154,6 @@ app
     initLogger()
     log.info('App ready')
 
-    // Check for WSL2 availability — show a helpful dialog if not installed
-    try {
-      const { execFileSync } = await import('child_process')
-      execFileSync('wsl.exe', ['--status'], { timeout: 10000, stdio: 'pipe' })
-    } catch {
-      log.warn('WSL2 not detected — showing setup dialog')
-      dialog.showMessageBoxSync({
-        type: 'warning',
-        title: 'WSL2 Required',
-        message: 'Windows Subsystem for Linux (WSL2) was not detected.',
-        detail:
-          'AgentDeck requires WSL2 to run terminal sessions.\n\n' +
-          'To install WSL2, open PowerShell as Administrator and run:\n' +
-          '  wsl --install\n\n' +
-          'Then restart your computer and launch AgentDeck again.\n\n' +
-          'The app will continue to load, but terminal features will not work.',
-      })
-    }
-
     appStore = createProjectStore()
     seedTemplates(appStore)
     seedRoles(appStore)
@@ -166,6 +162,22 @@ app
 
     createWindow()
     log.info('Window created')
+
+    // Check WSL2 availability asynchronously after the window is shown,
+    // then push the result to the renderer via IPC.
+    if (mainWindow) {
+      const win = mainWindow
+      const { execFile } = await import('child_process')
+      execFile('wsl.exe', ['--status'], { timeout: 10_000 }, (err) => {
+        if (err) {
+          log.warn('WSL2 not detected', { err: String(err) })
+          win.webContents.send('wsl:status', { available: false, error: String(err) })
+        } else {
+          log.info('WSL2 detected')
+          win.webContents.send('wsl:status', { available: true })
+        }
+      })
+    }
   })
   .catch((err: unknown) => {
     log.error('Startup failed', { err: String(err) })

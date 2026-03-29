@@ -106,6 +106,9 @@ declare global {
       skills: {
         list: (opts: { projectPath?: string; includeGlobal?: boolean }) => Promise<SkillInfo[]>
       }
+      wsl: {
+        onStatus: (cb: (data: { available: boolean; error?: string }) => void) => () => void
+      }
       pickFolder: () => Promise<string | null>
       log: {
         send: (level: string, mod: string, message: string, data?: unknown) => Promise<void>

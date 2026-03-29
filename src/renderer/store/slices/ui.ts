@@ -56,6 +56,10 @@ export interface UiSlice {
   zoomFactor: number
   setZoomFactor: (factor: number) => void
 
+  // WSL status (null = checking, true = ok, false = down)
+  wslAvailable: boolean | null
+  setWslAvailable: (available: boolean) => void
+
   // Theme
   theme: string
   setTheme: (name: string) => void
@@ -207,6 +211,10 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set) => (
       window.agentDeck.log.send('debug', 'layout', 'Layout persist failed', { err: String(err) })
     })
   },
+
+  // WSL status
+  wslAvailable: null,
+  setWslAvailable: (available) => set({ wslAvailable: available }),
 
   // Zoom
   zoomFactor: 1.0,

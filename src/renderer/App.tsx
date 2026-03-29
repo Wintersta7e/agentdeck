@@ -158,6 +158,15 @@ export function App(): React.JSX.Element {
     return unsub
   }, [])
 
+  // Listen for WSL status from main process
+  const wslAvailable = useAppStore((s) => s.wslAvailable)
+  useEffect(() => {
+    const unsub = window.agentDeck.wsl.onStatus((data) => {
+      useAppStore.getState().setWslAvailable(data.available)
+    })
+    return unsub
+  }, [])
+
   // Load saved zoom level on mount
   useEffect(() => {
     window.agentDeck.zoom
@@ -334,6 +343,11 @@ export function App(): React.JSX.Element {
         isIdle={isIdle}
       />
       <div className="app-body">
+        {wslAvailable === false && (
+          <div className="wsl-warning-banner" role="alert">
+            WSL not detected — check that your distribution is running
+          </div>
+        )}
         <div
           ref={sidebarRef}
           className={`sidebar-wrapper${sidebarOpen ? '' : ' collapsed'}`}
