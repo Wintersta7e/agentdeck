@@ -136,6 +136,7 @@ export function App(): React.JSX.Element {
       window.agentDeck.pty.kill(sessionId).catch((err: unknown) => {
         window.agentDeck.log.send('debug', 'pty', 'Kill failed', { err: String(err) })
       })
+      window.agentDeck.cost.unbind(sessionId).catch(() => {})
       removeSession(sessionId)
     },
     [removeSession],
@@ -211,6 +212,7 @@ export function App(): React.JSX.Element {
     window.agentDeck.pty.kill(sessionId).catch((err: unknown) => {
       window.agentDeck.log.send('debug', 'pty', 'Kill failed', { err: String(err) })
     })
+    window.agentDeck.cost.unbind(sessionId).catch(() => {})
     window.agentDeck.worktree.discard(sessionId).catch((err: unknown) => {
       useAppStore
         .getState()
@@ -229,6 +231,7 @@ export function App(): React.JSX.Element {
     window.agentDeck.pty.kill(sessionId).catch((err: unknown) => {
       window.agentDeck.log.send('debug', 'pty', 'Kill failed', { err: String(err) })
     })
+    window.agentDeck.cost.unbind(sessionId).catch(() => {})
     window.agentDeck.worktree.keep(sessionId).catch((err: unknown) => {
       window.agentDeck.log.send('warn', 'worktree', 'Keep failed', { err: String(err) })
     })
@@ -287,6 +290,14 @@ export function App(): React.JSX.Element {
   useEffect(() => {
     const unsub = window.agentDeck.wsl.onStatus((data) => {
       useAppStore.getState().setWslAvailable(data.available)
+    })
+    return unsub
+  }, [])
+
+  // Listen for cost/token usage updates from main process
+  useEffect(() => {
+    const unsub = window.agentDeck.cost.onUpdate((data) => {
+      useAppStore.getState().setSessionUsage(data.sessionId, data.usage)
     })
     return unsub
   }, [])

@@ -424,7 +424,19 @@ export function TerminalPane({
             agentRef.current,
             agentFlagsRef.current,
           )
-          if (!cancelled) setSessionStatus(sessionId, 'running')
+          if (cancelled) return
+          // Bind cost tracking (best-effort, fire-and-forget)
+          window.agentDeck.cost
+            .bind(sessionId, {
+              agent: agentRef.current ?? '',
+              projectPath: projectPathRef.current ?? '',
+              cwd: spawnPath ?? projectPathRef.current ?? '',
+              spawnAt: spawnTimestamp,
+            })
+            .catch(() => {
+              /* cost tracking is best-effort */
+            })
+          setSessionStatus(sessionId, 'running')
         } catch (err: unknown) {
           if (cancelled) return
           window.agentDeck.log.send('error', 'terminal', `PTY spawn failed for ${sessionId}`, {
@@ -620,6 +632,7 @@ export function TerminalPane({
       } else {
         // Session removed → dispose everything
         clearWorktreePath(sessionId)
+        window.agentDeck.cost.unbind(sessionId).catch(() => {})
         try {
           webglAddon?.dispose()
         } catch {

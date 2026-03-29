@@ -4,6 +4,16 @@ import { useAppStore } from '../../store/appStore'
 import { HexDot } from '../shared/HexDot'
 import './PaneTopbar.css'
 
+function fmtTokens(n: number): string {
+  if (n < 1000) return String(n)
+  return (n / 1000).toFixed(1) + 'k'
+}
+
+function fmtCost(usd: number): string {
+  if (usd <= 0) return ''
+  return '$' + usd.toFixed(2)
+}
+
 interface PaneTopbarProps {
   sessionId: string
   focused: boolean
@@ -19,6 +29,7 @@ export const PaneTopbar = memo(function PaneTopbar({
     projectId ? s.projects.find((p) => p.id === projectId) : undefined,
   )
   const worktreeInfo = useAppStore((s) => s.worktreePaths[sessionId])
+  const usage = useAppStore((s) => s.sessionUsage[sessionId])
   const restartSession = useAppStore((s) => s.restartSession)
 
   const isTerminal = !projectId
@@ -69,6 +80,20 @@ export const PaneTopbar = memo(function PaneTopbar({
         <span className="pane-worktree-badge" title={`Worktree: ${worktreeInfo.branch}`}>
           <GitBranch size={12} />
           <span>{worktreeInfo.branch.split('/').pop()}</span>
+        </span>
+      )}
+      {usage && (usage.totalCostUsd > 0 || usage.inputTokens + usage.outputTokens > 0) && (
+        <span
+          className="pane-cost-badge"
+          title={`Input: ${usage.inputTokens} · Output: ${usage.outputTokens} · Cache read: ${usage.cacheReadTokens} · Cache write: ${usage.cacheWriteTokens}`}
+        >
+          {fmtCost(usage.totalCostUsd) && <span>{fmtCost(usage.totalCostUsd)}</span>}
+          {fmtCost(usage.totalCostUsd) && usage.inputTokens + usage.outputTokens > 0 && (
+            <span> · </span>
+          )}
+          {usage.inputTokens + usage.outputTokens > 0 && (
+            <span>{fmtTokens(usage.inputTokens + usage.outputTokens)} tokens</span>
+          )}
         </span>
       )}
       {showPath && (

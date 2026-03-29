@@ -139,3 +139,14 @@
   font-family: var(--font-mono);
   flex-shrink: 0;
 }
+
+.pane-cost-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: var(--text3);
+  margin-left: 8px;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
