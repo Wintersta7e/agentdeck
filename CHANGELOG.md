@@ -5,6 +5,47 @@ All notable changes to AgentDeck will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.7.0] - 2026-03-29
+
+### Added
+- Keyboard tab cycling: Ctrl+Tab / Ctrl+Shift+Tab
+- ConfirmDialog component for destructive actions (project/workflow deletion)
+- IPC error-to-notification middleware with user-friendly messages (12 new tests)
+- Workflow state hydration — renderer recovers running workflow status after reload
+- WSL health status banner — red warning when WSL is not detected
+- PTY spawn failure now shows error message in terminal instead of blank screen
+- Suspense spinner fallback for lazy-loaded screens
+- Agent install guidance tooltips for missing agents
+- Empty sidebar section hints (pinned, templates, workflows)
+- Sidebar path tooltips on hover
+- Workflow load failure error state
+- Resource limits: max 20 PTY sessions, max 3 concurrent workflow runs
+- Default 30-minute absolute timeout on agent nodes
+- safeStorage unavailability warning toast
+- Process cleanup handlers (uncaughtException, unhandledRejection)
+- CSP enforced via onHeadersReceived header (in addition to meta tag)
+- Smart Settings command palette action (resolves active project, disabled state)
+
+### Fixed
+- Accessibility: prefers-reduced-motion support (targeted, preserves ambient effects)
+- Accessibility: keyboard support on all interactive div elements (role, tabIndex, onKeyDown)
+- Accessibility: ARIA landmark/widget roles across sidebar, tab bars, status bar, toasts
+- Accessibility: visible focus indicators (:focus-visible)
+- Accessibility: WCAG AA color contrast on all 4 light themes (--text3 darkened)
+- Security: shellQuote for project paths in pty-manager (was double-quote interpolation)
+- Security: sessionId validation in pty:spawn handler
+- Security: block all navigation in will-navigate (was only blocking file://)
+- Reliability: async WSL check (was blocking main process up to 10s)
+- Reliability: electron-store write lock prevents concurrent save races
+- Reliability: workflowEngine.stopAll() on renderer crash and window close
+- Reliability: WSL distro fallback warning log
+- UX: tab bar horizontal scroll on overflow
+- UX: quick-open bar opens command palette instead of wizard
+- UX: replaced window.confirm with custom ConfirmDialog
+
+### Changed
+- 511 tests (up from 499)
+
 ## [4.6.1] - 2026-03-29
 
 ### Changed
