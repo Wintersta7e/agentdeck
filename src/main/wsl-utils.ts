@@ -105,6 +105,9 @@ export function getDefaultDistroAsync(): Promise<string> {
           .split('\n')
           .map((l) => l.trim())
           .filter(Boolean)[0]
+        if (!first) {
+          log.warn('Could not detect WSL distro, falling back to ' + FALLBACK_DISTRO)
+        }
         cachedDistro = first ?? FALLBACK_DISTRO
         log.debug(`Async resolved WSL distro: ${cachedDistro}`)
         resolve(cachedDistro)
