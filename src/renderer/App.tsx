@@ -357,24 +357,15 @@ export function App(): React.JSX.Element {
           contain: 'strict',
         }}
       >
-        {!reducedMotion && (
-          <>
-            <HexGrid rotation={15} />
-            <EnergyVein color="var(--accent)" count={2} speed={veinSpeed} />
-            <AmbientGlow
-              color="rgba(var(--accent-rgb), 0.15)"
-              position={[25, 15]}
-              size={600}
-              skew={-12}
-            />
-            <AmbientGlow
-              color="rgba(100, 180, 255, 0.08)"
-              position={[75, 80]}
-              size={500}
-              skew={5}
-            />
-          </>
-        )}
+        <HexGrid rotation={15} />
+        <EnergyVein color="var(--accent)" count={2} speed={reducedMotion ? 0 : veinSpeed} />
+        <AmbientGlow
+          color="rgba(var(--accent-rgb), 0.15)"
+          position={[25, 15]}
+          size={600}
+          skew={-12}
+        />
+        <AmbientGlow color="rgba(100, 180, 255, 0.08)" position={[75, 80]} size={500} skew={5} />
       </div>
       <Titlebar
         onCloseTab={handleCloseTab}
