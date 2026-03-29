@@ -5,7 +5,7 @@ A desktop terminal manager for WSL AI coding agents. Launch, manage, and orchest
 ![Electron](https://img.shields.io/badge/Electron-40-47848F?logo=electron)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)
-![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+![License: Elastic-2.0](https://img.shields.io/badge/License-Elastic--2.0-blue.svg)
 ![Tests](https://img.shields.io/badge/Tests-499_passing-brightgreen)
 
 ## Why AgentDeck?
@@ -204,7 +204,7 @@ src/
 
 ## License
 
-MIT - see [LICENSE](./LICENSE) for details.
+[Elastic License 2.0](./LICENSE) — free to use, modify, and share. You may not offer it as a hosted/managed service.
 
 ## Support
 

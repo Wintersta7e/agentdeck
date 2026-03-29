@@ -3,7 +3,7 @@
   "version": "4.6.0",
   "description": "Electron desktop app for managing WSL agent sessions",
   "main": "./out/main/index.js",
-  "license": "MIT",
+  "license": "Elastic-2.0",
   "author": "Wintersta7e",
   "homepage": "https://github.com/Wintersta7e/agentdeck#readme",
   "repository": {
