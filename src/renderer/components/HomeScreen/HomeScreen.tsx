@@ -286,7 +286,18 @@ export function HomeScreen({
         </div>
 
         <PanelBox corners="all" glow="none" className="home-quick-open">
-          <div className="quick-open" onClick={openWizard}>
+          <div
+            className="quick-open"
+            onClick={openWizard}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                openWizard()
+              }
+            }}
+            role="button"
+            tabIndex={0}
+          >
             <span className="quick-open-icon">
               <Search size={14} />
             </span>
@@ -380,6 +391,14 @@ export function HomeScreen({
                       className={`project-card stagger-item ${status === 'running' ? 'running' : ''} ${status === 'error' ? 'error' : ''}`}
                       style={{ animationDelay: `${index * 60}ms` }}
                       onClick={() => onOpenProject(p)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          onOpenProject(p)
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
                       onContextMenu={(e) => {
                         e.preventDefault()
                         setCardMenu({ x: e.clientX, y: e.clientY, projectId: p.id })
@@ -544,7 +563,18 @@ export function HomeScreen({
               </PanelBox>
             )
           })}
-          <div className="agent-card add-agent" onClick={() => openCommandPalette('agents')}>
+          <div
+            className="agent-card add-agent"
+            onClick={() => openCommandPalette('agents')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                openCommandPalette('agents')
+              }
+            }}
+            role="button"
+            tabIndex={0}
+          >
             <div className="agent-card-icon agent-add-icon">
               <Plus size={20} />
             </div>

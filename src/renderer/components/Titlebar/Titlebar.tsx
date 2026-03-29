@@ -109,7 +109,19 @@ export function Titlebar({
 
   return (
     <div className="titlebar">
-      <div className="titlebar-logo" onClick={() => setCurrentView('home')} title="Home">
+      <div
+        className="titlebar-logo"
+        onClick={() => setCurrentView('home')}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            setCurrentView('home')
+          }
+        }}
+        role="button"
+        tabIndex={0}
+        title="Home"
+      >
         <div className={`logo-mark${isIdle ? '' : ' logo-mark--active'}`} />
         <div className="logo-text">
           Agent<span>Deck</span>
@@ -126,7 +138,7 @@ export function Titlebar({
       )}
       {currentView === 'template-editor' && <div className="titlebar-center">Templates</div>}
       {(sessionList.length > 0 || openWorkflowIds.length > 0) && (
-        <div className="tab-bar">
+        <div className="tab-bar" role="tablist">
           {sessionList.map((s) => (
             <div
               key={s.id}
@@ -135,6 +147,16 @@ export function Titlebar({
                 setActiveSession(s.id)
                 setCurrentView('session')
               }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  setActiveSession(s.id)
+                  setCurrentView('session')
+                }
+              }}
+              role="tab"
+              tabIndex={0}
+              aria-selected={s.id === activeSessionId && currentView === 'session'}
             >
               <HexDot
                 status={s.status === 'running' ? 'live' : s.status === 'error' ? 'error' : 'idle'}
@@ -158,6 +180,15 @@ export function Titlebar({
               key={wfId}
               className={`tab tab-workflow${wfId === activeWorkflowId && currentView === 'workflow' ? ' active' : ''}${closingTabs.has(wfId) ? ' closing' : ''}`}
               onClick={() => openWorkflow(wfId)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  openWorkflow(wfId)
+                }
+              }}
+              role="tab"
+              tabIndex={0}
+              aria-selected={wfId === activeWorkflowId && currentView === 'workflow'}
             >
               <span className="tab-wf-icon">
                 <Hexagon size={12} />
@@ -175,7 +206,19 @@ export function Titlebar({
               </button>
             </div>
           ))}
-          <div className="tab-add" onClick={onAddTab} role="button" aria-label="New tab">
+          <div
+            className="tab-add"
+            onClick={onAddTab}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onAddTab()
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            aria-label="New tab"
+          >
             <Plus size={14} />
           </div>
         </div>
