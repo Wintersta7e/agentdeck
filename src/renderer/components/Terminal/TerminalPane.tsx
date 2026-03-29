@@ -358,8 +358,12 @@ export function TerminalPane({
       if (!cancelled) term.options.theme = getXtermTheme(t)
     })
 
+    // Track spawn time so the exit handler can detect quick exits (< 2s = likely failure)
+    let spawnTimestamp = 0
+
     // Only spawn on first mount — reattached terminals already have a live PTY
     if (!isReattached) {
+      spawnTimestamp = Date.now()
       const { cols, rows } = term
       window.agentDeck.pty
         .spawn(
@@ -380,6 +384,11 @@ export function TerminalPane({
           window.agentDeck.log.send('error', 'terminal', `PTY spawn failed for ${sessionId}`, {
             err: String(err),
           })
+          try {
+            term.write('\r\n\x1b[31m Session failed to start. Is WSL running?\x1b[0m\r\n')
+          } catch {
+            /* terminal disposed */
+          }
           setSessionStatus(sessionId, 'exited')
         })
     }
@@ -426,8 +435,25 @@ export function TerminalPane({
       if (filtered) window.agentDeck.pty.write(sessionId, filtered)
     })
 
-    const unsubExit = window.agentDeck.pty.onExit(sessionId, () => {
+    const QUICK_EXIT_MS = 2000
+    const unsubExit = window.agentDeck.pty.onExit(sessionId, (exitCode) => {
+      const isSpawnFailure = exitCode === -1
+      const isQuickExit = spawnTimestamp > 0 && Date.now() - spawnTimestamp < QUICK_EXIT_MS
+
+      // Show a visible error message for spawn failures or suspiciously quick exits
+      if (isSpawnFailure || isQuickExit) {
+        try {
+          term.write('\r\n\x1b[31m Session failed to start. Is WSL running?\x1b[0m\r\n')
+        } catch {
+          /* terminal disposed */
+        }
+      }
+
       setSessionStatus(sessionId, 'exited')
+
+      // Do NOT auto-close on spawn failure — let the user see the error and close manually
+      if (isSpawnFailure) return
+
       const timer = setTimeout(() => {
         exitTimerMap.delete(sessionId)
         removeSession(sessionId)
