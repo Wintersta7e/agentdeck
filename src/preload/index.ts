@@ -185,6 +185,13 @@ contextBridge.exposeInMainWorld('agentDeck', {
       return () => ipcRenderer.removeListener('wsl:status', listener)
     },
   },
+  security: {
+    onEncryptionUnavailable: (cb: () => void) => {
+      const listener = (): void => cb()
+      ipcRenderer.on('security:encryption-unavailable', listener)
+      return () => ipcRenderer.removeListener('security:encryption-unavailable', listener)
+    },
+  },
   onFileDrop: (cb: (wslPaths: string[]) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, wslPaths: string[]): void => cb(wslPaths)
     ipcRenderer.on('file-dropped', listener)

@@ -167,6 +167,16 @@ export function App(): React.JSX.Element {
     return unsub
   }, [])
 
+  // Listen for encryption unavailability warning
+  useEffect(() => {
+    const unsub = window.agentDeck.security.onEncryptionUnavailable(() => {
+      useAppStore
+        .getState()
+        .addNotification('warning', 'Encryption unavailable — API keys are stored as plaintext')
+    })
+    return unsub
+  }, [])
+
   // Load saved zoom level on mount
   useEffect(() => {
     window.agentDeck.zoom

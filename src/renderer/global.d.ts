@@ -109,6 +109,9 @@ declare global {
       wsl: {
         onStatus: (cb: (data: { available: boolean; error?: string }) => void) => () => void
       }
+      security: {
+        onEncryptionUnavailable: (cb: () => void) => () => void
+      }
       pickFolder: () => Promise<string | null>
       log: {
         send: (level: string, mod: string, message: string, data?: unknown) => Promise<void>

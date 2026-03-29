@@ -1,4 +1,4 @@
-import { app, BrowserWindow, screen } from 'electron'
+import { app, BrowserWindow, safeStorage, screen } from 'electron'
 import { join } from 'path'
 import { createPtyManager, type PtyManager } from './pty-manager'
 import { createProjectStore, type AppStore } from './project-store'
@@ -162,6 +162,14 @@ app
 
     createWindow()
     log.info('Window created')
+
+    // Warn renderer if encryption is unavailable (secrets stored as plaintext)
+    if (!safeStorage.isEncryptionAvailable() && mainWindow) {
+      log.warn('safeStorage encryption unavailable — secrets stored as plaintext')
+      mainWindow.webContents.once('did-finish-load', () => {
+        mainWindow?.webContents.send('security:encryption-unavailable')
+      })
+    }
 
     // Check WSL2 availability asynchronously after the window is shown,
     // then push the result to the renderer via IPC.
