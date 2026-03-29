@@ -55,7 +55,9 @@ export const createProjectsSlice: StateCreator<AppState, [], [], ProjectsSlice> 
       const hasInstalled = Object.values(status).some((v) => v)
       if (hasInstalled) {
         void window.agentDeck.agents.checkUpdates(status).catch((err: unknown) => {
-          console.warn('checkUpdates failed', err)
+          window.agentDeck.log.send('warn', 'agents', 'checkUpdates failed', {
+            err: String(err),
+          })
         })
       }
     } catch (err) {

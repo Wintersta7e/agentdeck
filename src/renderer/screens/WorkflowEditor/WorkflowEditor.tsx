@@ -17,6 +17,7 @@ import WorkflowRunDialog from './WorkflowRunDialog'
 import WorkflowToolbar from './WorkflowToolbar'
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog'
 import { useWorkflowActions } from './useWorkflowActions'
+import { handleIpcError } from '../../utils/ipcErrorHandler'
 import './WorkflowEditor.css'
 
 interface WorkflowEditorProps {
@@ -75,7 +76,7 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
         window.agentDeck.log.send('error', 'workflow-editor', 'Auto-save failed', {
           err: String(err),
         })
-        useAppStore.getState().addNotification('error', `Workflow auto-save failed: ${String(err)}`)
+        handleIpcError(err, 'Workflow auto-save failed')
       })
     }, AUTO_SAVE_DEBOUNCE_MS)
   }, [])

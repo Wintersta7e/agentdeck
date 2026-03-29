@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { useAppStore } from '../../store/appStore'
+import { handleIpcError } from '../../utils/ipcErrorHandler'
 import type { Workflow, Project, WorkflowExport } from '../../../shared/types'
 
 interface WorkflowActions {
@@ -33,6 +34,7 @@ export function useWorkflowActions(
             err: String(err),
             workflowId,
           })
+          handleIpcError(err, 'Workflow run failed')
           const s = useAppStore.getState()
           s.setWorkflowStatus(workflowId, 'error')
           s.addWorkflowLog(workflowId, {
@@ -60,7 +62,7 @@ export function useWorkflowActions(
       URL.revokeObjectURL(url)
       addNotification('info', 'Workflow exported')
     } catch (err) {
-      addNotification('error', `Export failed: ${String(err)}`)
+      handleIpcError(err, 'Failed to export workflow')
     }
   }, [workflowId, workflow, addNotification])
 
@@ -112,7 +114,7 @@ export function useWorkflowActions(
         useAppStore.getState().setWorkflows(workflows)
         useAppStore.getState().openWorkflow(result.workflow.id)
       } catch (err) {
-        addNotification('error', `Import failed: ${String(err)}`)
+        handleIpcError(err, 'Failed to import workflow')
       }
     }
     input.click()
@@ -128,7 +130,7 @@ export function useWorkflowActions(
       useAppStore.getState().setWorkflows(workflows)
       useAppStore.getState().openWorkflow(newWf.id)
     } catch (err) {
-      addNotification('error', `Duplicate failed: ${String(err)}`)
+      handleIpcError(err, 'Failed to duplicate workflow')
     }
   }, [workflowId, addNotification])
 

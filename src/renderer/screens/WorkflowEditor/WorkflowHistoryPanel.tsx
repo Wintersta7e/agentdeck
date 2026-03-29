@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { RefreshCw, Trash2, ChevronRight } from 'lucide-react'
+import { handleIpcError } from '../../utils/ipcErrorHandler'
 import type { WorkflowRun, WorkflowNodeRun } from '../../../shared/types'
 import './WorkflowHistoryPanel.css'
 
@@ -153,6 +154,7 @@ export default function WorkflowHistoryPanel({
         setRuns(result)
       })
       .catch((err: unknown) => {
+        handleIpcError(err, 'Failed to load workflow history')
         window.agentDeck.log.send('error', 'workflow-history', 'Failed to load runs', {
           err: String(err),
           workflowId,
@@ -173,6 +175,7 @@ export default function WorkflowHistoryPanel({
         if (!cancelled) setRuns(result)
       })
       .catch((err: unknown) => {
+        if (!cancelled) handleIpcError(err, 'Failed to load workflow history')
         window.agentDeck.log.send('error', 'workflow-history', 'Failed to load runs', {
           err: String(err),
           workflowId,
@@ -199,6 +202,7 @@ export default function WorkflowHistoryPanel({
           if (expandedId === runId) setExpandedId(null)
         })
         .catch((err: unknown) => {
+          handleIpcError(err, 'Failed to delete run')
           window.agentDeck.log.send('error', 'workflow-history', 'Failed to delete run', {
             err: String(err),
             runId,
