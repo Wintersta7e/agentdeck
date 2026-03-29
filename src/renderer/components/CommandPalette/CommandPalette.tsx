@@ -37,6 +37,7 @@ interface PaletteItem {
   detail: string
   badge?: string | undefined
   kbd?: string | undefined
+  disabled?: boolean | undefined
   /** Original data reference for executing the action */
   data?: Project | undefined
 }
@@ -324,14 +325,38 @@ function PaletteInner({
       name: 'New Template',
       detail: 'Create a new prompt template',
     })
+    // Resolve the best project for Settings: active session's project > most recent > none
+    const settingsProject = (() => {
+      // Parse session snapshot to find active session's project
+      const sessEntries = sessionSnapshot
+        ? sessionSnapshot.split(',').map((e) => {
+            const parts = e.split('|')
+            return { id: parts[0] ?? '', projectId: parts[1] ?? '' }
+          })
+        : []
+      const activeId = useAppStore.getState().activeSessionId
+      const activeSess = activeId ? sessEntries.find((s) => s.id === activeId) : undefined
+      if (activeSess?.projectId) {
+        const p = projects.find((proj) => proj.id === activeSess.projectId)
+        if (p) return p
+      }
+      // Fall back to most recently used project
+      const sorted = [...projects].sort((a, b) => (b.lastOpened ?? 0) - (a.lastOpened ?? 0))
+      return sorted[0]
+    })()
+
+    const hasProjects = projects.length > 0
     items.push({
       type: 'action',
       id: 'action-settings',
       icon: <Settings size={14} />,
-      iconClass: '',
+      iconClass: hasProjects ? '' : 'muted',
       name: 'Settings',
-      detail: 'App settings, agents, keybindings',
-      kbd: 'Ctrl+,',
+      detail: hasProjects
+        ? `Project settings \u00B7 ${settingsProject?.name ?? 'Unknown'}`
+        : 'Create a project first',
+      kbd: hasProjects ? 'Ctrl+,' : undefined,
+      disabled: !hasProjects,
     })
     items.push({
       type: 'action',
@@ -499,9 +524,20 @@ function PaletteInner({
           } else if (item.id === 'action-new-template') {
             useAppStore.getState().openTemplateEditor()
           } else if (item.id === 'action-settings') {
-            const firstProject = useAppStore.getState().projects[0]
-            if (firstProject) {
-              useAppStore.getState().openSettings(firstProject.id)
+            if (item.disabled) break
+            // Resolve best project: active session's project > most recent
+            const state = useAppStore.getState()
+            const activeSess = state.activeSessionId
+              ? state.sessions[state.activeSessionId]
+              : undefined
+            const activeProject = activeSess?.projectId
+              ? state.projects.find((p) => p.id === activeSess.projectId)
+              : undefined
+            const target =
+              activeProject ??
+              [...state.projects].sort((a, b) => (b.lastOpened ?? 0) - (a.lastOpened ?? 0))[0]
+            if (target) {
+              state.openSettings(target.id)
             }
           } else if (item.id === 'action-about') {
             onAbout?.()
@@ -666,8 +702,8 @@ function PaletteInner({
                     return (
                       <div
                         key={item.id}
-                        className={`result-item${isSelected ? ' selected' : ''}`}
-                        onClick={() => executeItem(item)}
+                        className={`result-item${isSelected ? ' selected' : ''}${item.disabled ? ' disabled' : ''}`}
+                        onClick={() => !item.disabled && executeItem(item)}
                         onMouseEnter={() => setSelectedIndex(flatIdx)}
                       >
                         <div className={`result-icon${item.iconClass ? ` ${item.iconClass}` : ''}`}>
