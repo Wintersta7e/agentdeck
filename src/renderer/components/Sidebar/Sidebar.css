@@ -10,10 +10,13 @@
 .sidebar-section {
   padding: 12px 12px 6px;
   overflow-y: auto;
+  flex-shrink: 0;
+  max-height: 35%;
 }
 
 .sidebar-section.flex-fill {
   flex: 1;
+  min-height: 120px;
   overflow-y: auto;
   mask-image: linear-gradient(
     to bottom,

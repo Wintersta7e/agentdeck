@@ -1,6 +1,6 @@
 # AgentDeck User Guide
 
-> **Version**: 4.5.0
+> **Version**: 4.6.0
 
 AgentDeck is a desktop command center for managing AI coding agents through WSL2 terminals. This guide covers every feature from first launch to advanced workflow automation.
 
@@ -40,7 +40,6 @@ AgentDeck is a desktop command center for managing AI coding agents through WSL2
 Run the portable executable (`AgentDeck-{version}-portable.exe`) or start from source:
 
 ```bash
-cd agentdeck
 npm install --no-bin-links
 npm run dev
 ```

@@ -5,6 +5,19 @@ A desktop terminal manager for WSL AI coding agents. Launch, manage, and orchest
 ![Electron](https://img.shields.io/badge/Electron-40-47848F?logo=electron)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+![Tests](https://img.shields.io/badge/Tests-499_passing-brightgreen)
+
+## Why AgentDeck?
+
+If you work with AI coding agents, you know the pain: each agent is its own CLI, its own terminal tab, its own workflow. Switching between Claude Code, Codex, Aider, and others means juggling windows, re-typing project paths, and losing context.
+
+AgentDeck puts all your agents in one place. Open a project, pick an agent, and you're coding. Split the screen to run two agents side-by-side. Chain agents into automated workflows with conditions, loops, and variables. Keep your prompt templates, project configs, and session history organized instead of scattered across terminals.
+
+It's a desktop app, not a web service — your code stays local, your API keys are encrypted at rest, and everything runs through your own WSL environment.
+
+<!-- TODO: Add screenshots/GIFs showcasing the UI -->
+<!-- ![AgentDeck Screenshot](docs/assets/screenshot.png) -->
 
 ## Overview
 
@@ -119,7 +132,7 @@ npm run dev
 # Build for production (validates TypeScript)
 npm run build
 
-# Run tests (436 tests)
+# Run tests (499 tests)
 npm test
 
 # Lint code (zero-warning policy)
@@ -158,7 +171,7 @@ src/
 │   ├── components/          # Titlebar, Sidebar, SplitView, CommandPalette,
 │   │                        # HomeScreen, StatusBar, Terminal, RightPanel, etc.
 │   ├── screens/             # WorkflowEditor, ProjectSettings, TemplateEditor
-│   ├── store/appStore.ts    # Zustand store (single store, granular selectors)
+│   ├── store/               # Zustand store (6 slices: sessions, ui, projects, workflows, templates, notifications)
 │   ├── hooks/               # useProjects, usePty, useRolesMap
 │   └── styles/              # tokens.css (design system), global.css
 └── shared/
@@ -179,12 +192,19 @@ src/
 | [node-pty](https://github.com/microsoft/node-pty) | Pseudo-terminal (WSL sessions) |
 | [Zustand](https://zustand-demo.pmnd.rs) | State management |
 | [React Flow](https://reactflow.dev) | Visual workflow node editor |
-| [Vitest 4](https://vitest.dev) | Testing framework (436 tests) |
+| [Vitest 4](https://vitest.dev) | Testing framework (499 tests) |
 | [ESLint 9](https://eslint.org) | Linting (flat config, zero-warning policy) |
 
 ## Documentation
 
 - **[User Guide](./docs/USER-GUIDE.md)** - Detailed usage instructions
+- **[Changelog](./CHANGELOG.md)** - Version history and release notes
+- **[Contributing](./CONTRIBUTING.md)** - How to contribute
+- **[Security](./SECURITY.md)** - Reporting vulnerabilities
+
+## License
+
+MIT - see [LICENSE](./LICENSE) for details.
 
 ## Support
 

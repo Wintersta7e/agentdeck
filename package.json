@@ -1,9 +1,30 @@
 {
   "name": "agentdeck",
   "version": "4.6.0",
-  "private": true,
   "description": "Electron desktop app for managing WSL agent sessions",
   "main": "./out/main/index.js",
+  "license": "MIT",
+  "author": "Wintersta7e",
+  "homepage": "https://github.com/Wintersta7e/agentdeck#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Wintersta7e/agentdeck.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Wintersta7e/agentdeck/issues"
+  },
+  "keywords": [
+    "electron",
+    "terminal",
+    "wsl",
+    "ai",
+    "coding-agent",
+    "claude",
+    "codex",
+    "aider",
+    "workflow",
+    "desktop"
+  ],
   "engines": {
     "node": ">=22.12.0"
   },
