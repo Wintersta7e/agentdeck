@@ -55,11 +55,11 @@ const handlers = (
   ipcMain as unknown as { __handlers: Map<string, (...args: unknown[]) => unknown> }
 ).__handlers
 
-function callHandler(channel: string, ...args: unknown[]): unknown {
+async function callHandler(channel: string, ...args: unknown[]): Promise<unknown> {
   const handler = handlers.get(channel)
   if (!handler) throw new Error(`No handler for ${channel}`)
   // First arg is the IPC event object (unused), rest are actual args
-  return handler({}, ...args)
+  return await handler({}, ...args)
 }
 
 beforeEach(() => {
@@ -81,99 +81,99 @@ describe('createProjectStore', () => {
     expect(ipcMain.handle).toHaveBeenCalledWith('store:deleteRole', expect.any(Function))
   })
 
-  it('returns empty projects list initially', () => {
+  it('returns empty projects list initially', async () => {
     createProjectStore()
-    const projects = callHandler('store:getProjects')
+    const projects = await callHandler('store:getProjects')
     expect(projects).toEqual([])
   })
 
-  it('saves and retrieves a project', () => {
+  it('saves and retrieves a project', async () => {
     createProjectStore()
     const project: Partial<Project> = { name: 'Test', path: '/home/test' }
-    const saved = callHandler('store:saveProject', project) as Project
+    const saved = (await callHandler('store:saveProject', project)) as Project
     expect(saved.id).toBeTruthy()
     expect(saved.name).toBe('Test')
 
-    const projects = callHandler('store:getProjects') as Project[]
+    const projects = (await callHandler('store:getProjects')) as Project[]
     expect(projects).toHaveLength(1)
     expect(projects[0]?.name).toBe('Test')
   })
 
-  it('updates an existing project', () => {
+  it('updates an existing project', async () => {
     createProjectStore()
-    const saved = callHandler('store:saveProject', {
+    const saved = (await callHandler('store:saveProject', {
       name: 'Original',
       path: '/home/test',
-    }) as Project
-    callHandler('store:saveProject', { id: saved.id, name: 'Updated', path: '/home/test' })
+    })) as Project
+    await callHandler('store:saveProject', { id: saved.id, name: 'Updated', path: '/home/test' })
 
-    const projects = callHandler('store:getProjects') as Project[]
+    const projects = (await callHandler('store:getProjects')) as Project[]
     expect(projects).toHaveLength(1)
     expect(projects[0]?.name).toBe('Updated')
   })
 
-  it('deletes a project', () => {
+  it('deletes a project', async () => {
     createProjectStore()
-    const saved = callHandler('store:saveProject', {
+    const saved = (await callHandler('store:saveProject', {
       name: 'ToDelete',
       path: '/tmp',
-    }) as Project
-    callHandler('store:deleteProject', saved.id)
+    })) as Project
+    await callHandler('store:deleteProject', saved.id)
 
-    const projects = callHandler('store:getProjects') as Project[]
+    const projects = (await callHandler('store:getProjects')) as Project[]
     expect(projects).toHaveLength(0)
   })
 
-  it('rejects null project on save', () => {
+  it('rejects null project on save', async () => {
     createProjectStore()
-    expect(() => callHandler('store:saveProject', null)).toThrow('non-null object')
+    await expect(callHandler('store:saveProject', null)).rejects.toThrow('non-null object')
   })
 
-  it('encrypts secret env vars on save', () => {
+  it('encrypts secret env vars on save', async () => {
     createProjectStore()
     const envVars: EnvVar[] = [
       { id: 'e1', key: 'API_KEY', value: 'secret123', secret: true },
       { id: 'e2', key: 'DEBUG', value: 'true', secret: false },
     ]
-    callHandler('store:saveProject', { name: 'With Env', path: '/tmp', envVars })
+    await callHandler('store:saveProject', { name: 'With Env', path: '/tmp', envVars })
 
     expect(safeStorage.encryptString).toHaveBeenCalledWith('secret123')
   })
 
-  it('decrypts secret env vars on read', () => {
+  it('decrypts secret env vars on read', async () => {
     createProjectStore()
     const envVars: EnvVar[] = [{ id: 'e1', key: 'API_KEY', value: 'secret123', secret: true }]
-    callHandler('store:saveProject', { name: 'With Env', path: '/tmp', envVars })
+    await callHandler('store:saveProject', { name: 'With Env', path: '/tmp', envVars })
 
-    const projects = callHandler('store:getProjects') as Project[]
+    const projects = (await callHandler('store:getProjects')) as Project[]
     // decryptString should have been called during read
     expect(safeStorage.decryptString).toHaveBeenCalled()
     // The value should come back decrypted
     expect(projects[0]?.envVars?.[0]?.key).toBe('API_KEY')
   })
 
-  it('handles encryption unavailable gracefully', () => {
+  it('handles encryption unavailable gracefully', async () => {
     vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(false)
     createProjectStore()
     const envVars: EnvVar[] = [{ id: 'e1', key: 'KEY', value: 'plain', secret: true }]
-    callHandler('store:saveProject', { name: 'No Enc', path: '/tmp', envVars })
+    await callHandler('store:saveProject', { name: 'No Enc', path: '/tmp', envVars })
 
     // Should not encrypt when unavailable
     expect(safeStorage.encryptString).not.toHaveBeenCalled()
   })
 
-  it('auto-migrates legacy single-agent project to agents[] on load', () => {
+  it('auto-migrates legacy single-agent project to agents[] on load', async () => {
     createProjectStore()
     // Save a project with legacy agent field (bypass migration by saving with agents undefined)
-    const saved = callHandler('store:saveProject', {
+    const saved = (await callHandler('store:saveProject', {
       name: 'Legacy',
       path: '/home/legacy',
       agent: 'goose',
       agentFlags: '--verbose',
-    }) as Project
+    })) as Project
 
     // Reading back should trigger migration
-    const projects = callHandler('store:getProjects') as Project[]
+    const projects = (await callHandler('store:getProjects')) as Project[]
     const migrated = projects.find((p) => p.id === saved.id)
     expect(migrated).toBeDefined()
     expect(migrated?.agents).toEqual([{ agent: 'goose', agentFlags: '--verbose', isDefault: true }])
@@ -182,15 +182,15 @@ describe('createProjectStore', () => {
     expect(migrated?.agentFlags).toBeUndefined()
   })
 
-  it('does not re-migrate projects that already have agents[]', () => {
+  it('does not re-migrate projects that already have agents[]', async () => {
     createProjectStore()
-    const saved = callHandler('store:saveProject', {
+    const saved = (await callHandler('store:saveProject', {
       name: 'Modern',
       path: '/home/modern',
       agents: [{ agent: 'claude-code', isDefault: true }, { agent: 'aider' }],
-    }) as Project
+    })) as Project
 
-    const projects = callHandler('store:getProjects') as Project[]
+    const projects = (await callHandler('store:getProjects')) as Project[]
     const project = projects.find((p) => p.id === saved.id)
     expect(project?.agents).toHaveLength(2)
     expect(project?.agents?.[0]?.agent).toBe('claude-code')
