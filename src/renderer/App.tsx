@@ -10,6 +10,7 @@ import { CommandPalette } from './components/CommandPalette/CommandPalette'
 import { AboutDialog } from './components/AboutDialog/AboutDialog'
 import { ShortcutsDialog } from './components/ShortcutsDialog/ShortcutsDialog'
 import { NotificationToast } from './components/NotificationToast/NotificationToast'
+import { ConfirmDialog } from './components/shared/ConfirmDialog'
 import { HexGrid } from './components/shared/HexGrid'
 import { EnergyVein } from './components/shared/EnergyVein'
 import { AmbientGlow } from './components/shared/AmbientGlow'
@@ -81,6 +82,12 @@ export function App(): React.JSX.Element {
   const openShortcuts = useCallback(() => setShortcutsOpen(true), [])
   const closeShortcuts = useCallback(() => setShortcutsOpen(false), [])
 
+  const [worktreeCloseDialog, setWorktreeCloseDialog] = useState<{
+    sessionId: string
+    branch: string
+    message: string
+  } | null>(null)
+
   const handleNewTerminal = useCallback(() => {
     const sessionId = `terminal-${Date.now()}`
     addSession(sessionId, '')
@@ -123,10 +130,9 @@ export function App(): React.JSX.Element {
     [addSession, updateProject],
   )
 
-  const handleCloseTab = useCallback(
+  /** Kill PTY + remove session (non-worktree path, or after worktree cleanup). */
+  const closeSessionImmediate = useCallback(
     (sessionId: string) => {
-      // Kill PTY immediately on explicit close — don't rely only on
-      // TerminalPane cleanup which may race with React's unmount timing.
       window.agentDeck.pty.kill(sessionId).catch((err: unknown) => {
         window.agentDeck.log.send('debug', 'pty', 'Kill failed', { err: String(err) })
       })
@@ -134,6 +140,107 @@ export function App(): React.JSX.Element {
     },
     [removeSession],
   )
+
+  const handleCloseTab = useCallback(
+    (sessionId: string) => {
+      // Read worktree state fresh from store to avoid stale closure
+      const wt = useAppStore.getState().worktreePaths[sessionId]
+      // Non-worktree session — release primary slot and close immediately.
+      if (!wt?.isolated) {
+        const projectId = useAppStore.getState().sessions[sessionId]?.projectId
+        if (projectId) {
+          window.agentDeck.worktree.releasePrimary(projectId, sessionId).catch((err: unknown) => {
+            window.agentDeck.log.send('debug', 'worktree', 'releasePrimary failed', {
+              err: String(err),
+            })
+          })
+        }
+        closeSessionImmediate(sessionId)
+        return
+      }
+
+      // Worktree session — inspect before closing.
+      window.agentDeck.worktree
+        .inspect(sessionId)
+        .then((result) => {
+          if (result.hasChanges || result.hasUnmerged) {
+            // Dirty worktree — show confirmation dialog.
+            const parts: string[] = []
+            if (result.hasChanges) parts.push('uncommitted changes')
+            if (result.hasUnmerged) parts.push('unmerged commits')
+            setWorktreeCloseDialog({
+              sessionId,
+              branch: result.branch,
+              message: `Branch "${result.branch}" has ${parts.join(' and ')}.\nDiscard will delete the worktree and branch.`,
+            })
+          } else {
+            // Clean worktree — discard silently.
+            window.agentDeck.pty.kill(sessionId).catch((err: unknown) => {
+              window.agentDeck.log.send('debug', 'pty', 'Kill failed', { err: String(err) })
+            })
+            window.agentDeck.worktree.discard(sessionId).catch((err: unknown) => {
+              useAppStore
+                .getState()
+                .addNotification(
+                  'warning',
+                  'Failed to clean up worktree — it may need manual removal',
+                )
+              window.agentDeck.log.send('warn', 'worktree', 'Discard failed', {
+                err: String(err),
+              })
+            })
+            useAppStore.getState().clearWorktreePath(sessionId)
+            removeSession(sessionId)
+          }
+        })
+        .catch((err: unknown) => {
+          // Inspect failed — fall back to normal close to avoid blocking.
+          window.agentDeck.log.send('warn', 'worktree', 'Inspect failed, closing anyway', {
+            err: String(err),
+          })
+          closeSessionImmediate(sessionId)
+        })
+    },
+    [removeSession, closeSessionImmediate],
+  )
+
+  /** Worktree dialog: "Discard" — delete branch + worktree. */
+  const handleWorktreeDiscard = useCallback(() => {
+    if (!worktreeCloseDialog) return
+    const { sessionId } = worktreeCloseDialog
+    window.agentDeck.pty.kill(sessionId).catch((err: unknown) => {
+      window.agentDeck.log.send('debug', 'pty', 'Kill failed', { err: String(err) })
+    })
+    window.agentDeck.worktree.discard(sessionId).catch((err: unknown) => {
+      useAppStore
+        .getState()
+        .addNotification('warning', 'Failed to clean up worktree — it may need manual removal')
+      window.agentDeck.log.send('warn', 'worktree', 'Discard failed', { err: String(err) })
+    })
+    useAppStore.getState().clearWorktreePath(sessionId)
+    removeSession(sessionId)
+    setWorktreeCloseDialog(null)
+  }, [worktreeCloseDialog, removeSession])
+
+  /** Worktree dialog: "Keep Branch" — preserve branch, remove worktree. */
+  const handleWorktreeKeep = useCallback(() => {
+    if (!worktreeCloseDialog) return
+    const { sessionId } = worktreeCloseDialog
+    window.agentDeck.pty.kill(sessionId).catch((err: unknown) => {
+      window.agentDeck.log.send('debug', 'pty', 'Kill failed', { err: String(err) })
+    })
+    window.agentDeck.worktree.keep(sessionId).catch((err: unknown) => {
+      window.agentDeck.log.send('warn', 'worktree', 'Keep failed', { err: String(err) })
+    })
+    useAppStore.getState().clearWorktreePath(sessionId)
+    removeSession(sessionId)
+    setWorktreeCloseDialog(null)
+  }, [worktreeCloseDialog, removeSession])
+
+  /** Worktree dialog: "Cancel" — abort close, keep session alive. */
+  const handleWorktreeCancel = useCallback(() => {
+    setWorktreeCloseDialog(null)
+  }, [])
 
   const handleAddTab = useCallback(() => {
     useAppStore.getState().openCommandPalette()
@@ -443,6 +550,15 @@ export function App(): React.JSX.Element {
       />
       {aboutOpen && <AboutDialog onClose={closeAbout} />}
       {shortcutsOpen && <ShortcutsDialog onClose={closeShortcuts} />}
+      <ConfirmDialog
+        open={worktreeCloseDialog !== null}
+        title="Close Worktree Session"
+        message={worktreeCloseDialog?.message ?? ''}
+        confirmLabel="Discard"
+        onConfirm={handleWorktreeDiscard}
+        onCancel={handleWorktreeCancel}
+        extraAction={{ label: 'Keep Branch', onClick: handleWorktreeKeep }}
+      />
       <NotificationToast />
     </div>
   )

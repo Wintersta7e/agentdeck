@@ -35,6 +35,7 @@ export function StatusBar({ onAboutClick, onShortcutsClick }: StatusBarProps): R
   const openCommandPalette = useAppStore((s) => s.openCommandPalette)
   const zoomFactor = useAppStore((s) => s.zoomFactor)
   const wslDistro = useAppStore((s) => s.wslDistro)
+  const hasWorktree = useAppStore((s) => Object.values(s.worktreePaths).some((w) => w.isolated))
 
   const [appVersion, setAppVersion] = useState('')
 
@@ -61,6 +62,12 @@ export function StatusBar({ onAboutClick, onShortcutsClick }: StatusBarProps): R
       </div>
       <span className="status-sep">|</span>
       <div className="status-item">WSL2{wslDistro ? ` \u00b7 ${wslDistro}` : ''}</div>
+      {hasWorktree && (
+        <>
+          <span className="status-sep">|</span>
+          <span className="status-item status-worktree">Worktree</span>
+        </>
+      )}
       {activeProjectName && (
         <>
           <span className="status-sep">|</span>

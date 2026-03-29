@@ -8,6 +8,8 @@ import { initLogger, createLogger, closeLogger } from './logger'
 import { seedWorkflows } from './workflow-seeds'
 import { createWorkflowEngine } from './workflow-engine'
 import type { WorkflowEngine } from './workflow-engine'
+import { createWorktreeManager, type WorktreeManager } from './worktree-manager'
+import { createWslGitPort } from './git-port'
 import {
   registerPtyHandlers,
   registerWindowHandlers,
@@ -16,6 +18,7 @@ import {
   registerWorkflowHandlers,
   registerUtilHandlers,
   registerSkillHandlers,
+  registerWorktreeHandlers,
 } from './ipc'
 
 const log = createLogger('app')
@@ -24,6 +27,7 @@ let mainWindow: BrowserWindow | null = null
 let ptyManager: PtyManager | null = null
 let workflowEngine: WorkflowEngine | null = null
 let appStore: AppStore | null = null
+let worktreeManager: WorktreeManager | null = null
 
 // --- Crash cleanup handlers (REL-4) ---
 process.on('uncaughtException', (err) => {
@@ -155,6 +159,7 @@ function registerIpcHandlers(store: AppStore): void {
     },
   )
   registerUtilHandlers()
+  registerWorktreeHandlers(() => worktreeManager)
 }
 
 app
@@ -167,6 +172,45 @@ app
     seedTemplates(appStore)
     seedRoles(appStore)
     await seedWorkflows(appStore)
+
+    const gitPort = createWslGitPort()
+    // Resolve WSL $HOME for worktree storage (can't use ~ — Node treats it literally)
+    let wslHome: string | null = null
+    try {
+      const { execFile: execFileCb } = await import('child_process')
+      wslHome = await new Promise<string>((resolve, reject) => {
+        execFileCb(
+          'wsl.exe',
+          ['bash', '-lc', 'echo $HOME'],
+          { timeout: 5000, encoding: 'utf-8' },
+          (err, stdout) => {
+            if (err) reject(err)
+            else resolve(stdout.trim())
+          },
+        )
+      })
+    } catch (err) {
+      log.warn('Could not resolve WSL $HOME — worktree isolation disabled', {
+        err: String(err),
+      })
+    }
+
+    const registryDir = join(app.getPath('userData'), 'worktree-registry')
+    if (wslHome) {
+      const wslWorktreeDir = `${wslHome}/.agentdeck/worktrees`
+      worktreeManager = createWorktreeManager(
+        gitPort,
+        (id) => {
+          const projects = appStore?.get('projects') ?? []
+          return projects.find((p) => p.id === id)?.path
+        },
+        registryDir,
+        wslWorktreeDir,
+      )
+    } else {
+      log.warn('Worktree manager not created — WSL $HOME unknown')
+    }
+
     registerIpcHandlers(appStore)
 
     createWindow()
@@ -179,6 +223,11 @@ app
         mainWindow?.webContents.send('security:encryption-unavailable')
       })
     }
+
+    // Prune orphaned worktrees from previous sessions (fire-and-forget).
+    worktreeManager?.pruneOrphans().catch((err: unknown) => {
+      log.warn('Worktree prune failed', { err: String(err) })
+    })
 
     // Check WSL2 availability asynchronously after the window is shown,
     // then push the result to the renderer via IPC.

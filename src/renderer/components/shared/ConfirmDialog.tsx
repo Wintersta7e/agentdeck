@@ -9,6 +9,8 @@ interface ConfirmDialogProps {
   confirmLabel?: string | undefined
   onConfirm: () => void
   onCancel: () => void
+  /** Optional third action button (rendered between Cancel and Confirm). */
+  extraAction?: { label: string; onClick: () => void } | undefined
 }
 
 export function ConfirmDialog({
@@ -18,6 +20,7 @@ export function ConfirmDialog({
   confirmLabel,
   onConfirm,
   onCancel,
+  extraAction,
 }: ConfirmDialogProps): React.JSX.Element | null {
   const trapRef = useFocusTrap<HTMLDivElement>()
 
@@ -69,6 +72,15 @@ export function ConfirmDialog({
           <button type="button" className="confirm-dialog-btn-cancel" onClick={onCancel}>
             Cancel
           </button>
+          {extraAction && (
+            <button
+              type="button"
+              className="confirm-dialog-btn-cancel"
+              onClick={extraAction.onClick}
+            >
+              {extraAction.label}
+            </button>
+          )}
           <button type="button" className="confirm-dialog-btn-confirm" onClick={onConfirm}>
             {confirmLabel ?? 'Confirm'}
           </button>

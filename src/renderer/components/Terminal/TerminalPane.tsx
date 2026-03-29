@@ -102,6 +102,11 @@ export function TerminalPane({
   const writeRafRef = useRef(0)
   const setSessionStatus = useAppStore((s) => s.setSessionStatus)
   const removeSession = useAppStore((s) => s.removeSession)
+  const setWorktreePath = useAppStore((s) => s.setWorktreePath)
+  const clearWorktreePath = useAppStore((s) => s.clearWorktreePath)
+  // Look up projectId from session (stable per sessionId lifetime)
+  const projectId = useAppStore((s) => s.sessions[sessionId]?.projectId ?? '')
+  const projectIdRef = useRef(projectId)
 
   /**
    * Schedule a single coalesced fit in the next animation frame.
@@ -363,23 +368,64 @@ export function TerminalPane({
 
     // Only spawn on first mount — reattached terminals already have a live PTY
     if (!isReattached) {
-      spawnTimestamp = Date.now()
-      const { cols, rows } = term
-      window.agentDeck.pty
-        .spawn(
-          sessionId,
-          cols,
-          rows,
-          projectPathRef.current,
-          startupRef.current,
-          envRef.current,
-          agentRef.current,
-          agentFlagsRef.current,
-        )
-        .then(() => {
+      const doSpawn = async (): Promise<void> => {
+        if (cancelled) return
+
+        // Resolve worktree path for project sessions (bare terminals use projectPath directly)
+        let spawnPath = projectPathRef.current
+        const pid = projectIdRef.current
+        if (pid) {
+          try {
+            const result = await window.agentDeck.worktree.acquire(pid, sessionId)
+            if (cancelled) {
+              // Tab closed while acquire was in-flight — discard the orphaned worktree
+              if (result.isolated) {
+                window.agentDeck.worktree.discard(sessionId).catch((err: unknown) => {
+                  window.agentDeck.log.send('warn', 'terminal', 'Orphan worktree cleanup failed', {
+                    sessionId,
+                    err: String(err),
+                  })
+                })
+              }
+              return
+            }
+            setWorktreePath(sessionId, result)
+            spawnPath = result.path
+          } catch (err: unknown) {
+            if (cancelled) return
+            window.agentDeck.log.send(
+              'error',
+              'terminal',
+              `Worktree acquire failed for ${sessionId}`,
+              { err: String(err) },
+            )
+            try {
+              term.write(
+                '\r\n\x1b[31m Failed to acquire worktree. Falling back to project path.\x1b[0m\r\n',
+              )
+            } catch {
+              /* terminal disposed */
+            }
+            // Fall back to original project path
+          }
+        }
+
+        if (cancelled) return
+        spawnTimestamp = Date.now()
+        const { cols, rows } = term
+        try {
+          await window.agentDeck.pty.spawn(
+            sessionId,
+            cols,
+            rows,
+            spawnPath,
+            startupRef.current,
+            envRef.current,
+            agentRef.current,
+            agentFlagsRef.current,
+          )
           if (!cancelled) setSessionStatus(sessionId, 'running')
-        })
-        .catch((err: unknown) => {
+        } catch (err: unknown) {
           if (cancelled) return
           window.agentDeck.log.send('error', 'terminal', `PTY spawn failed for ${sessionId}`, {
             err: String(err),
@@ -390,7 +436,13 @@ export function TerminalPane({
             /* terminal disposed */
           }
           setSessionStatus(sessionId, 'exited')
+        }
+      }
+      doSpawn().catch((err: unknown) => {
+        window.agentDeck.log.send('error', 'terminal', `Spawn sequence failed for ${sessionId}`, {
+          err: String(err),
         })
+      })
     }
 
     // Buffer data received while hidden, batch visible writes per animation frame.
@@ -567,6 +619,7 @@ export function TerminalPane({
         })
       } else {
         // Session removed → dispose everything
+        clearWorktreePath(sessionId)
         try {
           webglAddon?.dispose()
         } catch {
@@ -582,7 +635,7 @@ export function TerminalPane({
         })
       }
     }
-  }, [sessionId, setSessionStatus, removeSession, scheduleFit])
+  }, [sessionId, setSessionStatus, removeSession, scheduleFit, setWorktreePath, clearWorktreePath])
 
   // Clear search decorations when search is dismissed via Ctrl+Shift+F toggle
   // (Escape already clears in the TerminalSearchBar component)
