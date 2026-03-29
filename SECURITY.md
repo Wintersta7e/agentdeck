@@ -6,7 +6,7 @@ If you discover a security vulnerability in AgentDeck, please report it responsi
 
 **Do NOT open a public GitHub issue for security vulnerabilities.**
 
-Instead, please email **wintersta7e@users.noreply.github.com** with:
+Instead, use [GitHub's private vulnerability reporting](https://github.com/Wintersta7e/agentdeck/security/advisories/new) to submit your report. Include:
 
 1. A description of the vulnerability
 2. Steps to reproduce
