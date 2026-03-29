@@ -293,3 +293,12 @@
   color: var(--text3);
   font-size: 12px;
 }
+
+.wf-load-error {
+  padding: 16px 20px;
+  background: var(--red-dim);
+  color: var(--red);
+  font-size: 12px;
+  text-align: center;
+  border-bottom: 1px solid var(--red);
+}

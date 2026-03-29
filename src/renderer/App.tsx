@@ -17,6 +17,7 @@ import { AmbientGlow } from './components/shared/AmbientGlow'
 import { useAppStore } from './store/appStore'
 import { useProjects } from './hooks/useProjects'
 import { useAmbientState } from './hooks/useAmbientState'
+import { useReducedMotion } from './hooks/useReducedMotion'
 import type { ActivityEvent, AgentConfig, Project } from '../shared/types'
 import './App.css'
 
@@ -86,6 +87,7 @@ export function App(): React.JSX.Element {
   }, [addSession])
 
   const { veinSpeed, isIdle } = useAmbientState()
+  const reducedMotion = useReducedMotion()
 
   const { updateProject } = useProjects()
 
@@ -152,6 +154,42 @@ export function App(): React.JSX.Element {
       if (!sid) return
       const escaped = wslPaths.map((p) => (p.includes(' ') ? `"${p}"` : p)).join(' ')
       window.agentDeck.pty.write(sid, escaped)
+    })
+    return unsub
+  }, [])
+
+  // Hydrate workflow execution state from main process on mount (REL-8)
+  useEffect(() => {
+    window.agentDeck.workflows
+      .getRunning()
+      .then((ids) => {
+        const store = useAppStore.getState()
+        for (const id of ids) {
+          store.setWorkflowStatus(id, 'running')
+        }
+      })
+      .catch((err: unknown) => {
+        window.agentDeck.log.send('warn', 'app', 'Failed to hydrate workflow state', {
+          err: String(err),
+        })
+      })
+  }, [])
+
+  // Listen for WSL status from main process
+  const wslAvailable = useAppStore((s) => s.wslAvailable)
+  useEffect(() => {
+    const unsub = window.agentDeck.wsl.onStatus((data) => {
+      useAppStore.getState().setWslAvailable(data.available)
+    })
+    return unsub
+  }, [])
+
+  // Listen for encryption unavailability warning
+  useEffect(() => {
+    const unsub = window.agentDeck.security.onEncryptionUnavailable(() => {
+      useAppStore
+        .getState()
+        .addNotification('warning', 'Encryption unavailable — API keys are stored as plaintext')
     })
     return unsub
   }, [])
@@ -243,6 +281,19 @@ export function App(): React.JSX.Element {
         useAppStore.getState().setPaneLayout(Number(e.key) as 1 | 2 | 3)
         return
       }
+      if (e.ctrlKey && e.key === 'Tab') {
+        e.preventDefault()
+        const state = useAppStore.getState()
+        const ids = Object.keys(state.sessions)
+        if (ids.length === 0) return
+        const currentIdx = state.activeSessionId ? ids.indexOf(state.activeSessionId) : -1
+        const next = e.shiftKey
+          ? (currentIdx - 1 + ids.length) % ids.length
+          : (currentIdx + 1) % ids.length
+        const nextId = ids[next]
+        if (nextId) state.setActiveSession(nextId)
+        return
+      }
       if (e.key === 'Escape') {
         const state = useAppStore.getState()
         if (state.commandPaletteOpen) {
@@ -307,7 +358,7 @@ export function App(): React.JSX.Element {
         }}
       >
         <HexGrid rotation={15} />
-        <EnergyVein color="var(--accent)" count={2} speed={veinSpeed} />
+        <EnergyVein color="var(--accent)" count={2} speed={reducedMotion ? 0 : veinSpeed} />
         <AmbientGlow
           color="rgba(var(--accent-rgb), 0.15)"
           position={[25, 15]}
@@ -323,6 +374,11 @@ export function App(): React.JSX.Element {
         isIdle={isIdle}
       />
       <div className="app-body">
+        {wslAvailable === false && (
+          <div className="wsl-warning-banner" role="alert">
+            WSL not detected — check that your distribution is running
+          </div>
+        )}
         <div
           ref={sidebarRef}
           className={`sidebar-wrapper${sidebarOpen ? '' : ' collapsed'}`}
@@ -349,7 +405,7 @@ export function App(): React.JSX.Element {
               onOpenProjectWithAgent={handleOpenProjectWithAgent}
             />
           )}
-          <Suspense fallback={null}>
+          <Suspense fallback={<div className="suspense-spinner" />}>
             {currentView === 'wizard' && <NewProjectWizard onCreateProject={handleOpenProject} />}
             {currentView === 'settings' && <ProjectSettings key={settingsProjectId} />}
             {currentView === 'template-editor' && <TemplateEditor />}

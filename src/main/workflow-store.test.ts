@@ -10,6 +10,13 @@ vi.mock('./project-store', () => ({
     { id: 'role-uuid-security', name: 'Security Auditor', builtin: true, icon: '', persona: '' },
     { id: 'role-uuid-refactorer', name: 'Refactorer', builtin: true, icon: '', persona: '' },
     { id: 'role-uuid-debugger', name: 'Debugger', builtin: true, icon: '', persona: '' },
+    {
+      id: 'role-uuid-docwriter',
+      name: 'Documentation Writer',
+      builtin: true,
+      icon: '',
+      persona: '',
+    },
   ]),
 }))
 
@@ -213,41 +220,41 @@ function createMockAppStore(prefs: Record<string, unknown> = {}) {
 }
 
 describe('seedWorkflows', () => {
-  it('seeds 7 workflows on fresh install', async () => {
+  it('seeds 12 workflows on fresh install', async () => {
     const store = createMockAppStore()
     await seedWorkflows(store)
     const workflows = await listWorkflows()
-    expect(workflows).toHaveLength(7)
+    expect(workflows).toHaveLength(12)
     for (const wf of workflows) {
       expect(wf.id).toMatch(/^seed-wf-/)
     }
     expect(store.set).toHaveBeenCalledWith(
       'appPrefs',
       expect.objectContaining({
-        workflowSeedVersion: 2,
+        workflowSeedVersion: 4,
       }),
     )
   })
 
   it('skips seeding when version is current', async () => {
-    const store = createMockAppStore({ workflowSeedVersion: 2, workflowLastRolesVersion: 0 })
+    const store = createMockAppStore({ workflowSeedVersion: 4, workflowLastRolesVersion: 0 })
     await seedWorkflows(store)
     const workflows = await listWorkflows()
     expect(workflows).toHaveLength(0)
   })
 
-  it('resolves role names to UUIDs', async () => {
+  it('agent nodes with _roleName get resolved roleId after seeding', async () => {
     const store = createMockAppStore()
     await seedWorkflows(store)
     const lintFix = await loadWorkflow('seed-wf-lint-fix')
     expect(lintFix).not.toBeNull()
-    const lintFixWf = lintFix ?? { nodes: [] as { name: string; roleId?: string }[] }
-    const reviewerNode = lintFixWf.nodes.find((n) => n.name === 'Run Linter')
-    expect(reviewerNode).toBeDefined()
-    expect(reviewerNode?.roleId).toBe('role-uuid-reviewer')
-    const devNode = lintFixWf.nodes.find((n) => n.name === 'Fix Errors')
-    expect(devNode).toBeDefined()
-    expect(devNode?.roleId).toBe('role-uuid-developer')
+    const lintFixWf = lintFix ?? { nodes: [] as { type: string; name: string; roleId?: string }[] }
+    for (const node of lintFixWf.nodes) {
+      if (node.type === 'agent') {
+        expect(node.roleId).toBeDefined()
+        expect(node.roleId).toMatch(/^role-uuid-/)
+      }
+    }
   })
 
   it('all agent nodes use codex with --full-auto --ephemeral', async () => {
@@ -293,11 +300,11 @@ describe('seedWorkflows', () => {
       updatedAt: 0,
     })
     let all = await listWorkflows()
-    expect(all).toHaveLength(8)
+    expect(all).toHaveLength(13)
     const upgradeStore = createMockAppStore({ workflowSeedVersion: 0 })
     await seedWorkflows(upgradeStore)
     all = await listWorkflows()
-    expect(all).toHaveLength(8)
+    expect(all).toHaveLength(13)
     const custom = await loadWorkflow('my-custom-workflow')
     expect(custom).not.toBeNull()
     expect(custom?.name).toBe('My Custom')

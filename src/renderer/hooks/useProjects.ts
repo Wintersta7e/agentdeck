@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from 'react'
 import { useAppStore } from '../store/appStore'
+import { handleIpcError } from '../utils/ipcErrorHandler'
 import type { Project, Role, Template } from '../../shared/types'
 
 interface UseProjectsReturn {
@@ -45,12 +46,7 @@ export function useProjects(): UseProjectsReturn {
         }
       } catch (err) {
         if (!cancelled) {
-          useAppStore
-            .getState()
-            .addNotification(
-              'error',
-              `Failed to load data: ${err instanceof Error ? err.message : String(err)}`,
-            )
+          handleIpcError(err, 'Failed to load data')
         }
       } finally {
         loadingInFlight = false
@@ -76,7 +72,7 @@ export function useProjects(): UseProjectsReturn {
         }
         return saved
       } catch (err) {
-        useAppStore.getState().addNotification('error', `Failed to add project: ${String(err)}`)
+        handleIpcError(err, 'Failed to add project')
         throw err
       }
     },
@@ -89,7 +85,7 @@ export function useProjects(): UseProjectsReturn {
         const saved: Project = await window.agentDeck.store.saveProject(project)
         setProjects(useAppStore.getState().projects.map((p) => (p.id === saved.id ? saved : p)))
       } catch (err) {
-        useAppStore.getState().addNotification('error', `Failed to update project: ${String(err)}`)
+        handleIpcError(err, 'Failed to update project')
         throw err
       }
     },
@@ -102,7 +98,7 @@ export function useProjects(): UseProjectsReturn {
         await window.agentDeck.store.deleteProject(id)
         setProjects(useAppStore.getState().projects.filter((p) => p.id !== id))
       } catch (err) {
-        useAppStore.getState().addNotification('error', `Failed to delete project: ${String(err)}`)
+        handleIpcError(err, 'Failed to delete project')
         throw err
       }
     },
@@ -121,7 +117,7 @@ export function useProjects(): UseProjectsReturn {
         }
         return saved
       } catch (err) {
-        useAppStore.getState().addNotification('error', `Failed to add template: ${String(err)}`)
+        handleIpcError(err, 'Failed to add template')
         throw err
       }
     },
@@ -134,7 +130,7 @@ export function useProjects(): UseProjectsReturn {
         const saved: Template = await window.agentDeck.store.saveTemplate(template)
         setTemplates(useAppStore.getState().templates.map((t) => (t.id === saved.id ? saved : t)))
       } catch (err) {
-        useAppStore.getState().addNotification('error', `Failed to update template: ${String(err)}`)
+        handleIpcError(err, 'Failed to update template')
         throw err
       }
     },
@@ -147,7 +143,7 @@ export function useProjects(): UseProjectsReturn {
         await window.agentDeck.store.deleteTemplate(id)
         setTemplates(useAppStore.getState().templates.filter((t) => t.id !== id))
       } catch (err) {
-        useAppStore.getState().addNotification('error', `Failed to delete template: ${String(err)}`)
+        handleIpcError(err, 'Failed to delete template')
         throw err
       }
     },
@@ -166,7 +162,7 @@ export function useProjects(): UseProjectsReturn {
         }
         return saved
       } catch (err) {
-        useAppStore.getState().addNotification('error', `Failed to add role: ${String(err)}`)
+        handleIpcError(err, 'Failed to add role')
         throw err
       }
     },
@@ -179,7 +175,7 @@ export function useProjects(): UseProjectsReturn {
         const saved: Role = await window.agentDeck.store.saveRole(role)
         setRoles(useAppStore.getState().roles.map((r) => (r.id === saved.id ? saved : r)))
       } catch (err) {
-        useAppStore.getState().addNotification('error', `Failed to update role: ${String(err)}`)
+        handleIpcError(err, 'Failed to update role')
         throw err
       }
     },
@@ -192,7 +188,7 @@ export function useProjects(): UseProjectsReturn {
         await window.agentDeck.store.deleteRole(id)
         setRoles(useAppStore.getState().roles.filter((r) => r.id !== id))
       } catch (err) {
-        useAppStore.getState().addNotification('error', `Failed to delete role: ${String(err)}`)
+        handleIpcError(err, 'Failed to delete role')
         throw err
       }
     },

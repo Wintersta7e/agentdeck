@@ -1,5 +1,6 @@
 import { useEffect, useReducer, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
+import type { SkillInfo } from '../../../shared/types'
 import './MemoryTab.css'
 
 interface MemoryState {
@@ -38,6 +39,41 @@ export function MemoryTab(): React.JSX.Element {
     loading: true,
   })
   const [refreshKey, setRefreshKey] = useState(0)
+  // SK-R5: Track previous projectPath to clear stale skills on change.
+  // Uses [skills, prevPath] tuple so we can detect path changes during
+  // render and reset synchronously without a ref.
+  const [skillState, setSkillState] = useState<{
+    skills: SkillInfo[]
+    forPath: string | null
+  }>({ skills: [], forPath: projectPath })
+
+  // If path changed, reset skills synchronously during render
+  if (skillState.forPath !== projectPath) {
+    setSkillState({ skills: [], forPath: projectPath })
+  }
+
+  const skills = skillState.skills
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function fetchSkills(): Promise<void> {
+      if (!projectPath) {
+        return
+      }
+      try {
+        const result = await window.agentDeck.skills.list({ projectPath, includeGlobal: true })
+        if (!cancelled) setSkillState({ skills: result, forPath: projectPath })
+      } catch {
+        if (!cancelled) setSkillState({ skills: [], forPath: projectPath })
+      }
+    }
+    void fetchSkills()
+
+    return () => {
+      cancelled = true
+    }
+  }, [projectPath])
 
   useEffect(() => {
     let cancelled = false
@@ -104,6 +140,19 @@ export function MemoryTab(): React.JSX.Element {
         <pre className="memory-file-content">{state.agentsMd}</pre>
       ) : (
         <div className="panel-placeholder">File not found</div>
+      )}
+
+      {skills.length > 0 && (
+        <>
+          <div className="panel-section-header">Codex Skills ({String(skills.length)})</div>
+          {skills.map((s) => (
+            <div key={s.id} className="memory-skill-item">
+              <strong>{s.name}</strong>
+              <span className="memory-skill-scope">{s.scope}</span>
+              <div className="memory-skill-desc">{s.description}</div>
+            </div>
+          ))}
+        </>
       )}
     </>
   )

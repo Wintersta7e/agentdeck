@@ -94,6 +94,17 @@ export function ProjectSettings(): React.JSX.Element | null {
 
   return (
     <div className="settings-main">
+      {/* Breadcrumb */}
+      <div className="settings-breadcrumb">
+        <button type="button" className="settings-breadcrumb-link" onClick={closeSettings}>
+          Projects
+        </button>
+        <span className="settings-breadcrumb-sep">/</span>
+        <span className="settings-breadcrumb-current">{draft.name || 'Untitled'}</span>
+        <span className="settings-breadcrumb-sep">/</span>
+        <span className="settings-breadcrumb-current">Settings</span>
+      </div>
+
       {/* Unsaved warning strip */}
       {isDirty && (
         <div className="unsaved-warning">

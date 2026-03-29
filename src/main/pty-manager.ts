@@ -5,8 +5,11 @@ import { createLogger } from './logger'
 import { ptyBus } from './pty-bus'
 import { toWslPath } from './wsl-utils'
 import { AGENT_BINARY_MAP, SAFE_FLAGS_RE } from '../shared/agents'
+import { shellQuote } from './node-runners'
 
 const log = createLogger('pty-manager')
+
+const MAX_CONCURRENT_SESSIONS = 20
 
 /**
  * Map of agent name → npm package info for agents installed via npm.
@@ -75,6 +78,11 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
       return
     }
 
+    if (sessions.size >= MAX_CONCURRENT_SESSIONS) {
+      log.warn('Max concurrent sessions reached', { limit: MAX_CONCURRENT_SESSIONS })
+      throw new Error(`Maximum concurrent sessions reached (${MAX_CONCURRENT_SESSIONS})`)
+    }
+
     const cwd = process.env['USERPROFILE'] ?? process.cwd()
     // Set COLORFGBG so TUI apps (Codex/crossterm) detect dark background without
     // sending OSC 10/11 color queries that leak as visible text in xterm.js.
@@ -104,12 +112,14 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
     // Build the full command sequence: cd to project dir, startup commands, then launch agent
     const commands: string[] = []
     if (projectPath) {
-      let wslPath = toWslPath(projectPath)
-      // Expand leading ~ so it works inside double quotes (bash doesn't expand ~ in quotes)
-      if (wslPath === '~' || wslPath.startsWith('~/')) {
-        wslPath = '$HOME' + wslPath.slice(1)
+      const wslPath = toWslPath(projectPath)
+      if (wslPath === '~') {
+        commands.push('cd "$HOME"')
+      } else if (wslPath.startsWith('~/')) {
+        commands.push(`cd "$HOME"/${shellQuote(wslPath.slice(2))}`)
+      } else {
+        commands.push(`cd ${shellQuote(wslPath)}`)
       }
-      commands.push(`cd "${wslPath}"`)
     }
     if (startupCommands) {
       // Filter out cd and agent commands — those are handled by projectPath auto-cd

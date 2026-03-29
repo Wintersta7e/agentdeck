@@ -30,6 +30,7 @@ interface WorkflowCanvasProps {
   onConnect: (fromNodeId: string, toNodeId: string, branch?: 'true' | 'false') => void
   onUpdateNode: (node: WorkflowNode) => void
   onDeleteNode: (nodeId: string) => void
+  onDuplicateNode: (nodeId: string) => void
   onDeleteEdge: (edgeId: string) => void
 }
 
@@ -55,6 +56,7 @@ function toFlowNodes(
   selectedId: string | null,
   onUpdate: (node: WorkflowNode) => void,
   onDelete: (nodeId: string) => void,
+  onDuplicate: (nodeId: string) => void,
 ): WfNode[] {
   return wf.nodes.map((n) => ({
     id: n.id,
@@ -66,6 +68,7 @@ function toFlowNodes(
       status: statuses[n.id] ?? 'idle',
       onUpdateNode: onUpdate,
       onDeleteNode: onDelete,
+      onDuplicateNode: onDuplicate,
     } satisfies WorkflowNodeData,
   }))
 }
@@ -95,6 +98,7 @@ export function WorkflowCanvas({
   onConnect,
   onUpdateNode,
   onDeleteNode,
+  onDuplicateNode,
   onDeleteEdge,
 }: WorkflowCanvasProps): React.JSX.Element {
   // ── Local state for React Flow ──
@@ -121,7 +125,14 @@ export function WorkflowCanvas({
     setPrev({ workflow, statuses: nodeStatuses, selectedId: selectedNodeId })
     setLocalNodes(
       workflow
-        ? toFlowNodes(workflow, nodeStatuses, selectedNodeId, onUpdateNode, onDeleteNode)
+        ? toFlowNodes(
+            workflow,
+            nodeStatuses,
+            selectedNodeId,
+            onUpdateNode,
+            onDeleteNode,
+            onDuplicateNode,
+          )
         : [],
     )
   }

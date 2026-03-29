@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import type { WorkflowVariable } from '../../../shared/types'
 import { FolderOpen } from 'lucide-react'
+import { useFocusTrap } from '../../hooks/useFocusTrap'
 import './WorkflowRunDialog.css'
 
 interface WorkflowRunDialogProps {
@@ -27,7 +28,8 @@ export default function WorkflowRunDialog({
   onCancel,
 }: WorkflowRunDialogProps): React.JSX.Element {
   const [values, setValues] = useState<Record<string, string>>(() => buildDefaults(variables))
-  const backdropRef = useRef<HTMLDivElement>(null)
+  const [submitted, setSubmitted] = useState(false)
+  const trapRef = useFocusTrap<HTMLDivElement>()
 
   const setValue = useCallback((name: string, value: string) => {
     setValues((prev) => ({ ...prev, [name]: value }))
@@ -48,7 +50,7 @@ export default function WorkflowRunDialog({
   // Click on backdrop closes dialog
   const handleBackdropClick = useCallback(
     (e: React.MouseEvent) => {
-      if (e.target === backdropRef.current) {
+      if (e.target === e.currentTarget) {
         onCancel()
       }
     },
@@ -74,6 +76,7 @@ export default function WorkflowRunDialog({
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault()
+      setSubmitted(true)
       if (canStart) {
         onStart(values)
       }
@@ -82,7 +85,14 @@ export default function WorkflowRunDialog({
   )
 
   return (
-    <div className="wf-run-dialog-backdrop" ref={backdropRef} onClick={handleBackdropClick}>
+    <div
+      className="wf-run-dialog-backdrop"
+      ref={trapRef}
+      onClick={handleBackdropClick}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Configure workflow variables"
+    >
       <form className="wf-run-dialog" onSubmit={handleSubmit}>
         <div className="wf-run-dialog-header">
           <h3 className="wf-run-dialog-title">Configure Variables</h3>
@@ -96,6 +106,7 @@ export default function WorkflowRunDialog({
               value={values[v.name] ?? ''}
               onChange={setValue}
               onBrowse={handleBrowse}
+              showErrors={submitted}
             />
           ))}
         </div>
@@ -118,6 +129,7 @@ interface VariableFieldProps {
   value: string
   onChange: (name: string, value: string) => void
   onBrowse: (name: string) => Promise<void>
+  showErrors: boolean
 }
 
 function VariableField({
@@ -125,9 +137,11 @@ function VariableField({
   value,
   onChange,
   onBrowse,
+  showErrors,
 }: VariableFieldProps): React.JSX.Element {
   const label = variable.label ?? variable.name
   const required = isRequired(variable)
+  const hasError = showErrors && required && !value.trim()
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -141,7 +155,7 @@ function VariableField({
   }, [onBrowse, variable.name])
 
   return (
-    <div className="wf-run-field">
+    <div className={`wf-run-field${hasError ? ' wf-run-field--error' : ''}`}>
       <label>
         {label}
         {required && <span className="wf-run-field-required">*</span>}
@@ -174,6 +188,7 @@ function VariableField({
           ))}
         </select>
       )}
+      {hasError && <span className="wf-run-field-error">Required</span>}
     </div>
   )
 }

@@ -90,7 +90,7 @@ describe('createPtyManager', () => {
 
       const mockProc = vi.mocked(pty.spawn).mock.results[0]?.value
       expect(mockProc.write).toHaveBeenCalledWith(
-        expect.stringContaining('cd "/home/user/project"'),
+        expect.stringContaining("cd '/home/user/project'"),
       )
     })
 
@@ -103,7 +103,7 @@ describe('createPtyManager', () => {
 
       const mockProc = vi.mocked(pty.spawn).mock.results[0]?.value
       expect(mockProc.write).toHaveBeenCalledWith(
-        expect.stringContaining('cd "/mnt/c/Users/dev/project"'),
+        expect.stringContaining("cd '/mnt/c/Users/dev/project'"),
       )
     })
 

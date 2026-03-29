@@ -77,6 +77,10 @@ export function TerminalPane({
   scrollback,
 }: TerminalPaneProps): React.JSX.Element {
   const [searchOpen, setSearchOpen] = useState(false)
+  const [showWatermark, setShowWatermark] = useState(true)
+  const [copyFlash, setCopyFlash] = useState(false)
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null)
+  const ctxMenuRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
@@ -220,11 +224,17 @@ export function TerminalPane({
         }
         // Ctrl+Shift+C or Ctrl+C with selection → copy
         if (e.ctrlKey && e.key === 'c' && (e.shiftKey || term.hasSelection())) {
-          navigator.clipboard.writeText(term.getSelection()).catch((err: unknown) => {
-            window.agentDeck.log.send('warn', 'terminal', 'Clipboard copy failed', {
-              err: String(err),
+          navigator.clipboard
+            .writeText(term.getSelection())
+            .then(() => {
+              setCopyFlash(true)
+              setTimeout(() => setCopyFlash(false), 1200)
             })
-          })
+            .catch((err: unknown) => {
+              window.agentDeck.log.send('warn', 'terminal', 'Clipboard copy failed', {
+                err: String(err),
+              })
+            })
           term.clearSelection()
           return false
         }
@@ -348,8 +358,12 @@ export function TerminalPane({
       if (!cancelled) term.options.theme = getXtermTheme(t)
     })
 
+    // Track spawn time so the exit handler can detect quick exits (< 2s = likely failure)
+    let spawnTimestamp = 0
+
     // Only spawn on first mount — reattached terminals already have a live PTY
     if (!isReattached) {
+      spawnTimestamp = Date.now()
       const { cols, rows } = term
       window.agentDeck.pty
         .spawn(
@@ -370,6 +384,11 @@ export function TerminalPane({
           window.agentDeck.log.send('error', 'terminal', `PTY spawn failed for ${sessionId}`, {
             err: String(err),
           })
+          try {
+            term.write('\r\n\x1b[31m Session failed to start. Is WSL running?\x1b[0m\r\n')
+          } catch {
+            /* terminal disposed */
+          }
           setSessionStatus(sessionId, 'exited')
         })
     }
@@ -383,6 +402,7 @@ export function TerminalPane({
     // into a single write+scroll-restore cycle, preventing the scroll guard race
     // condition that causes viewport jumping during rapid agent output.
     const unsubData = window.agentDeck.pty.onData(sessionId, (data) => {
+      setShowWatermark(false)
       if (visibleRef.current) {
         writeBufferRef.current.push(data)
         if (!writeRafRef.current) {
@@ -415,8 +435,25 @@ export function TerminalPane({
       if (filtered) window.agentDeck.pty.write(sessionId, filtered)
     })
 
-    const unsubExit = window.agentDeck.pty.onExit(sessionId, () => {
+    const QUICK_EXIT_MS = 2000
+    const unsubExit = window.agentDeck.pty.onExit(sessionId, (exitCode) => {
+      const isSpawnFailure = exitCode === -1
+      const isQuickExit = spawnTimestamp > 0 && Date.now() - spawnTimestamp < QUICK_EXIT_MS
+
+      // Show a visible error message for spawn failures or suspiciously quick exits
+      if (isSpawnFailure || isQuickExit) {
+        try {
+          term.write('\r\n\x1b[31m Session failed to start. Is WSL running?\x1b[0m\r\n')
+        } catch {
+          /* terminal disposed */
+        }
+      }
+
       setSessionStatus(sessionId, 'exited')
+
+      // Do NOT auto-close on spawn failure — let the user see the error and close manually
+      if (isSpawnFailure) return
+
       const timer = setTimeout(() => {
         exitTimerMap.delete(sessionId)
         removeSession(sessionId)
@@ -623,15 +660,130 @@ export function TerminalPane({
     }
   }, [focused])
 
+  // ── Context menu dismiss ──────────────────────────────────
+  useEffect(() => {
+    if (!ctxMenu) return
+    function handleClick(e: MouseEvent): void {
+      if (ctxMenuRef.current && !ctxMenuRef.current.contains(e.target as Node)) {
+        setCtxMenu(null)
+      }
+    }
+    function handleKey(e: KeyboardEvent): void {
+      if (e.key === 'Escape') setCtxMenu(null)
+    }
+    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [ctxMenu])
+
+  const [ctxHasSelection, setCtxHasSelection] = useState(false)
+
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setCtxHasSelection(termRef.current?.hasSelection() ?? false)
+    setCtxMenu({
+      x: Math.min(e.clientX, window.innerWidth - 200),
+      y: Math.min(e.clientY, window.innerHeight - 220),
+    })
+  }, [])
+
+  const handleCtxAction = useCallback(
+    (action: 'copy' | 'paste' | 'selectAll' | 'clear' | 'search') => {
+      setCtxMenu(null)
+      const term = termRef.current
+      if (!term) return
+      switch (action) {
+        case 'copy':
+          if (term.hasSelection()) {
+            navigator.clipboard
+              .writeText(term.getSelection())
+              .then(() => {
+                setCopyFlash(true)
+                setTimeout(() => setCopyFlash(false), 1200)
+              })
+              .catch(() => {})
+          }
+          break
+        case 'paste':
+          navigator.clipboard
+            .readText()
+            .then((text) => {
+              if (text) window.agentDeck.pty.write(sessionId, text)
+            })
+            .catch(() => {})
+          break
+        case 'selectAll':
+          term.selectAll()
+          break
+        case 'clear':
+          // 1. Wipe the visible screen + scrollback via ANSI sequences
+          // 2. Then clear xterm.js internal scrollback buffer
+          // 3. Then send Ctrl+L to the PTY so the running agent redraws
+          //    its UI on the now-clean screen
+          term.write('\x1b[2J\x1b[3J\x1b[H')
+          term.clear()
+          window.agentDeck.pty.write(sessionId, '\x0c')
+          break
+        case 'search':
+          setSearchOpen(true)
+          break
+      }
+    },
+    [sessionId],
+  )
+
   const searchAddon = searchAddonMap.get(sessionId)
+
   return (
-    <div ref={containerRef} className="terminal-container">
+    <div ref={containerRef} className="terminal-container" onContextMenu={handleContextMenu}>
+      {showWatermark && (
+        <div className="term-watermark">
+          <div className="term-watermark-label">{agent ?? 'Terminal'}</div>
+          <div className="term-watermark-status">Starting\u2026</div>
+        </div>
+      )}
+      {copyFlash && <div className="term-copy-flash">Copied!</div>}
       {searchAddon && (
         <TerminalSearchBar
           searchAddon={searchAddon}
           visible={searchOpen}
           onClose={() => setSearchOpen(false)}
         />
+      )}
+      {ctxMenu && (
+        <div
+          ref={ctxMenuRef}
+          className="term-context-menu"
+          style={{ top: ctxMenu.y, left: ctxMenu.x }}
+        >
+          <button
+            className="term-ctx-item"
+            disabled={!ctxHasSelection}
+            onClick={() => handleCtxAction('copy')}
+          >
+            Copy
+            <span className="term-ctx-hint">Ctrl+Shift+C</span>
+          </button>
+          <button className="term-ctx-item" onClick={() => handleCtxAction('paste')}>
+            Paste
+            <span className="term-ctx-hint">Ctrl+V</span>
+          </button>
+          <button className="term-ctx-item" onClick={() => handleCtxAction('selectAll')}>
+            Select All
+          </button>
+          <div className="term-ctx-sep" />
+          <button className="term-ctx-item" onClick={() => handleCtxAction('clear')}>
+            Clear Scrollback
+          </button>
+          <div className="term-ctx-sep" />
+          <button className="term-ctx-item" onClick={() => handleCtxAction('search')}>
+            Search
+            <span className="term-ctx-hint">Ctrl+Shift+F</span>
+          </button>
+        </div>
       )}
     </div>
   )

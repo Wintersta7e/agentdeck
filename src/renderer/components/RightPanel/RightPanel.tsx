@@ -19,10 +19,12 @@ export function RightPanel(): React.JSX.Element {
   return (
     <div className="right-panel">
       <PanelBox corners={['tr', 'bl']} glow="right" className="right-panel-box">
-        <div className="panel-tabs">
+        <div className="panel-tabs" role="tablist">
           {TABS.map((tab) => (
             <button
               key={tab.key}
+              role="tab"
+              aria-selected={rightPanelTab === tab.key}
               className={`panel-tab${rightPanelTab === tab.key ? ' active' : ''}`}
               onClick={() => setRightPanelTab(tab.key)}
             >
@@ -30,7 +32,7 @@ export function RightPanel(): React.JSX.Element {
             </button>
           ))}
         </div>
-        <div className="panel-body">
+        <div className="panel-body" role="tabpanel">
           {rightPanelTab === 'context' && <ContextTab />}
           {rightPanelTab === 'activity' && <ActivityTab />}
           {rightPanelTab === 'memory' && <MemoryTab />}

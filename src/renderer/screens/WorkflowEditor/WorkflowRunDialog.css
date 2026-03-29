@@ -61,6 +61,18 @@
   margin-left: 2px;
 }
 
+.wf-run-field--error input,
+.wf-run-field--error textarea,
+.wf-run-field--error select {
+  border-color: var(--red);
+}
+
+.wf-run-field-error {
+  font-size: 10px;
+  color: var(--red);
+  margin-top: 2px;
+}
+
 .wf-run-field input,
 .wf-run-field textarea,
 .wf-run-field select {

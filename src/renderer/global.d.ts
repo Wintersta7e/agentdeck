@@ -1,4 +1,12 @@
-import type { ActivityEvent, DetectedStack, Project, Role, Template } from '../shared/types'
+import type {
+  ActivityEvent,
+  DetectedStack,
+  Project,
+  ProjectMeta,
+  Role,
+  SkillInfo,
+  Template,
+} from '../shared/types'
 
 declare global {
   interface Window {
@@ -93,6 +101,16 @@ declare global {
         detectStack: (path: string, distro?: string) => Promise<DetectedStack | null>
         getDefaultDistro: () => Promise<string>
         readProjectFile: (projectPath: string, filename: string) => Promise<string | null>
+        refreshMeta: (projectId: string) => Promise<ProjectMeta>
+      }
+      skills: {
+        list: (opts: { projectPath?: string; includeGlobal?: boolean }) => Promise<SkillInfo[]>
+      }
+      wsl: {
+        onStatus: (cb: (data: { available: boolean; error?: string }) => void) => () => void
+      }
+      security: {
+        onEncryptionUnavailable: (cb: () => void) => () => void
       }
       pickFolder: () => Promise<string | null>
       log: {
@@ -119,6 +137,7 @@ declare global {
         duplicate(id: string): Promise<import('../shared/types').Workflow>
         listRuns(workflowId: string): Promise<import('../shared/types').WorkflowRun[]>
         deleteRun(runId: string): Promise<void>
+        getRunning(): Promise<string[]>
         run(id: string, path?: string, variables?: Record<string, string>): Promise<void>
         stop(id: string): Promise<void>
         resume(id: string, nodeId: string): Promise<void>

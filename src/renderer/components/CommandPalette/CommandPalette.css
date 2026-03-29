@@ -214,6 +214,16 @@
   background: var(--amber);
 }
 
+.result-item.disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.result-item.disabled:hover {
+  background: none;
+  border-left: none;
+}
+
 .result-icon {
   width: 28px;
   height: 28px;
@@ -225,6 +235,12 @@
   flex-shrink: 0;
   background: var(--bg4);
   border: 1px solid var(--border);
+}
+
+.result-icon.muted {
+  background: var(--bg3);
+  border-color: var(--border);
+  color: var(--text3);
 }
 
 .result-icon.green {

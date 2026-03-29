@@ -73,15 +73,17 @@ async function initAndRender(): Promise<void> {
   }> => {
     const [username, agents, distro] = await Promise.all([
       window.agentDeck.app.wslUsername().catch((err: unknown) => {
-        console.warn('WSL username fetch failed', err)
+        window.agentDeck.log.send('warn', 'init', 'WSL username fetch failed', {
+          err: String(err),
+        })
         return ''
       }),
       window.agentDeck.agents.check().catch((err: unknown) => {
-        console.warn('Agent check failed', err)
+        window.agentDeck.log.send('warn', 'init', 'Agent check failed', { err: String(err) })
         return {} as Record<string, boolean>
       }),
       window.agentDeck.projects.getDefaultDistro().catch((err: unknown) => {
-        console.warn('WSL distro fetch failed', err)
+        window.agentDeck.log.send('warn', 'init', 'WSL distro fetch failed', { err: String(err) })
         return ''
       }),
     ])
@@ -107,7 +109,9 @@ async function initAndRender(): Promise<void> {
         const hasInstalled = Object.values(retryAgents).some((v) => v)
         if (hasInstalled) {
           void window.agentDeck.agents.checkUpdates(retryAgents).catch((err: unknown) => {
-            console.warn('checkUpdates failed', err)
+            window.agentDeck.log.send('warn', 'init', 'checkUpdates failed', {
+              err: String(err),
+            })
           })
         }
       } catch (err) {
@@ -117,7 +121,7 @@ async function initAndRender(): Promise<void> {
   } else {
     // WSL was already warm — trigger update checks immediately
     void window.agentDeck.agents.checkUpdates(agentStatusResult).catch((err: unknown) => {
-      console.warn('checkUpdates failed', err)
+      window.agentDeck.log.send('warn', 'init', 'checkUpdates failed', { err: String(err) })
     })
   }
 }

@@ -10,10 +10,13 @@
 .sidebar-section {
   padding: 12px 12px 6px;
   overflow-y: auto;
+  flex-shrink: 0;
+  max-height: 35%;
 }
 
 .sidebar-section.flex-fill {
   flex: 1;
+  min-height: 120px;
   overflow-y: auto;
   mask-image: linear-gradient(
     to bottom,
@@ -457,6 +460,14 @@
 .sidebar ::-webkit-scrollbar-thumb {
   background: var(--bg4);
   border-radius: 2px;
+}
+
+/* ─── Empty section hints ─── */
+.sidebar-empty-hint {
+  color: var(--text3);
+  font-size: 10px;
+  font-style: italic;
+  padding: 6px 8px;
 }
 
 /* ─── Fusion design system additions ─── */

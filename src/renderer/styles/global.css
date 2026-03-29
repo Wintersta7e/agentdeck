@@ -27,6 +27,17 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Focus-visible indicators for keyboard navigation (UX-6) */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r);
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
 /* Scrollbar defaults */
 ::-webkit-scrollbar {
   width: 4px;
@@ -215,5 +226,43 @@ button:active,
   }
   100% {
     transform: scaleX(1);
+  }
+}
+
+/* ─── Focus Indicators ─── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r);
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ─── Reduced Motion ───
+   Disable UI transition animations but preserve ambient decorative effects
+   (HexGrid, EnergyVein, AmbientGlow). Windows "Animation effects" OFF
+   triggers this preference — a blanket * rule would kill ALL effects. */
+@media (prefers-reduced-motion: reduce) {
+  .home-main,
+  .wizard-shell,
+  .settings-main,
+  .template-editor,
+  .wf-editor {
+    animation: none !important;
+  }
+
+  button,
+  .tab,
+  .sidebar-item,
+  .new-project-btn,
+  .sidebar-new-wf,
+  .result-item,
+  .toast,
+  .cmd-overlay,
+  .cmd-palette {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }

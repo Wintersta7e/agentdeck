@@ -158,6 +158,14 @@ contextBridge.exposeInMainWorld('agentDeck', {
     getDefaultDistro: () => ipcRenderer.invoke('projects:getDefaultDistro'),
     readProjectFile: (projectPath: string, filename: string) =>
       ipcRenderer.invoke('projects:readFile', projectPath, filename) as Promise<string | null>,
+    refreshMeta: (projectId: string) =>
+      ipcRenderer.invoke('projects:refreshMeta', projectId) as Promise<
+        import('../shared/types').ProjectMeta
+      >,
+  },
+  skills: {
+    list: (opts: { projectPath?: string; includeGlobal?: boolean }) =>
+      ipcRenderer.invoke('skills:list', opts) as Promise<import('../shared/types').SkillInfo[]>,
   },
   pickFolder: () => ipcRenderer.invoke('dialog:pickFolder'),
   log: {
@@ -166,6 +174,23 @@ contextBridge.exposeInMainWorld('agentDeck', {
   },
   clipboard: {
     readFilePaths: () => ipcRenderer.invoke('clipboard:readFilePaths') as Promise<string[]>,
+  },
+  wsl: {
+    onStatus: (cb: (data: { available: boolean; error?: string }) => void) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        data: { available: boolean; error?: string },
+      ): void => cb(data)
+      ipcRenderer.on('wsl:status', listener)
+      return () => ipcRenderer.removeListener('wsl:status', listener)
+    },
+  },
+  security: {
+    onEncryptionUnavailable: (cb: () => void) => {
+      const listener = (): void => cb()
+      ipcRenderer.on('security:encryption-unavailable', listener)
+      return () => ipcRenderer.removeListener('security:encryption-unavailable', listener)
+    },
   },
   onFileDrop: (cb: (wslPaths: string[]) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, wslPaths: string[]): void => cb(wslPaths)
@@ -194,6 +219,8 @@ contextBridge.exposeInMainWorld('agentDeck', {
     listRuns: (workflowId: string): Promise<WorkflowRun[]> =>
       ipcRenderer.invoke('workflows:listRuns', workflowId),
     deleteRun: (runId: string): Promise<void> => ipcRenderer.invoke('workflows:deleteRun', runId),
+    getRunning: (): Promise<string[]> =>
+      ipcRenderer.invoke('workflows:getRunning') as Promise<string[]>,
     run: (id: string, path?: string, variables?: Record<string, string>): Promise<void> =>
       ipcRenderer.invoke('workflow:run', id, path, variables),
     stop: (id: string): Promise<void> => ipcRenderer.invoke('workflow:stop', id),

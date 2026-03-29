@@ -36,3 +36,114 @@
 .terminal-container .xterm .xterm-viewport::-webkit-scrollbar-track {
   background: transparent;
 }
+
+/* ── Watermark (shown until first PTY data) ───────────────── */
+
+.term-watermark {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.25;
+}
+
+.term-watermark-label {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text2);
+  text-transform: capitalize;
+}
+
+.term-watermark-status {
+  font-size: 11px;
+  color: var(--text3);
+}
+
+/* ── Copy flash badge ─────────────────────────────────────── */
+
+.term-copy-flash {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--bg0);
+  background: var(--accent);
+  border-radius: var(--r);
+  pointer-events: none;
+  z-index: 2;
+  animation: copyFlashIn 1.2s ease-out forwards;
+}
+
+@keyframes copyFlashIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ── Terminal context menu ─────────────────────────────────── */
+
+.term-context-menu {
+  position: fixed;
+  z-index: 2000;
+  background: var(--bg1);
+  border: 1px solid var(--bg3);
+  border-radius: var(--r);
+  padding: 4px 0;
+  min-width: 180px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.term-ctx-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text1);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.term-ctx-item:hover:not(:disabled) {
+  background: rgba(var(--accent-rgb), 0.1);
+  color: var(--text0);
+}
+
+.term-ctx-item:disabled {
+  color: var(--text3);
+  cursor: default;
+}
+
+.term-ctx-hint {
+  font-size: 10px;
+  color: var(--text3);
+  margin-left: 16px;
+}
+
+.term-ctx-sep {
+  height: 1px;
+  background: var(--bg3);
+  margin: 4px 0;
+}

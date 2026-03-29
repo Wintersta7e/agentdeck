@@ -9,6 +9,19 @@ import { createLogger } from './logger'
 
 const log = createLogger('project-store')
 
+// REL-2: Promise-based write lock prevents concurrent read-modify-write races.
+// All mutating handlers (save/delete for projects, templates, roles) are serialized
+// through this lock so a second IPC call waits for the first to finish writing.
+let writeLock = Promise.resolve()
+function serialized<T>(fn: () => T): Promise<T> {
+  const p = writeLock.then(fn)
+  writeLock = p.then(
+    () => {},
+    () => {},
+  )
+  return p
+}
+
 function encryptEnvVars(envVars: EnvVar[] | undefined): EnvVar[] | undefined {
   if (!envVars) return envVars
   if (!safeStorage.isEncryptionAvailable()) {
@@ -147,30 +160,34 @@ export function createProjectStore(): Store<StoreSchema> {
         if (ev.value.length > 65536) throw new Error('Env var value too long (max 64KB)')
       }
     }
-    const p = project as Partial<Project>
-    const projects = store.get('projects')
-    const id = p.id ?? randomUUID()
-    const withId = { ...p, id, envVars: encryptEnvVars(p.envVars) } as Project
-    const idx = projects.findIndex((existing) => existing.id === id)
-    const existing = idx >= 0 ? projects[idx] : undefined
-    if (existing !== undefined) {
-      projects[idx] = { ...existing, ...withId }
-    } else {
-      projects.push(withId)
-    }
-    store.set('projects', projects)
-    const savedIdx = idx >= 0 ? idx : projects.length - 1
-    const saved = projects[savedIdx]
-    if (!saved) throw new Error('store:saveProject — saved project not found after write')
-    log.info(`Project saved: ${saved.name}`, { id: saved.id })
-    return { ...saved, envVars: decryptEnvVars(saved.envVars) }
+    return serialized(() => {
+      const p = project as Partial<Project>
+      const projects = store.get('projects')
+      const id = p.id ?? randomUUID()
+      const withId = { ...p, id, envVars: encryptEnvVars(p.envVars) } as Project
+      const idx = projects.findIndex((existing) => existing.id === id)
+      const existing = idx >= 0 ? projects[idx] : undefined
+      if (existing !== undefined) {
+        projects[idx] = { ...existing, ...withId }
+      } else {
+        projects.push(withId)
+      }
+      store.set('projects', projects)
+      const savedIdx = idx >= 0 ? idx : projects.length - 1
+      const saved = projects[savedIdx]
+      if (!saved) throw new Error('store:saveProject — saved project not found after write')
+      log.info(`Project saved: ${saved.name}`, { id: saved.id })
+      return { ...saved, envVars: decryptEnvVars(saved.envVars) }
+    })
   })
 
   ipcMain.handle('store:deleteProject', (_, id: string) => {
     if (typeof id !== 'string' || !id) throw new Error('Invalid id')
-    const projects = store.get('projects').filter((p) => p.id !== id)
-    store.set('projects', projects)
-    log.info(`Project deleted`, { id })
+    return serialized(() => {
+      const projects = store.get('projects').filter((p) => p.id !== id)
+      store.set('projects', projects)
+      log.info(`Project deleted`, { id })
+    })
   })
 
   ipcMain.handle('store:getTemplates', () => {
@@ -188,25 +205,29 @@ export function createProjectStore(): Store<StoreSchema> {
       throw new Error('store:saveTemplate — name must be a string')
     if (typeof rawT.name === 'string' && rawT.name.length > 200)
       throw new Error('store:saveTemplate — name too long')
-    const t = template as Partial<Template>
-    const templates = store.get('templates')
-    const id = t.id ?? randomUUID()
-    const withId = { ...t, id } as Template
-    const idx = templates.findIndex((existing) => existing.id === id)
-    const existingTpl = idx >= 0 ? templates[idx] : undefined
-    if (existingTpl !== undefined) {
-      templates[idx] = { ...existingTpl, ...withId }
-    } else {
-      templates.push(withId)
-    }
-    store.set('templates', templates)
-    return templates[idx >= 0 ? idx : templates.length - 1]
+    return serialized(() => {
+      const t = template as Partial<Template>
+      const templates = store.get('templates')
+      const id = t.id ?? randomUUID()
+      const withId = { ...t, id } as Template
+      const idx = templates.findIndex((existing) => existing.id === id)
+      const existingTpl = idx >= 0 ? templates[idx] : undefined
+      if (existingTpl !== undefined) {
+        templates[idx] = { ...existingTpl, ...withId }
+      } else {
+        templates.push(withId)
+      }
+      store.set('templates', templates)
+      return templates[idx >= 0 ? idx : templates.length - 1]
+    })
   })
 
   ipcMain.handle('store:deleteTemplate', (_, id: string) => {
     if (typeof id !== 'string' || !id) throw new Error('Invalid id')
-    const templates = store.get('templates').filter((t) => t.id !== id)
-    store.set('templates', templates)
+    return serialized(() => {
+      const templates = store.get('templates').filter((t) => t.id !== id)
+      store.set('templates', templates)
+    })
   })
 
   ipcMain.handle('store:getRoles', () => {
@@ -224,25 +245,29 @@ export function createProjectStore(): Store<StoreSchema> {
       throw new Error('store:saveRole — name must be a string')
     if (typeof rawR.name === 'string' && rawR.name.length > 200)
       throw new Error('store:saveRole — name too long')
-    const r = role as Partial<Role>
-    const roles = store.get('roles')
-    const id = r.id ?? randomUUID()
-    const withId = { ...r, id } as Role
-    const idx = roles.findIndex((existing) => existing.id === id)
-    const existingRole = idx >= 0 ? roles[idx] : undefined
-    if (existingRole !== undefined) {
-      roles[idx] = { ...existingRole, ...withId }
-    } else {
-      roles.push(withId)
-    }
-    store.set('roles', roles)
-    return roles[idx >= 0 ? idx : roles.length - 1]
+    return serialized(() => {
+      const r = role as Partial<Role>
+      const roles = store.get('roles')
+      const id = r.id ?? randomUUID()
+      const withId = { ...r, id } as Role
+      const idx = roles.findIndex((existing) => existing.id === id)
+      const existingRole = idx >= 0 ? roles[idx] : undefined
+      if (existingRole !== undefined) {
+        roles[idx] = { ...existingRole, ...withId }
+      } else {
+        roles.push(withId)
+      }
+      store.set('roles', roles)
+      return roles[idx >= 0 ? idx : roles.length - 1]
+    })
   })
 
   ipcMain.handle('store:deleteRole', (_, id: string) => {
     if (typeof id !== 'string' || !id) throw new Error('Invalid id')
-    const roles = store.get('roles').filter((r) => r.id !== id)
-    store.set('roles', roles)
+    return serialized(() => {
+      const roles = store.get('roles').filter((r) => r.id !== id)
+      store.set('roles', roles)
+    })
   })
 
   return store

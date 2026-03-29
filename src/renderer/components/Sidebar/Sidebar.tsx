@@ -3,6 +3,7 @@ import { useAppStore } from '../../store/appStore'
 import { useProjects } from '../../hooks/useProjects'
 import { PanelBox } from '../shared/PanelBox'
 import { HexDot } from '../shared/HexDot'
+import { ConfirmDialog } from '../shared/ConfirmDialog'
 import type { AgentConfig, Project } from '../../../shared/types'
 import { getProjectAgents } from '../../../shared/agent-helpers'
 import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
@@ -12,6 +13,7 @@ import {
   ChevronRight,
   Plus,
   Settings,
+  MoreVertical,
   ArrowLeft,
   SquareCheck,
   Square,
@@ -62,6 +64,14 @@ export function Sidebar({
     subMenu?: 'templates' | 'agents' | undefined
   } | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+
+  // Confirmation dialog state for destructive actions
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string
+    message: string
+    confirmLabel: string
+    onConfirm: () => void
+  } | null>(null)
 
   // Inline rename state for workflows
   const [renamingWorkflowId, setRenamingWorkflowId] = useState<string | null>(null)
@@ -128,8 +138,19 @@ export function Sidebar({
 
   function handleRemoveProject(): void {
     if (!contextMenu?.projectId) return
-    void deleteProject(contextMenu.projectId)
+    const project = projects.find((p) => p.id === contextMenu.projectId)
+    const projectName = project?.name ?? 'this project'
+    const projectId = contextMenu.projectId
     closeMenu()
+    setConfirmDialog({
+      title: 'Remove Project',
+      message: `Remove "${projectName}"? This cannot be undone.`,
+      confirmLabel: 'Remove',
+      onConfirm: () => {
+        void deleteProject(projectId)
+        setConfirmDialog(null)
+      },
+    })
   }
 
   function handleToggleTemplate(templateId: string): void {
@@ -145,22 +166,32 @@ export function Sidebar({
 
   function handleDeleteWorkflow(): void {
     if (!contextMenu?.workflowId) return
+    const wf = workflows.find((w) => w.id === contextMenu.workflowId)
+    const workflowName = wf?.name ?? 'this workflow'
     const id = contextMenu.workflowId
-    // If we're currently editing this workflow, close the editor
-    if (openWorkflowIds.includes(id)) closeWorkflow(id)
-    window.agentDeck.workflows
-      .delete(id)
-      .then(() => {
-        const current = useAppStore.getState().workflows
-        setWorkflows(current.filter((w) => w.id !== id))
-      })
-      .catch((err: unknown) => {
-        window.agentDeck.log.send('error', 'sidebar', 'Failed to delete workflow', {
-          err: String(err),
-        })
-        useAppStore.getState().addNotification('error', 'Failed to delete workflow')
-      })
     closeMenu()
+    setConfirmDialog({
+      title: 'Delete Workflow',
+      message: `Delete "${workflowName}"? This cannot be undone.`,
+      confirmLabel: 'Delete',
+      onConfirm: () => {
+        // If we're currently editing this workflow, close the editor
+        if (openWorkflowIds.includes(id)) closeWorkflow(id)
+        window.agentDeck.workflows
+          .delete(id)
+          .then(() => {
+            const current = useAppStore.getState().workflows
+            setWorkflows(current.filter((w) => w.id !== id))
+          })
+          .catch((err: unknown) => {
+            window.agentDeck.log.send('error', 'sidebar', 'Failed to delete workflow', {
+              err: String(err),
+            })
+            useAppStore.getState().addNotification('error', 'Failed to delete workflow')
+          })
+        setConfirmDialog(null)
+      },
+    })
   }
 
   function handleRenameWorkflow(): void {
@@ -229,12 +260,21 @@ export function Sidebar({
   }
 
   return (
-    <div className="sidebar">
+    <div className="sidebar" role="navigation" aria-label="Sidebar">
       <PanelBox corners={['tl', 'br']} glow="left" className="sidebar-panel">
         <div className="sidebar-section">
           <div
             className="sidebar-label sidebar-label-clickable"
             onClick={() => toggleSidebarSection('pinned')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                toggleSidebarSection('pinned')
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            aria-expanded={sidebarSections.pinned}
           >
             <span>
               <span className={`sidebar-chevron${sidebarSections.pinned ? ' open' : ''}`}>
@@ -252,43 +292,60 @@ export function Sidebar({
               <Plus size={14} />
             </button>
           </div>
-          {sidebarSections.pinned &&
-            pinned.map((p) => (
-              <div
-                key={p.id}
-                className={`sidebar-item ${isActive(p.id) ? 'active' : ''}`}
-                onClick={() => onOpenProject(p)}
-                onContextMenu={(e) => handleContextMenu(e, p.id)}
-              >
-                <HexDot
-                  status={
-                    getProjectStatus(p.id) === 'running'
-                      ? 'live'
-                      : getProjectStatus(p.id) === 'error'
-                        ? 'error'
-                        : 'idle'
-                  }
-                  size={8}
-                />
-                <div className="sidebar-item-info">
-                  <div className="sidebar-item-name">{p.name}</div>
-                  <div className="sidebar-item-sub">{p.path}</div>
-                </div>
-                {p.badge && (
-                  <span className={`sidebar-badge badge-${badgeClass(p.badge)}`}>{p.badge}</span>
-                )}
-                <button
-                  className="sidebar-item-gear"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    openSettings(p.id)
+          {sidebarSections.pinned && (
+            <div role="group" aria-label="Pinned projects">
+              {pinned.length === 0 && projects.length > 0 && (
+                <div className="sidebar-empty-hint">Right-click a project to pin it</div>
+              )}
+              {pinned.map((p) => (
+                <div
+                  key={p.id}
+                  className={`sidebar-item ${isActive(p.id) ? 'active' : ''}`}
+                  onClick={() => onOpenProject(p)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      onOpenProject(p)
+                    }
                   }}
-                  title="Project settings"
+                  role="button"
+                  tabIndex={0}
+                  onContextMenu={(e) => handleContextMenu(e, p.id)}
                 >
-                  <Settings size={14} />
-                </button>
-              </div>
-            ))}
+                  <HexDot
+                    status={
+                      getProjectStatus(p.id) === 'running'
+                        ? 'live'
+                        : getProjectStatus(p.id) === 'error'
+                          ? 'error'
+                          : 'idle'
+                    }
+                    size={8}
+                  />
+                  <div className="sidebar-item-info">
+                    <div className="sidebar-item-name">{p.name}</div>
+                    <div className="sidebar-item-sub" title={p.path}>
+                      {p.path}
+                    </div>
+                  </div>
+                  {p.badge && (
+                    <span className={`sidebar-badge badge-${badgeClass(p.badge)}`}>{p.badge}</span>
+                  )}
+                  <button
+                    className="sidebar-item-gear"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleContextMenu(e, p.id)
+                    }}
+                    aria-label="Project options"
+                    title="Project options"
+                  >
+                    <MoreVertical size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="sidebar-divider" />
@@ -318,6 +375,15 @@ export function Sidebar({
                   onClick={() => setContextMenu({ ...contextMenu, subMenu: 'templates' })}
                 >
                   Attach Templates
+                </button>
+                <button
+                  className="sidebar-context-item"
+                  onClick={() => {
+                    if (contextMenu.projectId) openSettings(contextMenu.projectId)
+                    setContextMenu(null)
+                  }}
+                >
+                  <Settings size={12} /> Settings
                 </button>
                 <div className="sidebar-context-divider" />
                 <button className="sidebar-context-item danger" onClick={handleRemoveProject}>
@@ -425,6 +491,15 @@ export function Sidebar({
           <div
             className="sidebar-label sidebar-label-clickable"
             onClick={() => toggleSidebarSection('templates')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                toggleSidebarSection('templates')
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            aria-expanded={sidebarSections.templates}
           >
             <span>
               <span className={`sidebar-chevron${sidebarSections.templates ? ' open' : ''}`}>
@@ -442,21 +517,39 @@ export function Sidebar({
               <Plus size={14} />
             </button>
           </div>
-          {sidebarSections.templates &&
-            groupedTemplates.map((group) => (
-              <div key={group.category} className="sidebar-tpl-group">
-                <div className="sidebar-group-label">{group.category}</div>
-                {group.templates.map((t) => (
-                  <div key={t.id} className="sidebar-item" onClick={() => openTemplateEditor(t.id)}>
-                    <ClipboardList size={12} />
-                    <div className="sidebar-item-info">
-                      <div className="sidebar-item-name">{t.name}</div>
-                      <div className="sidebar-item-sub">{t.description}</div>
+          {sidebarSections.templates && (
+            <div role="group" aria-label="Templates">
+              {groupedTemplates.length === 0 && (
+                <div className="sidebar-empty-hint">Create templates from the + button</div>
+              )}
+              {groupedTemplates.map((group) => (
+                <div key={group.category} className="sidebar-tpl-group">
+                  <div className="sidebar-group-label">{group.category}</div>
+                  {group.templates.map((t) => (
+                    <div
+                      key={t.id}
+                      className="sidebar-item"
+                      onClick={() => openTemplateEditor(t.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          openTemplateEditor(t.id)
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      <ClipboardList size={12} />
+                      <div className="sidebar-item-info">
+                        <div className="sidebar-item-name">{t.name}</div>
+                        <div className="sidebar-item-sub">{t.description}</div>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ))}
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="sidebar-divider" />
@@ -464,6 +557,15 @@ export function Sidebar({
           <div
             className="sidebar-label sidebar-label-clickable"
             onClick={() => toggleSidebarSection('workflows')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                toggleSidebarSection('workflows')
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            aria-expanded={sidebarSections.workflows}
           >
             <span>
               <span className={`sidebar-chevron${sidebarSections.workflows ? ' open' : ''}`}>
@@ -481,47 +583,61 @@ export function Sidebar({
               <Plus size={14} />
             </button>
           </div>
-          {sidebarSections.workflows &&
-            workflows.map((w) => (
-              <div
-                key={w.id}
-                className={`sidebar-item${activeWorkflowId === w.id ? ' sidebar-item-wf-active' : ''}`}
-                onClick={() => openWorkflow(w.id)}
-                onContextMenu={(e) => handleWorkflowContextMenu(e, w.id)}
-              >
-                <div className="sidebar-dot sidebar-dot-wf" />
-                <div className="sidebar-item-info">
-                  {renamingWorkflowId === w.id ? (
-                    <input
-                      ref={renameInputRef}
-                      className="sidebar-rename-input"
-                      value={renameValue}
-                      onChange={(e) => setRenameValue(e.target.value)}
-                      onBlur={commitRename}
-                      onKeyDown={handleRenameKeyDown}
-                      onClick={(e) => e.stopPropagation()}
-                      maxLength={60}
-                    />
-                  ) : (
-                    <div
-                      className="sidebar-item-name"
-                      onDoubleClick={(e) => {
-                        e.stopPropagation()
-                        setRenamingWorkflowId(w.id)
-                        setRenameValue(w.name)
-                        focusTimerRef.current = setTimeout(
-                          () => renameInputRef.current?.select(),
-                          0,
-                        )
-                      }}
-                    >
-                      {w.name}
-                    </div>
-                  )}
-                  <div className="sidebar-item-sub">{w.nodeCount} nodes</div>
+          {sidebarSections.workflows && (
+            <div role="group" aria-label="Workflows">
+              {workflows.length === 0 && (
+                <div className="sidebar-empty-hint">Create workflows from the + button</div>
+              )}
+              {workflows.map((w) => (
+                <div
+                  key={w.id}
+                  className={`sidebar-item${activeWorkflowId === w.id ? ' sidebar-item-wf-active' : ''}`}
+                  onClick={() => openWorkflow(w.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      openWorkflow(w.id)
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  onContextMenu={(e) => handleWorkflowContextMenu(e, w.id)}
+                >
+                  <div className="sidebar-dot sidebar-dot-wf" />
+                  <div className="sidebar-item-info">
+                    {renamingWorkflowId === w.id ? (
+                      <input
+                        ref={renameInputRef}
+                        className="sidebar-rename-input"
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onBlur={commitRename}
+                        onKeyDown={handleRenameKeyDown}
+                        onClick={(e) => e.stopPropagation()}
+                        maxLength={60}
+                      />
+                    ) : (
+                      <div
+                        className="sidebar-item-name"
+                        onDoubleClick={(e) => {
+                          e.stopPropagation()
+                          setRenamingWorkflowId(w.id)
+                          setRenameValue(w.name)
+                          focusTimerRef.current = setTimeout(
+                            () => renameInputRef.current?.select(),
+                            0,
+                          )
+                        }}
+                      >
+                        {w.name}
+                      </div>
+                    )}
+                    <div className="sidebar-item-sub">{w.nodeCount} nodes</div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="sidebar-bottom">
@@ -551,6 +667,15 @@ export function Sidebar({
           </div>
         )}
       </PanelBox>
+
+      <ConfirmDialog
+        open={confirmDialog !== null}
+        title={confirmDialog?.title ?? ''}
+        message={confirmDialog?.message ?? ''}
+        confirmLabel={confirmDialog?.confirmLabel}
+        onConfirm={() => confirmDialog?.onConfirm()}
+        onCancel={() => setConfirmDialog(null)}
+      />
     </div>
   )
 }

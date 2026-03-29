@@ -39,6 +39,9 @@ CLAUDE.md
 .claude/
 .superpowers/
 
+# Git worktrees
+.worktrees/
+
 # Plans, design docs, and mockups (local only)
 docs/
 !docs/USER-GUIDE.md

@@ -266,11 +266,25 @@
 
 .wf-history-empty {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   flex: 1;
   color: var(--text3);
   font-family: var(--font-mono);
   font-size: 12px;
-  padding: 40px 0;
+  padding: 40px 16px;
+  text-align: center;
+}
+
+.wf-history-empty-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text2);
+}
+
+.wf-history-empty-desc {
+  font-size: 11px;
+  line-height: 1.4;
 }

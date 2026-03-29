@@ -96,17 +96,79 @@ export async function checkAgentVersion(agentId: string): Promise<VersionInfo> {
 }
 
 /**
+ * Check whether an agent binary is findable on the WSL PATH.
+ * Returns true if `command -v <binary>` succeeds.
+ */
+async function isBinaryOnPath(binary: string): Promise<boolean> {
+  try {
+    await runWslCmd(`command -v ${binary}`)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** Extract the npm package name from an updateCmd like "npm install -g @openai/codex@latest" */
+function extractNpmPackage(updateCmd: string): string | null {
+  const match = /npm install\s+-g\s+((?:@[\w-]+\/)?[\w-]+)/.exec(updateCmd)
+  return match?.[1] ?? null
+}
+
+/**
+ * Repair missing npm bin symlink — a known issue with packages that use
+ * platform-specific optional dependencies (e.g. @openai/codex v0.100+).
+ *
+ * npm may install the package but fail to create the bin link when optional
+ * deps for the current platform aren't resolved.
+ *
+ * @see https://github.com/openai/codex/issues/13555
+ */
+async function repairNpmBinLink(binary: string, updateCmd: string): Promise<boolean> {
+  const pkg = extractNpmPackage(updateCmd)
+  if (!pkg) return false
+
+  try {
+    // Find the bin script inside the installed package and create the symlink
+    const repairScript = [
+      'NPM_PREFIX=$(npm prefix -g)',
+      `PKG_BIN="$NPM_PREFIX/lib/node_modules/${pkg}/bin/${binary}.js"`,
+      `LINK="$NPM_PREFIX/bin/${binary}"`,
+      '[ -f "$PKG_BIN" ] || exit 1',
+      'ln -sf "$PKG_BIN" "$LINK"',
+      'echo "repaired"',
+    ].join(' && ')
+    const result = await runWslCmd(repairScript)
+    if (result.includes('repaired')) {
+      log.info(`Repaired missing npm bin link for ${binary}`)
+      return true
+    }
+  } catch {
+    log.debug(`Bin link repair failed for ${binary}`)
+  }
+  return false
+}
+
+/**
  * Run the agent's update command and re-check the version afterward.
  *
  * For npm agents, resolves the exact latest version from the registry first
  * and installs that specific version instead of relying on `@latest` dist-tag
  * resolution, which can use stale npm packument cache.
+ *
+ * Safety: verifies the binary still exists after the update. If npm removed
+ * the binary (e.g. failed install, package rename, changed bin mapping),
+ * attempts to rollback to the previous version.
  */
 export async function updateAgent(agentId: string): Promise<UpdateResult> {
   const agent = AGENTS.find((a) => a.id === agentId)
   if (!agent) {
     return { agentId, success: false, newVersion: null, message: 'Unknown agent' }
   }
+
+  const binary = AGENT_BINARY_MAP[agentId] ?? agentId
+
+  // Snapshot current state before update (for rollback and diagnostics)
+  const preInfo = await checkAgentVersion(agentId)
 
   // Resolve the actual latest version from the registry before installing.
   // npm's @latest dist-tag resolution can use stale packument cache, so we
@@ -128,7 +190,11 @@ export async function updateAgent(agentId: string): Promise<UpdateResult> {
     updateCmd = updateCmd.replace('@latest', `@${targetVersion}`)
   }
 
-  log.info(`Starting update for ${agentId}`, { targetVersion, cmd: updateCmd })
+  log.info(`Starting update for ${agentId}`, {
+    targetVersion,
+    cmd: updateCmd,
+    previousVersion: preInfo.current,
+  })
 
   try {
     await runWslCmd(updateCmd, 120_000)
@@ -136,6 +202,61 @@ export async function updateAgent(agentId: string): Promise<UpdateResult> {
     const message = err instanceof Error ? err.message : String(err)
     log.warn(`Update failed for ${agentId}`, { message })
     return { agentId, success: false, newVersion: null, message }
+  }
+
+  // Critical safety check: verify the binary still exists after update.
+  // npm install -g can remove the old binary before installing the new one.
+  // If the new install fails or changes the bin mapping, the binary is gone.
+  let binaryStillExists = await isBinaryOnPath(binary)
+
+  // Auto-repair: npm packages with platform-specific optional deps (e.g. @openai/codex)
+  // can install successfully but fail to create the bin symlink.
+  if (!binaryStillExists && agent.updateCmd.includes('npm install')) {
+    log.warn(`Binary '${binary}' missing after update — attempting bin link repair`)
+    const repaired = await repairNpmBinLink(binary, updateCmd)
+    if (repaired) {
+      binaryStillExists = await isBinaryOnPath(binary)
+    }
+  }
+
+  if (!binaryStillExists) {
+    log.error(`Binary '${binary}' disappeared after updating ${agentId}!`, {
+      previousVersion: preInfo.current,
+      targetVersion,
+    })
+
+    // Attempt rollback for npm agents (those with @latest in updateCmd)
+    let rollbackAttempted = false
+    if (preInfo.current && agent.updateCmd.includes('@latest')) {
+      rollbackAttempted = true
+      const rollbackCmd = agent.updateCmd.replace('@latest', `@${preInfo.current}`)
+      log.warn(`Attempting rollback: ${rollbackCmd}`)
+      try {
+        await runWslCmd(rollbackCmd, 120_000)
+        const recovered = await isBinaryOnPath(binary)
+        if (recovered) {
+          log.info(`Rollback succeeded for ${agentId} — restored v${preInfo.current}`)
+          return {
+            agentId,
+            success: false,
+            newVersion: preInfo.current,
+            message: `Update removed the ${binary} binary. Rolled back to v${preInfo.current}. The target version may be incompatible.`,
+          }
+        }
+        log.error(`Rollback installed package but binary '${binary}' still missing`)
+      } catch (rollbackErr) {
+        log.error(`Rollback also failed for ${agentId}`, {
+          err: rollbackErr instanceof Error ? rollbackErr.message : String(rollbackErr),
+        })
+      }
+    }
+
+    return {
+      agentId,
+      success: false,
+      newVersion: null,
+      message: `Update removed the ${binary} binary.${rollbackAttempted ? ' Rollback was attempted but failed.' : ''} Please reinstall manually: ${agent.updateCmd}`,
+    }
   }
 
   // Re-check installed version after update
@@ -155,13 +276,24 @@ export async function updateAgent(agentId: string): Promise<UpdateResult> {
     }
   }
 
+  // Binary exists but version undetectable — cautious success
+  if (!info.current) {
+    log.warn(`Update completed but could not verify version for ${agentId}`)
+    return {
+      agentId,
+      success: true,
+      newVersion: null,
+      message: 'Update completed but version could not be verified',
+    }
+  }
+
   log.info(`Update complete for ${agentId}`, { newVersion: info.current })
 
   return {
     agentId,
     success: true,
     newVersion: info.current,
-    message: info.current ? `Updated to ${info.current}` : 'Update completed',
+    message: `Updated to ${info.current}`,
   }
 }
 

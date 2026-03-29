@@ -1,5 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Search, ArrowRight, RefreshCw, Check, X, Star, Plus } from 'lucide-react'
+import {
+  Search,
+  ArrowRight,
+  RefreshCw,
+  Check,
+  X,
+  Star,
+  Plus,
+  FolderOpen,
+  Bot,
+  Terminal,
+} from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import { PanelBox } from '../shared/PanelBox'
 import { ParticleField } from './ParticleField'
@@ -134,6 +145,7 @@ export function HomeScreen({
   const refreshAgentStatus = useAppStore((s) => s.refreshAgentStatus)
   const agentRefreshing = useAppStore((s) => s.agentRefreshing)
 
+  const [refreshingId, setRefreshingId] = useState<string | null>(null)
   const [cardMenu, setCardMenu] = useState<{
     x: number
     y: number
@@ -171,6 +183,48 @@ export function HomeScreen({
     }
   }, [cardMenu])
 
+  const setProjects = useAppStore((s) => s.setProjects)
+
+  const handleRefreshMeta = useCallback(
+    async (e: React.MouseEvent, projectId: string) => {
+      e.stopPropagation()
+      if (refreshingId) return // one at a time
+      setRefreshingId(projectId)
+      try {
+        const meta = await window.agentDeck.projects.refreshMeta(projectId)
+
+        // SK-4: Refresh Zustand store so badge + meta appear immediately.
+        // The main process may have updated both `meta` and `badge`, so re-fetch
+        // the full project list from the persistent store.
+        const freshProjects = await window.agentDeck.store.getProjects()
+        setProjects(freshProjects)
+
+        const parts: string[] = []
+        if (meta.contextFiles.length > 0) parts.push(meta.contextFiles.join(', '))
+        if (meta.skills.length > 0) {
+          parts.push(`${String(meta.skills.length)} skill${meta.skills.length !== 1 ? 's' : ''}`)
+        }
+        if (meta.scanStatus === 'partial') {
+          addNotification(
+            'info',
+            `Project metadata updated (${String(meta.skippedSkills ?? 0)} skills skipped)`,
+          )
+        } else if (meta.scanStatus === 'failed') {
+          addNotification('error', `Scan failed: ${meta.scanError ?? 'unknown error'}`)
+        } else if (parts.length > 0) {
+          addNotification('info', `Project metadata updated \u2014 found ${parts.join(', ')}`)
+        } else {
+          addNotification('info', 'Project metadata is up to date')
+        }
+      } catch (err) {
+        addNotification('error', `Failed to scan project metadata: ${String(err)}`)
+      } finally {
+        setRefreshingId(null)
+      }
+    },
+    [refreshingId, addNotification, setProjects],
+  )
+
   const handleAgentUpdate = useCallback(
     async (agentId: string) => {
       setAgentUpdating(agentId, true)
@@ -191,9 +245,12 @@ export function HomeScreen({
         addNotification('error', `Update error: ${String(err)}`)
       } finally {
         setAgentUpdating(agentId, false)
+        // Always re-detect agent availability after update to reflect real state.
+        // An update can remove a binary (npm package rename, failed install, etc.)
+        void refreshAgentStatus()
       }
     },
-    [setAgentUpdating, setAgentVersion, addNotification],
+    [setAgentUpdating, setAgentVersion, addNotification, refreshAgentStatus],
   )
 
   function getProjectStatus(projectId: string): string {
@@ -229,14 +286,25 @@ export function HomeScreen({
         </div>
 
         <PanelBox corners="all" glow="none" className="home-quick-open">
-          <div className="quick-open" onClick={openWizard}>
+          <div
+            className="quick-open"
+            onClick={() => openCommandPalette()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                openCommandPalette()
+              }
+            }}
+            role="button"
+            tabIndex={0}
+          >
             <span className="quick-open-icon">
               <Search size={14} />
             </span>
             <span className="quick-open-text">
               Open project, run template, or jump to session...
             </span>
-            <span className="quick-open-hint">Ctrl+N</span>
+            <span className="quick-open-hint">Ctrl+K</span>
           </div>
         </PanelBox>
 
@@ -263,17 +331,55 @@ export function HomeScreen({
           </div>
         </div>
 
+        {pinned.length === 0 && projects.length === 0 && (
+          <PanelBox corners="all" glow="none" className="home-card welcome-card">
+            <div className="welcome-inner">
+              <div className="welcome-headline">Get started</div>
+              <div className="welcome-steps">
+                <div className="welcome-step">
+                  <div className="welcome-step-icon">
+                    <FolderOpen size={20} />
+                  </div>
+                  <div className="welcome-step-num">1</div>
+                  <div className="welcome-step-title">Pick a folder</div>
+                  <div className="welcome-step-desc">Point AgentDeck at your project</div>
+                </div>
+                <div className="welcome-step">
+                  <div className="welcome-step-icon">
+                    <Bot size={20} />
+                  </div>
+                  <div className="welcome-step-num">2</div>
+                  <div className="welcome-step-title">Choose an agent</div>
+                  <div className="welcome-step-desc">7 agents supported, from Claude to Codex</div>
+                </div>
+                <div className="welcome-step">
+                  <div className="welcome-step-icon">
+                    <Terminal size={20} />
+                  </div>
+                  <div className="welcome-step-num">3</div>
+                  <div className="welcome-step-title">Start coding</div>
+                  <div className="welcome-step-desc">Launch a session and go</div>
+                </div>
+              </div>
+              <button className="welcome-cta" onClick={openWizard} type="button">
+                Create Project <ArrowRight size={14} />
+              </button>
+              <div className="welcome-hint">or press Ctrl+N anytime</div>
+            </div>
+          </PanelBox>
+        )}
+
         {pinned.length > 0 && (
           <>
             <div className="section-header">
-              <div className="section-title">Pinned Projects</div>
+              <div className="section-title">Projects</div>
               <button className="section-action" onClick={openWizard}>
                 <>
                   <Plus size={12} /> New <ArrowRight size={12} />
                 </>
               </button>
             </div>
-            <div className="pinned-grid">
+            <div className="projects-grid">
               {pinned.map((p, index) => {
                 const status = getProjectStatus(p.id)
                 const tNames = (p.attachedTemplates ?? [])
@@ -285,6 +391,14 @@ export function HomeScreen({
                       className={`project-card stagger-item ${status === 'running' ? 'running' : ''} ${status === 'error' ? 'error' : ''}`}
                       style={{ animationDelay: `${index * 60}ms` }}
                       onClick={() => onOpenProject(p)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          onOpenProject(p)
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
                       onContextMenu={(e) => {
                         e.preventDefault()
                         setCardMenu({ x: e.clientX, y: e.clientY, projectId: p.id })
@@ -296,6 +410,14 @@ export function HomeScreen({
                         >
                           {(p.badge && BADGE_ICONS[p.badge]) ?? '\u25C8'}
                         </div>
+                        <button
+                          className={`card-refresh${refreshingId === p.id ? ' spinning' : ''}`}
+                          onClick={(e) => void handleRefreshMeta(e, p.id)}
+                          title="Refresh project metadata"
+                          type="button"
+                        >
+                          <RefreshCw size={14} />
+                        </button>
                         <div className={`card-status ${statusColorClass(status)}`}>
                           <div
                             className={`card-status-dot ${statusColorClass(status)}`}
@@ -376,6 +498,21 @@ export function HomeScreen({
           </div>
         </div>
         <div className="agent-grid">
+          {Object.keys(agentStatus).length === 0 &&
+            Array.from({ length: 4 }, (_, i) => (
+              <PanelBox
+                key={`skel-${String(i)}`}
+                corners={['tl', 'br']}
+                glow="none"
+                className="home-card"
+              >
+                <div className="agent-card agent-card-skeleton">
+                  <div className="skeleton-line skeleton-icon" />
+                  <div className="skeleton-line skeleton-name" />
+                  <div className="skeleton-line skeleton-desc" />
+                </div>
+              </PanelBox>
+            ))}
           {AGENTS.filter((a) => !visibleAgents || visibleAgents.includes(a.name)).map((a) => {
             const vInfo = agentVersions[a.name]
             const installed = agentStatus[a.name]
@@ -387,7 +524,14 @@ export function HomeScreen({
                   {vInfo?.current && <div className="agent-card-version">v{vInfo.current}</div>}
                   <div className="agent-card-desc">{a.desc}</div>
                   {agentStatus[a.name] !== undefined && (
-                    <div className={installed ? 'agent-installed' : 'agent-missing'}>
+                    <div
+                      className={installed ? 'agent-installed' : 'agent-missing'}
+                      title={
+                        installed
+                          ? undefined
+                          : `Install: ${SHARED_AGENTS.find((sa) => sa.id === a.name)?.updateCmd ?? 'See agent docs'}`
+                      }
+                    >
                       {installed ? (
                         <>
                           <Check size={12} /> installed
@@ -400,30 +544,44 @@ export function HomeScreen({
                     </div>
                   )}
                   {installed && vInfo && (
-                    <button
-                      className={`agent-update-btn${vInfo.updateAvailable ? ' has-update' : ''}${vInfo.updating ? ' updating' : ''}`}
-                      disabled={vInfo.updating || !vInfo.updateAvailable}
-                      onClick={() => void handleAgentUpdate(a.name)}
-                      type="button"
-                    >
-                      {vInfo.updating ? (
-                        'Updating\u2026'
-                      ) : vInfo.updateAvailable ? (
-                        <>
-                          Update <ArrowRight size={12} /> {vInfo.latest}
-                        </>
-                      ) : (
-                        <>
-                          <Check size={12} /> Up to date
-                        </>
-                      )}
-                    </button>
+                    <>
+                      <button
+                        className={`agent-update-btn${vInfo.updateAvailable ? ' has-update' : ''}${vInfo.updating ? ' updating' : ''}`}
+                        disabled={vInfo.updating || !vInfo.updateAvailable}
+                        onClick={() => void handleAgentUpdate(a.name)}
+                        type="button"
+                      >
+                        {vInfo.updating ? (
+                          'Updating\u2026'
+                        ) : vInfo.updateAvailable ? (
+                          <>
+                            Update <ArrowRight size={12} /> {vInfo.latest}
+                          </>
+                        ) : (
+                          <>
+                            <Check size={12} /> Up to date
+                          </>
+                        )}
+                      </button>
+                      {vInfo.updating && <div className="agent-update-progress" />}
+                    </>
                   )}
                 </div>
               </PanelBox>
             )
           })}
-          <div className="agent-card add-agent" onClick={() => openCommandPalette('agents')}>
+          <div
+            className="agent-card add-agent"
+            onClick={() => openCommandPalette('agents')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                openCommandPalette('agents')
+              }
+            }}
+            role="button"
+            tabIndex={0}
+          >
             <div className="agent-card-icon agent-add-icon">
               <Plus size={20} />
             </div>

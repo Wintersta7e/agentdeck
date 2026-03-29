@@ -1,9 +1,30 @@
 {
   "name": "agentdeck",
-  "version": "4.5.0",
-  "private": true,
+  "version": "4.7.0",
   "description": "Electron desktop app for managing WSL agent sessions",
   "main": "./out/main/index.js",
+  "license": "Elastic-2.0",
+  "author": "Wintersta7e",
+  "homepage": "https://github.com/Wintersta7e/agentdeck#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Wintersta7e/agentdeck.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Wintersta7e/agentdeck/issues"
+  },
+  "keywords": [
+    "electron",
+    "terminal",
+    "wsl",
+    "ai",
+    "coding-agent",
+    "claude",
+    "codex",
+    "aider",
+    "workflow",
+    "desktop"
+  ],
   "engines": {
     "node": ">=22.12.0"
   },
@@ -40,31 +61,31 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@fontsource-variable/syne": "^5.1.0",
     "@fontsource/jetbrains-mono": "^5.1.1",
-    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/addon-fit": "^0.11.0",
     "@xterm/addon-search": "^0.16.0",
     "@xterm/addon-unicode11": "^0.9.0",
     "@xterm/addon-webgl": "^0.19.0",
     "@xterm/xterm": "^5.5.0",
-    "@xyflow/react": "^12.10.1",
+    "@xyflow/react": "^12.10.2",
     "electron-store": "^11.0.2",
-    "lucide-react": "^0.577.0",
+    "lucide-react": "^1.7.0",
     "node-pty": "^1.0.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-window": "^2.2.7",
-    "zustand": "^5.0.0"
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@electron/rebuild": "^4.0.3",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
-    "@types/node": "^25.3.1",
+    "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.4",
-    "@vitest/coverage-v8": "^4.0.18",
-    "electron": "^40.6.1",
+    "@vitest/coverage-v8": "^4.1.2",
+    "electron": "^41.1.0",
     "electron-builder": "^26.8.1",
     "electron-vite": "^5.0.0",
     "eslint": "^9.39.3",
@@ -72,11 +93,11 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "husky": "^9.1.7",
-    "jsdom": "^28.1.0",
-    "lint-staged": "^16.2.7",
+    "jsdom": "^29.0.1",
+    "lint-staged": "^16.4.0",
     "prettier": "^3.8.1",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.56.1",
+    "typescript-eslint": "^8.57.2",
     "vitest": "^4.0.18"
   }
 }

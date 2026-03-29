@@ -52,7 +52,7 @@ export function StatusBar({ onAboutClick, onShortcutsClick }: StatusBarProps): R
   const layoutLabel = paneLayout === 1 ? 'single pane' : `${String(paneLayout)}-pane split`
 
   return (
-    <div className="statusbar">
+    <div className="statusbar" role="status">
       <div className={`status-item ${activeCount > 0 ? 'green' : ''}`}>
         <HexDot status={activeCount > 0 ? 'live' : 'idle'} size={5} />
         <span>
