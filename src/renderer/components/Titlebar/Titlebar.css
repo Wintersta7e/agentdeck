@@ -79,13 +79,19 @@
   letter-spacing: 0.08em;
 }
 
-/* Tab bar — inline in titlebar */
+/* Tab bar — inline in titlebar, scrollable overflow */
 .tab-bar {
   display: flex;
   align-items: center;
   margin-left: 16px;
   flex: 1;
-  overflow: hidden;
+  min-width: 0;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  scrollbar-width: none; /* Firefox */
+}
+.tab-bar::-webkit-scrollbar {
+  display: none; /* Chrome / Electron */
 }
 
 .tab {
@@ -105,12 +111,12 @@
     opacity 0.2s ease,
     padding 0.25s ease;
   white-space: nowrap;
-  flex-shrink: 0;
+  flex-shrink: 1;
+  min-width: 100px;
   position: relative;
   -webkit-app-region: no-drag;
   max-width: 300px;
   clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
-  min-width: 80px;
 }
 
 .tab.closing {
