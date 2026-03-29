@@ -9,6 +9,8 @@ import { shellQuote } from './node-runners'
 
 const log = createLogger('pty-manager')
 
+const MAX_CONCURRENT_SESSIONS = 20
+
 /**
  * Map of agent name → npm package info for agents installed via npm.
  * Used to fix missing bin symlinks in WSL (npm global installs sometimes
@@ -74,6 +76,11 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
     // pane to hidden section), don't kill and respawn — just reuse it.
     if (sessions.has(sessionId)) {
       return
+    }
+
+    if (sessions.size >= MAX_CONCURRENT_SESSIONS) {
+      log.warn('Max concurrent sessions reached', { limit: MAX_CONCURRENT_SESSIONS })
+      throw new Error(`Maximum concurrent sessions reached (${MAX_CONCURRENT_SESSIONS})`)
     }
 
     const cwd = process.env['USERPROFILE'] ?? process.cwd()

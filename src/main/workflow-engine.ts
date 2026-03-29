@@ -48,6 +48,7 @@ export function createWorkflowEngine(
   mainWindow: BrowserWindow,
   getRoles?: (() => Role[]) | undefined,
 ): WorkflowEngine {
+  const MAX_CONCURRENT_WORKFLOWS = 3
   const activeRuns = new Map<string, { stop: () => void; resume: (nodeId: string) => void }>()
 
   function push(workflowId: string, event: Omit<WorkflowEvent, 'id' | 'timestamp'>): void {
@@ -70,6 +71,10 @@ export function createWorkflowEngine(
       variables && Object.keys(variables).length > 0
         ? substituteVariables(inputWorkflow, variables)
         : inputWorkflow
+    if (activeRuns.size >= MAX_CONCURRENT_WORKFLOWS) {
+      log.warn('Max concurrent workflows reached', { limit: MAX_CONCURRENT_WORKFLOWS })
+      throw new Error(`Maximum concurrent workflow runs reached (${MAX_CONCURRENT_WORKFLOWS})`)
+    }
     // C5: Guard against concurrent runs of the same workflow
     if (activeRuns.has(workflow.id)) {
       log.warn('Workflow already running, ignoring duplicate run', { id: workflow.id })

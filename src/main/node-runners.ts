@@ -48,6 +48,9 @@ export const AGENT_IDLE_TIMEOUT = 5 * MINUTES
 /** How often to check whether an agent node has gone idle */
 const IDLE_CHECK_INTERVAL = 0.5 * MINUTES
 
+/** Default absolute timeout for agent nodes without an explicit timeout */
+const DEFAULT_AGENT_TIMEOUT = 30 * MINUTES
+
 /** Max number of nodes to run concurrently within a single tier */
 export const MAX_TIER_CONCURRENCY = 5
 
@@ -285,26 +288,23 @@ export function runAgentNode(
       }
     }, IDLE_CHECK_INTERVAL)
 
-    // Optional absolute timeout: only if the user set node.timeout explicitly
-    const absoluteTimer = node.timeout
-      ? setTimeout(() => {
-          log.warn('Agent node absolute timeout', {
-            workflowId: deps.workflowId,
-            nodeId: node.id,
-            agent: bin,
-            timeoutMs: node.timeout,
-          })
-          forceKillTree(child)
-          clearInterval(flushTimer)
-          clearInterval(idleCheckTimer)
-          deps.activeChildProcesses.delete(child)
-          settleReject(
-            new Error(
-              `Agent ${bin} timed out after ${(node.timeout ?? 0) / 1000}s (absolute limit)`,
-            ),
-          )
-        }, node.timeout)
-      : undefined
+    const effectiveTimeout = node.timeout ?? DEFAULT_AGENT_TIMEOUT
+    const absoluteTimer = setTimeout(() => {
+      const isDefault = !node.timeout
+      log.warn('Agent node absolute timeout', {
+        workflowId: deps.workflowId,
+        nodeId: node.id,
+        agent: bin,
+        timeoutMs: effectiveTimeout,
+        isDefault,
+      })
+      forceKillTree(child)
+      clearInterval(flushTimer)
+      clearInterval(idleCheckTimer)
+      deps.activeChildProcesses.delete(child)
+      const label = isDefault ? 'default limit' : 'absolute limit'
+      settleReject(new Error(`Agent ${bin} timed out after ${effectiveTimeout / 1000}s (${label})`))
+    }, effectiveTimeout)
 
     child.on('close', (code) => {
       clearInterval(idleCheckTimer)
