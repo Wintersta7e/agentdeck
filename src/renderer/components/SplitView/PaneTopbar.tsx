@@ -1,4 +1,5 @@
 import { memo, useCallback } from 'react'
+import { GitBranch } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import { HexDot } from '../shared/HexDot'
 import './PaneTopbar.css'
@@ -15,6 +16,7 @@ export const PaneTopbar = memo(function PaneTopbar({
   const status = useAppStore((s) => s.sessions[sessionId]?.status ?? 'exited')
   const projectId = useAppStore((s) => s.sessions[sessionId]?.projectId)
   const projects = useAppStore((s) => s.projects)
+  const worktreeInfo = useAppStore((s) => s.worktreePaths[sessionId])
   const restartSession = useAppStore((s) => s.restartSession)
   const project = projectId ? projects.find((p) => p.id === projectId) : undefined
 
@@ -45,6 +47,12 @@ export const PaneTopbar = memo(function PaneTopbar({
     <div className={`pane-topbar${focused ? ' focused' : ''}`}>
       <div className="pane-accent" style={accentColor ? { background: accentColor } : undefined} />
       <span className="pane-project">{displayName}</span>
+      {worktreeInfo?.isolated === true && worktreeInfo.branch !== undefined && (
+        <span className="pane-worktree-badge" title={`Worktree: ${worktreeInfo.branch}`}>
+          <GitBranch size={12} />
+          <span>{worktreeInfo.branch.split('/').pop()}</span>
+        </span>
+      )}
       {showPath && (
         <>
           <span className="pane-sep">&gt;</span>
