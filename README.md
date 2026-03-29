@@ -7,6 +7,7 @@ A desktop terminal manager for WSL AI coding agents. Launch, manage, and orchest
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)
 ![License: Elastic-2.0](https://img.shields.io/badge/License-Elastic--2.0-blue.svg)
 ![Tests](https://img.shields.io/badge/Tests-499_passing-brightgreen)
+![CI](https://github.com/Wintersta7e/agentdeck/actions/workflows/ci.yml/badge.svg?branch=main)
 
 ## Why AgentDeck?
 
