@@ -5,6 +5,7 @@ import { createLogger } from './logger'
 import { ptyBus } from './pty-bus'
 import { toWslPath } from './wsl-utils'
 import { AGENT_BINARY_MAP, SAFE_FLAGS_RE } from '../shared/agents'
+import { shellQuote } from './node-runners'
 
 const log = createLogger('pty-manager')
 
@@ -104,12 +105,14 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
     // Build the full command sequence: cd to project dir, startup commands, then launch agent
     const commands: string[] = []
     if (projectPath) {
-      let wslPath = toWslPath(projectPath)
-      // Expand leading ~ so it works inside double quotes (bash doesn't expand ~ in quotes)
-      if (wslPath === '~' || wslPath.startsWith('~/')) {
-        wslPath = '$HOME' + wslPath.slice(1)
+      const wslPath = toWslPath(projectPath)
+      if (wslPath === '~') {
+        commands.push('cd "$HOME"')
+      } else if (wslPath.startsWith('~/')) {
+        commands.push(`cd "$HOME"/${shellQuote(wslPath.slice(2))}`)
+      } else {
+        commands.push(`cd ${shellQuote(wslPath)}`)
       }
-      commands.push(`cd "${wslPath}"`)
     }
     if (startupCommands) {
       // Filter out cd and agent commands — those are handled by projectPath auto-cd
