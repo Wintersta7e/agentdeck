@@ -5,7 +5,7 @@ import { toWslPath } from './wsl-utils'
 
 const log = createLogger('git-port')
 
-const EXEC_TIMEOUT_MS = 15_000
+const DEFAULT_EXEC_TIMEOUT_MS = 15_000
 
 // ─── Interface ────────────────────────────────────────────────────────────────
 
@@ -77,11 +77,11 @@ export function makeBranchName(projectId: string, sessionId: string, suffix?: nu
  * Runs `wsl.exe git <args>` in the given working directory.
  * Resolves with trimmed stdout; rejects with a descriptive Error on non-zero exit.
  */
-function wslExec(args: string[], cwd?: string): Promise<string> {
+function wslExec(args: string[], cwd?: string, timeoutMs?: number): Promise<string> {
   return new Promise((resolve, reject) => {
     const opts: ExecFileOptions & { encoding: 'utf8' } = {
       encoding: 'utf8',
-      timeout: EXEC_TIMEOUT_MS,
+      timeout: timeoutMs ?? DEFAULT_EXEC_TIMEOUT_MS,
       ...(cwd !== undefined ? { cwd } : {}),
     }
     execFile('wsl.exe', ['git', ...args], opts, (err, stdout, stderr) => {
@@ -106,11 +106,14 @@ function ensureWslPath(p: string): string {
 /**
  * Creates a GitPort that shells out to `wsl.exe git ...` for all operations.
  */
-export function createWslGitPort(): GitPort {
+export function createWslGitPort(options?: { timeoutMs?: number }): GitPort {
+  const t = options?.timeoutMs
+  const git = (args: string[]): Promise<string> => wslExec(args, undefined, t)
+
   return {
     async isGitRepo(path: string): Promise<boolean> {
       try {
-        await wslExec(['-C', ensureWslPath(path), 'rev-parse', '--git-dir'])
+        await git(['-C', ensureWslPath(path), 'rev-parse', '--git-dir'])
         return true
       } catch {
         return false
@@ -118,11 +121,11 @@ export function createWslGitPort(): GitPort {
     },
 
     async getRepoRoot(path: string): Promise<string> {
-      return wslExec(['-C', ensureWslPath(path), 'rev-parse', '--show-toplevel'])
+      return git(['-C', ensureWslPath(path), 'rev-parse', '--show-toplevel'])
     },
 
     async addWorktree(repoRoot: string, worktreePath: string, branch: string): Promise<void> {
-      await wslExec([
+      await git([
         '-C',
         ensureWslPath(repoRoot),
         'worktree',
@@ -135,7 +138,7 @@ export function createWslGitPort(): GitPort {
     },
 
     async removeWorktree(repoRoot: string, worktreePath: string): Promise<void> {
-      await wslExec([
+      await git([
         '-C',
         ensureWslPath(repoRoot),
         'worktree',
@@ -147,16 +150,16 @@ export function createWslGitPort(): GitPort {
     },
 
     async pruneWorktrees(repoRoot: string): Promise<void> {
-      await wslExec(['-C', ensureWslPath(repoRoot), 'worktree', 'prune'])
+      await git(['-C', ensureWslPath(repoRoot), 'worktree', 'prune'])
     },
 
     async deleteBranch(repoRoot: string, branch: string): Promise<void> {
-      await wslExec(['-C', ensureWslPath(repoRoot), 'branch', '-D', branch])
+      await git(['-C', ensureWslPath(repoRoot), 'branch', '-D', branch])
       log.info('branch deleted', { repoRoot, branch })
     },
 
     async status(path: string): Promise<{ hasChanges: boolean }> {
-      const output = await wslExec([
+      const output = await git([
         '-C',
         ensureWslPath(path),
         'status',
@@ -168,7 +171,7 @@ export function createWslGitPort(): GitPort {
     },
 
     async aheadCount(path: string, baseOid: string): Promise<number> {
-      const output = await wslExec([
+      const output = await git([
         '-C',
         ensureWslPath(path),
         'rev-list',
@@ -179,11 +182,11 @@ export function createWslGitPort(): GitPort {
     },
 
     async currentOid(path: string): Promise<string> {
-      return wslExec(['-C', ensureWslPath(path), 'rev-parse', 'HEAD'])
+      return git(['-C', ensureWslPath(path), 'rev-parse', 'HEAD'])
     },
 
     async gitVersion(): Promise<{ major: number; minor: number }> {
-      const output = await wslExec(['version'])
+      const output = await git(['version'])
       return parseGitVersion(output)
     },
   }

@@ -15,10 +15,11 @@ export const PaneTopbar = memo(function PaneTopbar({
 }: PaneTopbarProps): React.JSX.Element {
   const status = useAppStore((s) => s.sessions[sessionId]?.status ?? 'exited')
   const projectId = useAppStore((s) => s.sessions[sessionId]?.projectId)
-  const projects = useAppStore((s) => s.projects)
+  const project = useAppStore((s) =>
+    projectId ? s.projects.find((p) => p.id === projectId) : undefined,
+  )
   const worktreeInfo = useAppStore((s) => s.worktreePaths[sessionId])
   const restartSession = useAppStore((s) => s.restartSession)
-  const project = projectId ? projects.find((p) => p.id === projectId) : undefined
 
   const isTerminal = !projectId
   const accentColor = project?.identity?.accentColor ?? undefined

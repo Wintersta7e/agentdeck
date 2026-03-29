@@ -75,7 +75,7 @@ export function ConfirmDialog({
           {extraAction && (
             <button
               type="button"
-              className="confirm-dialog-btn-cancel"
+              className="confirm-dialog-btn-extra"
               onClick={extraAction.onClick}
             >
               {extraAction.label}
