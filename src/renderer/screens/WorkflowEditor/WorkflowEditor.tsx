@@ -487,8 +487,10 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
           style={{ width: wfLogPanelWidth, flexShrink: 0 }}
         >
           {/* Tab bar */}
-          <div className="wf-right-tabs">
+          <div className="wf-right-tabs" role="tablist">
             <button
+              role="tab"
+              aria-selected={rightTab === 'editor'}
               className={`wf-right-tab${rightTab === 'editor' ? ' active' : ''}`}
               onClick={() => setRightTab('editor')}
               type="button"
@@ -496,6 +498,8 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
               Node Editor
             </button>
             <button
+              role="tab"
+              aria-selected={rightTab === 'log'}
               className={`wf-right-tab${rightTab === 'log' ? ' active' : ''}`}
               onClick={() => setRightTab('log')}
               type="button"
@@ -503,6 +507,8 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
               Execution Log
             </button>
             <button
+              role="tab"
+              aria-selected={rightTab === 'history'}
               className={`wf-right-tab${rightTab === 'history' ? ' active' : ''}`}
               onClick={() => setRightTab('history')}
               type="button"
@@ -513,6 +519,7 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
 
           {/* Tab content */}
           <div
+            role="tabpanel"
             className={`wf-right-content ${rightTab === 'editor' ? 'wf-tab-visible' : 'wf-tab-hidden'}`}
           >
             {detailNode ? (
@@ -531,6 +538,7 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
             )}
           </div>
           <div
+            role="tabpanel"
             className={rightTab === 'log' ? 'wf-tab-visible' : 'wf-tab-hidden'}
             style={{ flex: 1, minHeight: 0 }}
           >
@@ -544,6 +552,7 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
             />
           </div>
           <div
+            role="tabpanel"
             className={rightTab === 'history' ? 'wf-tab-visible' : 'wf-tab-hidden'}
             style={{ flex: 1, minHeight: 0 }}
           >

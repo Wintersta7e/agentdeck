@@ -74,6 +74,8 @@ export function NotificationToast(): React.JSX.Element | null {
             key={n.id}
             className={`toast toast-${n.type}${isExpanded ? ' toast-expanded' : ''}`}
             onClick={() => handleClick(n.id)}
+            role={n.type === 'error' ? 'alert' : 'status'}
+            aria-live={n.type === 'error' ? 'assertive' : 'polite'}
           >
             <span className="toast-icon">
               {n.type === 'error' ? (
