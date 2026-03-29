@@ -63,6 +63,14 @@ export interface UiSlice {
   // Theme
   theme: string
   setTheme: (name: string) => void
+
+  // Worktree isolation paths (per-session)
+  worktreePaths: Record<string, { path: string; isolated: boolean; branch?: string | undefined }>
+  setWorktreePath: (
+    sessionId: string,
+    result: { path: string; isolated: boolean; branch?: string | undefined },
+  ) => void
+  clearWorktreePath: (sessionId: string) => void
 }
 
 export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set) => ({
@@ -229,4 +237,14 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set) => (
     window.agentDeck.theme.set(name)
     set({ theme: name })
   },
+
+  // Worktree isolation paths
+  worktreePaths: {},
+  setWorktreePath: (sessionId, result) =>
+    set((s) => ({ worktreePaths: { ...s.worktreePaths, [sessionId]: result } })),
+  clearWorktreePath: (sessionId) =>
+    set((s) => {
+      const { [sessionId]: _, ...rest } = s.worktreePaths
+      return { worktreePaths: rest }
+    }),
 })
