@@ -55,6 +55,7 @@ function createMockGit(overrides: Partial<GitPort> = {}): GitPort {
     getRepoRoot: vi.fn(async (p: string) => p),
     addWorktree: vi.fn(async () => {}),
     removeWorktree: vi.fn(async () => {}),
+    pruneWorktrees: vi.fn(async () => {}),
     deleteBranch: vi.fn(async () => {}),
     status: vi.fn(async () => ({ hasChanges: false })),
     aheadCount: vi.fn(async () => 0),

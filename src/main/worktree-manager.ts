@@ -303,6 +303,13 @@ export function createWorktreeManager(
       return
     }
 
+    // Prune git's internal worktree list so the branch is no longer locked
+    try {
+      await git.pruneWorktrees(entry.repoRoot)
+    } catch {
+      // Best-effort — branch delete below may still succeed
+    }
+
     try {
       await git.deleteBranch(entry.repoRoot, entry.branch)
     } catch (err) {
@@ -311,7 +318,6 @@ export function createWorktreeManager(
         branch: entry.branch,
         err: String(err),
       })
-      // Branch delete is best-effort after worktree is gone
     }
 
     removeEntry(sessionId)

@@ -14,6 +14,7 @@ export interface GitPort {
   getRepoRoot(path: string): Promise<string>
   addWorktree(repoRoot: string, worktreePath: string, branch: string): Promise<void>
   removeWorktree(repoRoot: string, worktreePath: string): Promise<void>
+  pruneWorktrees(repoRoot: string): Promise<void>
   deleteBranch(repoRoot: string, branch: string): Promise<void>
   status(path: string): Promise<{ hasChanges: boolean }>
   aheadCount(path: string, baseOid: string): Promise<number>
@@ -143,6 +144,10 @@ export function createWslGitPort(): GitPort {
         ensureWslPath(worktreePath),
       ])
       log.info('worktree removed', { repoRoot, worktreePath })
+    },
+
+    async pruneWorktrees(repoRoot: string): Promise<void> {
+      await wslExec(['-C', ensureWslPath(repoRoot), 'worktree', 'prune'])
     },
 
     async deleteBranch(repoRoot: string, branch: string): Promise<void> {
