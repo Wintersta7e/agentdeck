@@ -2,7 +2,7 @@
 
 A desktop terminal manager for WSL AI coding agents. Launch, manage, and orchestrate sessions across multiple agents from a single interface.
 
-![Electron](https://img.shields.io/badge/Electron-40-47848F?logo=electron)
+![Electron](https://img.shields.io/badge/Electron-41-47848F?logo=electron)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)
 ![License: Elastic-2.0](https://img.shields.io/badge/License-Elastic--2.0-blue.svg)
@@ -185,7 +185,7 @@ src/
 
 | Technology | Purpose |
 |------------|---------|
-| [Electron 40](https://electronjs.org) | Desktop application shell |
+| [Electron 41](https://electronjs.org) | Desktop application shell |
 | [React 19](https://react.dev) | UI framework |
 | [TypeScript 5](https://typescriptlang.org) | Type-safe development (strict mode) |
 | [electron-vite 5](https://electron-vite.org) | Build tooling |

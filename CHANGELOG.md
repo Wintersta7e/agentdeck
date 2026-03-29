@@ -5,6 +5,26 @@ All notable changes to AgentDeck will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.6.1] - 2026-03-29
+
+### Changed
+- License switched from MIT to Elastic License 2.0
+- Electron 40 → 41, lucide-react 0.577 → 1.7, jsdom 28 → 29, addon-fit 0.10 → 0.11
+- Bumped lint-staged, @types/node, typescript-eslint, zustand, @xyflow/react, @vitest/coverage-v8
+
+### Added
+- GitHub Actions CI workflow (lint, typecheck, format, test)
+- Dependabot for weekly npm and GitHub Actions updates
+- GitHub issue templates (bug report, feature request)
+- Community files: CHANGELOG, CODE_OF_CONDUCT, CONTRIBUTING, SECURITY
+- Branch protection on main (require PR + CI pass)
+- Private vulnerability reporting enabled
+
+### Fixed
+- brace-expansion moderate vulnerability (npm audit fix)
+- SECURITY.md: replaced unreachable noreply email with GitHub private vulnerability reporting
+- Sidebar CSS: templates section crushed when all sections expanded
+
 ## [4.6.0] - 2026-03-27
 
 ### Added
