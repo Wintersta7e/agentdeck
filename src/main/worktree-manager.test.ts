@@ -435,10 +435,13 @@ describe('WorktreeManager — pruneOrphans', () => {
     const { mgr, worktreeId } = await setupWorktreeSession(git)
 
     await mgr.keep(worktreeId)
+    // keep() removes the worktree directory (but preserves the branch)
+    expect(git.removeWorktree).toHaveBeenCalledTimes(1)
+    vi.mocked(git.removeWorktree).mockClear()
 
     const pruned = await mgr.pruneOrphans()
     expect(pruned).toBe(0)
-    // removeWorktree should never have been called
+    // pruneOrphans should NOT have called removeWorktree for a kept entry
     expect(git.removeWorktree).not.toHaveBeenCalled()
   })
 

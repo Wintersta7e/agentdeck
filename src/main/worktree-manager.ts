@@ -332,7 +332,19 @@ export function createWorktreeManager(
       throw new Error(`No worktree entry found for sessionId: ${sessionId}`)
     }
 
-    updateEntry(sessionId, { kept: true })
+    // Remove worktree directory to free disk space. The branch persists in the
+    // repo's refs regardless of whether the worktree directory exists.
+    try {
+      await git.removeWorktree(entry.repoRoot, entry.path)
+    } catch (err) {
+      log.warn('Failed to remove worktree dir on keep', {
+        sessionId,
+        path: entry.path,
+        err: String(err),
+      })
+    }
+
+    updateEntry(sessionId, { kept: true, lastUsed: Date.now() })
     log.info('Worktree kept', { sessionId, branch: entry.branch })
   }
 

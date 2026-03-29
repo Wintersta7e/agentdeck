@@ -377,7 +377,18 @@ export function TerminalPane({
         if (pid) {
           try {
             const result = await window.agentDeck.worktree.acquire(pid, sessionId)
-            if (cancelled) return
+            if (cancelled) {
+              // Tab closed while acquire was in-flight — discard the orphaned worktree
+              if (result.isolated) {
+                window.agentDeck.worktree.discard(sessionId).catch((err: unknown) => {
+                  window.agentDeck.log.send('warn', 'terminal', 'Orphan worktree cleanup failed', {
+                    sessionId,
+                    err: String(err),
+                  })
+                })
+              }
+              return
+            }
             setWorktreePath(sessionId, result)
             spawnPath = result.path
           } catch (err: unknown) {

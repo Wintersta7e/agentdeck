@@ -179,6 +179,12 @@ export function App(): React.JSX.Element {
               window.agentDeck.log.send('debug', 'pty', 'Kill failed', { err: String(err) })
             })
             window.agentDeck.worktree.discard(sessionId).catch((err: unknown) => {
+              useAppStore
+                .getState()
+                .addNotification(
+                  'warning',
+                  'Failed to clean up worktree — it may need manual removal',
+                )
               window.agentDeck.log.send('warn', 'worktree', 'Discard failed', {
                 err: String(err),
               })
@@ -206,6 +212,9 @@ export function App(): React.JSX.Element {
       window.agentDeck.log.send('debug', 'pty', 'Kill failed', { err: String(err) })
     })
     window.agentDeck.worktree.discard(sessionId).catch((err: unknown) => {
+      useAppStore
+        .getState()
+        .addNotification('warning', 'Failed to clean up worktree — it may need manual removal')
       window.agentDeck.log.send('warn', 'worktree', 'Discard failed', { err: String(err) })
     })
     useAppStore.getState().clearWorktreePath(sessionId)
