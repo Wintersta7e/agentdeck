@@ -1,6 +1,7 @@
 import { execFile, type ExecFileOptions } from 'child_process'
 import { createHash } from 'crypto'
 import { createLogger } from './logger'
+import { toWslPath } from './wsl-utils'
 
 const log = createLogger('git-port')
 
@@ -94,6 +95,13 @@ function wslExec(args: string[], cwd?: string): Promise<string> {
   })
 }
 
+/** Ensure a path is in WSL format (convert Windows paths like C:\... to /mnt/c/...) */
+function ensureWslPath(p: string): string {
+  // Already a WSL/Unix path
+  if (p.startsWith('/')) return p
+  return toWslPath(p)
+}
+
 /**
  * Creates a GitPort that shells out to `wsl.exe git ...` for all operations.
  */
@@ -101,7 +109,7 @@ export function createWslGitPort(): GitPort {
   return {
     async isGitRepo(path: string): Promise<boolean> {
       try {
-        await wslExec(['-C', path, 'rev-parse', '--git-dir'])
+        await wslExec(['-C', ensureWslPath(path), 'rev-parse', '--git-dir'])
         return true
       } catch {
         return false
@@ -109,36 +117,64 @@ export function createWslGitPort(): GitPort {
     },
 
     async getRepoRoot(path: string): Promise<string> {
-      return wslExec(['-C', path, 'rev-parse', '--show-toplevel'])
+      return wslExec(['-C', ensureWslPath(path), 'rev-parse', '--show-toplevel'])
     },
 
     async addWorktree(repoRoot: string, worktreePath: string, branch: string): Promise<void> {
-      await wslExec(['-C', repoRoot, 'worktree', 'add', '-b', branch, worktreePath])
+      await wslExec([
+        '-C',
+        ensureWslPath(repoRoot),
+        'worktree',
+        'add',
+        '-b',
+        branch,
+        ensureWslPath(worktreePath),
+      ])
       log.info('worktree added', { repoRoot, worktreePath, branch })
     },
 
     async removeWorktree(repoRoot: string, worktreePath: string): Promise<void> {
-      await wslExec(['-C', repoRoot, 'worktree', 'remove', '--force', worktreePath])
+      await wslExec([
+        '-C',
+        ensureWslPath(repoRoot),
+        'worktree',
+        'remove',
+        '--force',
+        ensureWslPath(worktreePath),
+      ])
       log.info('worktree removed', { repoRoot, worktreePath })
     },
 
     async deleteBranch(repoRoot: string, branch: string): Promise<void> {
-      await wslExec(['-C', repoRoot, 'branch', '-D', branch])
+      await wslExec(['-C', ensureWslPath(repoRoot), 'branch', '-D', branch])
       log.info('branch deleted', { repoRoot, branch })
     },
 
     async status(path: string): Promise<{ hasChanges: boolean }> {
-      const output = await wslExec(['-C', path, 'status', '--porcelain'])
+      const output = await wslExec([
+        '-C',
+        ensureWslPath(path),
+        'status',
+        '--porcelain=v2',
+        '-z',
+        '--untracked-files=normal',
+      ])
       return parseStatusPorcelain(output)
     },
 
     async aheadCount(path: string, baseOid: string): Promise<number> {
-      const output = await wslExec(['-C', path, 'rev-list', '--count', `${baseOid}..HEAD`])
+      const output = await wslExec([
+        '-C',
+        ensureWslPath(path),
+        'rev-list',
+        '--count',
+        `${baseOid}..HEAD`,
+      ])
       return parseAheadCount(output)
     },
 
     async currentOid(path: string): Promise<string> {
-      return wslExec(['-C', path, 'rev-parse', 'HEAD'])
+      return wslExec(['-C', ensureWslPath(path), 'rev-parse', 'HEAD'])
     },
 
     async gitVersion(): Promise<{ major: number; minor: number }> {

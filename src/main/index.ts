@@ -174,13 +174,26 @@ app
     await seedWorkflows(appStore)
 
     const gitPort = createWslGitPort()
-    const wslWorktreeDir = '~/.agentdeck/worktrees'
+    // Resolve WSL $HOME for worktree storage (can't use ~ — Node treats it literally)
+    let wslHome = '/home/rooty' // fallback
+    try {
+      const { execFileSync } = await import('child_process')
+      wslHome = execFileSync('wsl.exe', ['bash', '-lc', 'echo $HOME'], {
+        timeout: 5000,
+        encoding: 'utf-8',
+      }).trim()
+    } catch (err) {
+      log.warn('Could not resolve WSL $HOME, using fallback', { err: String(err) })
+    }
+    const wslWorktreeDir = `${wslHome}/.agentdeck/worktrees`
+    const registryDir = join(app.getPath('userData'), 'worktree-registry')
     worktreeManager = createWorktreeManager(
       gitPort,
       (id) => {
         const projects = appStore?.get('projects') ?? []
         return projects.find((p) => p.id === id)?.path
       },
+      registryDir,
       wslWorktreeDir,
     )
 
