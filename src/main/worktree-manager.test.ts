@@ -236,6 +236,26 @@ describe('WorktreeManager — acquire', () => {
     // No worktrees created
     expect(git.addWorktree).not.toHaveBeenCalled()
   })
+
+  it('retries with suffix when branch name collides', async () => {
+    const git = createMockGit({
+      addWorktree: vi
+        .fn()
+        .mockRejectedValueOnce(new Error('branch exists'))
+        .mockResolvedValueOnce(undefined),
+    })
+    const lookup = createLookup({ proj1: '/home/user/project-a' })
+    const mgr = createWorktreeManager(git, lookup, REGISTRY_DIR)
+
+    // sess-1 claims primary
+    await mgr.acquire('proj1', 'sess-1')
+
+    // sess-2 triggers worktree creation; first attempt fails, second succeeds
+    const result = await mgr.acquire('proj1', 'sess-2')
+
+    expect(result.isolated).toBe(true)
+    expect(git.addWorktree).toHaveBeenCalledTimes(2)
+  })
 })
 
 // ── Helper to set up a primary + worktree session ────────────────────────────
@@ -444,6 +464,36 @@ describe('WorktreeManager — pruneOrphans', () => {
     expect(pruned).toBe(0)
     // pruneOrphans should NOT have called removeWorktree for a kept entry
     expect(git.removeWorktree).not.toHaveBeenCalled()
+  })
+
+  it('removes clean worktree aged past ORPHAN_AGE_MS', async () => {
+    const git = createMockGit({
+      aheadCount: vi.fn(async () => 0),
+      status: vi.fn(async () => ({ hasChanges: false })),
+    })
+    const lookup = createLookup({ proj1: '/home/user/project-a' })
+    const mgr = createWorktreeManager(git, lookup, REGISTRY_DIR)
+
+    // Acquire primary + secondary to create a worktree registry entry
+    await mgr.acquire('proj1', 'sess-1')
+    await mgr.acquire('proj1', 'sess-2')
+
+    // Read registry from the in-memory fs store, set lastUsed to 25h ago, write back
+    const regPath = `${REGISTRY_DIR}/registry.json`
+    const raw = vi.mocked(fs.readFileSync)(regPath, 'utf-8') as string
+    const data = JSON.parse(raw) as { entries: Array<{ lastUsed: number }> }
+    for (const entry of data.entries) {
+      entry.lastUsed = Date.now() - 25 * 60 * 60 * 1000
+    }
+    vi.mocked(fs.writeFileSync)(regPath, JSON.stringify(data, null, 2), 'utf-8')
+
+    // Fresh manager instance loads the aged entry from fsStore
+    const mgr2 = createWorktreeManager(git, lookup, REGISTRY_DIR)
+
+    const pruned = await mgr2.pruneOrphans()
+
+    expect(pruned).toBe(1)
+    expect(git.removeWorktree).toHaveBeenCalledTimes(1)
   })
 
   it('retries and removes a pendingCleanup entry on success', async () => {
