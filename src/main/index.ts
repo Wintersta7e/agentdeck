@@ -175,27 +175,41 @@ app
 
     const gitPort = createWslGitPort()
     // Resolve WSL $HOME for worktree storage (can't use ~ — Node treats it literally)
-    let wslHome = '/home/rooty' // fallback
+    let wslHome: string | null = null
     try {
-      const { execFileSync } = await import('child_process')
-      wslHome = execFileSync('wsl.exe', ['bash', '-lc', 'echo $HOME'], {
-        timeout: 5000,
-        encoding: 'utf-8',
-      }).trim()
+      const { execFile: execFileCb } = await import('child_process')
+      wslHome = await new Promise<string>((resolve, reject) => {
+        execFileCb(
+          'wsl.exe',
+          ['bash', '-lc', 'echo $HOME'],
+          { timeout: 5000, encoding: 'utf-8' },
+          (err, stdout) => {
+            if (err) reject(err)
+            else resolve(stdout.trim())
+          },
+        )
+      })
     } catch (err) {
-      log.warn('Could not resolve WSL $HOME, using fallback', { err: String(err) })
+      log.warn('Could not resolve WSL $HOME — worktree isolation disabled', {
+        err: String(err),
+      })
     }
-    const wslWorktreeDir = `${wslHome}/.agentdeck/worktrees`
+
     const registryDir = join(app.getPath('userData'), 'worktree-registry')
-    worktreeManager = createWorktreeManager(
-      gitPort,
-      (id) => {
-        const projects = appStore?.get('projects') ?? []
-        return projects.find((p) => p.id === id)?.path
-      },
-      registryDir,
-      wslWorktreeDir,
-    )
+    if (wslHome) {
+      const wslWorktreeDir = `${wslHome}/.agentdeck/worktrees`
+      worktreeManager = createWorktreeManager(
+        gitPort,
+        (id) => {
+          const projects = appStore?.get('projects') ?? []
+          return projects.find((p) => p.id === id)?.path
+        },
+        registryDir,
+        wslWorktreeDir,
+      )
+    } else {
+      log.warn('Worktree manager not created — WSL $HOME unknown')
+    }
 
     registerIpcHandlers(appStore)
 
