@@ -145,8 +145,16 @@ export function App(): React.JSX.Element {
     (sessionId: string) => {
       // Read worktree state fresh from store to avoid stale closure
       const wt = useAppStore.getState().worktreePaths[sessionId]
-      // Non-worktree session — close immediately.
+      // Non-worktree session — release primary slot and close immediately.
       if (!wt?.isolated) {
+        const projectId = useAppStore.getState().sessions[sessionId]?.projectId
+        if (projectId) {
+          window.agentDeck.worktree.releasePrimary(projectId, sessionId).catch((err: unknown) => {
+            window.agentDeck.log.send('debug', 'worktree', 'releasePrimary failed', {
+              err: String(err),
+            })
+          })
+        }
         closeSessionImmediate(sessionId)
         return
       }

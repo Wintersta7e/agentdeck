@@ -214,6 +214,8 @@ contextBridge.exposeInMainWorld('agentDeck', {
       ipcRenderer.invoke('worktree:discard', sessionId) as Promise<void>,
     keep: (sessionId: string): Promise<void> =>
       ipcRenderer.invoke('worktree:keep', sessionId) as Promise<void>,
+    releasePrimary: (projectId: string, sessionId: string): Promise<void> =>
+      ipcRenderer.invoke('worktree:releasePrimary', projectId, sessionId) as Promise<void>,
   },
   onFileDrop: (cb: (wslPaths: string[]) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, wslPaths: string[]): void => cb(wslPaths)

@@ -58,7 +58,7 @@ function createMockGit(overrides: Partial<GitPort> = {}): GitPort {
     deleteBranch: vi.fn(async () => {}),
     status: vi.fn(async () => ({ hasChanges: false })),
     aheadCount: vi.fn(async () => 0),
-    currentOid: vi.fn(async () => 'abc123def456'),
+    currentOid: vi.fn(async () => 'abc123def456abc123def456abc123def456abcd'),
     gitVersion: vi.fn(async () => ({ major: 2, minor: 43 })),
     ...overrides,
   }
@@ -468,5 +468,60 @@ describe('WorktreeManager — pruneOrphans', () => {
     await expect(mgr.inspect(worktreeId)).rejects.toThrow(
       `No worktree entry found for sessionId: ${worktreeId}`,
     )
+  })
+})
+
+// ── releasePrimary ───────────────────────────────────────────────────────────
+
+describe('WorktreeManager — releasePrimary', () => {
+  beforeEach(() => {
+    fsStore.clear()
+  })
+
+  it('after releasePrimary, next acquire for same project gets primary (not worktree)', async () => {
+    const git = createMockGit()
+    const lookup = createLookup({ proj1: '/home/user/project-a' })
+    const mgr = createWorktreeManager(git, lookup, REGISTRY_DIR)
+
+    // sess-1 claims primary
+    const r1 = await mgr.acquire('proj1', 'sess-1')
+    expect(r1.isolated).toBe(false)
+
+    // Release primary for sess-1
+    mgr.releasePrimary('proj1', 'sess-1')
+
+    // sess-2 should now get primary (not a worktree)
+    const r2 = await mgr.acquire('proj1', 'sess-2')
+    expect(r2.isolated).toBe(false)
+    expect(r2.path).toBe('/home/user/project-a')
+
+    // No worktrees should have been created
+    expect(git.addWorktree).not.toHaveBeenCalled()
+  })
+
+  it('is a no-op when sessionId does not match current primary', async () => {
+    const git = createMockGit()
+    const lookup = createLookup({ proj1: '/home/user/project-a' })
+    const mgr = createWorktreeManager(git, lookup, REGISTRY_DIR)
+
+    // sess-1 claims primary
+    await mgr.acquire('proj1', 'sess-1')
+
+    // Release with wrong sessionId — should be a no-op
+    mgr.releasePrimary('proj1', 'sess-wrong')
+
+    // sess-2 should get a worktree (primary is still held by sess-1)
+    const r2 = await mgr.acquire('proj1', 'sess-2')
+    expect(r2.isolated).toBe(true)
+    expect(git.addWorktree).toHaveBeenCalledTimes(1)
+  })
+
+  it('is a no-op for unknown projectId', () => {
+    const git = createMockGit()
+    const lookup = createLookup({})
+    const mgr = createWorktreeManager(git, lookup, REGISTRY_DIR)
+
+    // Should not throw
+    expect(() => mgr.releasePrimary('nonexistent', 'sess-1')).not.toThrow()
   })
 })

@@ -7,7 +7,13 @@ import { createLogger } from './logger'
 const log = createLogger('worktree-manager')
 
 const MAX_BRANCH_RETRIES = 3
+const MAX_WORKTREES = 20
 const ORPHAN_AGE_MS = 24 * 60 * 60 * 1000 // 24 hours
+
+const VALID_OID_RE = /^[0-9a-f]{40}$/
+function isValidOid(oid: string): boolean {
+  return VALID_OID_RE.test(oid)
+}
 
 // ─── Public types ────────────────────────────────────────────────────────────
 
@@ -41,6 +47,7 @@ export interface WorktreeManager {
   inspect(sessionId: string): Promise<WorktreeInspection>
   discard(sessionId: string): Promise<void>
   keep(sessionId: string): Promise<void>
+  releasePrimary(projectId: string, sessionId: string): void
   pruneOrphans(): Promise<number>
 }
 
@@ -63,7 +70,14 @@ function loadRegistry(registryDir: string): WorktreeEntry[] {
       log.warn('Registry file malformed — resetting', { file })
       return []
     }
-    return data.entries
+    const valid = data.entries.filter((e) => isValidOid(e.baseOid))
+    if (valid.length < data.entries.length) {
+      log.warn('Filtered registry entries with invalid baseOid', {
+        file,
+        removed: data.entries.length - valid.length,
+      })
+    }
+    return valid
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code
     if (code !== 'ENOENT') {
@@ -179,7 +193,12 @@ export function createWorktreeManager(
         return { path: projectPath, isolated: false }
       }
 
-      // Non-primary: need worktree — check git version first
+      // Non-primary: need worktree — enforce cap first
+      if (entries.length >= MAX_WORKTREES) {
+        throw new Error(`Worktree limit reached (${MAX_WORKTREES}). Close existing sessions first.`)
+      }
+
+      // Check git version
       const ver = await git.gitVersion()
       if (ver.major < 2 || (ver.major === 2 && ver.minor < 17)) {
         throw new Error('Git 2.17+ required for worktree isolation')
@@ -188,6 +207,9 @@ export function createWorktreeManager(
       const repoRoot = await git.getRepoRoot(projectPath)
       const baseOid = await git.currentOid(projectPath)
       const worktreePath = path.posix.join(worktreeBaseDir, projectId, sessionId)
+      if (!worktreePath.startsWith(worktreeBaseDir + '/')) {
+        throw new Error('Worktree path escapes base directory')
+      }
 
       // Try creating worktree, retry with suffix on branch collision
       let branch = ''
@@ -246,6 +268,12 @@ export function createWorktreeManager(
     }
 
     const statusResult = await git.status(entry.path)
+
+    if (!isValidOid(entry.baseOid)) {
+      // Can't reliably check ahead count — treat as dirty
+      return { hasChanges: statusResult.hasChanges, hasUnmerged: true, branch: entry.branch }
+    }
+
     const ahead = await git.aheadCount(entry.path, entry.baseOid)
 
     return {
@@ -344,6 +372,13 @@ export function createWorktreeManager(
       if (now - entry.lastUsed < ORPHAN_AGE_MS) continue
 
       // Check if branch has unpushed commits — skip dirty branches
+      if (!isValidOid(entry.baseOid)) {
+        // Can't reliably check ahead count — treat as dirty, skip
+        log.warn('Skipping prune of worktree with invalid baseOid', {
+          sessionId: entry.sessionId,
+        })
+        continue
+      }
       try {
         const ahead = await git.aheadCount(entry.path, entry.baseOid)
         if (ahead > 0) {
@@ -382,5 +417,14 @@ export function createWorktreeManager(
     return pruned
   }
 
-  return { acquire, inspect, discard, keep, pruneOrphans }
+  // ── releasePrimary ────────────────────────────────────────────
+
+  function releasePrimary(projectId: string, sessionId: string): void {
+    if (primaries.get(projectId) === sessionId) {
+      primaries.delete(projectId)
+      log.info('Primary slot released', { projectId, sessionId })
+    }
+  }
+
+  return { acquire, inspect, discard, keep, releasePrimary, pruneOrphans }
 }

@@ -122,6 +122,7 @@ declare global {
         ): Promise<{ hasChanges: boolean; hasUnmerged: boolean; branch: string }>
         discard(sessionId: string): Promise<void>
         keep(sessionId: string): Promise<void>
+        releasePrimary(projectId: string, sessionId: string): Promise<void>
       }
       pickFolder: () => Promise<string | null>
       log: {

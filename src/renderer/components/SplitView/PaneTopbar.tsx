@@ -36,12 +36,29 @@ export const PaneTopbar = memo(function PaneTopbar({
   // Only show path separately if it adds info beyond the name
   const showPath = projectPath !== '' && projectPath !== rawName
 
+  const clearWorktreePath = useAppStore((s) => s.clearWorktreePath)
+
   const handleRestart = useCallback(() => {
+    // If the old session has an isolated worktree, clean it up before restart
+    const wt = useAppStore.getState().worktreePaths[sessionId]
+    const cleanupPromise =
+      wt?.isolated === true
+        ? window.agentDeck.worktree.discard(sessionId).then(
+            () => clearWorktreePath(sessionId),
+            (err: unknown) => {
+              window.agentDeck.log.send('warn', 'worktree', 'Discard before restart failed', {
+                err: String(err),
+              })
+              clearWorktreePath(sessionId)
+            },
+          )
+        : Promise.resolve()
+
     // Kill old PTY, then swap in a fresh session for the same project
-    void window.agentDeck.pty.kill(sessionId).then(() => {
+    void Promise.all([window.agentDeck.pty.kill(sessionId), cleanupPromise]).then(() => {
       restartSession(sessionId)
     })
-  }, [sessionId, restartSession])
+  }, [sessionId, restartSession, clearWorktreePath])
 
   return (
     <div className={`pane-topbar${focused ? ' focused' : ''}`}>
