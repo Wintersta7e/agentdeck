@@ -288,11 +288,11 @@ export function HomeScreen({
         <PanelBox corners="all" glow="none" className="home-quick-open">
           <div
             className="quick-open"
-            onClick={openWizard}
+            onClick={() => openCommandPalette()}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault()
-                openWizard()
+                openCommandPalette()
               }
             }}
             role="button"
@@ -304,7 +304,7 @@ export function HomeScreen({
             <span className="quick-open-text">
               Open project, run template, or jump to session...
             </span>
-            <span className="quick-open-hint">Ctrl+N</span>
+            <span className="quick-open-hint">Ctrl+K</span>
           </div>
         </PanelBox>
 
@@ -524,7 +524,14 @@ export function HomeScreen({
                   {vInfo?.current && <div className="agent-card-version">v{vInfo.current}</div>}
                   <div className="agent-card-desc">{a.desc}</div>
                   {agentStatus[a.name] !== undefined && (
-                    <div className={installed ? 'agent-installed' : 'agent-missing'}>
+                    <div
+                      className={installed ? 'agent-installed' : 'agent-missing'}
+                      title={
+                        installed
+                          ? undefined
+                          : `Install: ${SHARED_AGENTS.find((sa) => sa.id === a.name)?.updateCmd ?? 'See agent docs'}`
+                      }
+                    >
                       {installed ? (
                         <>
                           <Check size={12} /> installed

@@ -264,6 +264,19 @@ export function App(): React.JSX.Element {
         useAppStore.getState().setPaneLayout(Number(e.key) as 1 | 2 | 3)
         return
       }
+      if (e.ctrlKey && e.key === 'Tab') {
+        e.preventDefault()
+        const state = useAppStore.getState()
+        const ids = Object.keys(state.sessions)
+        if (ids.length === 0) return
+        const currentIdx = state.activeSessionId ? ids.indexOf(state.activeSessionId) : -1
+        const next = e.shiftKey
+          ? (currentIdx - 1 + ids.length) % ids.length
+          : (currentIdx + 1) % ids.length
+        const nextId = ids[next]
+        if (nextId) state.setActiveSession(nextId)
+        return
+      }
       if (e.key === 'Escape') {
         const state = useAppStore.getState()
         if (state.commandPaletteOpen) {
@@ -384,7 +397,7 @@ export function App(): React.JSX.Element {
               onOpenProjectWithAgent={handleOpenProjectWithAgent}
             />
           )}
-          <Suspense fallback={null}>
+          <Suspense fallback={<div className="suspense-spinner" />}>
             {currentView === 'wizard' && <NewProjectWizard onCreateProject={handleOpenProject} />}
             {currentView === 'settings' && <ProjectSettings key={settingsProjectId} />}
             {currentView === 'template-editor' && <TemplateEditor />}

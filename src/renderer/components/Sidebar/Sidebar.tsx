@@ -3,6 +3,7 @@ import { useAppStore } from '../../store/appStore'
 import { useProjects } from '../../hooks/useProjects'
 import { PanelBox } from '../shared/PanelBox'
 import { HexDot } from '../shared/HexDot'
+import { ConfirmDialog } from '../shared/ConfirmDialog'
 import type { AgentConfig, Project } from '../../../shared/types'
 import { getProjectAgents } from '../../../shared/agent-helpers'
 import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
@@ -63,6 +64,14 @@ export function Sidebar({
     subMenu?: 'templates' | 'agents' | undefined
   } | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+
+  // Confirmation dialog state for destructive actions
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string
+    message: string
+    confirmLabel: string
+    onConfirm: () => void
+  } | null>(null)
 
   // Inline rename state for workflows
   const [renamingWorkflowId, setRenamingWorkflowId] = useState<string | null>(null)
@@ -129,8 +138,19 @@ export function Sidebar({
 
   function handleRemoveProject(): void {
     if (!contextMenu?.projectId) return
-    void deleteProject(contextMenu.projectId)
+    const project = projects.find((p) => p.id === contextMenu.projectId)
+    const projectName = project?.name ?? 'this project'
+    const projectId = contextMenu.projectId
     closeMenu()
+    setConfirmDialog({
+      title: 'Remove Project',
+      message: `Remove "${projectName}"? This cannot be undone.`,
+      confirmLabel: 'Remove',
+      onConfirm: () => {
+        void deleteProject(projectId)
+        setConfirmDialog(null)
+      },
+    })
   }
 
   function handleToggleTemplate(templateId: string): void {
@@ -146,22 +166,32 @@ export function Sidebar({
 
   function handleDeleteWorkflow(): void {
     if (!contextMenu?.workflowId) return
+    const wf = workflows.find((w) => w.id === contextMenu.workflowId)
+    const workflowName = wf?.name ?? 'this workflow'
     const id = contextMenu.workflowId
-    // If we're currently editing this workflow, close the editor
-    if (openWorkflowIds.includes(id)) closeWorkflow(id)
-    window.agentDeck.workflows
-      .delete(id)
-      .then(() => {
-        const current = useAppStore.getState().workflows
-        setWorkflows(current.filter((w) => w.id !== id))
-      })
-      .catch((err: unknown) => {
-        window.agentDeck.log.send('error', 'sidebar', 'Failed to delete workflow', {
-          err: String(err),
-        })
-        useAppStore.getState().addNotification('error', 'Failed to delete workflow')
-      })
     closeMenu()
+    setConfirmDialog({
+      title: 'Delete Workflow',
+      message: `Delete "${workflowName}"? This cannot be undone.`,
+      confirmLabel: 'Delete',
+      onConfirm: () => {
+        // If we're currently editing this workflow, close the editor
+        if (openWorkflowIds.includes(id)) closeWorkflow(id)
+        window.agentDeck.workflows
+          .delete(id)
+          .then(() => {
+            const current = useAppStore.getState().workflows
+            setWorkflows(current.filter((w) => w.id !== id))
+          })
+          .catch((err: unknown) => {
+            window.agentDeck.log.send('error', 'sidebar', 'Failed to delete workflow', {
+              err: String(err),
+            })
+            useAppStore.getState().addNotification('error', 'Failed to delete workflow')
+          })
+        setConfirmDialog(null)
+      },
+    })
   }
 
   function handleRenameWorkflow(): void {
@@ -264,6 +294,9 @@ export function Sidebar({
           </div>
           {sidebarSections.pinned && (
             <div role="group" aria-label="Pinned projects">
+              {pinned.length === 0 && projects.length > 0 && (
+                <div className="sidebar-empty-hint">Right-click a project to pin it</div>
+              )}
               {pinned.map((p) => (
                 <div
                   key={p.id}
@@ -291,7 +324,9 @@ export function Sidebar({
                   />
                   <div className="sidebar-item-info">
                     <div className="sidebar-item-name">{p.name}</div>
-                    <div className="sidebar-item-sub">{p.path}</div>
+                    <div className="sidebar-item-sub" title={p.path}>
+                      {p.path}
+                    </div>
                   </div>
                   {p.badge && (
                     <span className={`sidebar-badge badge-${badgeClass(p.badge)}`}>{p.badge}</span>
@@ -484,6 +519,9 @@ export function Sidebar({
           </div>
           {sidebarSections.templates && (
             <div role="group" aria-label="Templates">
+              {groupedTemplates.length === 0 && (
+                <div className="sidebar-empty-hint">Create templates from the + button</div>
+              )}
               {groupedTemplates.map((group) => (
                 <div key={group.category} className="sidebar-tpl-group">
                   <div className="sidebar-group-label">{group.category}</div>
@@ -547,6 +585,9 @@ export function Sidebar({
           </div>
           {sidebarSections.workflows && (
             <div role="group" aria-label="Workflows">
+              {workflows.length === 0 && (
+                <div className="sidebar-empty-hint">Create workflows from the + button</div>
+              )}
               {workflows.map((w) => (
                 <div
                   key={w.id}
@@ -626,6 +667,15 @@ export function Sidebar({
           </div>
         )}
       </PanelBox>
+
+      <ConfirmDialog
+        open={confirmDialog !== null}
+        title={confirmDialog?.title ?? ''}
+        message={confirmDialog?.message ?? ''}
+        confirmLabel={confirmDialog?.confirmLabel}
+        onConfirm={() => confirmDialog?.onConfirm()}
+        onCancel={() => setConfirmDialog(null)}
+      />
     </div>
   )
 }

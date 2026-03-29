@@ -15,6 +15,7 @@ import { PanelDivider } from '../../components/shared/PanelDivider'
 import WorkflowNodeEditorPanel from './WorkflowNodeEditorPanel'
 import WorkflowRunDialog from './WorkflowRunDialog'
 import WorkflowToolbar from './WorkflowToolbar'
+import { ConfirmDialog } from '../../components/shared/ConfirmDialog'
 import { useWorkflowActions } from './useWorkflowActions'
 import './WorkflowEditor.css'
 
@@ -47,6 +48,8 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
   const [detailNode, setDetailNode] = useState<WorkflowNode | null>(null)
   const [rightTab, setRightTab] = useState<'editor' | 'log' | 'history'>('editor')
   const [showRunDialog, setShowRunDialog] = useState(false)
+  const [showNoProjectConfirm, setShowNoProjectConfirm] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   // M7: Instance-scoped counter instead of module-level
   const nodeCounterRef = useRef(0)
@@ -107,6 +110,9 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
         }
       })
       .catch((err: unknown) => {
+        if (!cancelled) {
+          setLoadError('Failed to load workflow. It may have been deleted or corrupted.')
+        }
         window.agentDeck.log.send('error', 'workflow-editor', 'Failed to load workflow', {
           err: String(err),
           workflowId,
@@ -372,23 +378,25 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
     projects,
   )
 
-  const handleRun = useCallback(() => {
-    // Warn if workflow has agent nodes but no project selected
-    const hasAgentNodes = workflow?.nodes.some((n) => n.type === 'agent')
-    if (hasAgentNodes && !workflow?.projectId) {
-      const confirmed = window.confirm(
-        'This workflow has agent nodes but no project is selected.\nAgents need a project directory to review/modify code.\n\nRun anyway?',
-      )
-      if (!confirmed) return
-    }
-
-    // If workflow has variables, show dialog instead of running immediately
+  /** Proceed with workflow execution (after any confirmation dialogs) */
+  const proceedWithRun = useCallback(() => {
     if (workflow?.variables && workflow.variables.length > 0) {
       setShowRunDialog(true)
       return
     }
     runWorkflow()
   }, [workflow, runWorkflow])
+
+  const handleRun = useCallback(() => {
+    // Warn if workflow has agent nodes but no project selected
+    const hasAgentNodes = workflow?.nodes.some((n) => n.type === 'agent')
+    if (hasAgentNodes && !workflow?.projectId) {
+      setShowNoProjectConfirm(true)
+      return
+    }
+
+    proceedWithRun()
+  }, [workflow, proceedWithRun])
 
   const handleStop = useCallback(() => {
     window.agentDeck.workflows.stop(workflowId)
@@ -456,6 +464,12 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
         onProjectChange={handleProjectChange}
         projects={projects}
       />
+
+      {loadError && (
+        <div className="wf-load-error" role="alert">
+          {loadError}
+        </div>
+      )}
 
       {/* Content: canvas + right panel */}
       <div className="wf-content">
@@ -571,6 +585,18 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
           onCancel={() => setShowRunDialog(false)}
         />
       )}
+
+      <ConfirmDialog
+        open={showNoProjectConfirm}
+        title="No Project Selected"
+        message="This workflow has agent nodes but no project is selected. Agents need a project directory to review/modify code.\n\nRun anyway?"
+        confirmLabel="Run Anyway"
+        onConfirm={() => {
+          setShowNoProjectConfirm(false)
+          proceedWithRun()
+        }}
+        onCancel={() => setShowNoProjectConfirm(false)}
+      />
     </div>
   )
 }
