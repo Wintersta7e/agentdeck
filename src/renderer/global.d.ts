@@ -112,6 +112,17 @@ declare global {
       security: {
         onEncryptionUnavailable: (cb: () => void) => () => void
       }
+      worktree: {
+        acquire(
+          projectId: string,
+          sessionId: string,
+        ): Promise<{ path: string; isolated: boolean; branch?: string }>
+        inspect(
+          sessionId: string,
+        ): Promise<{ hasChanges: boolean; hasUnmerged: boolean; branch: string }>
+        discard(sessionId: string): Promise<void>
+        keep(sessionId: string): Promise<void>
+      }
       pickFolder: () => Promise<string | null>
       log: {
         send: (level: string, mod: string, message: string, data?: unknown) => Promise<void>

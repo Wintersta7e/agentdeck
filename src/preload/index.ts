@@ -192,6 +192,29 @@ contextBridge.exposeInMainWorld('agentDeck', {
       return () => ipcRenderer.removeListener('security:encryption-unavailable', listener)
     },
   },
+  worktree: {
+    acquire: (
+      projectId: string,
+      sessionId: string,
+    ): Promise<{ path: string; isolated: boolean; branch?: string }> =>
+      ipcRenderer.invoke('worktree:acquire', projectId, sessionId) as Promise<{
+        path: string
+        isolated: boolean
+        branch?: string
+      }>,
+    inspect: (
+      sessionId: string,
+    ): Promise<{ hasChanges: boolean; hasUnmerged: boolean; branch: string }> =>
+      ipcRenderer.invoke('worktree:inspect', sessionId) as Promise<{
+        hasChanges: boolean
+        hasUnmerged: boolean
+        branch: string
+      }>,
+    discard: (sessionId: string): Promise<void> =>
+      ipcRenderer.invoke('worktree:discard', sessionId) as Promise<void>,
+    keep: (sessionId: string): Promise<void> =>
+      ipcRenderer.invoke('worktree:keep', sessionId) as Promise<void>,
+  },
   onFileDrop: (cb: (wslPaths: string[]) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, wslPaths: string[]): void => cb(wslPaths)
     ipcRenderer.on('file-dropped', listener)
