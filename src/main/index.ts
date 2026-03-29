@@ -55,6 +55,17 @@ function createWindow(): void {
     },
   })
 
+  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:; connect-src 'none'",
+        ],
+      },
+    })
+  })
+
   ptyManager = createPtyManager(mainWindow)
   workflowEngine = createWorkflowEngine(ptyManager, mainWindow, () => appStore?.get('roles') ?? [])
 
@@ -110,10 +121,8 @@ function createWindow(): void {
   }
 
   mainWindow.webContents.on('will-navigate', (event, url) => {
-    if (url.startsWith('file://')) {
-      event.preventDefault()
-      handleFileUrl(url)
-    }
+    event.preventDefault()
+    handleFileUrl(url)
   })
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {

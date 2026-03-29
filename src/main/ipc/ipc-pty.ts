@@ -19,6 +19,8 @@ const BLOCKED_ENV = new Set([
 /** Maximum bytes per pty:write chunk (1 MiB). */
 const MAX_CHUNK = 1_048_576
 
+const SAFE_SESSION_ID_RE = /^[a-zA-Z0-9_-]+$/
+
 export function registerPtyHandlers(getPtyManager: () => PtyManager | null): void {
   ipcMain.handle(
     'pty:spawn',
@@ -42,6 +44,9 @@ export function registerPtyHandlers(getPtyManager: () => PtyManager | null): voi
             safeEnv[k] = v
           }
         }
+      }
+      if (typeof sessionId !== 'string' || !SAFE_SESSION_ID_RE.test(sessionId)) {
+        throw new Error('Invalid sessionId')
       }
       const mgr = getPtyManager()
       if (!mgr) throw new Error('PTY manager not initialized')
