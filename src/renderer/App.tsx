@@ -44,9 +44,6 @@ export function App(): React.JSX.Element {
   const addSession = useAppStore((s) => s.addSession)
   const removeSession = useAppStore((s) => s.removeSession)
 
-  const worktreePaths = useAppStore((s) => s.worktreePaths)
-  const clearWorktreePath = useAppStore((s) => s.clearWorktreePath)
-
   const activeWorkflowId = useAppStore((s) => s.activeWorkflowId)
   const settingsProjectId = useAppStore((s) => s.settingsProjectId)
 
@@ -146,7 +143,8 @@ export function App(): React.JSX.Element {
 
   const handleCloseTab = useCallback(
     (sessionId: string) => {
-      const wt = worktreePaths[sessionId]
+      // Read worktree state fresh from store to avoid stale closure
+      const wt = useAppStore.getState().worktreePaths[sessionId]
       // Non-worktree session — close immediately.
       if (!wt?.isolated) {
         closeSessionImmediate(sessionId)
@@ -177,7 +175,7 @@ export function App(): React.JSX.Element {
                 err: String(err),
               })
             })
-            clearWorktreePath(sessionId)
+            useAppStore.getState().clearWorktreePath(sessionId)
             removeSession(sessionId)
           }
         })
@@ -189,7 +187,7 @@ export function App(): React.JSX.Element {
           closeSessionImmediate(sessionId)
         })
     },
-    [worktreePaths, clearWorktreePath, removeSession, closeSessionImmediate],
+    [removeSession, closeSessionImmediate],
   )
 
   /** Worktree dialog: "Discard" — delete branch + worktree. */
@@ -202,10 +200,10 @@ export function App(): React.JSX.Element {
     window.agentDeck.worktree.discard(sessionId).catch((err: unknown) => {
       window.agentDeck.log.send('warn', 'worktree', 'Discard failed', { err: String(err) })
     })
-    clearWorktreePath(sessionId)
+    useAppStore.getState().clearWorktreePath(sessionId)
     removeSession(sessionId)
     setWorktreeCloseDialog(null)
-  }, [worktreeCloseDialog, clearWorktreePath, removeSession])
+  }, [worktreeCloseDialog, removeSession])
 
   /** Worktree dialog: "Keep Branch" — preserve branch, remove worktree. */
   const handleWorktreeKeep = useCallback(() => {
@@ -217,10 +215,10 @@ export function App(): React.JSX.Element {
     window.agentDeck.worktree.keep(sessionId).catch((err: unknown) => {
       window.agentDeck.log.send('warn', 'worktree', 'Keep failed', { err: String(err) })
     })
-    clearWorktreePath(sessionId)
+    useAppStore.getState().clearWorktreePath(sessionId)
     removeSession(sessionId)
     setWorktreeCloseDialog(null)
-  }, [worktreeCloseDialog, clearWorktreePath, removeSession])
+  }, [worktreeCloseDialog, removeSession])
 
   /** Worktree dialog: "Cancel" — abort close, keep session alive. */
   const handleWorktreeCancel = useCallback(() => {
