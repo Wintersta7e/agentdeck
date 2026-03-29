@@ -37,6 +37,7 @@ export interface WorkflowEngine {
   stop: (workflowId: string) => void
   resume: (workflowId: string, nodeId: string) => void
   isRunning: (workflowId: string) => boolean
+  getRunningWorkflows: () => string[]
   stopAll: () => void
 }
 
@@ -563,6 +564,7 @@ export function createWorkflowEngine(
       if (run) run.resume(nodeId)
     },
     isRunning: (workflowId: string) => activeRuns.has(workflowId),
+    getRunningWorkflows: () => Array.from(activeRuns.keys()),
     stopAll: (): void => {
       for (const [id, run] of activeRuns) {
         log.info('Stopping workflow on quit', { id })

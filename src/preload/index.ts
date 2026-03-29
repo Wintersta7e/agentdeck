@@ -219,6 +219,8 @@ contextBridge.exposeInMainWorld('agentDeck', {
     listRuns: (workflowId: string): Promise<WorkflowRun[]> =>
       ipcRenderer.invoke('workflows:listRuns', workflowId),
     deleteRun: (runId: string): Promise<void> => ipcRenderer.invoke('workflows:deleteRun', runId),
+    getRunning: (): Promise<string[]> =>
+      ipcRenderer.invoke('workflows:getRunning') as Promise<string[]>,
     run: (id: string, path?: string, variables?: Record<string, string>): Promise<void> =>
       ipcRenderer.invoke('workflow:run', id, path, variables),
     stop: (id: string): Promise<void> => ipcRenderer.invoke('workflow:stop', id),

@@ -189,6 +189,11 @@ export function registerWorkflowHandlers(
     return deleteRun(runId)
   })
 
+  /* ── Workflow State Hydration ───────────────────────────────────── */
+  ipcMain.handle('workflows:getRunning', () => {
+    return getWorkflowEngine()?.getRunningWorkflows() ?? []
+  })
+
   /* ── Workflow Execution ────────────────────────────────────────── */
   const VAR_NAME_RE = /^[A-Z_][A-Z0-9_]*$/
 

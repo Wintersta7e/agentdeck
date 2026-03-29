@@ -158,6 +158,23 @@ export function App(): React.JSX.Element {
     return unsub
   }, [])
 
+  // Hydrate workflow execution state from main process on mount (REL-8)
+  useEffect(() => {
+    window.agentDeck.workflows
+      .getRunning()
+      .then((ids) => {
+        const store = useAppStore.getState()
+        for (const id of ids) {
+          store.setWorkflowStatus(id, 'running')
+        }
+      })
+      .catch((err: unknown) => {
+        window.agentDeck.log.send('warn', 'app', 'Failed to hydrate workflow state', {
+          err: String(err),
+        })
+      })
+  }, [])
+
   // Listen for WSL status from main process
   const wslAvailable = useAppStore((s) => s.wslAvailable)
   useEffect(() => {
