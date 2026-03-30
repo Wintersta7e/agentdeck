@@ -1,4 +1,4 @@
-import { app, BrowserWindow, safeStorage, screen } from 'electron'
+import { app, BrowserWindow, ipcMain, safeStorage, screen } from 'electron'
 import { join } from 'path'
 import { createPtyManager, type PtyManager } from './pty-manager'
 import { createProjectStore, type AppStore } from './project-store'
@@ -10,6 +10,8 @@ import { createWorkflowEngine } from './workflow-engine'
 import type { WorkflowEngine } from './workflow-engine'
 import { createWorktreeManager, type WorktreeManager } from './worktree-manager'
 import { createWslGitPort } from './git-port'
+import { createCostTracker, type CostTracker } from './cost-tracker'
+import { createClaudeAdapter, createCodexAdapter } from './log-adapters'
 import {
   registerPtyHandlers,
   registerWindowHandlers,
@@ -28,6 +30,7 @@ let ptyManager: PtyManager | null = null
 let workflowEngine: WorkflowEngine | null = null
 let appStore: AppStore | null = null
 let worktreeManager: WorktreeManager | null = null
+let costTracker: CostTracker | null = null
 
 // --- Crash cleanup handlers (REL-4) ---
 process.on('uncaughtException', (err) => {
@@ -216,6 +219,24 @@ app
     createWindow()
     log.info('Window created')
 
+    if (mainWindow) {
+      costTracker = createCostTracker(mainWindow, [createClaudeAdapter(), createCodexAdapter()])
+    }
+
+    ipcMain.handle(
+      'cost:bind',
+      (
+        _,
+        sessionId: string,
+        opts: { agent: string; projectPath: string; cwd: string; spawnAt: number },
+      ) => {
+        costTracker?.bindSession(sessionId, opts)
+      },
+    )
+    ipcMain.handle('cost:unbind', (_, sessionId: string) => {
+      costTracker?.unbindSession(sessionId)
+    })
+
     // Warn renderer if encryption is unavailable (secrets stored as plaintext)
     if (!safeStorage.isEncryptionAvailable() && mainWindow) {
       log.warn('safeStorage encryption unavailable — secrets stored as plaintext')
@@ -251,6 +272,7 @@ app
 
 app.on('before-quit', () => {
   log.info('App quitting')
+  costTracker?.destroy()
   workflowEngine?.stopAll()
   ptyManager?.killAll()
   closeLogger()

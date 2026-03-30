@@ -20,11 +20,34 @@ export interface SessionsSlice {
   activityFeeds: Record<string, ActivityEvent[]>
   addActivityEvent: (sessionId: string, event: ActivityEvent) => void
   clearActivityFeed: (sessionId: string) => void
+
+  // Usage tracking (per-session)
+  sessionUsage: Record<
+    string,
+    {
+      inputTokens: number
+      outputTokens: number
+      cacheReadTokens: number
+      cacheWriteTokens: number
+      totalCostUsd: number
+    }
+  >
+  setSessionUsage: (
+    sessionId: string,
+    usage: {
+      inputTokens: number
+      outputTokens: number
+      cacheReadTokens: number
+      cacheWriteTokens: number
+      totalCostUsd: number
+    },
+  ) => void
 }
 
 export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> = (set, get) => ({
   sessions: {},
   activeSessionId: null,
+  sessionUsage: {},
 
   addSession: (sessionId, projectId, overrides) =>
     set((state) => {
@@ -85,6 +108,7 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
     set((state) => {
       const { [sessionId]: _, ...rest } = state.sessions
       const { [sessionId]: _feed, ...remainingFeeds } = state.activityFeeds
+      const { [sessionId]: _usage, ...remainingUsage } = state.sessionUsage
       const remainingIds = Object.keys(rest)
       // Clear removed session from pane slots, then compact left so pane 0 always
       // has a session if any exist (prevents empty pane with sessions in hidden slots)
@@ -100,6 +124,7 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
       return {
         sessions: rest,
         activityFeeds: remainingFeeds,
+        sessionUsage: remainingUsage,
         activeSessionId: state.activeSessionId === sessionId ? newActive : state.activeSessionId,
         currentView:
           remainingIds.length === 0
@@ -164,6 +189,10 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
     const { sessions } = get()
     return Object.values(sessions).find((s) => s.projectId === projectId)
   },
+
+  // Usage tracking
+  setSessionUsage: (sessionId, usage) =>
+    set((s) => ({ sessionUsage: { ...s.sessionUsage, [sessionId]: usage } })),
 
   // Activity Feed
   activityFeeds: {},

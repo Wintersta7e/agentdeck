@@ -217,6 +217,41 @@ contextBridge.exposeInMainWorld('agentDeck', {
     releasePrimary: (projectId: string, sessionId: string): Promise<void> =>
       ipcRenderer.invoke('worktree:releasePrimary', projectId, sessionId) as Promise<void>,
   },
+  cost: {
+    bind: (
+      sessionId: string,
+      opts: { agent: string; projectPath: string; cwd: string; spawnAt: number },
+    ): Promise<void> => ipcRenderer.invoke('cost:bind', sessionId, opts),
+    unbind: (sessionId: string): Promise<void> => ipcRenderer.invoke('cost:unbind', sessionId),
+    onUpdate: (
+      cb: (data: {
+        sessionId: string
+        usage: {
+          inputTokens: number
+          outputTokens: number
+          cacheReadTokens: number
+          cacheWriteTokens: number
+          totalCostUsd: number
+        }
+      }) => void,
+    ) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        data: {
+          sessionId: string
+          usage: {
+            inputTokens: number
+            outputTokens: number
+            cacheReadTokens: number
+            cacheWriteTokens: number
+            totalCostUsd: number
+          }
+        },
+      ): void => cb(data)
+      ipcRenderer.on('cost:update', listener)
+      return () => ipcRenderer.removeListener('cost:update', listener)
+    },
+  },
   onFileDrop: (cb: (wslPaths: string[]) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, wslPaths: string[]): void => cb(wslPaths)
     ipcRenderer.on('file-dropped', listener)

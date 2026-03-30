@@ -1,8 +1,28 @@
 import { memo, useCallback } from 'react'
-import { GitBranch } from 'lucide-react'
+import { GitBranch, Zap } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import { HexDot } from '../shared/HexDot'
 import './PaneTopbar.css'
+
+function fmtTokens(n: number): string {
+  if (n < 1000) return String(n)
+  return (n / 1000).toFixed(1) + 'k'
+}
+
+function fmtCost(usd: number): string {
+  if (usd <= 0) return ''
+  return '$' + usd.toFixed(2)
+}
+
+/** Total tokens processed (all types). Consistent with cost computation. */
+function totalTokens(u: {
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens: number
+  cacheWriteTokens: number
+}): number {
+  return u.inputTokens + u.cacheReadTokens + u.cacheWriteTokens + u.outputTokens
+}
 
 interface PaneTopbarProps {
   sessionId: string
@@ -19,13 +39,18 @@ export const PaneTopbar = memo(function PaneTopbar({
     projectId ? s.projects.find((p) => p.id === projectId) : undefined,
   )
   const worktreeInfo = useAppStore((s) => s.worktreePaths[sessionId])
+  const usage = useAppStore((s) => s.sessionUsage[sessionId])
   const restartSession = useAppStore((s) => s.restartSession)
 
+  const agentOverride = useAppStore((s) => s.sessions[sessionId]?.agentOverride)
   const isTerminal = !projectId
   const accentColor = project?.identity?.accentColor ?? undefined
   const agentName = isTerminal
     ? 'shell'
-    : (project?.agents?.find((a) => a.isDefault)?.agent ?? project?.agent ?? 'claude-code')
+    : (agentOverride ??
+      project?.agents?.find((a) => a.isDefault)?.agent ??
+      project?.agent ??
+      'claude-code')
 
   // Extract a clean display name: use project name, but if it looks like a path, take the last segment
   const rawName = isTerminal ? 'Terminal' : (project?.name ?? 'Unknown')
@@ -69,6 +94,17 @@ export const PaneTopbar = memo(function PaneTopbar({
         <span className="pane-worktree-badge" title={`Worktree: ${worktreeInfo.branch}`}>
           <GitBranch size={12} />
           <span>{worktreeInfo.branch.split('/').pop()}</span>
+        </span>
+      )}
+      {usage && (usage.totalCostUsd > 0 || totalTokens(usage) > 0) && (
+        <span
+          className="pane-cost-badge"
+          title={`Input: ${usage.inputTokens} · Output: ${usage.outputTokens} · Cache read: ${usage.cacheReadTokens} · Cache write: ${usage.cacheWriteTokens}`}
+        >
+          <Zap size={11} />
+          {fmtCost(usage.totalCostUsd) && <span>{fmtCost(usage.totalCostUsd)}</span>}
+          {fmtCost(usage.totalCostUsd) && totalTokens(usage) > 0 && <span> · </span>}
+          {totalTokens(usage) > 0 && <span>{fmtTokens(totalTokens(usage))} tokens</span>}
         </span>
       )}
       {showPath && (
