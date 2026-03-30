@@ -143,9 +143,10 @@
 .pane-cost-badge {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  font-size: 10px;
-  color: var(--text3);
+  gap: 4px;
+  font-size: 11px;
+  color: var(--accent);
+  opacity: 0.85;
   margin-left: 8px;
   font-family: var(--font-mono);
   flex-shrink: 0;

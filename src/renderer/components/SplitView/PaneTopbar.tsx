@@ -1,5 +1,5 @@
 import { memo, useCallback } from 'react'
-import { GitBranch } from 'lucide-react'
+import { GitBranch, Zap } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import { HexDot } from '../shared/HexDot'
 import './PaneTopbar.css'
@@ -86,20 +86,26 @@ export const PaneTopbar = memo(function PaneTopbar({
           <span>{worktreeInfo.branch.split('/').pop()}</span>
         </span>
       )}
-      {usage && (usage.totalCostUsd > 0 || usage.inputTokens + usage.outputTokens > 0) && (
-        <span
-          className="pane-cost-badge"
-          title={`Input: ${usage.inputTokens} · Output: ${usage.outputTokens} · Cache read: ${usage.cacheReadTokens} · Cache write: ${usage.cacheWriteTokens}`}
-        >
-          {fmtCost(usage.totalCostUsd) && <span>{fmtCost(usage.totalCostUsd)}</span>}
-          {fmtCost(usage.totalCostUsd) && usage.inputTokens + usage.outputTokens > 0 && (
-            <span> · </span>
-          )}
-          {usage.inputTokens + usage.outputTokens > 0 && (
-            <span>{fmtTokens(usage.inputTokens + usage.outputTokens)} tokens</span>
-          )}
-        </span>
-      )}
+      {usage &&
+        (usage.totalCostUsd > 0 ||
+          usage.inputTokens + usage.cacheWriteTokens + usage.outputTokens > 0) && (
+          <span
+            className="pane-cost-badge"
+            title={`Input: ${usage.inputTokens} · Output: ${usage.outputTokens} · Cache read: ${usage.cacheReadTokens} · Cache write: ${usage.cacheWriteTokens}`}
+          >
+            <Zap size={11} />
+            {fmtCost(usage.totalCostUsd) && <span>{fmtCost(usage.totalCostUsd)}</span>}
+            {fmtCost(usage.totalCostUsd) &&
+              usage.inputTokens + usage.cacheWriteTokens + usage.outputTokens > 0 && (
+                <span> · </span>
+              )}
+            {usage.inputTokens + usage.cacheWriteTokens + usage.outputTokens > 0 && (
+              <span>
+                {fmtTokens(usage.inputTokens + usage.cacheWriteTokens + usage.outputTokens)} tokens
+              </span>
+            )}
+          </span>
+        )}
       {showPath && (
         <>
           <span className="pane-sep">&gt;</span>

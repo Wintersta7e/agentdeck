@@ -92,56 +92,102 @@ describe('ClaudeAdapter', () => {
     expect(adapter.getFilePattern()).toBe('*.jsonl')
   })
 
-  it('parseUsage extracts usage from Claude JSONL line', () => {
+  it('parseUsage extracts usage from final Claude JSONL entry', () => {
     const line = JSON.stringify({
       type: 'assistant',
       message: {
+        model: 'claude-opus-4-6',
+        stop_reason: 'end_turn',
         usage: {
-          input_tokens: 1500,
-          output_tokens: 300,
-          cache_read_input_tokens: 100,
-          cache_creation_input_tokens: 50,
+          input_tokens: 3,
+          output_tokens: 67,
+          cache_read_input_tokens: 0,
+          cache_creation_input_tokens: 28750,
         },
       },
-      costUSD: 0.02,
       cwd: '/home/rooty/project',
     })
     const result = adapter.parseUsage(line, { ...ZERO_USAGE })
     expect(result).not.toBeNull()
     if (!result) throw new Error('Expected result')
-    expect(result.inputTokens).toBe(1500)
-    expect(result.outputTokens).toBe(300)
-    expect(result.cacheReadTokens).toBe(100)
-    expect(result.cacheWriteTokens).toBe(50)
-    expect(result.totalCostUsd).toBeCloseTo(0.02)
+    expect(result.inputTokens).toBe(3)
+    expect(result.outputTokens).toBe(67)
+    expect(result.cacheReadTokens).toBe(0)
+    expect(result.cacheWriteTokens).toBe(28750)
   })
 
-  it('parseUsage accumulates on top of existing accumulator', () => {
+  it('parseUsage computes cost from model pricing', () => {
     const line = JSON.stringify({
       type: 'assistant',
       message: {
+        model: 'claude-opus-4-6',
+        stop_reason: 'end_turn',
+        usage: {
+          input_tokens: 1000,
+          output_tokens: 500,
+          cache_read_input_tokens: 10000,
+          cache_creation_input_tokens: 20000,
+        },
+      },
+    })
+    const result = adapter.parseUsage(line, { ...ZERO_USAGE })
+    expect(result).not.toBeNull()
+    if (!result) throw new Error('Expected result')
+    // opus: $5/1M input, $25/1M output
+    // input:       1000 × 5.0  / 1M = 0.005
+    // cache read:  10000 × 5.0 × 0.1 / 1M = 0.005
+    // cache write: 20000 × 5.0 × 1.25 / 1M = 0.125
+    // output:      500 × 25.0 / 1M = 0.0125
+    // total = 0.005 + 0.005 + 0.125 + 0.0125 = 0.1475
+    expect(result.totalCostUsd).toBeCloseTo(0.1475)
+  })
+
+  it('parseUsage skips streaming partials (stop_reason: null)', () => {
+    const partial = JSON.stringify({
+      type: 'assistant',
+      message: {
+        model: 'claude-opus-4-6',
+        stop_reason: null,
+        usage: {
+          input_tokens: 3,
+          output_tokens: 30,
+          cache_read_input_tokens: 0,
+          cache_creation_input_tokens: 28750,
+        },
+      },
+    })
+    expect(adapter.parseUsage(partial, { ...ZERO_USAGE })).toBeNull()
+  })
+
+  it('parseUsage accumulates across multiple final entries', () => {
+    const line = JSON.stringify({
+      type: 'assistant',
+      message: {
+        model: 'claude-sonnet-4-6',
+        stop_reason: 'end_turn',
         usage: {
           input_tokens: 500,
           output_tokens: 100,
-          cache_read_input_tokens: 0,
+          cache_read_input_tokens: 28750,
           cache_creation_input_tokens: 0,
         },
       },
-      costUSD: 0.01,
     })
     const acc = {
-      inputTokens: 1000,
-      outputTokens: 200,
-      cacheReadTokens: 50,
-      cacheWriteTokens: 10,
-      totalCostUsd: 0.05,
+      inputTokens: 3,
+      outputTokens: 67,
+      cacheReadTokens: 0,
+      cacheWriteTokens: 28750,
+      totalCostUsd: 0.18,
     }
     const result = adapter.parseUsage(line, acc)
     expect(result).not.toBeNull()
     if (!result) throw new Error('Expected result')
-    expect(result.inputTokens).toBe(1500)
-    expect(result.outputTokens).toBe(300)
-    expect(result.totalCostUsd).toBeCloseTo(0.06)
+    expect(result.inputTokens).toBe(503)
+    expect(result.outputTokens).toBe(167)
+    expect(result.cacheReadTokens).toBe(28750)
+    expect(result.cacheWriteTokens).toBe(28750)
+    expect(result.totalCostUsd).toBeGreaterThan(0.18)
   })
 
   it('parseUsage returns null for non-usage lines', () => {

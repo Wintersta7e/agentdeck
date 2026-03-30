@@ -89,6 +89,21 @@ function anyLineContains(lines: string[], target: string): boolean {
 // ClaudeAdapter
 // ---------------------------------------------------------------------------
 
+/** Per-model pricing for Claude cost estimation. */
+const CLAUDE_PRICING: Record<string, { inputPer1M: number; outputPer1M: number }> = {
+  opus: { inputPer1M: 5.0, outputPer1M: 25.0 },
+  sonnet: { inputPer1M: 3.0, outputPer1M: 15.0 },
+  haiku: { inputPer1M: 1.0, outputPer1M: 5.0 },
+}
+
+/** Match a Claude model ID (e.g. "claude-opus-4-6") to a pricing tier. */
+function getClaudePricing(model: string): { inputPer1M: number; outputPer1M: number } | undefined {
+  for (const [tier, pricing] of Object.entries(CLAUDE_PRICING)) {
+    if (model.includes(tier)) return pricing
+  }
+  return undefined
+}
+
 export function createClaudeAdapter(): LogAdapter {
   return {
     agent: 'claude-code',
@@ -122,6 +137,13 @@ export function createClaudeAdapter(): LogAdapter {
       if (typeof message !== 'object' || message === null) return null
 
       const msg = message as Record<string, unknown>
+
+      // Claude Code logs both streaming partials (stop_reason: null) and the
+      // final entry (stop_reason: "end_turn" / "tool_use" / etc.) for the same
+      // API call, with identical usage blocks.  Only count the final entry.
+      const stopReason = msg['stop_reason']
+      if (stopReason === null || stopReason === undefined) return null
+
       const usage = msg['usage']
       if (typeof usage !== 'object' || usage === null) return null
 
@@ -132,14 +154,25 @@ export function createClaudeAdapter(): LogAdapter {
         typeof u['cache_read_input_tokens'] === 'number' ? u['cache_read_input_tokens'] : 0
       const cacheWriteTokens =
         typeof u['cache_creation_input_tokens'] === 'number' ? u['cache_creation_input_tokens'] : 0
-      const costUsd = typeof obj['costUSD'] === 'number' ? obj['costUSD'] : 0
+
+      // Compute cost from model pricing (Claude JSONL has no costUSD field).
+      // Cache writes cost 1.25× base input; cache reads cost 0.1× base input.
+      const model = typeof msg['model'] === 'string' ? (msg['model'] as string) : ''
+      const pricing = getClaudePricing(model)
+      const turnCost =
+        pricing !== undefined
+          ? (inputTokens / 1_000_000) * pricing.inputPer1M +
+            (cacheReadTokens / 1_000_000) * pricing.inputPer1M * 0.1 +
+            (cacheWriteTokens / 1_000_000) * pricing.inputPer1M * 1.25 +
+            (outputTokens / 1_000_000) * pricing.outputPer1M
+          : 0
 
       return {
         inputTokens: accumulator.inputTokens + inputTokens,
         outputTokens: accumulator.outputTokens + outputTokens,
         cacheReadTokens: accumulator.cacheReadTokens + cacheReadTokens,
         cacheWriteTokens: accumulator.cacheWriteTokens + cacheWriteTokens,
-        totalCostUsd: accumulator.totalCostUsd + costUsd,
+        totalCostUsd: accumulator.totalCostUsd + turnCost,
       }
     },
   }
