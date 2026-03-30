@@ -8,6 +8,7 @@
  */
 import type { BrowserWindow } from 'electron'
 import { execFile } from 'child_process'
+import { toWslPath } from './wsl-utils'
 import { createLogger } from './logger'
 import type { LogAdapter, TokenUsage } from './log-adapters'
 import { ZERO_USAGE } from './log-adapters'
@@ -33,6 +34,7 @@ const WSL_TIMEOUT_MS = 5000
 interface BoundSession {
   sessionId: string
   adapter: LogAdapter
+  projectPath: string
   cwd: string
   spawnAt: number
   discoveryStartedAt: number
@@ -85,7 +87,7 @@ export function createCostTracker(mainWindow: BrowserWindow, adapters: LogAdapte
   // ── Discovery ───────────────────────────────────────────────────
 
   function startDiscovery(session: BoundSession): void {
-    const dirs = session.adapter.getLogDirs(session.cwd)
+    const dirs = session.adapter.getLogDirs(session.projectPath)
     const pattern = session.adapter.getFilePattern()
 
     function discoveryPoll(): void {
@@ -299,10 +301,15 @@ export function createCostTracker(mainWindow: BrowserWindow, adapters: LogAdapte
       return
     }
 
+    // Convert Windows paths to WSL format for log directory lookup
+    const wslCwd = toWslPath(opts.cwd)
+    const wslProjectPath = toWslPath(opts.projectPath)
+
     const session: BoundSession = {
       sessionId,
       adapter,
-      cwd: opts.cwd,
+      projectPath: wslProjectPath,
+      cwd: wslCwd,
       spawnAt: opts.spawnAt,
       discoveryStartedAt: Date.now(),
       filePath: null,
