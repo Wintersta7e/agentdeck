@@ -16,17 +16,12 @@ describe('skill prefix extraction', () => {
     expect(extractSkillPrefix('project:deploy', 'codex')).toBe('$deploy ')
   })
 
-  it('returns null for non-codex agent (claude-code)', () => {
-    expect(extractSkillPrefix('global:lint-fix', 'claude-code')).toBeNull()
-  })
-
-  it('returns null for non-codex agent (aider)', () => {
-    expect(extractSkillPrefix('global:lint-fix', 'aider')).toBeNull()
-  })
-
-  it('returns null for non-codex agent (goose)', () => {
-    expect(extractSkillPrefix('global:lint-fix', 'goose')).toBeNull()
-  })
+  it.each(['claude-code', 'aider', 'goose'] as const)(
+    'returns null for non-codex agent (%s)',
+    (agent) => {
+      expect(extractSkillPrefix('global:lint-fix', agent)).toBeNull()
+    },
+  )
 
   it('returns null when skillId is undefined', () => {
     expect(extractSkillPrefix(undefined, 'codex')).toBeNull()

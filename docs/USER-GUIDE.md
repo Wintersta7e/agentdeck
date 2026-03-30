@@ -1,6 +1,6 @@
 # AgentDeck User Guide
 
-> **Version**: 4.7.0
+> **Version**: 4.8.0
 
 AgentDeck is a desktop command center for managing AI coding agents through WSL2 terminals. This guide covers every feature from first launch to advanced workflow automation.
 
@@ -21,10 +21,12 @@ AgentDeck is a desktop command center for managing AI coding agents through WSL2
 11. [Agentic Workflows](#agentic-workflows) (conditions, loops, variables, import/export, history)
 12. [Workflow Roles](#workflow-roles)
 13. [Command Palette](#command-palette)
-14. [Agent Updates](#agent-updates)
-15. [Themes](#themes)
-16. [Keyboard Shortcuts](#keyboard-shortcuts)
-17. [Troubleshooting](#troubleshooting)
+14. [Cost/Token Tracking](#costtoken-tracking)
+15. [Git Worktree Isolation](#git-worktree-isolation)
+16. [Agent Updates](#agent-updates)
+17. [Themes](#themes)
+18. [Keyboard Shortcuts](#keyboard-shortcuts)
+19. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -538,6 +540,67 @@ Press **Esc** (or **Ctrl+K**) to toggle the command palette. It provides fuzzy s
 ### Theme Preview
 
 In the Themes sub-menu, arrow keys give a live preview of each theme. Press Enter to apply, or Esc to revert to your current theme.
+
+---
+
+## Cost/Token Tracking
+
+AgentDeck tracks token usage and estimated cost for **Claude Code** and **Codex CLI** sessions in real-time.
+
+### How It Works
+
+When a session starts, AgentDeck discovers the agent's JSONL log file in WSL and tails it every 3 seconds. Token usage and cost are parsed from the log entries and pushed to the UI.
+
+- **Claude Code**: Reads `~/.claude/projects/` session logs. Pricing uses the model ID (opus/sonnet/haiku) with cache-aware rates — cache writes cost 1.25x, cache reads cost 0.1x of the base input rate.
+- **Codex CLI**: Reads `~/.codex/sessions/` rollout files. Pricing uses per-model maps (gpt-4o, o3, gpt-5.3, etc.).
+
+### The Cost Badge
+
+A **Zap icon** appears in the pane topbar showing:
+- **USD cost** (e.g. `$0.18`) — computed from model pricing
+- **Total tokens** (e.g. `28.8k tokens`) — all tokens processed (input + cache + output)
+
+**Hover** the badge for a tooltip breakdown: input, output, cache read, and cache write tokens.
+
+The cost and token count are always consistent — both reflect the same set of tokens, so the numbers make sense together.
+
+### Notes
+
+- Cost tracking is automatic — no configuration needed
+- Only Claude Code and Codex are supported (other agents show no badge)
+- On the first turn, Claude shows high token counts due to system prompt caching — this drops dramatically on subsequent turns
+- Cost data is per-session and resets when the session closes
+
+---
+
+## Git Worktree Isolation
+
+Each agent session can run in its own **git worktree** — an isolated copy of the repository on a separate branch. This prevents agents from interfering with each other or with your working directory.
+
+### How It Works
+
+When you open a session for a project that is a git repository, AgentDeck automatically creates a worktree:
+- A new branch is created (e.g. `agentdeck/session-abc`)
+- The agent works in the worktree directory, not your main working copy
+- Changes are isolated until you decide to keep or discard them
+
+### Branch Badge
+
+When a session has an isolated worktree, a **branch badge** appears in the pane topbar showing the branch name. The status bar also shows a worktree indicator.
+
+### Closing a Session
+
+When you close a session with an active worktree, AgentDeck inspects the worktree for changes:
+
+- **No changes**: Worktree is silently cleaned up
+- **Has changes**: A dialog appears with three options:
+  - **Keep** — Preserve the branch and worktree for later merging
+  - **Discard** — Delete the worktree and branch (changes are lost)
+  - **Cancel** — Keep the session open
+
+### Cleanup
+
+Orphaned worktrees (from crashes or abrupt exits) are automatically pruned on startup.
 
 ---
 

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import {
   formatTokens,
   formatCost,
@@ -83,9 +83,7 @@ describe('ClaudeAdapter', () => {
     const dirs = adapter.getLogDirs('/home/rooty/my-project')
     const second = dirs[1]
     if (!second) throw new Error('Expected second dir')
-    expect(second).toContain('~/.claude/projects/')
-    // fallback dir should not contain the path slug
-    expect(second).not.toContain('rooty')
+    expect(second).toBe('~/.claude/projects/')
   })
 
   it('getFilePattern returns "*.jsonl"', () => {
@@ -219,7 +217,11 @@ describe('ClaudeAdapter', () => {
 // ---------------------------------------------------------------------------
 
 describe('CodexAdapter', () => {
-  const adapter = createCodexAdapter()
+  let adapter: ReturnType<typeof createCodexAdapter>
+
+  beforeEach(() => {
+    adapter = createCodexAdapter()
+  })
 
   it('has agent "codex"', () => {
     expect(adapter.agent).toBe('codex')

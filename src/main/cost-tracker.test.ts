@@ -211,7 +211,10 @@ describe('file discovery', () => {
     // Tailing poll at 3s after discovery
     await vi.advanceTimersByTimeAsync(3000)
 
-    expect(callCount).toBeGreaterThanOrEqual(3)
+    expect(win.webContents.send).toHaveBeenCalledWith(
+      'cost:update',
+      expect.objectContaining({ sessionId: 's1' }),
+    )
 
     tracker.destroy()
   })

@@ -23,18 +23,8 @@ describe('AGENTS', () => {
 })
 
 describe('AGENT_BINARY_MAP', () => {
-  it('maps claude-code to claude', () => {
-    expect(AGENT_BINARY_MAP['claude-code']).toBe('claude')
-  })
-
-  it('maps gemini-cli to gemini', () => {
-    expect(AGENT_BINARY_MAP['gemini-cli']).toBe('gemini')
-  })
-
-  it('maps amazon-q to q', () => {
-    expect(AGENT_BINARY_MAP['amazon-q']).toBe('q')
-  })
-
+  // Covers all agents including non-identity mappings (claude-code→claude,
+  // gemini-cli→gemini, amazon-q→q) by iterating the canonical AGENTS list.
   it('has an entry for every agent', () => {
     for (const agent of AGENTS) {
       expect(AGENT_BINARY_MAP[agent.id]).toBe(agent.binary)

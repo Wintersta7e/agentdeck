@@ -6,7 +6,7 @@ vi.mock('child_process', () => ({
   execFile: vi.fn(),
 }))
 
-import { wslPathToWindows, getDefaultDistro } from './wsl-utils'
+import { wslPathToWindows } from './wsl-utils'
 import { execFileSync } from 'child_process'
 
 const mockedExecFileSync = vi.mocked(execFileSync)
@@ -56,22 +56,21 @@ describe('wslPathToWindows', () => {
 })
 
 describe('getDefaultDistro', () => {
-  it('parses wsl.exe output for first distro name', () => {
-    // Need fresh module to reset cache — use dynamic import
-    // For now, test the mock behavior
+  it('parses wsl.exe output for first distro name', async () => {
+    vi.resetModules()
     mockedExecFileSync.mockReturnValue('Ubuntu-24.04\n' as never)
-    const result = getDefaultDistro()
+    const { getDefaultDistro: freshGet } = await import('./wsl-utils')
+    const result = freshGet()
     expect(result).toBe('Ubuntu-24.04')
   })
 
-  it('falls back on error', () => {
-    // Reset by calling with error first
+  it('falls back to "Ubuntu" on error', async () => {
+    vi.resetModules()
     mockedExecFileSync.mockImplementation(() => {
       throw new Error('wsl.exe not found')
     })
-    // The function caches, so this tests the error path only if cache is empty
-    // In practice the first test populates the cache. This is a known limitation.
-    // We verify the function doesn't throw.
-    expect(() => getDefaultDistro()).not.toThrow()
+    const { getDefaultDistro: freshGet } = await import('./wsl-utils')
+    const result = freshGet()
+    expect(result).toBe('Ubuntu')
   })
 })

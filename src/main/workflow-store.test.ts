@@ -81,10 +81,6 @@ describe('listWorkflows', () => {
       'notes.txt',
       '.DS_Store',
     ] as never)
-    testStore.set(
-      expect.stringContaining('wf1'),
-      JSON.stringify({ id: 'wf1', name: 'Test', nodes: [], updatedAt: 1000 }),
-    )
     // readFile will be called for wf1.json
     vi.mocked(fs.promises.readFile).mockResolvedValueOnce(
       JSON.stringify({ id: 'wf1', name: 'Test', nodes: [1, 2], updatedAt: 1000 }),

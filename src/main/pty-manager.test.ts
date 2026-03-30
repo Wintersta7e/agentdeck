@@ -389,6 +389,23 @@ describe('createPtyManager', () => {
         expect.objectContaining({ type: 'think' }),
       )
     })
+
+    it('handles multi-line data chunks correctly', () => {
+      const win = makeMockWindow()
+      const mgr = createPtyManager(win)
+
+      mgr.spawn('s1', 80, 24)
+      const cb = ptyInstances[0]?.onData[0]
+      // Send a chunk with multiple lines at once
+      cb?.('Read file1.ts\nWrite file2.ts\n')
+      vi.runAllTimers()
+
+      // Should have emitted activity for both lines
+      const calls = vi
+        .mocked(win.webContents.send)
+        .mock.calls.filter((c) => c[0] === 'pty:activity:s1')
+      expect(calls.length).toBeGreaterThanOrEqual(2)
+    })
   })
 
   describe('line buffer cap', () => {

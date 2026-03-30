@@ -150,6 +150,7 @@ describe('createProjectStore', () => {
     expect(safeStorage.decryptString).toHaveBeenCalled()
     // The value should come back decrypted
     expect(projects[0]?.envVars?.[0]?.key).toBe('API_KEY')
+    expect(projects[0]?.envVars?.[0]?.value).toBe('secret123')
   })
 
   it('handles encryption unavailable gracefully', async () => {

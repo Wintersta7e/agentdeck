@@ -44,7 +44,8 @@ describe('Session lifecycle', () => {
   it('restarts a session', () => {
     useAppStore.getState().addSession('s1', 'proj-1')
     const newId = useAppStore.getState().restartSession('s1')
-    expect(newId).toBeTruthy()
+    expect(typeof newId).toBe('string')
+    expect(newId).not.toBe('')
     const state = useAppStore.getState()
     expect(state.sessions['s1']).toBeUndefined()
     const newSession = newId ? state.sessions[newId] : undefined
@@ -82,7 +83,8 @@ describe('Session lifecycle', () => {
       agentFlagsOverride: '--fast',
     })
     const newId = useAppStore.getState().restartSession('s1')
-    expect(newId).toBeTruthy()
+    expect(typeof newId).toBe('string')
+    expect(newId).not.toBe('')
     const newSession = newId ? useAppStore.getState().sessions[newId] : undefined
     expect(newSession?.agentOverride).toBe('codex')
     expect(newSession?.agentFlagsOverride).toBe('--fast')

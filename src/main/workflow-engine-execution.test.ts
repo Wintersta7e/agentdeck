@@ -276,6 +276,7 @@ describe('concurrent execution', () => {
     engine.run(wf)
     await tick()
 
+    // MAX_TIER_CONCURRENCY = 5 (defined in workflow-engine.ts)
     expect(mockSpawn).toHaveBeenCalledTimes(5)
 
     // Close the first child — the 6th node should now spawn
@@ -536,6 +537,10 @@ describe('error scenarios', () => {
     const errors = getEvents(sendSpy, 'wf-idle', 'node:error')
     expect(errors).toHaveLength(1)
     expect(String(errors[0]?.message)).toContain('idle')
+
+    // Verify workflow-level terminal event was emitted (stopped due to node failure)
+    const workflowStopped = getEvents(sendSpy, 'wf-idle', 'workflow:stopped')
+    expect(workflowStopped).toHaveLength(1)
   })
 
   it('kills agent after absolute timeout (node.timeout)', async () => {

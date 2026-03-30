@@ -106,4 +106,34 @@ describe('safeFitAndResize', () => {
     expect(callbacks.syncViewport).toHaveBeenCalledOnce()
     expect(callbacks.resizePty).not.toHaveBeenCalled()
   })
+
+  it('does not resize when only cols is zero', () => {
+    const term = makeTerm(80, 24)
+    const fit: FittableAddon = {
+      fit: vi.fn(() => {
+        term.cols = 0
+        term.rows = 24
+      }),
+    }
+    const callbacks = makeCallbacks()
+
+    safeFitAndResize(makeContainer(800, 600), fit, term, callbacks)
+
+    expect(callbacks.resizePty).not.toHaveBeenCalled()
+  })
+
+  it('does not resize when only rows is zero', () => {
+    const term = makeTerm(80, 24)
+    const fit: FittableAddon = {
+      fit: vi.fn(() => {
+        term.cols = 80
+        term.rows = 0
+      }),
+    }
+    const callbacks = makeCallbacks()
+
+    safeFitAndResize(makeContainer(800, 600), fit, term, callbacks)
+
+    expect(callbacks.resizePty).not.toHaveBeenCalled()
+  })
 })
