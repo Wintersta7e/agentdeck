@@ -5,6 +5,34 @@ All notable changes to AgentDeck will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.8.0] - 2026-03-30
+
+### Added
+- Cost/token tracking for Claude Code and Codex CLI sessions (PR #20)
+  - Log adapters parse JSONL session logs with per-model pricing maps
+  - CostTracker discovers log files via WSL, tails on 3s poll, pushes usage over IPC
+  - Cost badge in PaneTopbar: Zap icon + USD cost + total processed tokens (accent-colored)
+  - Tooltip shows per-type breakdown (input, output, cache read, cache write)
+  - Claude pricing: opus/sonnet/haiku tiers with cache write 1.25x and cache read 0.1x rates
+  - Codex pricing: per-model map (gpt-4o, o3, o4-mini, gpt-5.3/5.4, codex-mini)
+- Git worktree isolation for per-session branches (PR #19)
+  - GitPort abstraction + WslGitPort implementation
+  - WorktreeManager: acquire/inspect/discard/keep/releasePrimary/pruneOrphans
+  - Branch badge in PaneTopbar, worktree indicator in StatusBar
+  - Close flow with inspect + ConfirmDialog (Keep/Discard/Cancel)
+
+### Fixed
+- Claude adapter: skip streaming partials (stop_reason: null) to prevent double-counting
+- Claude adapter: compute cost from model pricing (JSONL has no costUSD field)
+- Codex adapter: normalize input_tokens by subtracting cached_input_tokens (was showing inflated 12k for simple prompts)
+- Codex adapter: parse real JSONL format (payload.info.total_token_usage, not payload directly)
+- Cost badge: show total processed tokens consistent with cost (no mismatch between $0.18 and "87 tokens")
+- Windows paths converted to WSL format before log file discovery
+- Session agent override shown in PaneTopbar (was showing project default)
+
+### Changed
+- 614 tests (up from 511)
+
 ## [4.7.0] - 2026-03-29
 
 ### Added
