@@ -11,6 +11,7 @@
 // ---------------------------------------------------------------------------
 
 export interface TokenUsage {
+  /** Non-cached input tokens (excludes cache reads for both Claude and Codex). */
   inputTokens: number
   outputTokens: number
   cacheReadTokens: number
@@ -215,21 +216,24 @@ export function createCodexAdapter(): LogAdapter {
       if (typeof usage !== 'object' || usage === null) return null
 
       const u = usage as Record<string, number>
-      const inputTokens = u['input_tokens'] ?? 0
+      const rawInputTokens = u['input_tokens'] ?? 0
       const outputTokens = u['output_tokens'] ?? 0
       const cachedInputTokens = u['cached_input_tokens'] ?? 0
 
       // Codex token_count events are CUMULATIVE — replace accumulator values.
+      // Codex input_tokens INCLUDES cached_input_tokens as a subset.
+      // Normalize to non-cached input only (matches Claude adapter semantics).
+      const nonCachedInput = rawInputTokens - cachedInputTokens
       const model = codexModel
       const pricing = CODEX_PRICING[model]
       const totalCostUsd =
         pricing !== undefined
-          ? (inputTokens / 1_000_000) * pricing.inputPer1M +
+          ? (rawInputTokens / 1_000_000) * pricing.inputPer1M +
             (outputTokens / 1_000_000) * pricing.outputPer1M
           : 0
 
       return {
-        inputTokens,
+        inputTokens: nonCachedInput,
         outputTokens,
         cacheReadTokens: cachedInputTokens,
         cacheWriteTokens: accumulator.cacheWriteTokens,

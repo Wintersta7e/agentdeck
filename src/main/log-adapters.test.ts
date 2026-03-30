@@ -218,7 +218,8 @@ describe('CodexAdapter', () => {
     const result = adapter.parseUsage(line, { ...ZERO_USAGE })
     expect(result).not.toBeNull()
     if (!result) throw new Error('Expected result')
-    expect(result.inputTokens).toBe(2000)
+    // inputTokens normalized: 2000 raw - 100 cached = 1900 non-cached
+    expect(result.inputTokens).toBe(1900)
     expect(result.outputTokens).toBe(500)
     expect(result.cacheReadTokens).toBe(100)
   })
@@ -258,7 +259,7 @@ describe('CodexAdapter', () => {
     expect(result.outputTokens).toBe(200)
   })
 
-  it('parseUsage computes cost from gpt-4o pricing map', () => {
+  it('parseUsage computes cost from gpt-4o pricing using raw input (including cached)', () => {
     const contextLine = JSON.stringify({
       type: 'turn_context',
       payload: { turn_id: 't1', model: 'gpt-4o' },
@@ -273,7 +274,7 @@ describe('CodexAdapter', () => {
           total_token_usage: {
             input_tokens: 1_000_000,
             output_tokens: 1_000_000,
-            cached_input_tokens: 0,
+            cached_input_tokens: 200_000,
             total_tokens: 2_000_000,
           },
         },
@@ -282,8 +283,12 @@ describe('CodexAdapter', () => {
     const result = adapter.parseUsage(line, { ...ZERO_USAGE })
     expect(result).not.toBeNull()
     if (!result) throw new Error('Expected result')
+    // Cost uses raw input (1M) not non-cached (800K)
     // gpt-4o: input $2.50/1M + output $10.00/1M = $12.50
     expect(result.totalCostUsd).toBeCloseTo(12.5)
+    // Display tokens exclude cached
+    expect(result.inputTokens).toBe(800_000)
+    expect(result.cacheReadTokens).toBe(200_000)
   })
 
   it('parseUsage sets totalCostUsd to 0 for unknown model', () => {
