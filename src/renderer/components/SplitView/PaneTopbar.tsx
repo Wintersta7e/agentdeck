@@ -14,6 +14,16 @@ function fmtCost(usd: number): string {
   return '$' + usd.toFixed(2)
 }
 
+/** Total tokens processed (all types). Consistent with cost computation. */
+function totalTokens(u: {
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens: number
+  cacheWriteTokens: number
+}): number {
+  return u.inputTokens + u.cacheReadTokens + u.cacheWriteTokens + u.outputTokens
+}
+
 interface PaneTopbarProps {
   sessionId: string
   focused: boolean
@@ -86,26 +96,17 @@ export const PaneTopbar = memo(function PaneTopbar({
           <span>{worktreeInfo.branch.split('/').pop()}</span>
         </span>
       )}
-      {usage &&
-        (usage.totalCostUsd > 0 ||
-          usage.inputTokens + usage.cacheWriteTokens + usage.outputTokens > 0) && (
-          <span
-            className="pane-cost-badge"
-            title={`Input: ${usage.inputTokens} · Output: ${usage.outputTokens} · Cache read: ${usage.cacheReadTokens} · Cache write: ${usage.cacheWriteTokens}`}
-          >
-            <Zap size={11} />
-            {fmtCost(usage.totalCostUsd) && <span>{fmtCost(usage.totalCostUsd)}</span>}
-            {fmtCost(usage.totalCostUsd) &&
-              usage.inputTokens + usage.cacheWriteTokens + usage.outputTokens > 0 && (
-                <span> · </span>
-              )}
-            {usage.inputTokens + usage.cacheWriteTokens + usage.outputTokens > 0 && (
-              <span>
-                {fmtTokens(usage.inputTokens + usage.cacheWriteTokens + usage.outputTokens)} tokens
-              </span>
-            )}
-          </span>
-        )}
+      {usage && (usage.totalCostUsd > 0 || totalTokens(usage) > 0) && (
+        <span
+          className="pane-cost-badge"
+          title={`Input: ${usage.inputTokens} · Output: ${usage.outputTokens} · Cache read: ${usage.cacheReadTokens} · Cache write: ${usage.cacheWriteTokens}`}
+        >
+          <Zap size={11} />
+          {fmtCost(usage.totalCostUsd) && <span>{fmtCost(usage.totalCostUsd)}</span>}
+          {fmtCost(usage.totalCostUsd) && totalTokens(usage) > 0 && <span> · </span>}
+          {totalTokens(usage) > 0 && <span>{fmtTokens(totalTokens(usage))} tokens</span>}
+        </span>
+      )}
       {showPath && (
         <>
           <span className="pane-sep">&gt;</span>
