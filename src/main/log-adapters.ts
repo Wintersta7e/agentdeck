@@ -155,9 +155,14 @@ const CODEX_PRICING: Record<string, { inputPer1M: number; outputPer1M: number }>
   o3: { inputPer1M: 2.0, outputPer1M: 8.0 },
   'o4-mini': { inputPer1M: 1.1, outputPer1M: 4.4 },
   'codex-mini': { inputPer1M: 1.5, outputPer1M: 6.0 },
+  'gpt-5.3': { inputPer1M: 2.0, outputPer1M: 8.0 },
+  'gpt-5.4': { inputPer1M: 2.0, outputPer1M: 8.0 },
+  'gpt-5.3-codex': { inputPer1M: 2.0, outputPer1M: 8.0 },
 }
 
 export function createCodexAdapter(): LogAdapter {
+  let codexModel = ''
+
   return {
     agent: 'codex',
 
@@ -188,13 +193,34 @@ export function createCodexAdapter(): LogAdapter {
       if (typeof payload !== 'object' || payload === null) return null
 
       const p = payload as Record<string, unknown>
+
+      // Extract model from turn_context events for pricing lookup
+      if (p['turn_id'] && typeof p['model'] === 'string') {
+        // Store model in accumulator metadata — we use cacheWriteTokens as a hack-free approach:
+        // just remember the model name for later. Actually, return null and let token_count handle it.
+        // The model is available in turn_context, not in token_count.
+        // We'll extract it here and store via a side channel.
+        codexModel = p['model'] as string
+      }
+
       if (p['type'] !== 'token_count') return null
 
-      const inputTokens = typeof p['input_tokens'] === 'number' ? p['input_tokens'] : 0
-      const outputTokens = typeof p['output_tokens'] === 'number' ? p['output_tokens'] : 0
+      // token_count events have payload.info with total_token_usage
+      // First event may have info: null (just rate limits) — skip those
+      const info = p['info']
+      if (typeof info !== 'object' || info === null) return null
+
+      const infoObj = info as Record<string, unknown>
+      const usage = infoObj['total_token_usage']
+      if (typeof usage !== 'object' || usage === null) return null
+
+      const u = usage as Record<string, number>
+      const inputTokens = u['input_tokens'] ?? 0
+      const outputTokens = u['output_tokens'] ?? 0
+      const cachedInputTokens = u['cached_input_tokens'] ?? 0
 
       // Codex token_count events are CUMULATIVE — replace accumulator values.
-      const model = typeof obj['model'] === 'string' ? obj['model'] : ''
+      const model = codexModel
       const pricing = CODEX_PRICING[model]
       const totalCostUsd =
         pricing !== undefined
@@ -205,7 +231,7 @@ export function createCodexAdapter(): LogAdapter {
       return {
         inputTokens,
         outputTokens,
-        cacheReadTokens: accumulator.cacheReadTokens,
+        cacheReadTokens: cachedInputTokens,
         cacheWriteTokens: accumulator.cacheWriteTokens,
         totalCostUsd,
       }

@@ -194,24 +194,55 @@ describe('CodexAdapter', () => {
   })
 
   it('parseUsage extracts cumulative tokens from token_count event', () => {
+    // First, feed a turn_context line to set the model
+    const contextLine = JSON.stringify({
+      type: 'turn_context',
+      payload: { turn_id: 't1', model: 'gpt-4o', cwd: '/home/rooty/project' },
+    })
+    adapter.parseUsage(contextLine, { ...ZERO_USAGE })
+
     const line = JSON.stringify({
-      type: 'event',
-      payload: { type: 'token_count', input_tokens: 2000, output_tokens: 500 },
-      model: 'gpt-4o',
-      cwd: '/home/rooty/project',
+      type: 'event_msg',
+      payload: {
+        type: 'token_count',
+        info: {
+          total_token_usage: {
+            input_tokens: 2000,
+            output_tokens: 500,
+            cached_input_tokens: 100,
+            total_tokens: 2500,
+          },
+        },
+      },
     })
     const result = adapter.parseUsage(line, { ...ZERO_USAGE })
     expect(result).not.toBeNull()
     if (!result) throw new Error('Expected result')
     expect(result.inputTokens).toBe(2000)
     expect(result.outputTokens).toBe(500)
+    expect(result.cacheReadTokens).toBe(100)
   })
 
   it('parseUsage replaces (not adds) accumulator for cumulative tokens', () => {
+    const contextLine = JSON.stringify({
+      type: 'turn_context',
+      payload: { turn_id: 't1', model: 'o3' },
+    })
+    adapter.parseUsage(contextLine, { ...ZERO_USAGE })
+
     const line = JSON.stringify({
-      type: 'event',
-      payload: { type: 'token_count', input_tokens: 1000, output_tokens: 200 },
-      model: 'o3',
+      type: 'event_msg',
+      payload: {
+        type: 'token_count',
+        info: {
+          total_token_usage: {
+            input_tokens: 1000,
+            output_tokens: 200,
+            cached_input_tokens: 0,
+            total_tokens: 1200,
+          },
+        },
+      },
     })
     const acc = {
       inputTokens: 9999,
@@ -223,16 +254,30 @@ describe('CodexAdapter', () => {
     const result = adapter.parseUsage(line, acc)
     expect(result).not.toBeNull()
     if (!result) throw new Error('Expected result')
-    // REPLACE, not accumulate
     expect(result.inputTokens).toBe(1000)
     expect(result.outputTokens).toBe(200)
   })
 
   it('parseUsage computes cost from gpt-4o pricing map', () => {
+    const contextLine = JSON.stringify({
+      type: 'turn_context',
+      payload: { turn_id: 't1', model: 'gpt-4o' },
+    })
+    adapter.parseUsage(contextLine, { ...ZERO_USAGE })
+
     const line = JSON.stringify({
-      type: 'event',
-      payload: { type: 'token_count', input_tokens: 1_000_000, output_tokens: 1_000_000 },
-      model: 'gpt-4o',
+      type: 'event_msg',
+      payload: {
+        type: 'token_count',
+        info: {
+          total_token_usage: {
+            input_tokens: 1_000_000,
+            output_tokens: 1_000_000,
+            cached_input_tokens: 0,
+            total_tokens: 2_000_000,
+          },
+        },
+      },
     })
     const result = adapter.parseUsage(line, { ...ZERO_USAGE })
     expect(result).not.toBeNull()
@@ -242,10 +287,25 @@ describe('CodexAdapter', () => {
   })
 
   it('parseUsage sets totalCostUsd to 0 for unknown model', () => {
+    const contextLine = JSON.stringify({
+      type: 'turn_context',
+      payload: { turn_id: 't1', model: 'unknown-model-xyz' },
+    })
+    adapter.parseUsage(contextLine, { ...ZERO_USAGE })
+
     const line = JSON.stringify({
-      type: 'event',
-      payload: { type: 'token_count', input_tokens: 500, output_tokens: 100 },
-      model: 'unknown-model-xyz',
+      type: 'event_msg',
+      payload: {
+        type: 'token_count',
+        info: {
+          total_token_usage: {
+            input_tokens: 500,
+            output_tokens: 100,
+            cached_input_tokens: 0,
+            total_tokens: 600,
+          },
+        },
+      },
     })
     const result = adapter.parseUsage(line, { ...ZERO_USAGE })
     expect(result).not.toBeNull()
@@ -253,8 +313,16 @@ describe('CodexAdapter', () => {
     expect(result.totalCostUsd).toBe(0)
   })
 
+  it('parseUsage returns null for token_count with info: null', () => {
+    const line = JSON.stringify({
+      type: 'event_msg',
+      payload: { type: 'token_count', info: null, rate_limits: {} },
+    })
+    expect(adapter.parseUsage(line, { ...ZERO_USAGE })).toBeNull()
+  })
+
   it('parseUsage returns null for non-token_count events', () => {
-    const line = JSON.stringify({ type: 'event', payload: { type: 'output', text: 'hello' } })
+    const line = JSON.stringify({ type: 'event_msg', payload: { type: 'output', text: 'hello' } })
     expect(adapter.parseUsage(line, { ...ZERO_USAGE })).toBeNull()
   })
 
