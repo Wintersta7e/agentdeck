@@ -32,11 +32,15 @@ export const PaneTopbar = memo(function PaneTopbar({
   const usage = useAppStore((s) => s.sessionUsage[sessionId])
   const restartSession = useAppStore((s) => s.restartSession)
 
+  const agentOverride = useAppStore((s) => s.sessions[sessionId]?.agentOverride)
   const isTerminal = !projectId
   const accentColor = project?.identity?.accentColor ?? undefined
   const agentName = isTerminal
     ? 'shell'
-    : (project?.agents?.find((a) => a.isDefault)?.agent ?? project?.agent ?? 'claude-code')
+    : (agentOverride ??
+      project?.agents?.find((a) => a.isDefault)?.agent ??
+      project?.agent ??
+      'claude-code')
 
   // Extract a clean display name: use project name, but if it looks like a path, take the last segment
   const rawName = isTerminal ? 'Terminal' : (project?.name ?? 'Unknown')
