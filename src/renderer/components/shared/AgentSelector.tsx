@@ -6,7 +6,7 @@ import './AgentSelector.css'
 const KNOWN_AGENTS = AGENTS.map((a) => ({
   type: a.id,
   icon: a.icon,
-  name: a.id,
+  name: a.name,
   desc: a.description,
 }))
 

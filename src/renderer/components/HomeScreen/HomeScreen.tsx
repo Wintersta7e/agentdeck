@@ -153,8 +153,8 @@ export function HomeScreen({
   } | null>(null)
   const cardMenuRef = useRef<HTMLDivElement>(null)
 
-  const dateStr = useMemo(() => formatDate(), [])
-  const greeting = useMemo(() => getGreeting(), [])
+  const dateStr = formatDate()
+  const greeting = getGreeting()
 
   const pinned = useMemo(() => projects.filter((p) => p.pinned), [projects])
 

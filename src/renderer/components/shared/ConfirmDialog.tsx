@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useId } from 'react'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 import './ConfirmDialog.css'
 
@@ -23,6 +23,9 @@ export function ConfirmDialog({
   extraAction,
 }: ConfirmDialogProps): React.JSX.Element | null {
   const trapRef = useFocusTrap<HTMLDivElement>()
+  const uniqueId = useId()
+  const titleId = `${uniqueId}-title`
+  const messageId = `${uniqueId}-message`
 
   // Close on Escape
   useEffect(() => {
@@ -56,15 +59,15 @@ export function ConfirmDialog({
       onClick={handleBackdropClick}
       role="alertdialog"
       aria-modal="true"
-      aria-labelledby="confirm-dialog-title"
-      aria-describedby="confirm-dialog-message"
+      aria-labelledby={titleId}
+      aria-describedby={messageId}
     >
       <div className="confirm-dialog">
         <div className="confirm-dialog-body">
-          <h3 id="confirm-dialog-title" className="confirm-dialog-title">
+          <h3 id={titleId} className="confirm-dialog-title">
             {title}
           </h3>
-          <p id="confirm-dialog-message" className="confirm-dialog-message">
+          <p id={messageId} className="confirm-dialog-message">
             {message}
           </p>
         </div>

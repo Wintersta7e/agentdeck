@@ -241,12 +241,16 @@ export function TemplateEditor(): React.JSX.Element {
         const tag = (e.target as HTMLElement)?.tagName
         if (tag === 'INPUT' || tag === 'TEXTAREA') return
         e.preventDefault()
-        void handleDelete()
+        // CQ-8: Confirm before deleting to prevent accidental loss
+        const tplName = templates.find((t) => t.id === selectedId)?.name ?? 'this template'
+        if (window.confirm(`Delete "${tplName}"? This cannot be undone.`)) {
+          void handleDelete()
+        }
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [handleSave, handleDelete, selectedId])
+  }, [handleSave, handleDelete, selectedId, templates])
 
   return (
     <div className="template-editor">

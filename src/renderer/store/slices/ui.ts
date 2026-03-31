@@ -73,7 +73,7 @@ export interface UiSlice {
   clearWorktreePath: (sessionId: string) => void
 }
 
-export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set) => ({
+export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get) => ({
   currentView: 'home',
   setCurrentView: (view) => set({ currentView: view }),
 
@@ -177,11 +177,8 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set) => (
   wfLogPanelWidth: 320,
 
   toggleSidebar: () => {
-    let next = false
-    set((state) => {
-      next = !state.sidebarOpen
-      return { sidebarOpen: next }
-    })
+    set((state) => ({ sidebarOpen: !state.sidebarOpen }))
+    const next = get().sidebarOpen
     window.agentDeck.layout.set({ sidebarOpen: next }).catch((err: unknown) => {
       window.agentDeck.log.send('debug', 'layout', 'Layout persist failed', { err: String(err) })
     })
@@ -195,15 +192,13 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set) => (
   },
 
   toggleSidebarSection: (key) => {
-    let sections: UiSlice['sidebarSections'] | undefined
-    set((state) => {
-      sections = { ...state.sidebarSections, [key]: !state.sidebarSections[key] }
-      return { sidebarSections: sections }
+    set((state) => ({
+      sidebarSections: { ...state.sidebarSections, [key]: !state.sidebarSections[key] },
+    }))
+    const sections = get().sidebarSections
+    window.agentDeck.layout.set({ sidebarSections: sections }).catch((err: unknown) => {
+      window.agentDeck.log.send('debug', 'layout', 'Layout persist failed', { err: String(err) })
     })
-    if (sections)
-      window.agentDeck.layout.set({ sidebarSections: sections }).catch((err: unknown) => {
-        window.agentDeck.log.send('debug', 'layout', 'Layout persist failed', { err: String(err) })
-      })
   },
 
   setRightPanelWidth: (w) => {
