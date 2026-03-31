@@ -308,11 +308,13 @@ describe('CodexAdapter', () => {
   })
 
   it('parseUsage computes cost from gpt-4o pricing using raw input (including cached)', () => {
+    // Use the same accumulator for both calls (matches real CostTracker usage)
+    const acc = { ...ZERO_USAGE }
     const contextLine = JSON.stringify({
       type: 'turn_context',
       payload: { turn_id: 't1', model: 'gpt-4o' },
     })
-    adapter.parseUsage(contextLine, { ...ZERO_USAGE })
+    adapter.parseUsage(contextLine, acc)
 
     const line = JSON.stringify({
       type: 'event_msg',
@@ -328,7 +330,7 @@ describe('CodexAdapter', () => {
         },
       },
     })
-    const result = adapter.parseUsage(line, { ...ZERO_USAGE })
+    const result = adapter.parseUsage(line, acc)
     expect(result).not.toBeNull()
     if (!result) throw new Error('Expected result')
     // Cost uses raw input (1M) not non-cached (800K)
@@ -340,11 +342,13 @@ describe('CodexAdapter', () => {
   })
 
   it('parseUsage sets totalCostUsd to 0 for unknown model', () => {
+    // Use the same accumulator for both calls (matches real CostTracker usage)
+    const acc = { ...ZERO_USAGE }
     const contextLine = JSON.stringify({
       type: 'turn_context',
       payload: { turn_id: 't1', model: 'unknown-model-xyz' },
     })
-    adapter.parseUsage(contextLine, { ...ZERO_USAGE })
+    adapter.parseUsage(contextLine, acc)
 
     const line = JSON.stringify({
       type: 'event_msg',
@@ -360,7 +364,7 @@ describe('CodexAdapter', () => {
         },
       },
     })
-    const result = adapter.parseUsage(line, { ...ZERO_USAGE })
+    const result = adapter.parseUsage(line, acc)
     expect(result).not.toBeNull()
     if (!result) throw new Error('Expected result')
     expect(result.totalCostUsd).toBe(0)

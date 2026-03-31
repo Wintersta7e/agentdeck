@@ -400,9 +400,17 @@ export function createWorktreeManager(
       try {
         const ahead = await git.aheadCount(entry.path, entry.baseOid)
         if (ahead > 0) {
-          log.warn('Skipping prune of dirty worktree', {
+          log.warn('Skipping prune of dirty worktree (unpushed commits)', {
             sessionId: entry.sessionId,
             ahead,
+          })
+          continue
+        }
+        // CDX-3: Also check for uncommitted changes (dirty working tree)
+        const statusResult = await git.status(entry.path)
+        if (statusResult.hasChanges) {
+          log.warn('Skipping prune of dirty worktree (uncommitted changes)', {
+            sessionId: entry.sessionId,
           })
           continue
         }

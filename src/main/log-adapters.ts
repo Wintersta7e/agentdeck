@@ -195,7 +195,10 @@ const CODEX_PRICING: Record<string, { inputPer1M: number; outputPer1M: number }>
 }
 
 export function createCodexAdapter(): LogAdapter {
-  let codexModel = ''
+  // Track model per-session via the accumulator reference.
+  // Each BoundSession owns a distinct TokenUsage object, so a WeakMap keyed
+  // by accumulator avoids cross-session model overwrites (CDX-1).
+  const modelBySession = new WeakMap<TokenUsage, string>()
 
   return {
     agent: 'codex',
@@ -228,13 +231,10 @@ export function createCodexAdapter(): LogAdapter {
 
       const p = payload as Record<string, unknown>
 
-      // Extract model from turn_context events for pricing lookup
+      // Extract model from turn_context events for pricing lookup.
+      // Stored per-accumulator so concurrent sessions don't overwrite each other (CDX-1).
       if (p['turn_id'] && typeof p['model'] === 'string') {
-        // Store model in accumulator metadata — we use cacheWriteTokens as a hack-free approach:
-        // just remember the model name for later. Actually, return null and let token_count handle it.
-        // The model is available in turn_context, not in token_count.
-        // We'll extract it here and store via a side channel.
-        codexModel = p['model'] as string
+        modelBySession.set(accumulator, p['model'] as string)
       }
 
       if (p['type'] !== 'token_count') return null
@@ -257,7 +257,7 @@ export function createCodexAdapter(): LogAdapter {
       // Codex input_tokens INCLUDES cached_input_tokens as a subset.
       // Normalize to non-cached input only (matches Claude adapter semantics).
       const nonCachedInput = rawInputTokens - cachedInputTokens
-      const model = codexModel
+      const model = modelBySession.get(accumulator) ?? ''
       const pricing = CODEX_PRICING[model]
       const totalCostUsd =
         pricing !== undefined
@@ -265,13 +265,17 @@ export function createCodexAdapter(): LogAdapter {
             (outputTokens / 1_000_000) * pricing.outputPer1M
           : 0
 
-      return {
+      const result: TokenUsage = {
         inputTokens: nonCachedInput,
         outputTokens,
         cacheReadTokens: cachedInputTokens,
         cacheWriteTokens: accumulator.cacheWriteTokens,
         totalCostUsd,
       }
+      // Carry model forward so the next parseUsage call (with the new accumulator
+      // replacing the old one) still has the model association.
+      if (model) modelBySession.set(result, model)
+      return result
     },
   }
 }

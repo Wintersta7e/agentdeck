@@ -154,6 +154,8 @@ export function TerminalPane({
     // Capture write buffer ref for cleanup (avoids react-hooks/exhaustive-deps warning).
     // The array reference stays stable — we push/splice in place, never reassign.
     const writeBuffer = writeBufferRef.current
+    // Capture projectId for cleanup (CDX-2 worktree release on implicit exit)
+    const capturedProjectId = projectIdRef.current
 
     // Prevent onData from writing before the visibility effect's rAF completes
     // fit+flush. Without this, visibleRef starts as true (from useRef init) and
@@ -631,6 +633,31 @@ export function TerminalPane({
         })
       } else {
         // Session removed → dispose everything
+        // CDX-2: Clean up worktree resources for project sessions that exited
+        // without going through the explicit close flow (PTY exits on its own).
+        const wt = useAppStore.getState().worktreePaths[sessionId]
+        if (wt?.isolated) {
+          window.agentDeck.worktree.discard(sessionId).catch((err: unknown) => {
+            window.agentDeck.log.send('warn', 'worktree', 'Implicit exit discard failed', {
+              sessionId,
+              err: String(err),
+            })
+          })
+        } else if (capturedProjectId) {
+          window.agentDeck.worktree
+            .releasePrimary(capturedProjectId, sessionId)
+            .catch((err: unknown) => {
+              window.agentDeck.log.send(
+                'debug',
+                'worktree',
+                'Implicit exit releasePrimary failed',
+                {
+                  sessionId,
+                  err: String(err),
+                },
+              )
+            })
+        }
         clearWorktreePath(sessionId)
         window.agentDeck.cost.unbind(sessionId).catch(() => {})
         try {
