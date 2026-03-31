@@ -230,10 +230,25 @@ app
         sessionId: string,
         opts: { agent: string; projectPath: string; cwd: string; spawnAt: number },
       ) => {
+        if (typeof sessionId !== 'string' || !sessionId) {
+          throw new Error('cost:bind requires a non-empty sessionId')
+        }
+        if (!opts || typeof opts !== 'object') {
+          throw new Error('cost:bind requires an opts object')
+        }
+        if (typeof opts.agent !== 'string' || !opts.agent) {
+          throw new Error('cost:bind requires a non-empty agent')
+        }
+        if (typeof opts.cwd !== 'string' || !opts.cwd) {
+          throw new Error('cost:bind requires a non-empty cwd')
+        }
         costTracker?.bindSession(sessionId, opts)
       },
     )
     ipcMain.handle('cost:unbind', (_, sessionId: string) => {
+      if (typeof sessionId !== 'string' || !sessionId) {
+        throw new Error('cost:unbind requires a non-empty sessionId')
+      }
       costTracker?.unbindSession(sessionId)
     })
 

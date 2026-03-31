@@ -31,6 +31,12 @@ export function registerProjectHandlers(
   })
 
   ipcMain.handle('projects:readFile', async (_event, projectPath: string, filename: string) => {
+    if (typeof projectPath !== 'string' || !projectPath) {
+      throw new Error('projects:readFile requires a non-empty projectPath')
+    }
+    if (/(?:^|\/)\.\.(?:\/|$)/.test(projectPath)) {
+      throw new Error('projects:readFile rejects path traversal in projectPath')
+    }
     if (!ALLOWED_FILES.has(filename)) {
       throw new Error(`File not permitted: ${filename}`)
     }

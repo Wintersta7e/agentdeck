@@ -37,7 +37,7 @@ export function registerUtilHandlers(): void {
             .trim()
             .split(/\r?\n/)
             .map((p) => toWslPath(p.trim()))
-          log.info(`clipboard:readFilePaths → ${JSON.stringify(paths)}`)
+          log.debug(`clipboard:readFilePaths → ${JSON.stringify(paths)}`)
           resolve(paths)
         },
       )

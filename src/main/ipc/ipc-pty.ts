@@ -55,7 +55,7 @@ export function registerPtyHandlers(getPtyManager: () => PtyManager | null): voi
   )
 
   ipcMain.on('pty:write', (_, sessionId: string, data: string) => {
-    if (typeof sessionId !== 'string' || !sessionId) return
+    if (typeof sessionId !== 'string' || !SAFE_SESSION_ID_RE.test(sessionId)) return
     if (typeof data !== 'string') return
     // Chunk oversized writes to avoid locking the PTY with a single huge buffer.
     // Normal keystrokes and small pastes go through the fast path.
@@ -73,11 +73,14 @@ export function registerPtyHandlers(getPtyManager: () => PtyManager | null): voi
   // Note: resize rate-limiting is handled renderer-side (80ms debounced ResizeObserver).
   // No server-side guard — node-pty resize is cheap and idempotent.
   ipcMain.on('pty:resize', (_, sessionId: string, cols: number, rows: number) => {
-    if (typeof sessionId !== 'string' || !sessionId) return
+    if (typeof sessionId !== 'string' || !SAFE_SESSION_ID_RE.test(sessionId)) return
     if (cols > 0 && rows > 0) getPtyManager()?.resize(sessionId, cols, rows)
   })
 
   ipcMain.handle('pty:kill', (_, sessionId: string) => {
+    if (typeof sessionId !== 'string' || !SAFE_SESSION_ID_RE.test(sessionId)) {
+      throw new Error('Invalid sessionId')
+    }
     getPtyManager()?.kill(sessionId)
   })
 }

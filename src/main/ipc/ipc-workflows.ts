@@ -24,10 +24,15 @@ export function registerWorkflowHandlers(
   getRoles?: (() => Role[]) | undefined,
   saveRole?: ((role: Role) => void) | undefined,
 ): void {
+  const SAFE_ID_RE = /^[a-zA-Z0-9_-]+$/
+
   /* ── Workflow CRUD ──────────────────────────────────────────────── */
   ipcMain.handle('workflows:list', () => listWorkflows())
   ipcMain.handle('workflows:load', (_, id: string) => loadWorkflow(id))
-  ipcMain.handle('workflows:save', (_, workflow: Workflow) => saveWorkflow(workflow))
+  ipcMain.handle('workflows:save', (_, workflow: Workflow) => {
+    if (!workflow || typeof workflow !== 'object') throw new Error('Invalid workflow')
+    return saveWorkflow(workflow)
+  })
   ipcMain.handle('workflows:rename', (_, id: string, name: string) => {
     if (typeof id !== 'string' || !id) throw new Error('Invalid workflow id')
     if (typeof name !== 'string' || !name.trim() || name.length > 200)
@@ -35,6 +40,7 @@ export function registerWorkflowHandlers(
     return renameWorkflow(id, name)
   })
   ipcMain.handle('workflows:delete', async (_, id: string) => {
+    if (typeof id !== 'string' || !SAFE_ID_RE.test(id)) throw new Error('Invalid workflow id')
     // C6: Stop running workflow before deleting to avoid orphaned PTYs
     getWorkflowEngine()?.stop(id)
     await deleteWorkflow(id)
@@ -173,7 +179,6 @@ export function registerWorkflowHandlers(
   })
 
   /* ── Workflow Run History ──────────────────────────────────────── */
-  const SAFE_ID_RE = /^[a-zA-Z0-9_-]+$/
 
   ipcMain.handle('workflows:listRuns', async (_, workflowId: string) => {
     if (typeof workflowId !== 'string' || !SAFE_ID_RE.test(workflowId)) {
@@ -217,7 +222,7 @@ export function registerWorkflowHandlers(
         if (typeof wslPath !== 'string' || wslPath.length > 1024 || !wslPath.startsWith('/')) {
           throw new Error(`Invalid project path: must be an absolute WSL path`)
         }
-        if (wslPath.includes('..')) {
+        if (/(?:^|\/)\.\.(?:\/|$)/.test(wslPath)) {
           throw new Error(`Invalid project path: path traversal not allowed`)
         }
       }

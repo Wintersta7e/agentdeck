@@ -179,6 +179,7 @@ export function App(): React.JSX.Element {
             window.agentDeck.pty.kill(sessionId).catch((err: unknown) => {
               window.agentDeck.log.send('debug', 'pty', 'Kill failed', { err: String(err) })
             })
+            window.agentDeck.cost.unbind(sessionId).catch(() => {})
             window.agentDeck.worktree.discard(sessionId).catch((err: unknown) => {
               useAppStore
                 .getState()
@@ -262,7 +263,7 @@ export function App(): React.JSX.Element {
       if (state.currentView !== 'session') return
       const sid = state.paneSessions[state.focusedPane]
       if (!sid) return
-      const escaped = wslPaths.map((p) => (p.includes(' ') ? `"${p}"` : p)).join(' ')
+      const escaped = wslPaths.map((p) => `'${p.replace(/'/g, "'\\''")}'`).join(' ')
       window.agentDeck.pty.write(sid, escaped)
     })
     return unsub
