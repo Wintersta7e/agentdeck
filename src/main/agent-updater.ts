@@ -121,6 +121,10 @@ function extractNpmPackage(updateCmd: string): string | null {
  * npm may install the package but fail to create the bin link when optional
  * deps for the current platform aren't resolved.
  *
+ * Uses `node -e` with `process.execPath` to derive the correct prefix,
+ * because `npm prefix -g` can return the wrong path when nvm fails to
+ * activate in non-interactive login shells (bash -lc).
+ *
  * @see https://github.com/openai/codex/issues/13555
  */
 async function repairNpmBinLink(binary: string, updateCmd: string): Promise<boolean> {
@@ -128,23 +132,31 @@ async function repairNpmBinLink(binary: string, updateCmd: string): Promise<bool
   if (!pkg) return false
 
   try {
-    // Find the bin script inside the installed package and create the symlink
-    const repairScript = [
-      'NPM_PREFIX=$(npm prefix -g)',
-      `PKG_BIN="$NPM_PREFIX/lib/node_modules/${pkg}/bin/${binary}.js"`,
-      `LINK="$NPM_PREFIX/bin/${binary}"`,
-      '[ -f "$PKG_BIN" ] || exit 1',
-      'ln -sf "$PKG_BIN" "$LINK"',
-      'echo "repaired"',
-    ].join(' && ')
-    const result = await runWslCmd(repairScript)
+    // Use node's own process.execPath to derive prefix — this is always correct
+    // even when nvm's PATH setup fails in bash -lc, because process.execPath
+    // resolves to the actual nvm-managed node binary, not /usr/bin/node.
+    const nodeScript = [
+      `const p=require("path"),fs=require("fs")`,
+      `const prefix=p.dirname(p.dirname(process.execPath))`,
+      `const src=p.join(prefix,"lib/node_modules",${JSON.stringify(pkg)},"bin",${JSON.stringify(binary + '.js')})`,
+      `const dst=p.join(prefix,"bin",${JSON.stringify(binary)})`,
+      `if(!fs.existsSync(src)){console.error("src missing: "+src);process.exit(1)}`,
+      `try{fs.unlinkSync(dst)}catch{}`,
+      `fs.symlinkSync(src,dst)`,
+      `console.log("repaired")`,
+    ].join(';')
+
+    const result = await runWslCmd(`node -e '${nodeScript}'`)
     if (result.includes('repaired')) {
       log.info(`Repaired missing npm bin link for ${binary}`)
       return true
     }
-  } catch {
-    log.debug(`Bin link repair failed for ${binary}`)
+  } catch (err) {
+    log.warn(`Bin link repair failed for ${binary}`, {
+      err: err instanceof Error ? err.message : String(err),
+    })
   }
+
   return false
 }
 
@@ -233,7 +245,18 @@ export async function updateAgent(agentId: string): Promise<UpdateResult> {
       log.warn(`Attempting rollback: ${rollbackCmd}`)
       try {
         await runWslCmd(rollbackCmd, 120_000)
-        const recovered = await isBinaryOnPath(binary)
+        let recovered = await isBinaryOnPath(binary)
+
+        // npm can reinstall the package but still fail to create the bin link.
+        // Attempt repair after rollback — this is the common case.
+        if (!recovered) {
+          log.warn(`Binary '${binary}' still missing after rollback — attempting bin link repair`)
+          const repaired = await repairNpmBinLink(binary, rollbackCmd)
+          if (repaired) {
+            recovered = await isBinaryOnPath(binary)
+          }
+        }
+
         if (recovered) {
           log.info(`Rollback succeeded for ${agentId} — restored v${preInfo.current}`)
           return {
@@ -243,7 +266,9 @@ export async function updateAgent(agentId: string): Promise<UpdateResult> {
             message: `Update removed the ${binary} binary. Rolled back to v${preInfo.current}. The target version may be incompatible.`,
           }
         }
-        log.error(`Rollback installed package but binary '${binary}' still missing`)
+        log.error(
+          `Rollback installed package but binary '${binary}' still missing after repair attempts`,
+        )
       } catch (rollbackErr) {
         log.error(`Rollback also failed for ${agentId}`, {
           err: rollbackErr instanceof Error ? rollbackErr.message : String(rollbackErr),
