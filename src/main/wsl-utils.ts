@@ -1,4 +1,4 @@
-import { execFileSync, execFile } from 'child_process'
+import { execFile } from 'child_process'
 import { createLogger } from './logger'
 
 const log = createLogger('wsl-utils')
@@ -54,36 +54,10 @@ export function wslPathToWindows(wslPath: string, distro = FALLBACK_DISTRO): str
   return `\\\\wsl.localhost\\${distro}${wslPath.replace(/\//g, '\\')}`
 }
 
-/** Cached distro name — populated by either sync or async detection */
+/** Cached distro name — populated by async detection */
 let cachedDistro: string | null = null
 
-/** Sync version — used by call sites that can't be async (e.g. IPC handlers returning sync) */
-export function getDefaultDistro(): string {
-  if (cachedDistro) return cachedDistro
-  try {
-    const output = execFileSync('wsl.exe', ['-l', '--quiet'], { encoding: 'utf16le' })
-    const cleaned = output.replace(/\0/g, '').replace(/\ufeff/g, '')
-    const first = cleaned
-      .split('\n')
-      .map((l) => l.trim())
-      .filter(Boolean)[0]
-    if (!first) {
-      log.warn('wsl.exe returned no distros, falling back to ' + FALLBACK_DISTRO)
-    } else {
-      log.debug(`Resolved WSL distro: ${first}`, { raw: cleaned })
-    }
-    cachedDistro = first ?? FALLBACK_DISTRO
-    return cachedDistro
-  } catch (err) {
-    log.error('Failed to detect WSL distro, falling back to ' + FALLBACK_DISTRO, {
-      err: String(err),
-    })
-    cachedDistro = FALLBACK_DISTRO
-    return cachedDistro
-  }
-}
-
-/** Async version — preferred at app startup to avoid blocking the main thread */
+/** Async distro detection — never blocks the main thread (PERF-5) */
 export function getDefaultDistroAsync(): Promise<string> {
   if (cachedDistro) return Promise.resolve(cachedDistro)
   return new Promise<string>((resolve) => {

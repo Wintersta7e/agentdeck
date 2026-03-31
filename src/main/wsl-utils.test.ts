@@ -2,14 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock child_process before importing module under test
 vi.mock('child_process', () => ({
-  execFileSync: vi.fn(),
   execFile: vi.fn(),
 }))
 
 import { wslPathToWindows } from './wsl-utils'
-import { execFileSync } from 'child_process'
+import { execFile } from 'child_process'
 
-const mockedExecFileSync = vi.mocked(execFileSync)
+const mockedExecFile = vi.mocked(execFile)
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -55,22 +54,30 @@ describe('wslPathToWindows', () => {
   })
 })
 
-describe('getDefaultDistro', () => {
+describe('getDefaultDistroAsync', () => {
   it('parses wsl.exe output for first distro name', async () => {
     vi.resetModules()
-    mockedExecFileSync.mockReturnValue('Ubuntu-24.04\n' as never)
-    const { getDefaultDistro: freshGet } = await import('./wsl-utils')
-    const result = freshGet()
+    mockedExecFile.mockImplementation(
+      (_cmd: unknown, _args: unknown, _opts: unknown, cb: unknown) => {
+        ;(cb as (err: null, stdout: string) => void)(null, 'Ubuntu-24.04\n')
+        return undefined as never
+      },
+    )
+    const { getDefaultDistroAsync: freshGet } = await import('./wsl-utils')
+    const result = await freshGet()
     expect(result).toBe('Ubuntu-24.04')
   })
 
   it('falls back to "Ubuntu" on error', async () => {
     vi.resetModules()
-    mockedExecFileSync.mockImplementation(() => {
-      throw new Error('wsl.exe not found')
-    })
-    const { getDefaultDistro: freshGet } = await import('./wsl-utils')
-    const result = freshGet()
+    mockedExecFile.mockImplementation(
+      (_cmd: unknown, _args: unknown, _opts: unknown, cb: unknown) => {
+        ;(cb as (err: Error) => void)(new Error('wsl.exe not found'))
+        return undefined as never
+      },
+    )
+    const { getDefaultDistroAsync: freshGet } = await import('./wsl-utils')
+    const result = await freshGet()
     expect(result).toBe('Ubuntu')
   })
 })

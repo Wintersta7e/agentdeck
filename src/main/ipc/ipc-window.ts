@@ -48,7 +48,7 @@ export function registerWindowHandlers(
   /* ── Theme ──────────────────────────────────────────────────────── */
   ipcMain.handle('theme:get', () => store.get('appPrefs').theme ?? '')
   ipcMain.handle('theme:set', (_, theme: string) => {
-    const valid = ['', 'cyan', 'violet', 'ice', 'parchment', 'fog', 'lavender', 'stone']
+    const valid = ['', 'amber', 'cyan', 'violet', 'ice', 'parchment', 'fog', 'lavender', 'stone']
     const safe = valid.includes(theme) ? theme : ''
     store.set('appPrefs', { ...store.get('appPrefs'), theme: safe })
     return safe

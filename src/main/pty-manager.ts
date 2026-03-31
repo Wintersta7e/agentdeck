@@ -188,6 +188,11 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
         flushScheduled.set(sessionId, true)
         setImmediate(() => {
           flushScheduled.delete(sessionId)
+          // REL-3: Guard against firing after session was killed
+          if (!sessions.has(sessionId)) {
+            dataBuffers.delete(sessionId)
+            return
+          }
           const buffered = dataBuffers.get(sessionId)
           if (!buffered) return
           dataBuffers.delete(sessionId)

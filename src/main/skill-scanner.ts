@@ -41,7 +41,7 @@ interface SkillCache {
 // ── Cache state ────────────────────────────────────────────────────
 
 let globalCache: SkillCache | null = null
-let cachedHomePath: string | null = null
+const cachedHomePaths = new Map<string, string>()
 const projectCache = new Map<string, SkillCache>()
 const inFlight = new Map<string, Promise<SkillCache>>()
 
@@ -78,10 +78,11 @@ function wslExec(cmd: string, distro?: string): Promise<string | null> {
 // ── Cached $HOME resolution ───────────────────────────────────────
 
 async function resolveHomePath(distro: string): Promise<string | null> {
-  if (cachedHomePath) return cachedHomePath
+  const cached = cachedHomePaths.get(distro)
+  if (cached) return cached
   const output = await wslExec('echo $HOME', distro)
   const home = output?.trim() ?? null
-  if (home) cachedHomePath = home
+  if (home) cachedHomePaths.set(distro, home)
   return home
 }
 
@@ -394,14 +395,20 @@ export async function listSkills(opts: {
 }
 
 export function invalidateProjectCache(projectPath: string): void {
-  // Remove all entries matching this project path (any distro)
+  // Remove all entries matching this project path (any distro).
+  // CQ-5: Use exact key segment match instead of suffix match to prevent
+  // false positives when one path is a suffix of another.
+  const suffix = `:${projectPath}`
   for (const key of projectCache.keys()) {
-    if (key.endsWith(`:${projectPath}`)) {
+    // Key format: "project:<distro>:<path>" — extract path after second colon
+    const secondColon = key.indexOf(':', key.indexOf(':') + 1)
+    if (secondColon !== -1 && key.slice(secondColon) === suffix) {
       projectCache.delete(key)
     }
   }
   for (const key of inFlight.keys()) {
-    if (key.endsWith(`:${projectPath}`)) {
+    const secondColon = key.indexOf(':', key.indexOf(':') + 1)
+    if (secondColon !== -1 && key.slice(secondColon) === suffix) {
       inFlight.delete(key)
     }
   }
@@ -409,7 +416,7 @@ export function invalidateProjectCache(projectPath: string): void {
 
 export function invalidateAllCaches(): void {
   globalCache = null
-  cachedHomePath = null
+  cachedHomePaths.clear()
   projectCache.clear()
   inFlight.clear()
 }
