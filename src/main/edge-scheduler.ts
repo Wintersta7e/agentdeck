@@ -22,8 +22,8 @@ export interface EdgeScheduler {
   getNodeStatus(nodeId: string): WorkflowNodeStatus
   /** True when all nodes are done, skipped, or errored (nothing running or pending). */
   isDone(): boolean
-  /** Reset loop subgraph for re-execution. */
-  resetLoopSubgraph(loopTargetId: string, conditionId: string): void
+  /** Reset loop subgraph for re-execution. Returns the set of reset node IDs. */
+  resetLoopSubgraph(loopTargetId: string, conditionId: string): ReadonlySet<string>
 }
 
 // ── Internal types ──────────────────────────────────────────
@@ -229,12 +229,12 @@ export function createScheduler(
       return true
     },
 
-    resetLoopSubgraph(loopTargetId: string, conditionId: string): void {
+    resetLoopSubgraph(loopTargetId: string, conditionId: string): ReadonlySet<string> {
       // 1. Identify subgraph: all nodes on forward paths from target to condition (inclusive)
       const subgraphIds = new Set<string>()
       findSubgraph(loopTargetId, conditionId, subgraphIds, new Set())
 
-      if (subgraphIds.size === 0) return
+      if (subgraphIds.size === 0) return subgraphIds
 
       // 2. Compute intra-loop in-degree for each subgraph node
       //    (count incoming forward edges where the source is also in the subgraph)
@@ -310,6 +310,8 @@ export function createScheduler(
           }
         }
       }
+
+      return subgraphIds
     },
   }
 

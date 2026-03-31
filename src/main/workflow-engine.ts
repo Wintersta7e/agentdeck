@@ -162,6 +162,11 @@ export function createWorkflowEngine(
         try {
           return new RegExp(node.conditionPattern ?? '').test(testOutput) ? 'true' : 'false'
         } catch {
+          // PERF-3: Catch regex syntax errors so they don't crash the engine
+          log.warn('Condition regex failed', {
+            nodeId: node.id,
+            pattern: node.conditionPattern,
+          })
           return 'false'
         }
       }
@@ -235,7 +240,21 @@ export function createWorkflowEngine(
                 maxIterations: le.maxIterations,
                 message: `Loop iteration ${String(count)}/${String(le.maxIterations)}`,
               })
-              scheduler.resetLoopSubgraph(le.toNodeId, node.id)
+              const resetIds = scheduler.resetLoopSubgraph(le.toNodeId, node.id)
+              // REL-7: Clear loop counters for inner loop edges within the reset subgraph
+              // so nested loops restart correctly on each outer iteration
+              for (const innerLoops of loopEdgesByCondition.values()) {
+                for (const innerLe of innerLoops) {
+                  if (innerLe.id !== le.id && resetIds.has(innerLe.fromNodeId)) {
+                    loopCounters.delete(innerLe.id)
+                  }
+                }
+              }
+              // PERF-4: Clear output maps for re-executing nodes to prevent unbounded growth
+              for (const nid of resetIds) {
+                nodeOutputs.delete(nid)
+                conditionOutputs.delete(nid)
+              }
             }
           }
         }
@@ -485,6 +504,12 @@ export function createWorkflowEngine(
           message: 'Workflow stopped',
         })
       }
+
+      // REL-6: Resolve any pending checkpoint promises so execute() can complete
+      for (const [, resolve] of runCheckpoints) {
+        resolve()
+      }
+      runCheckpoints.clear()
 
       // ── Flush run history to disk ────────────────────────────────
       recorder.finalize(stopped ? 'stopped' : 'done')

@@ -5,7 +5,7 @@
  * runWorkflow(). They now take an explicit NodeRunnerDeps interface
  * instead of closing over parent-scope variables.
  */
-import { spawn, execFile, type ChildProcess } from 'child_process'
+import { spawn, execFile, type ChildProcess, type ExecException } from 'child_process'
 import { createLogger } from './logger'
 import type { WorkflowNode, WorkflowEvent, Role } from '../shared/types'
 import { AGENT_BINARY_MAP, SAFE_FLAGS_RE } from '../shared/agents'
@@ -357,7 +357,9 @@ export function runShellNode(node: WorkflowNode, deps: NodeRunnerDeps): Promise<
       { timeout: node.timeout ?? 60000 },
       (err, stdout, stderr) => {
         deps.activeChildProcesses.delete(child)
-        deps.nodeExitCodes.set(node.id, err ? 1 : 0)
+        // REL-2: Extract real exit code from ExecException instead of hardcoding 1
+        const exitCode = err ? ((err as ExecException).code ?? 1) : 0
+        deps.nodeExitCodes.set(node.id, exitCode)
         const out = stripAnsi(stdout + stderr)
         deps.nodeOutputs.set(node.id, out)
         deps.conditionOutputs.set(node.id, out.slice(-65536))
