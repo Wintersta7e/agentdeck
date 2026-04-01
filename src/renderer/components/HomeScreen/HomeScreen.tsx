@@ -19,6 +19,11 @@ import type { AgentConfig, Project, Template, StackBadge } from '../../../shared
 import { getProjectAgents } from '../../../shared/agent-helpers'
 import './HomeScreen.css'
 
+// PERF-16: O(1) agent metadata lookup (replaces O(n) SHARED_AGENTS.find() in render)
+const AGENT_META_MAP = new Map<string, (typeof SHARED_AGENTS)[number]>(
+  SHARED_AGENTS.map((a) => [a.id, a]),
+)
+
 function timeAgo(timestamp: number | undefined): string {
   if (!timestamp) return ''
   const diff = Date.now() - timestamp
@@ -230,7 +235,7 @@ export function HomeScreen({
       setAgentUpdating(agentId, true)
       try {
         const result = await window.agentDeck.agents.update(agentId)
-        const displayName = SHARED_AGENTS.find((a) => a.id === agentId)?.name ?? agentId
+        const displayName = AGENT_META_MAP.get(agentId)?.name ?? agentId
         if (result.success) {
           addNotification('info', `${displayName} updated to ${result.newVersion ?? 'latest'}`)
           setAgentVersion(agentId, {
@@ -447,7 +452,7 @@ export function HomeScreen({
                       )}
                       <div className="card-agents">
                         {getProjectAgents(p).map((ac) => {
-                          const meta = SHARED_AGENTS.find((a) => a.id === ac.agent)
+                          const meta = AGENT_META_MAP.get(ac.agent)
                           return (
                             <span
                               key={ac.agent}
@@ -529,7 +534,7 @@ export function HomeScreen({
                       title={
                         installed
                           ? undefined
-                          : `Install: ${SHARED_AGENTS.find((sa) => sa.id === a.name)?.updateCmd ?? 'See agent docs'}`
+                          : `Install: ${AGENT_META_MAP.get(a.name)?.updateCmd ?? 'See agent docs'}`
                       }
                     >
                       {installed ? (
@@ -607,7 +612,7 @@ export function HomeScreen({
             >
               <div className="home-context-header">Launch with...</div>
               {projectAgents.map((ac) => {
-                const agentMeta = SHARED_AGENTS.find((a) => a.id === ac.agent)
+                const agentMeta = AGENT_META_MAP.get(ac.agent)
                 return (
                   <button
                     key={ac.agent}

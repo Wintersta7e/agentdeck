@@ -15,6 +15,10 @@ import { HexGrid } from './components/shared/HexGrid'
 import { EnergyVein } from './components/shared/EnergyVein'
 import { AmbientGlow } from './components/shared/AmbientGlow'
 
+// PERF-17: Hoist static position tuples to module scope to avoid new array references on every render
+const GLOW_POS_1: [number, number] = [25, 15]
+const GLOW_POS_2: [number, number] = [75, 80]
+
 import { useAppStore } from './store/appStore'
 import { useProjects } from './hooks/useProjects'
 import { useAmbientState } from './hooks/useAmbientState'
@@ -136,7 +140,9 @@ export function App(): React.JSX.Element {
       window.agentDeck.pty.kill(sessionId).catch((err: unknown) => {
         window.agentDeck.log.send('debug', 'pty', 'Kill failed', { err: String(err) })
       })
-      window.agentDeck.cost.unbind(sessionId).catch(() => {})
+      window.agentDeck.cost.unbind(sessionId).catch((err: unknown) => {
+        window.agentDeck.log.send('debug', 'cost', 'unbind failed', { sessionId, err: String(err) })
+      })
       removeSession(sessionId)
     },
     [removeSession],
@@ -179,7 +185,12 @@ export function App(): React.JSX.Element {
             window.agentDeck.pty.kill(sessionId).catch((err: unknown) => {
               window.agentDeck.log.send('debug', 'pty', 'Kill failed', { err: String(err) })
             })
-            window.agentDeck.cost.unbind(sessionId).catch(() => {})
+            window.agentDeck.cost.unbind(sessionId).catch((err: unknown) => {
+              window.agentDeck.log.send('debug', 'cost', 'unbind failed', {
+                sessionId,
+                err: String(err),
+              })
+            })
             window.agentDeck.worktree.discard(sessionId).catch((err: unknown) => {
               useAppStore
                 .getState()
@@ -213,7 +224,9 @@ export function App(): React.JSX.Element {
     window.agentDeck.pty.kill(sessionId).catch((err: unknown) => {
       window.agentDeck.log.send('debug', 'pty', 'Kill failed', { err: String(err) })
     })
-    window.agentDeck.cost.unbind(sessionId).catch(() => {})
+    window.agentDeck.cost.unbind(sessionId).catch((err: unknown) => {
+      window.agentDeck.log.send('debug', 'cost', 'unbind failed', { sessionId, err: String(err) })
+    })
     window.agentDeck.worktree.discard(sessionId).catch((err: unknown) => {
       useAppStore
         .getState()
@@ -232,7 +245,9 @@ export function App(): React.JSX.Element {
     window.agentDeck.pty.kill(sessionId).catch((err: unknown) => {
       window.agentDeck.log.send('debug', 'pty', 'Kill failed', { err: String(err) })
     })
-    window.agentDeck.cost.unbind(sessionId).catch(() => {})
+    window.agentDeck.cost.unbind(sessionId).catch((err: unknown) => {
+      window.agentDeck.log.send('debug', 'cost', 'unbind failed', { sessionId, err: String(err) })
+    })
     window.agentDeck.worktree.keep(sessionId).catch((err: unknown) => {
       window.agentDeck.log.send('warn', 'worktree', 'Keep failed', { err: String(err) })
     })
@@ -480,11 +495,11 @@ export function App(): React.JSX.Element {
         <EnergyVein color="var(--accent)" count={2} speed={reducedMotion ? 0 : veinSpeed} />
         <AmbientGlow
           color="rgba(var(--accent-rgb), 0.15)"
-          position={[25, 15]}
+          position={GLOW_POS_1}
           size={600}
           skew={-12}
         />
-        <AmbientGlow color="rgba(100, 180, 255, 0.08)" position={[75, 80]} size={500} skew={5} />
+        <AmbientGlow color="rgba(100, 180, 255, 0.08)" position={GLOW_POS_2} size={500} skew={5} />
       </div>
       <Titlebar
         onCloseTab={handleCloseTab}

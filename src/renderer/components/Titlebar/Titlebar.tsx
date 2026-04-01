@@ -63,7 +63,13 @@ export function Titlebar({
     [onCloseWorkflowTab],
   )
   const currentView = useAppStore((s) => s.currentView)
-  const sessions = useAppStore((s) => s.sessions)
+  // PERF-10: Narrow session selector — only extract id/projectId/status to prevent
+  // re-renders on every PTY data event (setSessionStatus creates a new sessions object)
+  const sessionDataStr = useAppStore((s) =>
+    Object.values(s.sessions)
+      .map((sess) => `${sess.id}|${sess.projectId}|${sess.status}`)
+      .join(','),
+  )
   const activeSessionId = useAppStore((s) => s.activeSessionId)
   const projects = useAppStore((s) => s.projects)
   const setActiveSession = useAppStore((s) => s.setActiveSession)
@@ -98,14 +104,24 @@ export function Titlebar({
   }, [workflows])
 
   const getProjectName = useCallback(
-    (session: Session): string => {
+    (session: Pick<Session, 'id' | 'projectId'>): string => {
       if (!session.projectId) return 'Terminal'
       return projectNameMap.get(session.projectId) ?? session.id
     },
     [projectNameMap],
   )
 
-  const sessionList = useMemo(() => Object.values(sessions), [sessions])
+  const sessionList = useMemo(() => {
+    if (!sessionDataStr) return []
+    return sessionDataStr.split(',').map((entry) => {
+      const [id, projectId, status] = entry.split('|')
+      return {
+        id: id ?? '',
+        projectId: projectId ?? '',
+        status: (status ?? '') as Session['status'],
+      }
+    })
+  }, [sessionDataStr])
 
   return (
     <div className="titlebar">
