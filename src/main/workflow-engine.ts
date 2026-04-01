@@ -86,6 +86,15 @@ export function createWorkflowEngine(
       })
       return
     }
+    // BUG-10: Reject empty workflows instead of persisting 0ms run records
+    if (workflow.nodes.length === 0) {
+      push(workflow.id, {
+        type: 'workflow:error',
+        workflowId: workflow.id,
+        message: 'Workflow has no nodes',
+      })
+      return
+    }
     log.info('Starting workflow', {
       id: workflow.id,
       name: workflow.name,
@@ -242,10 +251,16 @@ export function createWorkflowEngine(
               })
               const resetIds = scheduler.resetLoopSubgraph(le.toNodeId, node.id)
               // REL-7: Clear loop counters for inner loop edges within the reset subgraph
-              // so nested loops restart correctly on each outer iteration
+              // so nested loops restart correctly on each outer iteration.
+              // BUG-5/CDX-5: Also check toNodeId is in resetIds — prevents sibling loop
+              // edges from the same condition node from having their counters cleared
               for (const innerLoops of loopEdgesByCondition.values()) {
                 for (const innerLe of innerLoops) {
-                  if (innerLe.id !== le.id && resetIds.has(innerLe.fromNodeId)) {
+                  if (
+                    innerLe.id !== le.id &&
+                    resetIds.has(innerLe.fromNodeId) &&
+                    resetIds.has(innerLe.toNodeId)
+                  ) {
                     loopCounters.delete(innerLe.id)
                   }
                 }
