@@ -3,6 +3,7 @@ import type { BrowserWindow } from 'electron'
 import { AGENTS, AGENT_BINARY_MAP } from '../shared/agents'
 import { createLogger } from './logger'
 import { NODE_INIT } from './wsl-utils'
+import { shellQuote } from './node-runners'
 
 const log = createLogger('agent-updater')
 
@@ -135,10 +136,17 @@ async function repairNpmBinLink(binary: string, updateCmd: string): Promise<bool
     // Use node's own process.execPath to derive prefix — this is always correct
     // even when nvm's PATH setup fails in bash -lc, because process.execPath
     // resolves to the actual nvm-managed node binary, not /usr/bin/node.
+    // BUG-2: Derive bin entry from package.json instead of hardcoding .js suffix.
+    // This handles agents whose npm package uses .cjs or a different filename.
     const nodeScript = [
       `const p=require("path"),fs=require("fs")`,
       `const prefix=p.dirname(p.dirname(process.execPath))`,
-      `const src=p.join(prefix,"lib/node_modules",${JSON.stringify(pkg)},"bin",${JSON.stringify(binary + '.js')})`,
+      `const pkgDir=p.join(prefix,"lib/node_modules",${JSON.stringify(pkg)})`,
+      `const pj=JSON.parse(fs.readFileSync(p.join(pkgDir,"package.json"),"utf-8"))`,
+      `const bins=typeof pj.bin==="string"?{[pj.name?.split("/").pop()||""]:pj.bin}:(pj.bin||{})`,
+      `const entry=bins[${JSON.stringify(binary)}]||Object.values(bins)[0]`,
+      `if(!entry){console.error("no bin entry for ${binary}");process.exit(1)}`,
+      `const src=p.join(pkgDir,entry)`,
       `const dst=p.join(prefix,"bin",${JSON.stringify(binary)})`,
       `if(!fs.existsSync(src)){console.error("src missing: "+src);process.exit(1)}`,
       `try{fs.unlinkSync(dst)}catch{}`,
@@ -146,7 +154,8 @@ async function repairNpmBinLink(binary: string, updateCmd: string): Promise<bool
       `console.log("repaired")`,
     ].join(';')
 
-    const result = await runWslCmd(`node -e '${nodeScript}'`)
+    // SEC-31: Use shellQuote to safely escape the script instead of raw single-quote wrapping
+    const result = await runWslCmd(`node -e ${shellQuote(nodeScript)}`)
     if (result.includes('repaired')) {
       log.info(`Repaired missing npm bin link for ${binary}`)
       return true
