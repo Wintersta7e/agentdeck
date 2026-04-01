@@ -5,6 +5,53 @@ All notable changes to AgentDeck will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.8.2] - 2026-04-01
+
+### Fixed
+- Cost tracking silently broken for all sessions — `$HOME` inside single quotes prevented bash expansion; discovery always timed out (R4-01)
+- Workflow deadlock reported as false success — engine now detects unreachable nodes after upstream failure and reports error (R2-01)
+- Startup commands joined with `&&` silently prevented agent launch on any setup failure — changed to `; ` (BUG-1)
+- Implicit PTY exit force-discarded isolated worktrees — now uses `keep` to prevent data loss (CDX-4)
+- Project deletion with active sessions orphaned worktrees — now kills sessions first (BUG-4)
+- Loop counter reset affected sibling loop edges from the same condition node (BUG-5/CDX-5)
+- Agent updater `repairNpmBinLink` hardcoded `.js` suffix — now derives entry from package.json (BUG-2)
+- Post-kill PTY data emission on ptyBus — added sessions.has guard (BUG-6)
+- `restartSession` leaked `sessionUsage` entries in Zustand store (LEAK-13)
+- Copy flash setTimeout not cancelled on terminal unmount (LEAK-10)
+- Timer TOCTOU race in CostTracker on unbind during async callback (R2-02)
+- Orphan worktree pruning leaked registry entries for manually-deleted directories (R2-25)
+- SplitView pulse timers not reset on pane layout change (BUG-8)
+- Workflow rename non-atomic — now reverts optimistic update on IPC failure (BUG-9)
+
+### Security
+- IPC validation: SAFE_ID_RE applied consistently across all 53 IPC channels (was duplicated in 4 files, 12 handlers missing checks)
+- Shell injection: `shellQuote` for agent updater node -e script (SEC-31) and `isBinaryOnPath` (R2-03)
+- Path traversal: backslash normalization in `projects:readFile` guard (SEC-34)
+- Renderer log data bounded to 4KB to prevent log exhaustion (SEC-33)
+- `agentFlags` type/length validation in `pty:spawn` (R2-21)
+- `cost:bind` validates `spawnAt` as finite number (R2-23)
+- Missing `--` separator in wsl.exe calls fixed in cost-tracker and index.ts (R2-20, R5-02)
+
+### Performance
+- Titlebar uses narrow serialized session selector (prevents re-renders at PTY data rate)
+- `listWorkflows` reads files concurrently via Promise.all (was sequential)
+- `pruneRuns` sorts by filename timestamp instead of calling stat() on each file
+- Worktree registry I/O converted from synchronous to async (unblocks main process)
+- Edge-scheduler `isDone()` is O(1) via activeCount tracking (was O(n) scan)
+- HomeScreen uses Map for O(1) agent metadata lookup (was O(n) find per chip)
+- Cached accent RGB in themeObserver to avoid getComputedStyle per terminal on theme change
+- Static AmbientGlow position arrays hoisted to module scope (prevents new refs on render)
+
+### Changed
+- Shared `validation.ts` module — single source of truth for SAFE_ID_RE
+- `paneSessions` capped at 3 entries to prevent unbounded growth
+- Silent `.catch(() => {})` on `cost.unbind` replaced with debug logging
+- `.some()` test assertions replaced with `toContainEqual` for actionable failures
+- Vite HMR cleanup for version info IPC listener (dev-only leak fix)
+- Cache invalidation no longer deletes in-flight scan promises (prevents stale overwrite race)
+- Empty workflows rejected with error event instead of persisting 0ms run records
+- 611 tests (all passing), 0 lint warnings
+
 ## [4.8.0] - 2026-03-30
 
 ### Added
