@@ -98,6 +98,8 @@ export function TerminalPane({
   const fitCallbacksRef = useRef<FitCallbacks | null>(null)
   // Write batching: coalesce PTY data chunks into one write per animation frame.
   // Prevents scroll guard race conditions during rapid agent output bursts.
+  // LEAK-10: Track copy flash timer so it can be cancelled on unmount
+  const copyFlashTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const writeBufferRef = useRef<string[]>([])
   const writeRafRef = useRef(0)
   const setSessionStatus = useAppStore((s) => s.setSessionStatus)
@@ -147,6 +149,7 @@ export function TerminalPane({
     let term: Terminal
     let fit: FitAddon
     let webglAddon: WebglAddon | null = null
+    let unicode11Addon: Unicode11Addon | null = null
     let search: SearchAddon | null = null
     let isReattached = false
     // M12: StrictMode double-spawn protection
@@ -235,7 +238,8 @@ export function TerminalPane({
             .writeText(term.getSelection())
             .then(() => {
               setCopyFlash(true)
-              setTimeout(() => setCopyFlash(false), 1200)
+              clearTimeout(copyFlashTimerRef.current)
+              copyFlashTimerRef.current = setTimeout(() => setCopyFlash(false), 1200)
             })
             .catch((err: unknown) => {
               window.agentDeck.log.send('warn', 'terminal', 'Clipboard copy failed', {
@@ -283,9 +287,10 @@ export function TerminalPane({
       term.open(containerRef.current)
 
       // Enable Unicode 11 for proper emoji & CJK character width
+      // LEAK-11: Store reference so it can be disposed in session-removed path
       try {
-        const unicode11 = new Unicode11Addon()
-        term.loadAddon(unicode11)
+        unicode11Addon = new Unicode11Addon()
+        term.loadAddon(unicode11Addon)
         term.unicode.activeVersion = '11'
       } catch (err: unknown) {
         window.agentDeck.log.send('warn', 'terminal', `Unicode11 addon failed for ${sessionId}`, {
@@ -590,6 +595,8 @@ export function TerminalPane({
       // next mount cycle's scheduleFit is not blocked by a stale true value.
       cancelAnimationFrame(fitRafRef.current)
       fitPendingRef.current = false
+      // LEAK-10: Cancel copy flash timer on unmount
+      clearTimeout(copyFlashTimerRef.current)
 
       // Cancel pending write batch rAF and flush any buffered data into the
       // terminal before caching (rAF won't fire after cleanup, so unflushed
@@ -633,12 +640,14 @@ export function TerminalPane({
         })
       } else {
         // Session removed → dispose everything
-        // CDX-2: Clean up worktree resources for project sessions that exited
+        // CDX-4/CDX-2: Clean up worktree resources for project sessions that exited
         // without going through the explicit close flow (PTY exits on its own).
+        // Use `keep` instead of `discard` for isolated worktrees to prevent data loss —
+        // the user may have uncommitted work. The explicit close flow prompts Keep/Discard.
         const wt = useAppStore.getState().worktreePaths[sessionId]
         if (wt?.isolated) {
-          window.agentDeck.worktree.discard(sessionId).catch((err: unknown) => {
-            window.agentDeck.log.send('warn', 'worktree', 'Implicit exit discard failed', {
+          window.agentDeck.worktree.keep(sessionId).catch((err: unknown) => {
+            window.agentDeck.log.send('warn', 'worktree', 'Implicit exit keep failed', {
               sessionId,
               err: String(err),
             })
@@ -659,7 +668,12 @@ export function TerminalPane({
             })
         }
         clearWorktreePath(sessionId)
-        window.agentDeck.cost.unbind(sessionId).catch(() => {})
+        window.agentDeck.cost.unbind(sessionId).catch((err: unknown) => {
+          window.agentDeck.log.send('debug', 'cost', 'unbind failed', {
+            sessionId,
+            err: String(err),
+          })
+        })
         try {
           webglAddon?.dispose()
         } catch {
@@ -795,7 +809,8 @@ export function TerminalPane({
               .writeText(term.getSelection())
               .then(() => {
                 setCopyFlash(true)
-                setTimeout(() => setCopyFlash(false), 1200)
+                clearTimeout(copyFlashTimerRef.current)
+                copyFlashTimerRef.current = setTimeout(() => setCopyFlash(false), 1200)
               })
               .catch(() => {})
           }

@@ -168,8 +168,10 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
       const timer = setTimeout(() => {
         spawnTimers.delete(sessionId)
         if (!sessions.has(sessionId)) return
-        // Send all commands as a single compound statement to avoid garbled output
-        proc.write(commands.join(' && ') + '\n')
+        // BUG-1: Use '; ' instead of ' && ' so an intermediate failure (e.g. cd to
+        // a deleted directory) doesn't abort the entire chain and silently prevent
+        // the agent from launching.
+        proc.write(commands.join('; ') + '\n')
       }, 500)
       spawnTimers.set(sessionId, timer)
     }
@@ -177,6 +179,9 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
     lineBuffers.set(sessionId, '')
 
     proc.onData((data) => {
+      // BUG-6: Guard against post-kill data emission — kill() deletes from sessions
+      // before proc.kill(), so a trailing chunk can arrive after the session is gone
+      if (!sessions.has(sessionId)) return
       ptyBus.emit(`data:${sessionId}`, data)
 
       // Accumulate data for batched IPC send
