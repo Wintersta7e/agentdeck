@@ -254,13 +254,14 @@ export function registerWorkflowHandlers(
   )
 
   ipcMain.handle('workflow:stop', (_, workflowId: string) => {
-    if (typeof workflowId !== 'string' || !workflowId) return
+    // R5-01: Use SAFE_ID_RE consistent with all other handlers
+    if (typeof workflowId !== 'string' || !SAFE_ID_RE.test(workflowId)) return
     getWorkflowEngine()?.stop(workflowId)
   })
 
   ipcMain.handle('workflow:resume', (_, workflowId: string, nodeId: string) => {
-    if (typeof workflowId !== 'string' || !workflowId) return
-    if (typeof nodeId !== 'string' || !nodeId) return
+    if (typeof workflowId !== 'string' || !SAFE_ID_RE.test(workflowId)) return
+    if (typeof nodeId !== 'string' || !SAFE_ID_RE.test(nodeId)) return
     getWorkflowEngine()?.resume(workflowId, nodeId)
   })
 }

@@ -88,9 +88,15 @@ async function pruneRuns(workflowId: string): Promise<void> {
   if (files.length <= MAX_RUNS_PER_WORKFLOW) return
 
   // PERF-12: Sort by timestamp embedded in filename instead of calling stat() on each file.
-  // Filename format: ${workflowId}_${startedAt}_${runId}.json — startedAt is the 2nd segment.
+  // Filename format: ${workflowId}_${startedAt}_${runId}.json
+  // R5-03: Parse from the right — workflowId may contain underscores (SAFE_ID_RE allows _),
+  // but runId (UUID) uses only hyphens and startedAt is always a number.
   const withTimestamp = files.map((f) => {
-    const ts = parseInt(f.split('_')[1] ?? '0', 10)
+    const base = f.replace(/\.json$/, '')
+    const lastUnderscore = base.lastIndexOf('_')
+    const secondLast = base.lastIndexOf('_', lastUnderscore - 1)
+    const tsStr = secondLast >= 0 ? base.slice(secondLast + 1, lastUnderscore) : '0'
+    const ts = parseInt(tsStr, 10)
     return { file: f, ts: Number.isFinite(ts) ? ts : 0 }
   })
   withTimestamp.sort((a, b) => b.ts - a.ts)

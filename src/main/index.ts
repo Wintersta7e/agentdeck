@@ -185,7 +185,8 @@ app
       wslHome = await new Promise<string>((resolve, reject) => {
         execFileCb(
           'wsl.exe',
-          ['bash', '-lc', 'echo $HOME'],
+          // R5-02: Use '--' separator consistent with all other WSL calls
+          ['--', 'bash', '-lc', 'echo $HOME'],
           { timeout: 5000, encoding: 'utf-8' },
           (err, stdout) => {
             if (err) reject(err)
