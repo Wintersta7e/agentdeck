@@ -78,7 +78,8 @@ export const PaneTopbar = memo(function PaneTopbar({
               clearWorktreePath(sessionId)
             },
           )
-        : Promise.resolve()
+        : // LEAK-14: Clear worktreePaths for non-isolated sessions too
+          Promise.resolve().then(() => clearWorktreePath(sessionId))
 
     // Kill old PTY, then swap in a fresh session for the same project
     void Promise.all([window.agentDeck.pty.kill(sessionId), cleanupPromise]).then(() => {

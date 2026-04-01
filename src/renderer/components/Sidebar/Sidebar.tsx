@@ -151,11 +151,23 @@ export function Sidebar({
     const projectName = project?.name ?? 'this project'
     const projectId = contextMenu.projectId
     closeMenu()
+    // BUG-4: Check for active sessions before deletion to prevent orphaned worktrees
+    const activeSessions = Object.values(useAppStore.getState().sessions).filter(
+      (s) => s.projectId === projectId,
+    )
+    const warningMsg =
+      activeSessions.length > 0
+        ? `Remove "${projectName}"? ${String(activeSessions.length)} active session(s) will be closed. This cannot be undone.`
+        : `Remove "${projectName}"? This cannot be undone.`
     setConfirmDialog({
       title: 'Remove Project',
-      message: `Remove "${projectName}"? This cannot be undone.`,
+      message: warningMsg,
       confirmLabel: 'Remove',
       onConfirm: () => {
+        // Kill active sessions first to trigger proper worktree cleanup
+        for (const s of activeSessions) {
+          window.agentDeck.pty.kill(s.id).catch(() => {})
+        }
         void deleteProject(projectId)
         setConfirmDialog(null)
       },

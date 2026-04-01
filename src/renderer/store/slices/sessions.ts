@@ -154,6 +154,8 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
       // Remove old session
       const { [oldSessionId]: _, ...rest } = s.sessions
       const { [oldSessionId]: _feed, ...remainingFeeds } = s.activityFeeds
+      // LEAK-13: Clean up sessionUsage for the old session
+      const { [oldSessionId]: _usage, ...remainingUsage } = s.sessionUsage
 
       // Find which pane slot the old session occupies (read from live state)
       const paneIndex = s.paneSessions.indexOf(oldSessionId)
@@ -177,6 +179,7 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
           },
         },
         activityFeeds: remainingFeeds,
+        sessionUsage: remainingUsage,
         activeSessionId: freshId,
         paneSessions,
       }
