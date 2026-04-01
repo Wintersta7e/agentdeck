@@ -11,6 +11,7 @@ import type { WorkflowEngine } from './workflow-engine'
 import { createWorktreeManager, type WorktreeManager } from './worktree-manager'
 import { createWslGitPort } from './git-port'
 import { createCostTracker, type CostTracker } from './cost-tracker'
+import { SAFE_ID_RE } from './validation'
 import { createClaudeAdapter, createCodexAdapter } from './log-adapters'
 import {
   registerPtyHandlers,
@@ -230,8 +231,9 @@ app
         sessionId: string,
         opts: { agent: string; projectPath: string; cwd: string; spawnAt: number },
       ) => {
-        if (typeof sessionId !== 'string' || !sessionId) {
-          throw new Error('cost:bind requires a non-empty sessionId')
+        // R3-01: Validate sessionId with SAFE_ID_RE consistent with all other IPC handlers
+        if (typeof sessionId !== 'string' || !SAFE_ID_RE.test(sessionId)) {
+          throw new Error('cost:bind requires a valid sessionId')
         }
         if (!opts || typeof opts !== 'object') {
           throw new Error('cost:bind requires an opts object')
@@ -253,8 +255,8 @@ app
       },
     )
     ipcMain.handle('cost:unbind', (_, sessionId: string) => {
-      if (typeof sessionId !== 'string' || !sessionId) {
-        throw new Error('cost:unbind requires a non-empty sessionId')
+      if (typeof sessionId !== 'string' || !SAFE_ID_RE.test(sessionId)) {
+        throw new Error('cost:unbind requires a valid sessionId')
       }
       costTracker?.unbindSession(sessionId)
     })

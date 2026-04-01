@@ -265,10 +265,14 @@ export function createScheduler(
         if (!state) continue
 
         const intraDegree = intraLoopInDegree.get(id) ?? 0
-        // PERF-14: Re-increment activeCount for nodes being reset back to idle
-        const wasTerminal =
-          state.status === 'done' || state.status === 'error' || state.status === 'skipped'
-        if (wasTerminal) activeCount++
+        // PERF-14: Re-increment activeCount for nodes transitioning from terminal → idle.
+        // Running/paused nodes are already counted as active, so no re-increment needed.
+        // Their old processNode promise will either: (a) complete and hit the status guard
+        // in completeNode (status is no longer 'running'), or (b) be superseded by the
+        // new execution after re-enqueue.
+        if (state.status === 'done' || state.status === 'error' || state.status === 'skipped') {
+          activeCount++
+        }
         state.status = 'idle'
         state.pending = intraDegree
         state.skippedEdgeIds = new Set()
