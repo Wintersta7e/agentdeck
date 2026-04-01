@@ -60,7 +60,17 @@ export function registerUtilHandlers(): void {
         rendererLog = createLogger(`renderer:${safeMod}`)
         rendererLoggers.set(safeMod, rendererLog)
       }
-      rendererLog[level as 'info' | 'warn' | 'error' | 'debug'](safeMsg, data)
+      // SEC-33: Bound renderer-supplied data to prevent log exhaustion / stack overflow
+      let safeData: unknown
+      if (data !== undefined) {
+        try {
+          const serialized = JSON.stringify(data)
+          safeData = serialized.length <= MAX_MSG_LENGTH ? data : undefined
+        } catch {
+          // Circular or un-serializable — drop
+        }
+      }
+      rendererLog[level as 'info' | 'warn' | 'error' | 'debug'](safeMsg, safeData)
     },
   )
 }

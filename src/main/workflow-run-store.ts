@@ -3,10 +3,9 @@ import * as path from 'path'
 import { app } from 'electron'
 import { createLogger } from './logger'
 import type { WorkflowRun } from '../shared/types'
+import { SAFE_ID_RE } from './validation'
 
 const log = createLogger('workflow-run-store')
-
-const SAFE_ID_RE = /^[a-zA-Z0-9_-]+$/
 const MAX_RUNS_PER_WORKFLOW = 20
 
 /** Validate id is safe for filesystem use. */
@@ -88,21 +87,16 @@ async function pruneRuns(workflowId: string): Promise<void> {
 
   if (files.length <= MAX_RUNS_PER_WORKFLOW) return
 
-  // Sort by mtime descending (newest first) to determine which to keep
-  const withStats = await Promise.all(
-    files.map(async (f) => {
-      try {
-        const stat = await fs.promises.stat(path.join(dir, f))
-        return { file: f, mtime: stat.mtimeMs }
-      } catch {
-        return { file: f, mtime: 0 }
-      }
-    }),
-  )
-  withStats.sort((a, b) => b.mtime - a.mtime)
+  // PERF-12: Sort by timestamp embedded in filename instead of calling stat() on each file.
+  // Filename format: ${workflowId}_${startedAt}_${runId}.json — startedAt is the 2nd segment.
+  const withTimestamp = files.map((f) => {
+    const ts = parseInt(f.split('_')[1] ?? '0', 10)
+    return { file: f, ts: Number.isFinite(ts) ? ts : 0 }
+  })
+  withTimestamp.sort((a, b) => b.ts - a.ts)
 
   // Delete everything beyond the retention limit
-  const toDelete = withStats.slice(MAX_RUNS_PER_WORKFLOW)
+  const toDelete = withTimestamp.slice(MAX_RUNS_PER_WORKFLOW)
   for (const entry of toDelete) {
     try {
       await fs.promises.rm(path.join(dir, entry.file), { force: true })

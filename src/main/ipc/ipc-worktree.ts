@@ -1,7 +1,6 @@
 import { ipcMain } from 'electron'
 import type { WorktreeManager } from '../worktree-manager'
-
-const SAFE_ID_RE = /^[a-zA-Z0-9_-]+$/
+import { SAFE_ID_RE } from '../validation'
 
 /**
  * Worktree IPC handlers: acquire, inspect, discard, keep.

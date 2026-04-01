@@ -1,5 +1,7 @@
 import { ipcMain } from 'electron'
 import type { PtyManager } from '../pty-manager'
+import { SAFE_ID_RE } from '../validation'
+import { KNOWN_AGENT_IDS } from '../../shared/agents'
 
 /**
  * PTY IPC handlers: spawn, write, resize, kill.
@@ -19,7 +21,10 @@ const BLOCKED_ENV = new Set([
 /** Maximum bytes per pty:write chunk (1 MiB). */
 const MAX_CHUNK = 1_048_576
 
-const SAFE_SESSION_ID_RE = /^[a-zA-Z0-9_-]+$/
+/** Maximum number of startup commands accepted from renderer. */
+const MAX_STARTUP_COMMANDS = 50
+/** Maximum length of a single startup command. */
+const MAX_STARTUP_CMD_LEN = 4096
 
 export function registerPtyHandlers(getPtyManager: () => PtyManager | null): void {
   ipcMain.handle(
@@ -45,8 +50,29 @@ export function registerPtyHandlers(getPtyManager: () => PtyManager | null): voi
           }
         }
       }
-      if (typeof sessionId !== 'string' || !SAFE_SESSION_ID_RE.test(sessionId)) {
+      if (typeof sessionId !== 'string' || !SAFE_ID_RE.test(sessionId)) {
         throw new Error('Invalid sessionId')
+      }
+      // SEC-32: Validate projectPath, agent, and startupCommands types
+      if (
+        projectPath !== undefined &&
+        (typeof projectPath !== 'string' || projectPath.length > 1024)
+      ) {
+        throw new Error('Invalid projectPath')
+      }
+      if (agent !== undefined && (typeof agent !== 'string' || !KNOWN_AGENT_IDS.has(agent))) {
+        throw new Error('Invalid agent')
+      }
+      // SEC-30: Validate startupCommands — reject crafted payloads
+      if (startupCommands !== undefined) {
+        if (!Array.isArray(startupCommands) || startupCommands.length > MAX_STARTUP_COMMANDS) {
+          throw new Error('Invalid startupCommands')
+        }
+        for (const cmd of startupCommands) {
+          if (typeof cmd !== 'string' || cmd.length > MAX_STARTUP_CMD_LEN) {
+            throw new Error('Invalid startupCommands entry')
+          }
+        }
       }
       const mgr = getPtyManager()
       if (!mgr) throw new Error('PTY manager not initialized')
@@ -55,7 +81,7 @@ export function registerPtyHandlers(getPtyManager: () => PtyManager | null): voi
   )
 
   ipcMain.on('pty:write', (_, sessionId: string, data: string) => {
-    if (typeof sessionId !== 'string' || !SAFE_SESSION_ID_RE.test(sessionId)) return
+    if (typeof sessionId !== 'string' || !SAFE_ID_RE.test(sessionId)) return
     if (typeof data !== 'string') return
     // Chunk oversized writes to avoid locking the PTY with a single huge buffer.
     // Normal keystrokes and small pastes go through the fast path.
@@ -73,12 +99,12 @@ export function registerPtyHandlers(getPtyManager: () => PtyManager | null): voi
   // Note: resize rate-limiting is handled renderer-side (80ms debounced ResizeObserver).
   // No server-side guard — node-pty resize is cheap and idempotent.
   ipcMain.on('pty:resize', (_, sessionId: string, cols: number, rows: number) => {
-    if (typeof sessionId !== 'string' || !SAFE_SESSION_ID_RE.test(sessionId)) return
+    if (typeof sessionId !== 'string' || !SAFE_ID_RE.test(sessionId)) return
     if (cols > 0 && rows > 0) getPtyManager()?.resize(sessionId, cols, rows)
   })
 
   ipcMain.handle('pty:kill', (_, sessionId: string) => {
-    if (typeof sessionId !== 'string' || !SAFE_SESSION_ID_RE.test(sessionId)) {
+    if (typeof sessionId !== 'string' || !SAFE_ID_RE.test(sessionId)) {
       throw new Error('Invalid sessionId')
     }
     getPtyManager()?.kill(sessionId)

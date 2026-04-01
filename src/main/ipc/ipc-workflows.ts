@@ -12,6 +12,7 @@ import { validateWorkflow, validateRole } from '../../shared/workflow-utils'
 import { toWslPath } from '../wsl-utils'
 import type { WorkflowEngine } from '../workflow-engine'
 import type { Role, Workflow, WorkflowExport } from '../../shared/types'
+import { SAFE_ID_RE } from '../validation'
 
 /**
  * Workflow IPC handlers: CRUD + execution (run, stop, resume) + export/import/duplicate.
@@ -24,8 +25,6 @@ export function registerWorkflowHandlers(
   getRoles?: (() => Role[]) | undefined,
   saveRole?: ((role: Role) => void) | undefined,
 ): void {
-  const SAFE_ID_RE = /^[a-zA-Z0-9_-]+$/
-
   /* ── Workflow CRUD ──────────────────────────────────────────────── */
   ipcMain.handle('workflows:list', () => listWorkflows())
   ipcMain.handle('workflows:load', (_, id: string) => loadWorkflow(id))
@@ -34,7 +33,7 @@ export function registerWorkflowHandlers(
     return saveWorkflow(workflow)
   })
   ipcMain.handle('workflows:rename', (_, id: string, name: string) => {
-    if (typeof id !== 'string' || !id) throw new Error('Invalid workflow id')
+    if (typeof id !== 'string' || !SAFE_ID_RE.test(id)) throw new Error('Invalid workflow id')
     if (typeof name !== 'string' || !name.trim() || name.length > 200)
       throw new Error('Invalid workflow name')
     return renameWorkflow(id, name)

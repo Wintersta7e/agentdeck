@@ -34,7 +34,9 @@ export function registerProjectHandlers(
     if (typeof projectPath !== 'string' || !projectPath) {
       throw new Error('projects:readFile requires a non-empty projectPath')
     }
-    if (/(?:^|\/)\.\.(?:\/|$)/.test(projectPath)) {
+    // SEC-34: Normalize to forward slashes before traversal check to cover Windows backslash sequences
+    const normalizedPath = projectPath.replace(/\\/g, '/')
+    if (/(?:^|\/)\.\.(?:\/|$)/.test(normalizedPath)) {
       throw new Error('projects:readFile rejects path traversal in projectPath')
     }
     if (!ALLOWED_FILES.has(filename)) {
