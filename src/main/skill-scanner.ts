@@ -406,12 +406,9 @@ export function invalidateProjectCache(projectPath: string): void {
       projectCache.delete(key)
     }
   }
-  for (const key of inFlight.keys()) {
-    const secondColon = key.indexOf(':', key.indexOf(':') + 1)
-    if (secondColon !== -1 && key.slice(secondColon) === suffix) {
-      inFlight.delete(key)
-    }
-  }
+  // R4-10: Do NOT delete from inFlight — let in-progress scans complete and
+  // re-populate the cache with fresh data. Deleting would cause the old promise
+  // to still write its result while a new scan starts, creating a race.
 }
 
 export function invalidateAllCaches(): void {

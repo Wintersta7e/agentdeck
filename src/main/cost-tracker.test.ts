@@ -267,15 +267,19 @@ describe('file tailing', () => {
 
     let callCount = 0
     mockExecFile.mockImplementation(
-      (_bin: string, _args: string[], _opts: unknown, cb: ExecFileCb) => {
+      (_bin: string, args: string[], _opts: unknown, cb: ExecFileCb) => {
         callCount++
-        if (callCount === 1) {
+        const cmd = Array.isArray(args) ? args.join(' ') : ''
+        if (cmd.includes('echo "$HOME"')) {
+          // R4-01: Home resolution call added by startDiscovery
+          cb(null, '/home/rooty\n', '')
+        } else if (callCount === 2) {
           // Discovery: find returns a file
           cb(null, '/home/rooty/.claude/sessions/abc.jsonl\n', '')
-        } else if (callCount === 2) {
+        } else if (callCount === 3) {
           // head: session match
           cb(null, '{"cwd":"/home/rooty/project"}\n', '')
-        } else if (callCount === 3) {
+        } else if (callCount === 4) {
           // First tail poll: stat + content with two complete lines
           cb(null, '80\n{"line":"one"}\n{"line":"two"}\n', '')
         } else {
@@ -327,16 +331,19 @@ describe('file tailing', () => {
 
     let callCount = 0
     mockExecFile.mockImplementation(
-      (_bin: string, _args: string[], _opts: unknown, cb: ExecFileCb) => {
+      (_bin: string, args: string[], _opts: unknown, cb: ExecFileCb) => {
         callCount++
-        if (callCount === 1) {
-          cb(null, '/home/rooty/.claude/sessions/abc.jsonl\n', '')
+        const cmd = Array.isArray(args) ? args.join(' ') : ''
+        if (cmd.includes('echo "$HOME"')) {
+          cb(null, '/home/rooty\n', '')
         } else if (callCount === 2) {
-          cb(null, '{"cwd":"/home/rooty/project"}\n', '')
+          cb(null, '/home/rooty/.claude/sessions/abc.jsonl\n', '')
         } else if (callCount === 3) {
+          cb(null, '{"cwd":"/home/rooty/project"}\n', '')
+        } else if (callCount === 4) {
           // First tail: one complete line + one partial (no trailing newline)
           cb(null, '60\n{"line":"one"}\n{"line":"tw', '')
-        } else if (callCount === 4) {
+        } else if (callCount === 5) {
           // Second tail: completes the partial line
           cb(null, '80\no"}\n', '')
         } else {
@@ -347,7 +354,7 @@ describe('file tailing', () => {
 
     tracker.bindSession('s1', BIND_OPTS)
 
-    // Discovery
+    // Discovery (home resolve + find + head)
     await vi.advanceTimersByTimeAsync(2000)
 
     // First tail — only line one is complete
@@ -377,16 +384,19 @@ describe('file tailing', () => {
 
     let callCount = 0
     mockExecFile.mockImplementation(
-      (_bin: string, _args: string[], _opts: unknown, cb: ExecFileCb) => {
+      (_bin: string, args: string[], _opts: unknown, cb: ExecFileCb) => {
         callCount++
-        if (callCount === 1) {
-          cb(null, '/home/rooty/.claude/sessions/abc.jsonl\n', '')
+        const cmd = Array.isArray(args) ? args.join(' ') : ''
+        if (cmd.includes('echo "$HOME"')) {
+          cb(null, '/home/rooty\n', '')
         } else if (callCount === 2) {
-          cb(null, '{"cwd":"/home/rooty/project"}\n', '')
+          cb(null, '/home/rooty/.claude/sessions/abc.jsonl\n', '')
         } else if (callCount === 3) {
+          cb(null, '{"cwd":"/home/rooty/project"}\n', '')
+        } else if (callCount === 4) {
           // First tail: 80 bytes of content
           cb(null, '80\n{"line":"one"}\n', '')
-        } else if (callCount === 4) {
+        } else if (callCount === 5) {
           // File was truncated: stat says 20 bytes, which is less than our offset
           // The tracker should reset and re-read from beginning
           cb(null, '20\n{"line":"reset"}\n', '')
@@ -398,7 +408,7 @@ describe('file tailing', () => {
 
     tracker.bindSession('s1', BIND_OPTS)
 
-    // Discovery + first tail
+    // Discovery (home resolve + find + head) + first tail
     await vi.advanceTimersByTimeAsync(2000)
     await vi.advanceTimersByTimeAsync(3000)
     expect(parseUsage).toHaveBeenCalledTimes(1)

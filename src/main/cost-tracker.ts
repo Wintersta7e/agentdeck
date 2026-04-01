@@ -88,9 +88,33 @@ export function createCostTracker(mainWindow: BrowserWindow, adapters: LogAdapte
   // ── Discovery ───────────────────────────────────────────────────
 
   function startDiscovery(session: BoundSession): void {
-    const dirs = session.adapter.getLogDirs(session.projectPath)
+    const rawDirs = session.adapter.getLogDirs(session.projectPath)
     const pattern = session.adapter.getFilePattern()
 
+    // R4-01: Resolve ~ to the actual WSL home directory BEFORE building
+    // shell commands. sq() wraps in single quotes which prevents $HOME
+    // expansion — so we must resolve it in Node, not in bash.
+    const resolveHome = wslExec('echo "$HOME"')
+      .then((out) => out.trim())
+      .catch(() => '')
+
+    resolveHome
+      .then((home) => {
+        if (!sessions.has(session.sessionId)) return
+        const dirs = rawDirs.map((d) => (d.startsWith('~') && home ? home + d.slice(1) : d))
+        runDiscoveryLoop(session, dirs, pattern)
+      })
+      .catch(() => {
+        // If home resolution fails, try dirs as-is (non-~ paths still work)
+        if (!sessions.has(session.sessionId)) return
+        const dirs = rawDirs.filter((d) => !d.startsWith('~'))
+        if (dirs.length > 0) {
+          runDiscoveryLoop(session, dirs, pattern)
+        }
+      })
+  }
+
+  function runDiscoveryLoop(session: BoundSession, dirs: string[], pattern: string): void {
     function discoveryPoll(): void {
       // Session may have been unbound while we were waiting
       if (!sessions.has(session.sessionId)) return
@@ -106,10 +130,10 @@ export function createCostTracker(mainWindow: BrowserWindow, adapters: LogAdapte
         return
       }
 
-      // Expand ~ in each dir and search for matching files modified after spawnAt
+      // Build find commands with resolved paths (no $HOME needed)
       const findParts = dirs.map(
         (d) =>
-          `find ${sq(d.replace('~', '$HOME'))} -name ${sq(pattern)} -newermt @${Math.floor((session.spawnAt - 2000) / 1000)} 2>/dev/null`,
+          `find ${sq(d)} -name ${sq(pattern)} -newermt @${Math.floor((session.spawnAt - 2000) / 1000)} 2>/dev/null`,
       )
       const findCmd = findParts.join('; ')
 

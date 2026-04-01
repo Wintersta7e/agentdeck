@@ -27,7 +27,10 @@ export function registerWorkflowHandlers(
 ): void {
   /* ── Workflow CRUD ──────────────────────────────────────────────── */
   ipcMain.handle('workflows:list', () => listWorkflows())
-  ipcMain.handle('workflows:load', (_, id: string) => loadWorkflow(id))
+  ipcMain.handle('workflows:load', (_, id: string) => {
+    if (typeof id !== 'string' || !SAFE_ID_RE.test(id)) throw new Error('Invalid workflow ID')
+    return loadWorkflow(id)
+  })
   ipcMain.handle('workflows:save', (_, workflow: Workflow) => {
     if (!workflow || typeof workflow !== 'object') throw new Error('Invalid workflow')
     return saveWorkflow(workflow)
