@@ -201,7 +201,7 @@ app
     const registryDir = join(app.getPath('userData'), 'worktree-registry')
     if (wslHome) {
       const wslWorktreeDir = `${wslHome}/.agentdeck/worktrees`
-      worktreeManager = createWorktreeManager(
+      worktreeManager = await createWorktreeManager(
         gitPort,
         (id) => {
           const projects = appStore?.get('projects') ?? []

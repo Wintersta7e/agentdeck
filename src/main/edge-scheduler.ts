@@ -93,6 +93,8 @@ export function createScheduler(
 
   // Ready queue: nodes with 0 pending
   const readyQueue: string[] = []
+  // PERF-14: Track count of non-terminal nodes for O(1) isDone()
+  let activeCount = stateMap.size
   for (const [id, state] of stateMap) {
     if (state.pending === 0) {
       readyQueue.push(id)
@@ -130,6 +132,7 @@ export function createScheduler(
         downstream.skippedEdgeIds.size === downstream.incomingForwardEdgeIds.size
       if (allSkipped) {
         downstream.status = 'skipped'
+        activeCount-- // PERF-14: track terminal transition
         // Propagate skip to all outgoing forward edges
         propagateSkip(downstream.node.id)
       } else {
@@ -179,6 +182,7 @@ export function createScheduler(
       const state = getState(nodeId)
       if (state.status !== 'running') return // WF-5: guard against double-complete
       state.status = 'done'
+      activeCount--
       activateOutgoing(nodeId)
     },
 
@@ -186,13 +190,17 @@ export function createScheduler(
       const state = getState(nodeId)
       if (state.status !== 'running') return // WF-5: guard against double-fail
       state.status = 'error'
+      activeCount--
       // Do NOT activate outgoing edges — engine decides via continueOnError
     },
 
     skipNode(nodeId: string): void {
       const state = getState(nodeId)
       if (state.status === 'done' || state.status === 'error') return // WF-5: already resolved
+      const wasActive =
+        state.status === 'idle' || state.status === 'running' || state.status === 'paused'
       state.status = 'skipped'
+      if (wasActive) activeCount--
       propagateSkip(nodeId)
     },
 
@@ -200,6 +208,7 @@ export function createScheduler(
       const state = getState(nodeId)
       if (state.status !== 'running') return // WF-5: guard against double-resolve
       state.status = 'done'
+      activeCount--
 
       const edges = outgoing.get(nodeId) ?? []
       for (const edge of edges) {
@@ -220,13 +229,9 @@ export function createScheduler(
       return getState(nodeId).status
     },
 
+    // PERF-14: O(1) isDone via activeCount tracking
     isDone(): boolean {
-      for (const state of stateMap.values()) {
-        if (state.status === 'idle' || state.status === 'running' || state.status === 'paused') {
-          return false
-        }
-      }
-      return true
+      return activeCount === 0
     },
 
     resetLoopSubgraph(loopTargetId: string, conditionId: string): ReadonlySet<string> {
@@ -260,6 +265,10 @@ export function createScheduler(
         if (!state) continue
 
         const intraDegree = intraLoopInDegree.get(id) ?? 0
+        // PERF-14: Re-increment activeCount for nodes being reset back to idle
+        const wasTerminal =
+          state.status === 'done' || state.status === 'error' || state.status === 'skipped'
+        if (wasTerminal) activeCount++
         state.status = 'idle'
         state.pending = intraDegree
         state.skippedEdgeIds = new Set()
@@ -288,6 +297,8 @@ export function createScheduler(
           target.incomingForwardEdgeIds = new Set(originalIncoming.map((e) => e.id))
           target.pending = originalIncoming.length
           target.skippedEdgeIds = new Set()
+          // PERF-14: Re-increment for exit target reset (status is 'skipped' or 'done' here)
+          activeCount++
           target.status = 'idle'
 
           // Re-apply any already-resolved edges from nodes outside the subgraph

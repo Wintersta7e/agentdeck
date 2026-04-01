@@ -124,6 +124,8 @@ export function createCostTracker(mainWindow: BrowserWindow, adapters: LogAdapte
 
           if (candidates.length === 0) {
             // Nothing yet — schedule next discovery poll
+            // R2-02: Re-check session existence before scheduling to avoid TOCTOU timer leak
+            if (!sessions.has(session.sessionId)) return
             session.pollTimer = setTimeout(discoveryPoll, DISCOVERY_INTERVAL_MS)
             return
           }
@@ -137,6 +139,8 @@ export function createCostTracker(mainWindow: BrowserWindow, adapters: LogAdapte
             sessionId: session.sessionId,
             err: String(err),
           })
+          // R2-02: Re-check before scheduling
+          if (!sessions.has(session.sessionId)) return
           session.pollTimer = setTimeout(discoveryPoll, DISCOVERY_INTERVAL_MS)
         })
     }
@@ -153,6 +157,8 @@ export function createCostTracker(mainWindow: BrowserWindow, adapters: LogAdapte
     if (!sessions.has(session.sessionId)) return Promise.resolve()
     if (index >= candidates.length) {
       // No match in this batch — schedule another discovery poll
+      // R2-02: Re-check before scheduling
+      if (!sessions.has(session.sessionId)) return Promise.resolve()
       session.pollTimer = setTimeout(() => {
         startDiscovery(session)
       }, DISCOVERY_INTERVAL_MS)

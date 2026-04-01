@@ -61,10 +61,11 @@ function registryPath(registryDir: string): string {
   return path.join(registryDir, 'registry.json')
 }
 
-function loadRegistry(registryDir: string): WorktreeEntry[] {
+// PERF-13: Async registry I/O to avoid blocking the main process event loop
+async function loadRegistry(registryDir: string): Promise<WorktreeEntry[]> {
   const file = registryPath(registryDir)
   try {
-    const raw = fs.readFileSync(file, 'utf-8')
+    const raw = await fs.promises.readFile(file, 'utf-8')
     const data = JSON.parse(raw) as RegistryData
     if (!Array.isArray(data.entries)) {
       log.warn('Registry file malformed — resetting', { file })
@@ -87,16 +88,16 @@ function loadRegistry(registryDir: string): WorktreeEntry[] {
   }
 }
 
-function saveRegistry(registryDir: string, entries: WorktreeEntry[]): void {
+async function saveRegistry(registryDir: string, entries: WorktreeEntry[]): Promise<void> {
   const file = registryPath(registryDir)
   const dir = path.dirname(file)
-  fs.mkdirSync(dir, { recursive: true })
+  await fs.promises.mkdir(dir, { recursive: true })
 
   const data: RegistryData = { entries }
   const json = JSON.stringify(data, null, 2)
   const tmpFile = file + '.tmp'
-  fs.writeFileSync(tmpFile, json, 'utf-8')
-  fs.renameSync(tmpFile, file)
+  await fs.promises.writeFile(tmpFile, json, 'utf-8')
+  await fs.promises.rename(tmpFile, file)
 }
 
 // ─── Per-key mutex (promise-based, same pattern as project-store) ────────────
@@ -123,14 +124,15 @@ function createMutexMap(): {
 
 // ─── Factory ─────────────────────────────────────────────────────────────────
 
-export function createWorktreeManager(
+export async function createWorktreeManager(
   git: GitPort,
   lookupProjectPath: (projectId: string) => string | undefined,
   registryDir: string,
   wslWorktreeDir?: string | undefined,
-): WorktreeManager {
+): Promise<WorktreeManager> {
   const worktreeBaseDir = wslWorktreeDir ?? registryDir
-  let entries: WorktreeEntry[] = loadRegistry(registryDir)
+  // PERF-13: Await async registry load
+  let entries: WorktreeEntry[] = await loadRegistry(registryDir)
 
   // Primary tracking: projectId -> sessionId. NOT persisted.
   // Reconstructed: sessions in the registry are worktree sessions, not primaries.
@@ -138,8 +140,8 @@ export function createWorktreeManager(
 
   const { serialized } = createMutexMap()
 
-  function persistEntries(): void {
-    saveRegistry(registryDir, entries)
+  async function persistEntries(): Promise<void> {
+    await saveRegistry(registryDir, entries)
   }
 
   function findEntry(sessionId: string): WorktreeEntry | undefined {
@@ -148,14 +150,14 @@ export function createWorktreeManager(
 
   function removeEntry(sessionId: string): void {
     entries = entries.filter((e) => e.sessionId !== sessionId)
-    persistEntries()
+    void persistEntries()
   }
 
   function updateEntry(sessionId: string, update: Partial<WorktreeEntry>): void {
     const entry = findEntry(sessionId)
     if (entry) {
       Object.assign(entry, update)
-      persistEntries()
+      void persistEntries()
     }
   }
 
@@ -414,8 +416,23 @@ export function createWorktreeManager(
           })
           continue
         }
-      } catch {
-        // If we can't check, skip to be safe
+      } catch (checkErr) {
+        // R2-25: If the worktree directory no longer exists (manually deleted),
+        // remove the registry entry since there's nothing to protect
+        const errMsg = checkErr instanceof Error ? checkErr.message : String(checkErr)
+        if (
+          errMsg.includes('ENOENT') ||
+          errMsg.includes('not a git repository') ||
+          errMsg.includes('does not exist')
+        ) {
+          log.info('Removing orphan registry entry for deleted worktree directory', {
+            sessionId: entry.sessionId,
+          })
+          removeEntry(entry.sessionId)
+          pruned++
+          continue
+        }
+        // For other errors, skip to be safe
         log.warn('Cannot check ahead count for orphan — skipping', {
           sessionId: entry.sessionId,
         })

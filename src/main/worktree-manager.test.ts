@@ -12,27 +12,38 @@ const { fsStore } = vi.hoisted(() => {
 })
 
 vi.mock('fs', () => {
+  const readFn = vi.fn((filepath: string) => {
+    const data = fsStore.get(filepath)
+    if (data === undefined) {
+      const err = new Error(`ENOENT: no such file`) as NodeJS.ErrnoException
+      err.code = 'ENOENT'
+      throw err
+    }
+    return data
+  })
+  const writeFn = vi.fn((filepath: string, data: string) => {
+    fsStore.set(filepath, data)
+  })
+  const renameFn = vi.fn((src: string, dest: string) => {
+    const data = fsStore.get(src)
+    if (data !== undefined) {
+      fsStore.delete(src)
+      fsStore.set(dest, data)
+    }
+  })
+  const mkdirFn = vi.fn()
   return {
-    readFileSync: vi.fn((filepath: string) => {
-      const data = fsStore.get(filepath)
-      if (data === undefined) {
-        const err = new Error(`ENOENT: no such file`) as NodeJS.ErrnoException
-        err.code = 'ENOENT'
-        throw err
-      }
-      return data
-    }),
-    writeFileSync: vi.fn((filepath: string, data: string) => {
-      fsStore.set(filepath, data)
-    }),
-    renameSync: vi.fn((src: string, dest: string) => {
-      const data = fsStore.get(src)
-      if (data !== undefined) {
-        fsStore.delete(src)
-        fsStore.set(dest, data)
-      }
-    }),
-    mkdirSync: vi.fn(),
+    readFileSync: readFn,
+    writeFileSync: writeFn,
+    renameSync: renameFn,
+    mkdirSync: mkdirFn,
+    // PERF-13: Async fs.promises versions for the updated worktree-manager
+    promises: {
+      readFile: vi.fn(async (filepath: string) => readFn(filepath)),
+      writeFile: vi.fn(async (filepath: string, data: string) => writeFn(filepath, data)),
+      rename: vi.fn(async (src: string, dest: string) => renameFn(src, dest)),
+      mkdir: vi.fn(async () => mkdirFn()),
+    },
   }
 })
 
@@ -83,7 +94,7 @@ describe('WorktreeManager — acquire', () => {
   it('first session gets original path (primary)', async () => {
     const git = createMockGit()
     const lookup = createLookup({ proj1: '/home/user/project-a' })
-    const mgr = createWorktreeManager(git, lookup, REGISTRY_DIR)
+    const mgr = await createWorktreeManager(git, lookup, REGISTRY_DIR)
 
     const result = await mgr.acquire('proj1', 'sess-1')
 
@@ -95,7 +106,7 @@ describe('WorktreeManager — acquire', () => {
   it('second session on same project gets worktree', async () => {
     const git = createMockGit()
     const lookup = createLookup({ proj1: '/home/user/project-a' })
-    const mgr = createWorktreeManager(git, lookup, REGISTRY_DIR)
+    const mgr = await createWorktreeManager(git, lookup, REGISTRY_DIR)
 
     // First session claims primary
     const r1 = await mgr.acquire('proj1', 'sess-1')
@@ -114,7 +125,7 @@ describe('WorktreeManager — acquire', () => {
   it('idempotent: same sessionId returns same result', async () => {
     const git = createMockGit()
     const lookup = createLookup({ proj1: '/home/user/project-a' })
-    const mgr = createWorktreeManager(git, lookup, REGISTRY_DIR)
+    const mgr = await createWorktreeManager(git, lookup, REGISTRY_DIR)
 
     // Primary
     await mgr.acquire('proj1', 'sess-1')
@@ -135,7 +146,7 @@ describe('WorktreeManager — acquire', () => {
       isGitRepo: vi.fn(async () => false),
     })
     const lookup = createLookup({ proj1: '/home/user/plain-dir' })
-    const mgr = createWorktreeManager(git, lookup, REGISTRY_DIR)
+    const mgr = await createWorktreeManager(git, lookup, REGISTRY_DIR)
 
     const result = await mgr.acquire('proj1', 'sess-1')
 
@@ -149,7 +160,7 @@ describe('WorktreeManager — acquire', () => {
       gitVersion: vi.fn(async () => ({ major: 2, minor: 15 })),
     })
     const lookup = createLookup({ proj1: '/home/user/project-a' })
-    const mgr = createWorktreeManager(git, lookup, REGISTRY_DIR)
+    const mgr = await createWorktreeManager(git, lookup, REGISTRY_DIR)
 
     // Primary succeeds (no version check needed)
     await mgr.acquire('proj1', 'sess-1')
@@ -167,7 +178,7 @@ describe('WorktreeManager — acquire', () => {
       }),
     })
     const lookup = createLookup({ proj1: '/home/user/project-a' })
-    const mgr = createWorktreeManager(git, lookup, REGISTRY_DIR)
+    const mgr = await createWorktreeManager(git, lookup, REGISTRY_DIR)
 
     // Primary
     await mgr.acquire('proj1', 'sess-1')
@@ -181,7 +192,7 @@ describe('WorktreeManager — acquire', () => {
   it('throws when projectPath cannot be resolved', async () => {
     const git = createMockGit()
     const lookup = createLookup({}) // empty — no projects
-    const mgr = createWorktreeManager(git, lookup, REGISTRY_DIR)
+    const mgr = await createWorktreeManager(git, lookup, REGISTRY_DIR)
 
     await expect(mgr.acquire('nonexistent', 'sess-1')).rejects.toThrow(
       'Cannot resolve project path for projectId: nonexistent',
@@ -191,7 +202,7 @@ describe('WorktreeManager — acquire', () => {
   it('serializes concurrent acquires (Promise.all, exactly 1 primary)', async () => {
     const git = createMockGit()
     const lookup = createLookup({ proj1: '/home/user/project-a' })
-    const mgr = createWorktreeManager(git, lookup, REGISTRY_DIR)
+    const mgr = await createWorktreeManager(git, lookup, REGISTRY_DIR)
 
     // Fire multiple acquires concurrently for the same project
     const results = await Promise.all([
@@ -219,7 +230,7 @@ describe('WorktreeManager — acquire', () => {
       proj1: '/home/user/project-a',
       proj2: '/home/user/project-b',
     })
-    const mgr = createWorktreeManager(git, lookup, REGISTRY_DIR)
+    const mgr = await createWorktreeManager(git, lookup, REGISTRY_DIR)
 
     // Fire acquires for different projects concurrently
     const [r1, r2] = await Promise.all([
@@ -245,7 +256,7 @@ describe('WorktreeManager — acquire', () => {
         .mockResolvedValueOnce(undefined),
     })
     const lookup = createLookup({ proj1: '/home/user/project-a' })
-    const mgr = createWorktreeManager(git, lookup, REGISTRY_DIR)
+    const mgr = await createWorktreeManager(git, lookup, REGISTRY_DIR)
 
     // sess-1 claims primary
     await mgr.acquire('proj1', 'sess-1')
@@ -264,12 +275,12 @@ async function setupWorktreeSession(
   git: ReturnType<typeof createMockGit>,
   projectPath: string = '/home/user/project-a',
 ): Promise<{
-  mgr: ReturnType<typeof createWorktreeManager>
+  mgr: Awaited<ReturnType<typeof createWorktreeManager>>
   primaryId: string
   worktreeId: string
 }> {
   const lookup = createLookup({ proj1: projectPath })
-  const mgr = createWorktreeManager(git, lookup, REGISTRY_DIR)
+  const mgr = await createWorktreeManager(git, lookup, REGISTRY_DIR)
 
   // Session 1 gets primary
   await mgr.acquire('proj1', 'sess-primary')
@@ -334,7 +345,7 @@ describe('WorktreeManager — inspect', () => {
   it('throws for unknown sessionId', async () => {
     const git = createMockGit()
     const lookup = createLookup({ proj1: '/home/user/project-a' })
-    const mgr = createWorktreeManager(git, lookup, REGISTRY_DIR)
+    const mgr = await createWorktreeManager(git, lookup, REGISTRY_DIR)
 
     await expect(mgr.inspect('nonexistent-session')).rejects.toThrow(
       'No worktree entry found for sessionId: nonexistent-session',
@@ -390,7 +401,7 @@ describe('WorktreeManager — discard', () => {
   it('is a no-op for unknown sessionId', async () => {
     const git = createMockGit()
     const lookup = createLookup({ proj1: '/home/user/project-a' })
-    const mgr = createWorktreeManager(git, lookup, REGISTRY_DIR)
+    const mgr = await createWorktreeManager(git, lookup, REGISTRY_DIR)
 
     // Should resolve without throwing
     await expect(mgr.discard('nonexistent-session')).resolves.toBeUndefined()
@@ -427,7 +438,7 @@ describe('WorktreeManager — keep', () => {
   it('throws for unknown sessionId', async () => {
     const git = createMockGit()
     const lookup = createLookup({ proj1: '/home/user/project-a' })
-    const mgr = createWorktreeManager(git, lookup, REGISTRY_DIR)
+    const mgr = await createWorktreeManager(git, lookup, REGISTRY_DIR)
 
     await expect(mgr.keep('nonexistent-session')).rejects.toThrow(
       'No worktree entry found for sessionId: nonexistent-session',
@@ -472,7 +483,7 @@ describe('WorktreeManager — pruneOrphans', () => {
       status: vi.fn(async () => ({ hasChanges: false })),
     })
     const lookup = createLookup({ proj1: '/home/user/project-a' })
-    const mgr = createWorktreeManager(git, lookup, REGISTRY_DIR)
+    const mgr = await createWorktreeManager(git, lookup, REGISTRY_DIR)
 
     // Acquire primary + secondary to create a worktree registry entry
     await mgr.acquire('proj1', 'sess-1')
@@ -488,7 +499,7 @@ describe('WorktreeManager — pruneOrphans', () => {
     vi.mocked(fs.writeFileSync)(regPath, JSON.stringify(data, null, 2), 'utf-8')
 
     // Fresh manager instance loads the aged entry from fsStore
-    const mgr2 = createWorktreeManager(git, lookup, REGISTRY_DIR)
+    const mgr2 = await createWorktreeManager(git, lookup, REGISTRY_DIR)
 
     const pruned = await mgr2.pruneOrphans()
 
@@ -535,7 +546,7 @@ describe('WorktreeManager — releasePrimary', () => {
   it('after releasePrimary, next acquire for same project gets primary (not worktree)', async () => {
     const git = createMockGit()
     const lookup = createLookup({ proj1: '/home/user/project-a' })
-    const mgr = createWorktreeManager(git, lookup, REGISTRY_DIR)
+    const mgr = await createWorktreeManager(git, lookup, REGISTRY_DIR)
 
     // sess-1 claims primary
     const r1 = await mgr.acquire('proj1', 'sess-1')
@@ -556,7 +567,7 @@ describe('WorktreeManager — releasePrimary', () => {
   it('is a no-op when sessionId does not match current primary', async () => {
     const git = createMockGit()
     const lookup = createLookup({ proj1: '/home/user/project-a' })
-    const mgr = createWorktreeManager(git, lookup, REGISTRY_DIR)
+    const mgr = await createWorktreeManager(git, lookup, REGISTRY_DIR)
 
     // sess-1 claims primary
     await mgr.acquire('proj1', 'sess-1')
@@ -570,10 +581,10 @@ describe('WorktreeManager — releasePrimary', () => {
     expect(git.addWorktree).toHaveBeenCalledTimes(1)
   })
 
-  it('is a no-op for unknown projectId', () => {
+  it('is a no-op for unknown projectId', async () => {
     const git = createMockGit()
     const lookup = createLookup({})
-    const mgr = createWorktreeManager(git, lookup, REGISTRY_DIR)
+    const mgr = await createWorktreeManager(git, lookup, REGISTRY_DIR)
 
     // Should not throw
     expect(() => mgr.releasePrimary('nonexistent', 'sess-1')).not.toThrow()

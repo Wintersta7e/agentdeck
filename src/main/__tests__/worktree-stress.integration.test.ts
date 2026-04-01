@@ -79,7 +79,7 @@ describeIf('Worktree Stress Tests (real git)', () => {
     }
   })
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Order matters: delete dirs first so git worktree prune can release branches
     try {
       wslExec(`rm -rf /tmp/agentdeck-stress-wt-*`)
@@ -108,7 +108,7 @@ describeIf('Worktree Stress Tests (real git)', () => {
     // Fresh manager for each test
     git = createWslGitPort()
     fs.mkdirSync(REGISTRY_DIR, { recursive: true })
-    mgr = createWorktreeManager(git, () => TEST_REPO, REGISTRY_DIR, WSL_WORKTREE_DIR)
+    mgr = await createWorktreeManager(git, () => TEST_REPO, REGISTRY_DIR, WSL_WORKTREE_DIR)
   })
 
   afterAll(() => {
@@ -305,7 +305,7 @@ describeIf('Worktree Stress Tests (real git)', () => {
   }, 15000)
 
   it('non-git project returns original path without error', async () => {
-    const nonGitMgr = createWorktreeManager(
+    const nonGitMgr = await createWorktreeManager(
       git,
       () => '/home/rooty/agentdeck-test/non-git-project',
       REGISTRY_DIR,
