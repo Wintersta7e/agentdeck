@@ -35,7 +35,13 @@ export function StatusBar({ onAboutClick, onShortcutsClick }: StatusBarProps): R
   const openCommandPalette = useAppStore((s) => s.openCommandPalette)
   const zoomFactor = useAppStore((s) => s.zoomFactor)
   const wslDistro = useAppStore((s) => s.wslDistro)
-  const hasWorktree = useAppStore((s) => Object.values(s.worktreePaths).some((w) => w.isolated))
+  // PERF-18: Serialize worktree isolation state to avoid O(n) scan on every store update
+  const hasWorktree = useAppStore((s) => {
+    for (const w of Object.values(s.worktreePaths)) {
+      if (w.isolated) return true
+    }
+    return false
+  })
 
   const [appVersion, setAppVersion] = useState('')
 

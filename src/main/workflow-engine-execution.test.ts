@@ -176,7 +176,10 @@ describe('checkpoint pause/resume', () => {
     await tick()
 
     const outputs = getEvents(sendSpy, 'wf-cp2', 'node:output')
-    expect(outputs.some((e) => String(e.message).includes('unknown checkpoint'))).toBe(true)
+    // COV-12: Use toContainEqual for actionable failure messages
+    expect(outputs).toContainEqual(
+      expect.objectContaining({ message: expect.stringContaining('unknown checkpoint') }),
+    )
   })
 
   it('handles multiple sequential checkpoints', async () => {
@@ -811,7 +814,9 @@ describe('lifecycle events', () => {
     await tick()
 
     const outputs = getEvents(sendSpy, 'wf-lc4', 'node:output')
-    expect(outputs.some((e) => String(e.message).includes('hello world'))).toBe(true)
+    expect(outputs).toContainEqual(
+      expect.objectContaining({ message: expect.stringContaining('hello world') }),
+    )
   })
 
   it('runs shell node successfully', async () => {
@@ -902,7 +907,7 @@ describe('condition node with exitCode branching', () => {
     // False branch should be skipped
     expect(hasEvent(sendSpy, 'wf-cond1', 'node:skipped')).toBe(true)
     const skipped = getEvents(sendSpy, 'wf-cond1', 'node:skipped')
-    expect(skipped.some((e) => e.nodeId === 'false-branch')).toBe(true)
+    expect(skipped).toContainEqual(expect.objectContaining({ nodeId: 'false-branch' }))
 
     expect(hasEvent(sendSpy, 'wf-cond1', 'workflow:done')).toBe(true)
   })
@@ -968,7 +973,7 @@ describe('condition node with exitCode branching', () => {
 
     // True branch should be skipped
     const skipped = getEvents(sendSpy, 'wf-cond2', 'node:skipped')
-    expect(skipped.some((e) => e.nodeId === 'true-branch')).toBe(true)
+    expect(skipped).toContainEqual(expect.objectContaining({ nodeId: 'true-branch' }))
 
     expect(hasEvent(sendSpy, 'wf-cond2', 'workflow:done')).toBe(true)
   })

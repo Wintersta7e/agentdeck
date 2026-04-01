@@ -235,13 +235,19 @@ export function Sidebar({
       setRenamingWorkflowId(null)
       return
     }
-    // Persist to disk
-    window.agentDeck.workflows.rename(renamingWorkflowId, trimmed).catch((err: unknown) => {
+    // BUG-9: Persist to disk, revert optimistic update on failure
+    const oldName = wf.name
+    const renameId = renamingWorkflowId
+    window.agentDeck.workflows.rename(renameId, trimmed).catch((err: unknown) => {
       window.agentDeck.log.send('error', 'sidebar', 'Failed to rename workflow', {
         err: String(err),
       })
+      // Revert optimistic update
+      const latest = useAppStore.getState().workflows
+      setWorkflows(latest.map((w) => (w.id === renameId ? { ...w, name: oldName } : w)))
+      useAppStore.getState().updateWorkflowMeta(renameId, { name: oldName })
     })
-    // Update Zustand store
+    // Optimistic update: apply both store mutations together
     setWorkflows(current.map((w) => (w.id === renamingWorkflowId ? { ...w, name: trimmed } : w)))
     useAppStore.getState().updateWorkflowMeta(renamingWorkflowId, { name: trimmed })
     setRenamingWorkflowId(null)

@@ -53,11 +53,13 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
     set((state) => {
       const paneSessions = [...state.paneSessions]
       // Place new session in the focused pane so it's always visible
-      const targetPane = state.focusedPane
+      const targetPane = Math.min(state.focusedPane, 2) // ARCH-11: Cap at max 3 panes
       while (paneSessions.length <= targetPane) {
         paneSessions.push('')
       }
       paneSessions[targetPane] = sessionId
+      // ARCH-11: Cap paneSessions to max 3 entries to prevent unbounded growth
+      paneSessions.length = Math.min(paneSessions.length, 3)
       const session: Session = {
         id: sessionId,
         projectId,

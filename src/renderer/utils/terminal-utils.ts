@@ -3,6 +3,7 @@
  * No React imports, no concrete xterm.js class dependencies — only `ITheme` type.
  */
 import type { ITheme } from '@xterm/xterm'
+import { getCachedAccentRgb } from './themeObserver'
 
 // ─── Minimal interfaces ──────────────────────────────────────────────
 
@@ -136,13 +137,12 @@ export const OSC_RESPONSE_RE = /\x1b\]\d+;[^\x07\x1b]*(?:\x07|\x1b\\)/g
  */
 export function getXtermTheme(themeId: string): ITheme {
   const base = { ...BASE_XTERM_THEME, ...(XTERM_THEME_OVERRIDES[themeId] ?? {}) }
-  // Read accent colour from CSS for selection highlight. DO NOT read --terminal-bg here:
-  // that token is rgba (semi-transparent) for CSS glass effects, but xterm.js needs opaque
-  // colours — otherwise ANSI-black cells (e.g. Codex TUI) get double-composited and appear
-  // darker than the canvas background. Per-theme solid hex values above are the correct source.
+  // PERF-15: Use cached accent RGB from themeObserver instead of calling getComputedStyle.
+  // Falls back to a fresh read on first call (before observer fires).
   if (typeof document !== 'undefined') {
-    const style = getComputedStyle(document.documentElement)
-    const accentRgb = style.getPropertyValue('--accent-rgb').trim()
+    const accentRgb =
+      getCachedAccentRgb() ||
+      getComputedStyle(document.documentElement).getPropertyValue('--accent-rgb').trim()
     if (accentRgb) {
       base.selectionBackground = `rgba(${accentRgb}, 0.20)`
     }
