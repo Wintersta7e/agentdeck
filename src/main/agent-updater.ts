@@ -102,7 +102,8 @@ export async function checkAgentVersion(agentId: string): Promise<VersionInfo> {
  */
 async function isBinaryOnPath(binary: string): Promise<boolean> {
   try {
-    await runWslCmd(`command -v ${binary}`)
+    // R2-03: shellQuote binary for defensive safety
+    await runWslCmd(`command -v ${shellQuote(binary)}`)
     return true
   } catch {
     return false

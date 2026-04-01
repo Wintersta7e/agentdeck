@@ -242,6 +242,13 @@ app
         if (typeof opts.cwd !== 'string' || !opts.cwd) {
           throw new Error('cost:bind requires a non-empty cwd')
         }
+        // R2-23: Validate spawnAt and projectPath types
+        if (typeof opts.spawnAt !== 'number' || !Number.isFinite(opts.spawnAt)) {
+          throw new Error('cost:bind requires a finite numeric spawnAt')
+        }
+        if (opts.projectPath !== undefined && typeof opts.projectPath !== 'string') {
+          throw new Error('cost:bind requires a string projectPath')
+        }
         costTracker?.bindSession(sessionId, opts)
       },
     )

@@ -450,13 +450,18 @@ export function createWorkflowEngine(
 
       // Track which nodes we've emitted skip events for
       const emittedSkipped = new Set<string>()
+      // R2-01: Track deadlock (nodes stuck pending after upstream failure)
+      let deadlocked = false
 
       try {
         while (!scheduler.isDone()) {
           if (stopped) break
 
           const ready = scheduler.getReady()
-          if (ready.length === 0 && !scheduler.isDone()) break // deadlock
+          if (ready.length === 0 && !scheduler.isDone()) {
+            deadlocked = true
+            break
+          }
 
           // Execute batch with concurrency limit
           const queue = [...ready]
@@ -504,7 +509,15 @@ export function createWorkflowEngine(
         }
       }
 
-      if (!stopped) {
+      if (deadlocked) {
+        // R2-01: Report stall as error, not false success
+        log.warn('Workflow stalled — unreachable nodes', { id: workflow.id })
+        push(workflow.id, {
+          type: 'workflow:error',
+          workflowId: workflow.id,
+          message: 'Workflow stalled — some nodes unreachable due to upstream failure',
+        })
+      } else if (!stopped) {
         log.info('Workflow completed', { id: workflow.id, name: workflow.name })
         push(workflow.id, {
           type: 'workflow:done',
@@ -527,7 +540,7 @@ export function createWorkflowEngine(
       runCheckpoints.clear()
 
       // ── Flush run history to disk ────────────────────────────────
-      recorder.finalize(stopped ? 'stopped' : 'done')
+      recorder.finalize(deadlocked ? 'error' : stopped ? 'stopped' : 'done')
     }
 
     const handle = {

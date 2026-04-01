@@ -19,24 +19,24 @@ export function registerWorktreeHandlers(getWorktreeManager: () => WorktreeManag
   })
 
   ipcMain.handle('worktree:inspect', async (_, sessionId: unknown) => {
-    if (typeof sessionId !== 'string' || !sessionId)
-      throw new Error('Invalid sessionId: must be a non-empty string')
+    if (typeof sessionId !== 'string' || !SAFE_ID_RE.test(sessionId))
+      throw new Error('Invalid sessionId: must match /^[a-zA-Z0-9_-]+$/')
     const mgr = getWorktreeManager()
     if (!mgr) throw new Error('WorktreeManager not initialized')
     return mgr.inspect(sessionId)
   })
 
   ipcMain.handle('worktree:discard', async (_, sessionId: unknown) => {
-    if (typeof sessionId !== 'string' || !sessionId)
-      throw new Error('Invalid sessionId: must be a non-empty string')
+    if (typeof sessionId !== 'string' || !SAFE_ID_RE.test(sessionId))
+      throw new Error('Invalid sessionId: must match /^[a-zA-Z0-9_-]+$/')
     const mgr = getWorktreeManager()
     if (!mgr) throw new Error('WorktreeManager not initialized')
     return mgr.discard(sessionId)
   })
 
   ipcMain.handle('worktree:keep', async (_, sessionId: unknown) => {
-    if (typeof sessionId !== 'string' || !sessionId)
-      throw new Error('Invalid sessionId: must be a non-empty string')
+    if (typeof sessionId !== 'string' || !SAFE_ID_RE.test(sessionId))
+      throw new Error('Invalid sessionId: must match /^[a-zA-Z0-9_-]+$/')
     const mgr = getWorktreeManager()
     if (!mgr) throw new Error('WorktreeManager not initialized')
     return mgr.keep(sessionId)

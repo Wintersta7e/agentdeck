@@ -204,6 +204,10 @@ export function registerWorkflowHandlers(
   ipcMain.handle(
     'workflow:run',
     async (_, workflowId: string, projectPath?: string, variables?: Record<string, string>) => {
+      // R2-05: Validate workflowId before filesystem access
+      if (typeof workflowId !== 'string' || !SAFE_ID_RE.test(workflowId)) {
+        throw new Error('Invalid workflow ID')
+      }
       const workflow = await loadWorkflow(workflowId)
       if (!workflow) throw new Error(`Workflow not found: ${workflowId}`)
       const engine = getWorkflowEngine()

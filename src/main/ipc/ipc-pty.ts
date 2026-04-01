@@ -74,6 +74,10 @@ export function registerPtyHandlers(getPtyManager: () => PtyManager | null): voi
           }
         }
       }
+      // R2-21: Validate agentFlags type and length
+      if (agentFlags !== undefined && (typeof agentFlags !== 'string' || agentFlags.length > 512)) {
+        throw new Error('Invalid agentFlags')
+      }
       const mgr = getPtyManager()
       if (!mgr) throw new Error('PTY manager not initialized')
       mgr.spawn(sessionId, cols, rows, projectPath, startupCommands, safeEnv, agent, agentFlags)

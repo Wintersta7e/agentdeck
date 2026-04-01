@@ -72,7 +72,8 @@ function sq(s: string): string {
  */
 function wslExec(cmd: string): Promise<string> {
   return new Promise<string>((resolve, reject) => {
-    execFile('wsl.exe', ['bash', '-lc', cmd], { timeout: WSL_TIMEOUT_MS }, (err, stdout) => {
+    // R2-20: Use '--' separator consistent with all other WSL exec calls in the codebase
+    execFile('wsl.exe', ['--', 'bash', '-lc', cmd], { timeout: WSL_TIMEOUT_MS }, (err, stdout) => {
       if (err) reject(err)
       else resolve(stdout)
     })
