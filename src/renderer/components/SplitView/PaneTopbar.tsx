@@ -122,10 +122,17 @@ export const PaneTopbar = memo(function PaneTopbar({
         <span className={`pane-status-text ${status}`}>{status}</span>
       </div>
       <div className="pane-actions">
-        <button className="pane-btn" onClick={handleRestart}>
+        <button
+          className="pane-btn"
+          onClick={handleRestart}
+          aria-label="Restart session"
+          title="Restart session"
+        >
           Restart
         </button>
-        <button className="pane-btn primary">{agentName}</button>
+        <button className="pane-btn primary" title={agentName}>
+          {agentName}
+        </button>
       </div>
     </div>
   )
