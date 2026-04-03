@@ -92,7 +92,10 @@
   cursor: pointer;
   font-family: inherit;
   box-shadow: 0 2px 8px var(--bg0);
-  transition: all var(--duration-base);
+  transition:
+    border-color var(--duration-base),
+    color var(--duration-base),
+    background-color var(--duration-base);
 }
 
 .lc-btn:hover {

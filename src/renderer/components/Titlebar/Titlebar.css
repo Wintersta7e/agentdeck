@@ -106,7 +106,9 @@
   font-size: var(--fs-sm);
   color: var(--text2);
   transition:
-    all var(--duration-base),
+    color var(--duration-base),
+    background-color var(--duration-base),
+    border-bottom-color var(--duration-base),
     max-width var(--duration-slow) var(--ease-default),
     opacity var(--duration-slow) var(--ease-default),
     padding var(--duration-slow) var(--ease-default);
@@ -166,7 +168,10 @@
   justify-content: center;
   font-size: var(--fs-sm);
   color: var(--text3);
-  transition: all var(--duration-base);
+  transition:
+    opacity var(--duration-base),
+    background-color var(--duration-base),
+    color var(--duration-base);
   margin-left: 2px;
   opacity: 0;
   background: none;
@@ -251,7 +256,9 @@
   font-family: inherit;
   font-size: var(--fs-xs);
   letter-spacing: 0.05em;
-  transition: all var(--duration-base);
+  transition:
+    border-color var(--duration-base),
+    color var(--duration-base);
 }
 .titlebar-btn:hover {
   border-color: var(--amber);

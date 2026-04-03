@@ -306,9 +306,7 @@ button:active,
   .home-aurora,
   .vein-drift,
   .edge-glow-pulse,
-  .pulse-dot,
-  .indeterminate,
-  .shimmer {
+  .dot-running {
     animation: none !important;
   }
 }

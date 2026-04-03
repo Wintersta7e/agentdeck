@@ -62,7 +62,7 @@ export function IdentityTab({ draft, onChange }: TabProps): React.JSX.Element {
                     style={{ background: color }}
                     onClick={() => setColor(color)}
                     role="radio"
-                    tabIndex={0}
+                    tabIndex={currentColor === color ? 0 : -1}
                     aria-label={color}
                     aria-checked={currentColor === color}
                     onKeyDown={(e) => {
@@ -86,7 +86,7 @@ export function IdentityTab({ draft, onChange }: TabProps): React.JSX.Element {
                     className={`icon-opt${currentIcon === icon ? ' selected' : ''}`}
                     onClick={() => setIcon(icon)}
                     role="radio"
-                    tabIndex={0}
+                    tabIndex={currentIcon === icon ? 0 : -1}
                     aria-label={`Icon: ${icon}`}
                     aria-checked={currentIcon === icon}
                     onKeyDown={(e) => {
