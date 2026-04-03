@@ -68,6 +68,51 @@
   --blue-rgb: 91, 155, 213;
   --text3-rgb: 61, 59, 56;
 
+  /* ── Spacing scale (4px base) ── */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-7: 32px;
+  --sp-8: 40px;
+  --sp-9: 48px;
+
+  /* ── Type scale ── */
+  --fs-xs: 10px;
+  --fs-sm: 12px;
+  --fs-base: 14px;
+  --fs-md: 16px;
+  --fs-lg: 20px;
+  --fs-xl: 24px;
+  --fs-2xl: 28px;
+  --lh-tight: 1.3;
+  --lh-base: 1.5;
+  --lh-relaxed: 1.6;
+
+  /* ── Z-index scale ── */
+  --z-base: 0;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-overlay: 500;
+  --z-modal: 1000;
+  --z-toast: 1500;
+  --z-tooltip: 2000;
+
+  /* ── Shadows ── */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.5);
+
+  /* ── Duration / easing ── */
+  --duration-fast: 80ms;
+  --duration-base: 150ms;
+  --duration-slow: 250ms;
+  --ease-default: ease;
+  --ease-out: ease-out;
+
   /* === Fusion Design System === */
   --corner-accent-size: 20px;
   --corner-accent-opacity: 0.55;
