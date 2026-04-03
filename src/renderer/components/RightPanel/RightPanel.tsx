@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Activity, Brain, FileText } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import { PanelBox } from '../shared/PanelBox'
@@ -19,7 +20,7 @@ const TABS: { key: RightPanelTab; label: string }[] = [
   { key: 'memory', label: 'Memory' },
 ]
 
-export function RightPanel(): React.JSX.Element {
+export const RightPanel = memo(function RightPanel(): React.JSX.Element {
   const rightPanelTab = useAppStore((s) => s.rightPanelTab)
   const setRightPanelTab = useAppStore((s) => s.setRightPanelTab)
 
@@ -48,4 +49,4 @@ export function RightPanel(): React.JSX.Element {
       </PanelBox>
     </div>
   )
-}
+})
