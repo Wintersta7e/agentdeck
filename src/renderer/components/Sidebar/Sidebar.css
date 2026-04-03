@@ -8,7 +8,7 @@
 }
 
 .sidebar-section {
-  padding: 12px 12px 6px;
+  padding: var(--sp-3) var(--sp-3) var(--sp-2);
   flex: 0 1 auto;
   overflow-y: auto;
 }
@@ -34,13 +34,13 @@
 }
 
 .sidebar-label {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text2);
   letter-spacing: 0.12em;
   text-transform: uppercase;
   font-weight: 700;
-  padding: 0 4px;
-  margin-bottom: 6px;
+  padding: 0 var(--sp-1);
+  margin-bottom: var(--sp-2);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -58,7 +58,7 @@
   color: var(--text3);
   transition: transform 0.15s ease;
   transform: rotate(0deg);
-  margin-right: 4px;
+  margin-right: var(--sp-1);
 }
 
 .sidebar-chevron.open {
@@ -68,7 +68,7 @@
 .sidebar-action {
   cursor: pointer;
   color: var(--text2);
-  font-size: 14px;
+  font-size: var(--fs-base);
   line-height: 1;
   transition: color 0.15s;
   background: none;
@@ -82,8 +82,8 @@
 .sidebar-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
   border-radius: var(--r);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -140,27 +140,27 @@
 }
 .sidebar-item-name {
   color: var(--text1);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   font-weight: 500;
 }
 .sidebar-rename-input {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   font-weight: 500;
   font-family: var(--font-mono);
   color: var(--text0);
   background: var(--bg0);
   border: 1px solid var(--purple-border);
   border-radius: var(--r);
-  padding: 1px 4px;
+  padding: 1px var(--sp-1);
   outline: none;
   width: 100%;
 }
 .sidebar-item-sub {
   color: var(--text2);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -173,7 +173,7 @@
   border: none;
   color: var(--text3);
   cursor: pointer;
-  padding: 4px;
+  padding: var(--sp-1);
   transition:
     opacity 0.12s,
     color 0.12s;
@@ -191,8 +191,8 @@
 }
 
 .sidebar-badge {
-  font-size: 9px;
-  padding: 1px 5px;
+  font-size: var(--fs-xs);
+  padding: 1px var(--sp-1);
   border-radius: 2px;
   flex-shrink: 0;
 }
@@ -204,7 +204,7 @@
   background: var(--bg2);
   border: 1px solid var(--border-bright);
   border-radius: var(--r);
-  padding: 4px;
+  padding: var(--sp-1);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   min-width: 140px;
 }
@@ -217,8 +217,8 @@
   border: none;
   color: var(--text1);
   font-family: var(--font-mono);
-  font-size: 11px;
-  padding: 6px 10px;
+  font-size: var(--fs-sm);
+  padding: var(--sp-2) var(--sp-3);
   border-radius: 2px;
   cursor: pointer;
   transition: background 0.1s;
@@ -239,7 +239,7 @@
 .sidebar-context-divider {
   height: 1px;
   background: var(--border);
-  margin: 4px 6px;
+  margin: var(--sp-1) var(--sp-2);
 }
 
 /* ─── Template attach sub-panel ─── */
@@ -250,10 +250,10 @@
 .sidebar-ctx-sub-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
   border-bottom: 1px solid var(--border);
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text1);
   font-weight: 500;
 }
@@ -262,7 +262,7 @@
   background: none;
   border: none;
   color: var(--text2);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   cursor: pointer;
   padding: 0;
   font-family: inherit;
@@ -276,7 +276,7 @@
 .sidebar-ctx-sub-body {
   max-height: 280px;
   overflow-y: auto;
-  padding: 4px 0;
+  padding: var(--sp-1) 0;
   scrollbar-width: thin;
   scrollbar-color: var(--bg4) transparent;
 }
@@ -290,26 +290,26 @@
 }
 
 .sidebar-ctx-sub-cat {
-  font-size: 9px;
+  font-size: var(--fs-xs);
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--text3);
   font-weight: 600;
-  padding: 6px 10px 2px;
+  padding: var(--sp-2) var(--sp-3) 2px;
 }
 
 .sidebar-ctx-sub-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
   width: 100%;
   text-align: left;
   background: none;
   border: none;
   color: var(--text1);
   font-family: var(--font-mono);
-  font-size: 11px;
-  padding: 5px 10px;
+  font-size: var(--fs-sm);
+  padding: var(--sp-1) var(--sp-3);
   cursor: pointer;
   transition: background 0.1s;
 }
@@ -323,7 +323,7 @@
 }
 
 .sidebar-ctx-sub-check {
-  font-size: 13px;
+  font-size: var(--fs-base);
   color: var(--text3);
   flex-shrink: 0;
   width: 16px;
@@ -342,27 +342,27 @@
 
 /* ─── Template category groups ─── */
 .sidebar-group-label {
-  font-size: 9px;
+  font-size: var(--fs-xs);
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--text3);
   font-weight: 600;
-  padding: 6px 4px 2px;
+  padding: var(--sp-2) var(--sp-1) 2px;
 }
 
 .sidebar-tpl-group + .sidebar-tpl-group .sidebar-group-label {
-  margin-top: 4px;
+  margin-top: var(--sp-1);
 }
 
 .sidebar-divider {
   height: 1px;
   background: var(--border);
-  margin: 8px 12px;
+  margin: var(--sp-2) var(--sp-3);
 }
 
 .sidebar-bottom {
   margin-top: auto;
-  padding: 8px 12px;
+  padding: var(--sp-2) var(--sp-3);
 }
 
 .new-project-btn {
@@ -370,14 +370,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 8px;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
   border: 1px dashed var(--border-bright);
   border-radius: var(--r);
   background: none;
   color: var(--text2);
   font-family: inherit;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   cursor: pointer;
   transition: all 0.15s;
 }
@@ -403,20 +403,20 @@
 /* New Workflow button */
 .sidebar-new-wf {
   width: 100%;
-  padding: 6px;
+  padding: var(--sp-2);
   border: 1px dashed var(--border-bright);
   border-radius: var(--r);
   background: none;
   color: var(--text2);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-sm);
   cursor: pointer;
   transition: all 0.15s;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  margin-top: 4px;
+  gap: var(--sp-1);
+  margin-top: var(--sp-1);
 }
 .sidebar-new-wf:hover {
   border-color: rgba(var(--purple-rgb), 0.5);
@@ -428,11 +428,11 @@
 .sidebar-agent-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
 }
 
 .sidebar-agent-icon {
-  font-size: 14px;
+  font-size: var(--fs-base);
   width: 20px;
   text-align: center;
   flex-shrink: 0;
@@ -444,12 +444,12 @@
 }
 
 .sidebar-agent-default {
-  font-size: 9px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   letter-spacing: 0.5px;
   color: var(--accent);
   background: rgba(var(--accent-rgb), 0.12);
-  padding: 1px 5px;
+  padding: 1px var(--sp-1);
   border-radius: var(--r);
 }
 
@@ -464,9 +464,9 @@
 /* ─── Empty section hints ─── */
 .sidebar-empty-hint {
   color: var(--text3);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   font-style: italic;
-  padding: 6px 8px;
+  padding: var(--sp-2) var(--sp-2);
 }
 
 /* ─── Fusion design system additions ─── */
@@ -485,7 +485,7 @@
   flex: 1;
   height: 1px;
   background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.25), transparent);
-  margin-left: 6px;
+  margin-left: var(--sp-2);
 }
 
 /* Connecting vein between pinned project items */
@@ -515,12 +515,12 @@
   display: flex;
   align-items: center;
   gap: 3px;
-  padding: 8px 12px;
+  padding: var(--sp-2) var(--sp-3);
   border-top: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .sidebar-summary-label {
-  margin-left: 4px;
+  margin-left: var(--sp-1);
   color: var(--text3);
   font-size: 7px;
   font-family: var(--font-mono);

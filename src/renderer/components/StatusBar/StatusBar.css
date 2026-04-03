@@ -6,10 +6,10 @@
   position: relative;
   display: flex;
   align-items: center;
-  padding: 0 12px;
-  gap: 16px;
+  padding: 0 var(--sp-3);
+  gap: var(--sp-4);
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text2);
 }
 
@@ -26,7 +26,7 @@
 .status-item {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--sp-1);
 }
 .status-item.green {
   color: var(--green);
@@ -42,23 +42,23 @@
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
 }
 
 .status-cmd {
   background: var(--bg2);
   border: 1px solid var(--border-bright);
   color: var(--text1);
-  padding: 0 8px;
+  padding: 0 var(--sp-2);
   height: 32px;
   border-radius: 3px;
-  font-size: 10px;
+  font-size: var(--fs-xs);
   cursor: pointer;
   font-family: var(--font-mono);
   transition: all 0.15s;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--sp-1);
 }
 
 .status-cmd:hover {
@@ -68,13 +68,13 @@
 }
 
 .status-cmd-icon {
-  font-size: 13px;
+  font-size: var(--fs-base);
   line-height: 1;
 }
 
 .status-cmd-kbd {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-xs);
   color: var(--text3);
   background: var(--bg0);
   border: 1px solid var(--border);
@@ -93,7 +93,7 @@
   background: none;
   border: none;
   color: var(--text2);
-  font-size: 11px;
+  font-size: var(--fs-sm);
   font-family: var(--font-mono);
   cursor: pointer;
   padding: 0;
@@ -106,7 +106,7 @@
 
 .status-sep {
   color: var(--text3);
-  font-size: 9px;
+  font-size: var(--fs-xs);
 }
 
 .status-worktree {

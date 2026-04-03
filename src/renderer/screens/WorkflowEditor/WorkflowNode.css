@@ -99,15 +99,15 @@
 /* ── Header ── */
 
 .wf-node-header {
-  padding: 10px 12px 8px;
+  padding: var(--sp-3) var(--sp-3) var(--sp-2);
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
 }
 
 .wf-node-type-icon {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   flex-shrink: 0;
   color: var(--text3);
   transition: color 0.3s;
@@ -142,7 +142,7 @@
 
 .wf-node-name {
   font-family: var(--font-display);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 700;
   color: var(--text0);
   flex: 1;
@@ -155,7 +155,7 @@
   background: none;
   border: none;
   color: var(--text3);
-  font-size: 14px;
+  font-size: var(--fs-base);
   cursor: pointer;
   padding: 0 2px;
   transition: color 0.12s;
@@ -170,7 +170,7 @@
 
 .wf-node-type-badge {
   font-size: 8px;
-  padding: 1px 5px;
+  padding: 1px var(--sp-1);
   border-radius: 10px;
   font-weight: 600;
   text-transform: uppercase;
@@ -205,11 +205,11 @@
 /* ── Body: labeled fields ── */
 
 .wf-node-body {
-  padding: 8px 10px;
+  padding: var(--sp-2) var(--sp-3);
 }
 
 .wf-node-field {
-  margin-bottom: 5px;
+  margin-bottom: var(--sp-1);
 }
 
 .wf-node-field:last-child {
@@ -217,7 +217,7 @@
 }
 
 .wf-node-field-label {
-  font-size: 9px;
+  font-size: var(--fs-xs);
   color: var(--text2);
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -225,7 +225,7 @@
 }
 
 .wf-node-field-value {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text1);
   line-height: 1.4;
 }
@@ -244,10 +244,10 @@
 .wf-node-role-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 7px;
+  gap: var(--sp-1);
+  padding: 2px var(--sp-2);
   border-radius: 10px;
-  font-size: 9px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   background: var(--cyan-dim2);
   color: var(--cyan);
@@ -255,7 +255,7 @@
 }
 
 .wf-node-role-badge-icon {
-  font-size: 10px;
+  font-size: var(--fs-xs);
 }
 
 /* ── React Flow Handles (ports) ── */
@@ -289,11 +289,11 @@
 /* ── Inline edit form ── */
 
 .wf-node-edit-form {
-  padding: 8px 12px 10px;
+  padding: var(--sp-2) var(--sp-3) var(--sp-3);
   border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--sp-2);
 }
 
 .wf-node-edit-input {
@@ -303,8 +303,8 @@
   border-radius: var(--r);
   color: var(--text0);
   font-family: var(--font-mono);
-  font-size: 10px;
-  padding: 4px 6px;
+  font-size: var(--fs-xs);
+  padding: var(--sp-1) var(--sp-2);
   outline: none;
   transition: border-color 0.12s;
 }
@@ -323,9 +323,9 @@
   border-radius: var(--r);
   color: var(--text0);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   line-height: 1.5;
-  padding: 4px 6px;
+  padding: var(--sp-1) var(--sp-2);
   outline: none;
   transition: border-color 0.12s;
 }
@@ -341,8 +341,8 @@
   border-radius: var(--r);
   color: var(--text0);
   font-family: var(--font-mono);
-  font-size: 10px;
-  padding: 4px 6px;
+  font-size: var(--fs-xs);
+  padding: var(--sp-1) var(--sp-2);
   outline: none;
   cursor: pointer;
   transition: border-color 0.12s;
@@ -354,15 +354,15 @@
 
 .wf-node-edit-actions {
   display: flex;
-  gap: 6px;
+  gap: var(--sp-2);
   justify-content: flex-end;
 }
 
 .wf-node-edit-btn {
-  padding: 3px 10px;
+  padding: 3px var(--sp-3);
   border-radius: var(--r);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   cursor: pointer;
   border: 1px solid var(--border-bright);
   background: none;
@@ -392,7 +392,7 @@
   position: absolute;
   top: 100%;
   right: 0;
-  margin-top: 4px;
+  margin-top: var(--sp-1);
   background: var(--bg3);
   border: 1px solid var(--border-bright);
   border-radius: var(--r);
@@ -405,12 +405,12 @@
 .wf-node-dropdown-item {
   display: block;
   width: 100%;
-  padding: 6px 10px;
+  padding: var(--sp-2) var(--sp-3);
   background: none;
   border: none;
   color: var(--text1);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   text-align: left;
   cursor: pointer;
   transition:

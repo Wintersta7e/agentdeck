@@ -1,8 +1,8 @@
 .field-row {
   display: flex;
   flex-direction: row;
-  gap: 16px;
-  padding: 10px 0;
+  gap: var(--sp-4);
+  padding: var(--sp-3) 0;
   border-bottom: 1px solid var(--border);
   align-items: center;
 }
@@ -18,13 +18,13 @@
 }
 
 .form-label {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text1);
   font-weight: 500;
 }
 
 .form-sublabel {
-  font-size: 9px;
+  font-size: var(--fs-xs);
   color: var(--text2);
   margin-top: 2px;
   line-height: 1.4;

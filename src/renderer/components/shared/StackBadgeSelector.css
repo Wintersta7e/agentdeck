@@ -1,15 +1,15 @@
 .badge-selector {
   display: flex;
-  gap: 6px;
+  gap: var(--sp-2);
   flex-wrap: wrap;
 }
 
 .badge-pill {
-  padding: 4px 10px;
+  padding: var(--sp-1) var(--sp-3);
   background: var(--bg3);
   color: var(--text2);
   border-radius: 3px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   cursor: pointer;
   border: 1px solid var(--border);
   transition: all 0.12s;
@@ -23,5 +23,5 @@
 /* Selected state gets colored via inline style + this class */
 .badge-pill.selected {
   border-width: 2px;
-  padding: 3px 9px; /* compensate for border width */
+  padding: 3px var(--sp-2); /* compensate for border width */
 }

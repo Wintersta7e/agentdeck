@@ -86,7 +86,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--sp-2);
   pointer-events: none;
   z-index: 1;
 }
@@ -98,7 +98,7 @@
 }
 
 .wf-canvas-empty-text {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text2);
 }
 

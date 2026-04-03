@@ -22,20 +22,20 @@
 }
 
 .confirm-dialog-body {
-  padding: 20px 20px 16px;
+  padding: var(--sp-5) var(--sp-5) var(--sp-4);
 }
 
 .confirm-dialog-title {
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: var(--fs-md);
   font-weight: 700;
   color: var(--text0);
-  margin: 0 0 8px;
+  margin: 0 0 var(--sp-2);
 }
 
 .confirm-dialog-message {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text2);
   line-height: 1.5;
   margin: 0;
@@ -45,15 +45,15 @@
 .confirm-dialog-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  padding: 12px 20px 16px;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-5) var(--sp-4);
   border-top: 1px solid var(--bg3);
 }
 
 .confirm-dialog-btn-cancel {
   font-family: var(--font-mono);
-  font-size: 12px;
-  padding: 6px 16px;
+  font-size: var(--fs-sm);
+  padding: var(--sp-2) var(--sp-4);
   background: transparent;
   color: var(--text2);
   border: 1px solid var(--bg3);
@@ -71,8 +71,8 @@
 
 .confirm-dialog-btn-extra {
   font-family: var(--font-mono);
-  font-size: 12px;
-  padding: 6px 16px;
+  font-size: var(--fs-sm);
+  padding: var(--sp-2) var(--sp-4);
   background: transparent;
   color: var(--accent);
   border: 1px solid var(--accent-border);
@@ -90,9 +90,9 @@
 
 .confirm-dialog-btn-confirm {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 600;
-  padding: 6px 16px;
+  padding: var(--sp-2) var(--sp-4);
   background: var(--red);
   color: var(--text0);
   border: 1px solid transparent;

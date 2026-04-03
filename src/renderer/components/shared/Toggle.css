@@ -1,7 +1,7 @@
 .toggle-wrapper {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
   cursor: pointer;
 }
 
@@ -42,7 +42,7 @@
 }
 
 .toggle-label {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text1);
   user-select: none;
 }

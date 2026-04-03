@@ -14,10 +14,10 @@
   border-radius: var(--r);
   width: 520px;
   max-height: 80vh;
-  padding: 24px 28px 20px;
+  padding: var(--sp-6) var(--sp-7) var(--sp-5);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--sp-4);
   position: relative;
   overflow-y: auto;
 }
@@ -29,9 +29,9 @@
   background: none;
   border: none;
   color: var(--text3);
-  font-size: 16px;
+  font-size: var(--fs-md);
   cursor: pointer;
-  padding: 4px 8px;
+  padding: var(--sp-1) var(--sp-2);
   border-radius: var(--r);
   transition: all 0.12s;
 }
@@ -43,7 +43,7 @@
 
 .shortcuts-title {
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: var(--fs-lg);
   font-weight: 700;
   color: var(--amber);
   letter-spacing: 0.3px;
@@ -53,7 +53,7 @@
 .shortcuts-title::after {
   content: '';
   display: block;
-  margin-top: 6px;
+  margin-top: var(--sp-2);
   height: 2px;
   background: linear-gradient(90deg, transparent, var(--accent), transparent);
   box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.4);
@@ -62,42 +62,42 @@
 .shortcuts-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px 24px;
+  gap: var(--sp-4) var(--sp-6);
 }
 
 .shortcuts-section {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--sp-1);
 }
 
 .shortcuts-section-title {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   color: var(--text3);
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  margin-bottom: 4px;
-  padding-bottom: 4px;
+  margin-bottom: var(--sp-1);
+  padding-bottom: var(--sp-1);
   border-bottom: 1px solid var(--border);
 }
 
 .shortcuts-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-3);
   padding: 3px 0;
 }
 
 .shortcuts-kbd {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text1);
   background: var(--bg0);
   border: 1px solid var(--border);
   border-radius: 3px;
-  padding: 1px 6px;
+  padding: 1px var(--sp-2);
   min-width: 80px;
   text-align: center;
   white-space: nowrap;
@@ -105,7 +105,7 @@
 }
 
 .shortcuts-action {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text2);
   white-space: nowrap;
 }

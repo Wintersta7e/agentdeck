@@ -16,40 +16,40 @@
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  padding: 0 14px;
-  gap: 8px;
+  padding: 0 var(--sp-4);
+  gap: var(--sp-2);
   flex-shrink: 0;
 }
 
 .wf-name {
   font-family: var(--font-display);
-  font-size: 13px;
+  font-size: var(--fs-base);
   font-weight: 700;
   color: var(--text0);
-  margin-right: 8px;
+  margin-right: var(--sp-2);
   cursor: default;
 }
 
 .wf-name-input {
   font-family: var(--font-display);
-  font-size: 13px;
+  font-size: var(--fs-base);
   font-weight: 700;
   color: var(--text0);
   background: var(--bg0);
   border: 1px solid var(--purple-border);
   border-radius: var(--r);
-  padding: 1px 6px;
-  margin-right: 8px;
+  padding: 1px var(--sp-2);
+  margin-right: var(--sp-2);
   outline: none;
   width: 180px;
 }
 
 .wf-name-badge {
-  font-size: 9px;
+  font-size: var(--fs-xs);
   background: var(--purple-dim);
   color: var(--purple);
   border: 1px solid var(--purple-border);
-  padding: 1px 6px;
+  padding: 1px var(--sp-2);
   border-radius: 20px;
   font-weight: 500;
 }
@@ -58,20 +58,20 @@
   width: 1px;
   height: 20px;
   background: var(--border);
-  margin: 0 4px;
+  margin: 0 var(--sp-1);
 }
 
 .wf-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-3);
   border: 1px solid var(--border);
   border-radius: var(--r);
   background: none;
   color: var(--text1);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-sm);
   cursor: pointer;
   transition: all 0.15s;
 }
@@ -115,20 +115,20 @@
 }
 
 .wf-btn-icon {
-  font-size: 12px;
+  font-size: var(--fs-sm);
 }
 
 .wf-toolbar-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
+  gap: var(--sp-1);
+  padding: var(--sp-1) var(--sp-2);
   border: 1px solid var(--bg3);
   border-radius: var(--r);
   background: var(--bg1);
   color: var(--text1);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-sm);
   cursor: pointer;
   transition:
     background 0.15s,
@@ -144,12 +144,12 @@
 
 .wf-project-select {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   background: var(--bg1);
   color: var(--text1);
   border: 1px solid var(--border);
   border-radius: var(--r);
-  padding: 4px 8px;
+  padding: var(--sp-1) var(--sp-2);
   outline: none;
   cursor: pointer;
   max-width: 180px;
@@ -173,11 +173,11 @@
 }
 
 .wf-status {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text2);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-2);
 }
 
 .wf-status-dot {
@@ -249,13 +249,13 @@
 
 .wf-right-tab {
   flex: 1;
-  padding: 8px 0;
+  padding: var(--sp-2) 0;
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
   color: var(--text2);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-sm);
   cursor: pointer;
   transition:
     color 0.12s,
@@ -291,14 +291,14 @@
   justify-content: center;
   height: 100%;
   color: var(--text3);
-  font-size: 12px;
+  font-size: var(--fs-sm);
 }
 
 .wf-load-error {
-  padding: 16px 20px;
+  padding: var(--sp-4) var(--sp-5);
   background: var(--red-dim);
   color: var(--red);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   text-align: center;
   border-bottom: 1px solid var(--red);
 }

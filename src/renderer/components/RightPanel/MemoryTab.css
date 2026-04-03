@@ -1,5 +1,5 @@
 .memory-file-content {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text1);
   line-height: 1.6;
   white-space: pre-wrap;
@@ -7,8 +7,8 @@
   background: var(--bg3);
   border: 1px solid var(--border);
   border-radius: var(--r);
-  padding: 10px;
-  margin-bottom: 12px;
+  padding: var(--sp-3);
+  margin-bottom: var(--sp-3);
   max-height: 300px;
   overflow-y: auto;
   font-family: var(--font-mono);
@@ -18,13 +18,13 @@
   background: none;
   border: 1px solid var(--border);
   color: var(--text2);
-  padding: 3px 8px;
+  padding: 3px var(--sp-2);
   border-radius: var(--r);
-  font-size: 9px;
+  font-size: var(--fs-xs);
   cursor: pointer;
   font-family: inherit;
   transition: all 0.12s;
-  margin-bottom: 8px;
+  margin-bottom: var(--sp-2);
 }
 
 .memory-refresh-btn:hover {
@@ -33,16 +33,16 @@
 }
 
 .memory-skill-item {
-  padding: 4px 12px;
-  font-size: 12px;
+  padding: var(--sp-1) var(--sp-3);
+  font-size: var(--fs-sm);
   color: var(--text1);
 }
 .memory-skill-scope {
-  margin-left: 6px;
-  font-size: 10px;
+  margin-left: var(--sp-2);
+  font-size: var(--fs-xs);
   color: var(--text3);
   background: var(--bg2);
-  padding: 1px 5px;
+  padding: 1px var(--sp-1);
   border-radius: var(--r);
 }
 .memory-skill-desc {

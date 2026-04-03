@@ -1,21 +1,21 @@
 .step-panel-inner {
   display: flex;
   flex-direction: column;
-  padding: 32px 20px;
+  padding: var(--sp-7) var(--sp-5);
 }
 
 .step-panel-header {
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: var(--fs-md);
   font-weight: 800;
   color: var(--text0);
-  margin-bottom: 4px;
+  margin-bottom: var(--sp-1);
 }
 
 .step-panel-sub {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text2);
-  margin-bottom: 32px;
+  margin-bottom: var(--sp-7);
   line-height: 1.5;
 }
 
@@ -28,7 +28,7 @@
 
 .step-row {
   display: flex;
-  gap: 12px;
+  gap: var(--sp-3);
   align-items: flex-start;
   cursor: pointer;
   padding: 2px 0;
@@ -49,7 +49,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 9px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   flex-shrink: 0;
   border: 1px solid var(--border);
@@ -86,11 +86,11 @@
 }
 
 .step-info {
-  padding: 1px 0 24px;
+  padding: 1px 0 var(--sp-6);
 }
 
 .step-name {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   font-weight: 500;
   color: var(--text2);
   transition: color 0.2s;
@@ -106,7 +106,7 @@
 }
 
 .step-desc {
-  font-size: 9px;
+  font-size: var(--fs-xs);
   color: var(--text3);
   margin-top: 2px;
   line-height: 1.4;

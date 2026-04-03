@@ -3,7 +3,7 @@
   display: flex;
   overflow: hidden;
   position: relative;
-  gap: 4px;
+  gap: var(--sp-1);
 }
 
 .split-pane {
@@ -50,7 +50,7 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%) rotate(90deg);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text3);
   pointer-events: none;
 }
@@ -70,7 +70,7 @@
   align-items: center;
   justify-content: center;
   color: var(--text3);
-  font-size: 11px;
+  font-size: var(--fs-sm);
 }
 
 .layout-controls {
@@ -78,7 +78,7 @@
   bottom: 12px;
   right: 12px;
   display: flex;
-  gap: 5px;
+  gap: var(--sp-1);
   z-index: 20;
 }
 
@@ -86,9 +86,9 @@
   background: var(--bg3);
   border: 1px solid var(--border);
   color: var(--text2);
-  padding: 5px 9px;
+  padding: var(--sp-1) var(--sp-2);
   border-radius: 4px;
-  font-size: 10px;
+  font-size: var(--fs-xs);
   cursor: pointer;
   font-family: inherit;
   box-shadow: 0 2px 8px var(--bg0);

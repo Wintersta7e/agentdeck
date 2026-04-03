@@ -9,17 +9,17 @@
 }
 
 .wf-log-header {
-  padding: 0 14px;
+  padding: 0 var(--sp-4);
   height: 36px;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
   flex-shrink: 0;
 }
 
 .wf-log-title {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text0);
   font-weight: 600;
   flex: 1;
@@ -30,7 +30,7 @@
   border: none;
   color: var(--text3);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   cursor: pointer;
   transition: color 0.12s;
 }
@@ -49,8 +49,8 @@
 }
 
 .wf-log-tab {
-  padding: 6px 12px;
-  font-size: 10px;
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-xs);
   color: var(--text2);
   cursor: pointer;
   transition: all 0.12s;
@@ -73,8 +73,8 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 10px;
-  font-size: 10px;
+  padding: var(--sp-3);
+  font-size: var(--fs-xs);
   line-height: 1.7;
   mask-image: linear-gradient(
     to bottom,
@@ -112,21 +112,21 @@
 .wf-log-entry {
   margin-bottom: 2px;
   display: flex;
-  gap: 8px;
+  gap: var(--sp-2);
   align-items: flex-start;
 }
 
 .wf-log-time {
   color: var(--text3);
   flex-shrink: 0;
-  font-size: 9px;
+  font-size: var(--fs-xs);
   padding-top: 1px;
 }
 
 .wf-log-source {
   flex-shrink: 0;
-  font-size: 9px;
-  padding: 1px 6px;
+  font-size: var(--fs-xs);
+  padding: 1px var(--sp-2);
   border-radius: 2px;
   font-weight: 600;
   line-height: 1.4;
@@ -184,11 +184,11 @@
 .wf-log-node-hdr {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-2);
   background: var(--bg2);
   border-radius: var(--r);
-  margin-bottom: 6px;
+  margin-bottom: var(--sp-2);
   border: 1px solid var(--border);
 }
 
@@ -219,14 +219,14 @@
 }
 
 .wf-log-node-hdr-name {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--text0);
   flex: 1;
 }
 
 .wf-log-node-hdr-time {
-  font-size: 9px;
+  font-size: var(--fs-xs);
   color: var(--text3);
 }
 
@@ -243,12 +243,12 @@
 /* ── Resume button ── */
 
 .wf-log-resume-row {
-  padding: 4px 0 6px 58px;
+  padding: var(--sp-1) 0 var(--sp-2) 58px;
 }
 
 .wf-log-resume-btn {
-  padding: 3px 12px;
-  font-size: 10px;
+  padding: 3px var(--sp-3);
+  font-size: var(--fs-xs);
   font-family: var(--font-mono);
   font-weight: 600;
   border: 1px solid rgba(var(--purple-rgb), 0.4);

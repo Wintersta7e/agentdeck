@@ -18,7 +18,7 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%) rotate(90deg);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text3);
   pointer-events: none;
 }

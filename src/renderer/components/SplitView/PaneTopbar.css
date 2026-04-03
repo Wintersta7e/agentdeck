@@ -4,8 +4,8 @@
   min-height: 28px;
   display: flex;
   align-items: center;
-  padding: 0 12px;
-  gap: 8px;
+  padding: 0 var(--sp-3);
+  gap: var(--sp-2);
   background: var(--bg2);
   border-bottom: 2px solid var(--border);
   font-family: var(--font-mono);
@@ -36,7 +36,7 @@
 }
 
 .pane-project {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   font-weight: 500;
   color: var(--text0);
   white-space: nowrap;
@@ -44,13 +44,13 @@
 }
 
 .pane-sep {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text3);
   flex-shrink: 0;
 }
 
 .pane-path {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text2);
   white-space: nowrap;
   overflow: hidden;
@@ -61,7 +61,7 @@
 .pane-status {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--sp-1);
   flex-shrink: 0;
 }
 
@@ -83,7 +83,7 @@
 }
 
 .pane-status-text {
-  font-size: 9px;
+  font-size: var(--fs-xs);
   color: var(--text2);
 }
 
@@ -98,15 +98,15 @@
 .pane-actions {
   margin-left: auto;
   display: flex;
-  gap: 4px;
+  gap: var(--sp-1);
   flex-shrink: 0;
 }
 
 .pane-btn {
-  padding: 4px 6px;
+  padding: var(--sp-1) var(--sp-2);
   min-height: 28px;
   border-radius: 4px;
-  font-size: 10px;
+  font-size: var(--fs-xs);
   font-family: var(--font-mono);
   color: var(--text3);
   border: 1px solid transparent;
@@ -133,10 +133,10 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--accent);
   opacity: 0.8;
-  margin-left: 8px;
+  margin-left: var(--sp-2);
   font-family: var(--font-mono);
   flex-shrink: 0;
 }
@@ -144,11 +144,11 @@
 .pane-cost-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 11px;
+  gap: var(--sp-1);
+  font-size: var(--fs-sm);
   color: var(--accent);
   opacity: 0.85;
-  margin-left: 8px;
+  margin-left: var(--sp-2);
   font-family: var(--font-mono);
   flex-shrink: 0;
 }

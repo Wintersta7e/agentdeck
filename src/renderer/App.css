@@ -10,8 +10,8 @@
   flex: 1;
   display: flex;
   overflow: hidden;
-  padding: 6px;
-  gap: 4px;
+  padding: var(--sp-2);
+  gap: var(--sp-1);
 }
 
 .app-main {
@@ -29,7 +29,7 @@
 }
 .view-panel--visible {
   display: flex;
-  gap: 4px;
+  gap: var(--sp-1);
 }
 
 .sidebar-wrapper {
@@ -67,7 +67,7 @@
   background: var(--red);
   color: var(--bg0);
   text-align: center;
-  padding: 8px;
+  padding: var(--sp-2);
   z-index: 10;
   font-family: var(--font-mono);
   font-size: 0.85rem;

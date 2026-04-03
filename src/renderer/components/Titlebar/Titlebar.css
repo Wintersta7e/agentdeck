@@ -3,8 +3,8 @@
   background: var(--titlebar-bg);
   display: flex;
   align-items: center;
-  padding: 0 12px;
-  gap: 10px;
+  padding: 0 var(--sp-3);
+  gap: var(--sp-3);
   flex-shrink: 0;
   -webkit-app-region: drag;
   position: relative;
@@ -15,11 +15,11 @@
 .titlebar-logo {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-left: 8px;
+  gap: var(--sp-2);
+  margin-left: var(--sp-2);
   cursor: pointer;
   -webkit-app-region: no-drag;
-  padding: 2px 6px;
+  padding: 2px var(--sp-2);
   border-radius: var(--r);
   transition: background 0.15s;
 }
@@ -53,7 +53,7 @@
 .logo-text {
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 13px;
+  font-size: var(--fs-base);
   color: var(--text0);
   letter-spacing: 0.05em;
   transition: color 0.15s;
@@ -74,7 +74,7 @@
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text2);
   letter-spacing: 0.08em;
 }
@@ -83,7 +83,7 @@
 .tab-bar {
   display: flex;
   align-items: center;
-  margin-left: 16px;
+  margin-left: var(--sp-4);
   flex: 1;
   min-width: 0;
   overflow-x: auto;
@@ -97,13 +97,13 @@
 .tab {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 0 14px;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-4);
   height: 30px;
   cursor: pointer;
   border-right: 1px solid var(--border);
   border-bottom: 2px solid transparent;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text2);
   transition:
     all 0.12s,
@@ -165,7 +165,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text3);
   transition: all 0.12s;
   margin-left: 2px;
@@ -185,13 +185,13 @@
 }
 
 .tab-add {
-  padding: 0 12px;
+  padding: 0 var(--sp-3);
   height: 30px;
   display: flex;
   align-items: center;
   color: var(--text3);
   cursor: pointer;
-  font-size: 16px;
+  font-size: var(--fs-md);
   transition: color 0.12s;
   flex-shrink: 0;
   -webkit-app-region: no-drag;
@@ -204,7 +204,7 @@
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
   flex-shrink: 0;
   -webkit-app-region: no-drag;
 }
@@ -214,7 +214,7 @@
   display: flex;
   align-items: stretch;
   height: 30px;
-  margin-left: 8px;
+  margin-left: var(--sp-2);
   -webkit-app-region: no-drag;
   flex-shrink: 0;
 }
@@ -227,7 +227,7 @@
   background: none;
   border: none;
   color: var(--text2);
-  font-size: 13px;
+  font-size: var(--fs-base);
   cursor: pointer;
   transition:
     background 0.1s,
@@ -247,11 +247,11 @@
   background: none;
   border: 1px solid var(--border);
   color: var(--text2);
-  padding: 3px 8px;
+  padding: 3px var(--sp-2);
   border-radius: var(--r);
   cursor: pointer;
   font-family: inherit;
-  font-size: 10px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.05em;
   transition: all 0.15s;
 }
@@ -270,7 +270,7 @@
 }
 .tab-wf-icon {
   color: var(--purple);
-  font-size: 9px;
+  font-size: var(--fs-xs);
   flex-shrink: 0;
 }
 
