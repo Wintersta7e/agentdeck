@@ -173,7 +173,7 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   sidebarOpen: true,
   sidebarWidth: 220,
   sidebarSections: { pinned: true, templates: true, workflows: true },
-  rightPanelWidth: 260,
+  rightPanelWidth: 240,
   wfLogPanelWidth: 320,
 
   toggleSidebar: () => {

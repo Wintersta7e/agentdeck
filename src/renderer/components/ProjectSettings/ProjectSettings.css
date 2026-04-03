@@ -236,7 +236,7 @@
 .section-head-title {
   font-size: 10px;
   color: var(--text1);
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
@@ -740,4 +740,15 @@
   font-size: 11px;
   color: var(--text3);
   margin-top: 2px;
+}
+
+/* Responsive: stack form rows on narrow windows */
+@media (max-width: 900px) {
+  .form-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .form-label-col {
+    width: auto;
+  }
 }

@@ -1,3 +1,4 @@
+import { Activity, Brain, FileText } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import { PanelBox } from '../shared/PanelBox'
 import { ActivityTab } from './ActivityTab'
@@ -5,6 +6,12 @@ import { ContextTab } from './ContextTab'
 import { MemoryTab } from './MemoryTab'
 import type { RightPanelTab } from '../../../shared/types'
 import './RightPanel.css'
+
+const TAB_ICONS: Record<RightPanelTab, React.JSX.Element> = {
+  context: <FileText size={12} />,
+  activity: <Activity size={12} />,
+  memory: <Brain size={12} />,
+}
 
 const TABS: { key: RightPanelTab; label: string }[] = [
   { key: 'context', label: 'Context' },
@@ -28,6 +35,7 @@ export function RightPanel(): React.JSX.Element {
               className={`panel-tab${rightPanelTab === tab.key ? ' active' : ''}`}
               onClick={() => setRightPanelTab(tab.key)}
             >
+              {TAB_ICONS[tab.key]}
               {tab.label}
             </button>
           ))}

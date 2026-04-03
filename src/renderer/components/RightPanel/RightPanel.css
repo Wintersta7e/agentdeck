@@ -25,9 +25,12 @@
 .panel-tab {
   position: relative;
   flex: 1;
-  padding: 8px 6px;
+  padding: 8px 12px;
   text-align: center;
-  font-size: 10px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
   color: var(--text2);
   cursor: pointer;
   border: none;
@@ -91,7 +94,7 @@
 }
 
 .panel-section-header {
-  font-size: 9px;
+  font-size: 10px;
   color: var(--text2);
   text-transform: uppercase;
   letter-spacing: 0.1em;
