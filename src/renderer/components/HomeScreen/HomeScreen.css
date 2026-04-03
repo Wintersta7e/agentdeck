@@ -649,7 +649,7 @@
 /* Right-click context menu */
 .home-context-menu {
   position: fixed;
-  z-index: var(--z-modal);
+  z-index: var(--z-context-menu);
   background: var(--bg1);
   border: 1px solid var(--bg3);
   border-radius: var(--r);
@@ -813,14 +813,23 @@
 
 .skeleton-line {
   border-radius: var(--r);
+  background: rgba(var(--accent-rgb), 0.04);
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-line::after {
+  content: '';
+  position: absolute;
+  inset: 0;
   background: linear-gradient(
     90deg,
-    rgba(var(--accent-rgb), 0.04) 25%,
-    rgba(var(--accent-rgb), 0.1) 50%,
-    rgba(var(--accent-rgb), 0.04) 75%
+    transparent 0%,
+    rgba(var(--accent-rgb), 0.08) 50%,
+    transparent 100%
   );
-  background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
+  will-change: transform;
 }
 
 .skeleton-icon {
@@ -841,9 +850,9 @@
 
 @keyframes shimmer {
   0% {
-    background-position: 200% 0;
+    transform: translateX(-100%);
   }
   100% {
-    background-position: -200% 0;
+    transform: translateX(100%);
   }
 }

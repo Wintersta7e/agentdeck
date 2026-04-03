@@ -165,8 +165,8 @@
   font-size: var(--fs-sm);
   font-weight: 600;
   padding: var(--sp-2) var(--sp-4);
-  background: var(--accent-bg);
-  color: var(--accent-text);
+  background: var(--accent);
+  color: var(--bg0);
   border: 1px solid transparent;
   border-radius: var(--r);
   cursor: pointer;

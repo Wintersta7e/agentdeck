@@ -111,8 +111,8 @@
 .wf-ne-field-role {
   background: var(--cyan-dim);
   padding: var(--sp-2);
-  margin-left: -var(--sp-2);
-  margin-right: -var(--sp-2);
+  margin-left: calc(-1 * var(--sp-2));
+  margin-right: calc(-1 * var(--sp-2));
   border-radius: var(--r);
 }
 

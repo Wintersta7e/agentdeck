@@ -125,6 +125,7 @@
   --z-base: 0;
   --z-dropdown: 100;
   --z-sticky: 200;
+  --z-context-menu: 300;
   --z-overlay: 500;
   --z-modal: 1000;
   --z-toast: 1500;

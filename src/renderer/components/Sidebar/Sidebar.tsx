@@ -321,6 +321,7 @@ export function Sidebar({
             </span>
             <button
               className="sidebar-action"
+              aria-label="Add project"
               onClick={(e) => {
                 e.stopPropagation()
                 openWizard()
@@ -546,6 +547,7 @@ export function Sidebar({
             </span>
             <button
               className="sidebar-action"
+              aria-label="New template"
               onClick={(e) => {
                 e.stopPropagation()
                 openTemplateEditor()
@@ -612,6 +614,7 @@ export function Sidebar({
             </span>
             <button
               className="sidebar-action"
+              aria-label="New workflow"
               onClick={(e) => {
                 e.stopPropagation()
                 createNewWorkflow()

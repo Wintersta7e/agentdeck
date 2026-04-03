@@ -143,7 +143,12 @@ export default function WorkflowNodeEditorPanel({
     <div className="wf-node-editor">
       <div className="wf-ne-header">
         <span className="wf-ne-title">{node.name}</span>
-        <button className="wf-ne-close" onClick={onClose} type="button">
+        <button
+          className="wf-ne-close"
+          onClick={onClose}
+          type="button"
+          aria-label="Close node editor"
+        >
           {'\u00D7'}
         </button>
       </div>

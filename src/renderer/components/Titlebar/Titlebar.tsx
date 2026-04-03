@@ -273,6 +273,7 @@ export function Titlebar({
           className="window-btn"
           onClick={() => window.agentDeck.window.minimize()}
           title="Minimize"
+          aria-label="Minimize"
         >
           <Minus size={12} />
         </button>
@@ -280,6 +281,7 @@ export function Titlebar({
           className="window-btn"
           onClick={() => window.agentDeck.window.maximize()}
           title="Maximize"
+          aria-label="Maximize"
         >
           <Square size={12} />
         </button>
@@ -287,6 +289,7 @@ export function Titlebar({
           className="window-btn window-btn-close"
           onClick={() => window.agentDeck.window.close()}
           title="Close"
+          aria-label="Close window"
         >
           <X size={12} />
         </button>

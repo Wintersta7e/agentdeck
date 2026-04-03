@@ -50,7 +50,7 @@
   border: 1px solid var(--border-bright);
   color: var(--text1);
   padding: 0 var(--sp-2);
-  height: 32px;
+  height: 22px;
   border-radius: 3px;
   font-size: var(--fs-xs);
   cursor: pointer;

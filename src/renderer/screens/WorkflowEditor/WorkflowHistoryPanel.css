@@ -91,7 +91,7 @@
 }
 
 .wf-history-status-dot.stopped {
-  background: var(--accent-bg);
+  background: var(--text3);
 }
 
 .wf-history-status-dot.idle,
@@ -237,7 +237,7 @@
 }
 
 .wf-history-node-badge.retry {
-  color: var(--accent-text);
+  color: var(--accent);
   background: var(--accent-dim);
 }
 
