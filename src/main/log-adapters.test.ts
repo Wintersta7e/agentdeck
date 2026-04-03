@@ -66,7 +66,7 @@ describe('ClaudeAdapter', () => {
     expect(adapter.agent).toBe('claude-code')
   })
 
-  it('getLogDirs returns project-specific sessions dir only', () => {
+  it('getLogDirs returns project-specific dir only', () => {
     const dirs = adapter.getLogDirs('/home/rooty/my-project')
     expect(dirs).toHaveLength(1)
   })
@@ -77,7 +77,7 @@ describe('ClaudeAdapter', () => {
     if (!first) throw new Error('Expected first dir')
     // slashes replaced by dashes
     expect(first).toContain('-home-rooty-my-project')
-    expect(first).toContain('/sessions/')
+    expect(first).toMatch(/~\/\.claude\/projects\/-home-rooty-my-project\/$/)
   })
 
   it('getFilePattern returns "*.jsonl"', () => {
