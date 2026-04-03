@@ -174,5 +174,5 @@
 .panel-placeholder-desc {
   font-size: var(--fs-xs);
   line-height: 1.4;
-  max-width: 220px;
+  max-width: 90%;
 }

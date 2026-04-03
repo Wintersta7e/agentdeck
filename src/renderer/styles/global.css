@@ -27,17 +27,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Focus-visible indicators for keyboard navigation (UX-6) */
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 3px;
-  border-radius: var(--r);
-}
-
-:focus:not(:focus-visible) {
-  outline: none;
-}
-
 /* Screen-reader only — visually hidden but accessible */
 .sr-only {
   position: absolute;
@@ -76,7 +65,9 @@ button:not([disabled]) {
   opacity: 0.5;
 }
 
-/* Global loading state */
+/* Global loading state
+   WARNING: pointer-events: none propagates to all children.
+   Only apply aria-busy to leaf elements, not containers. */
 [aria-busy='true'],
 .is-loading {
   opacity: 0.7;
@@ -255,14 +246,12 @@ button:active,
 }
 
 @keyframes edge-glow-pulse {
-  0% {
-    opacity: var(--corner-accent-opacity);
+  0%,
+  100% {
+    opacity: 0.55;
   }
   50% {
-    opacity: calc(var(--corner-accent-opacity) * 2);
-  }
-  100% {
-    opacity: var(--corner-accent-opacity);
+    opacity: 1;
   }
 }
 
@@ -314,7 +303,7 @@ button:active,
 
   .hex-pulse,
   .logo-breathe,
-  .auroraShift,
+  .home-aurora,
   .vein-drift,
   .edge-glow-pulse,
   .pulse-dot,

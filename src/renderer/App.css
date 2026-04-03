@@ -70,7 +70,13 @@
   padding: var(--sp-2);
   z-index: 10;
   font-family: var(--font-mono);
-  font-size: 0.85rem;
+  font-size: var(--fs-xs);
   font-weight: 600;
   flex-shrink: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .suspense-spinner {
+    animation: none !important;
+  }
 }

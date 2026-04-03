@@ -158,9 +158,8 @@
 }
 
 .tab-close {
-  width: 18px;
-  height: 18px;
-  padding: 3px;
+  width: 24px;
+  height: 24px;
   border-radius: 2px;
   display: flex;
   align-items: center;
@@ -174,7 +173,6 @@
   border: none;
   cursor: pointer;
   font-family: inherit;
-  box-sizing: content-box;
 }
 .tab:hover .tab-close {
   opacity: 1;

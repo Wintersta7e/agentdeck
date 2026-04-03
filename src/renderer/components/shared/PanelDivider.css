@@ -1,11 +1,18 @@
 .panel-divider {
-  width: 4px;
+  width: 5px;
   background: var(--border);
   cursor: col-resize;
   flex-shrink: 0;
   z-index: 5;
   transition: background var(--duration-base);
   position: relative;
+}
+
+.panel-divider::before {
+  content: '';
+  position: absolute;
+  inset: 0 -3px;
+  cursor: col-resize;
 }
 
 .panel-divider:hover {

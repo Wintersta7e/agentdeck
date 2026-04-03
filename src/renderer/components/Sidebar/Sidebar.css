@@ -86,7 +86,10 @@
   padding: var(--sp-2) var(--sp-3);
   border-radius: var(--r);
   cursor: pointer;
-  transition: all var(--duration-base) var(--ease-default);
+  transition:
+    background-color var(--duration-base) var(--ease-default),
+    box-shadow var(--duration-base) var(--ease-default),
+    border-color var(--duration-base) var(--ease-default);
   margin-bottom: 3px;
   border: 1px solid transparent;
 }
@@ -379,7 +382,11 @@
   font-family: inherit;
   font-size: var(--fs-sm);
   cursor: pointer;
-  transition: all var(--duration-base);
+  transition:
+    border-color var(--duration-base),
+    color var(--duration-base),
+    background-color var(--duration-base),
+    box-shadow var(--duration-base);
 }
 .new-project-btn:hover {
   border-color: var(--accent-dim);
@@ -411,7 +418,10 @@
   font-family: var(--font-mono);
   font-size: var(--fs-sm);
   cursor: pointer;
-  transition: all var(--duration-base);
+  transition:
+    border-color var(--duration-base),
+    color var(--duration-base),
+    background-color var(--duration-base);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -491,6 +501,7 @@
 /* Connecting vein between pinned project items */
 .sidebar-section:first-of-type {
   position: relative;
+  max-height: 45vh; /* cap so pinned projects cannot squeeze flex-fill sections */
 }
 
 .sidebar-section:first-of-type::before {

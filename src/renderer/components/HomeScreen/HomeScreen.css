@@ -22,7 +22,6 @@
     rgba(0, 0, 0, 0) 0%,
     transparent 100%
   );
-  transition: mask-image var(--duration-base) var(--ease-default);
   z-index: 0;
 }
 
@@ -217,7 +216,11 @@
   border-radius: 6px;
   padding: var(--sp-4);
   cursor: pointer;
-  transition: all var(--duration-base);
+  transition:
+    border-color var(--duration-base),
+    background-color var(--duration-base),
+    transform var(--duration-base),
+    box-shadow var(--duration-base);
   position: relative;
   overflow: hidden;
 }
@@ -430,7 +433,9 @@
   border: 1px solid var(--border);
   border-radius: var(--r);
   padding: var(--sp-3);
-  transition: all var(--duration-base);
+  transition:
+    border-color var(--duration-base),
+    background-color var(--duration-base);
   text-align: center;
 }
 .agent-card.add-agent {
@@ -473,7 +478,7 @@
 
 .agent-card-version {
   font-family: var(--font-mono);
-  font-size: 0.7rem;
+  font-size: var(--fs-xs);
   color: var(--text3);
   margin-top: -2px;
 }
@@ -485,10 +490,13 @@
   border-radius: var(--r);
   background: transparent;
   color: var(--text2);
-  font-size: 0.7rem;
+  font-size: var(--fs-xs);
   font-family: var(--font-mono);
   cursor: pointer;
-  transition: all var(--duration-base) var(--ease-default);
+  transition:
+    border-color var(--duration-base) var(--ease-default),
+    color var(--duration-base) var(--ease-default),
+    background-color var(--duration-base) var(--ease-default);
 }
 .agent-update-btn:hover {
   border-color: var(--text2);
@@ -854,5 +862,27 @@
   }
   100% {
     transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .section-action .spin {
+    animation: none !important;
+  }
+  .card-refresh.spinning svg {
+    animation: none !important;
+  }
+  .stagger-item {
+    animation: none !important;
+    opacity: 1;
+  }
+  .home-aurora {
+    animation: none !important;
+  }
+  .agent-update-progress::after {
+    animation: none !important;
+  }
+  .skeleton-line::after {
+    animation: none !important;
   }
 }
