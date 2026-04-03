@@ -55,7 +55,7 @@
   border: 1px solid var(--border);
   background: var(--bg3);
   color: var(--text2);
-  transition: all 0.2s;
+  transition: all var(--duration-slow);
   position: relative;
   z-index: 1;
 }
@@ -93,7 +93,7 @@
   font-size: var(--fs-sm);
   font-weight: 500;
   color: var(--text2);
-  transition: color 0.2s;
+  transition: color var(--duration-slow);
   line-height: 20px;
 }
 

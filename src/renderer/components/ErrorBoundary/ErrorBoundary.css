@@ -56,7 +56,7 @@
   font-size: var(--fs-base);
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.12s;
+  transition: opacity var(--duration-base);
 }
 
 .error-boundary-reload:hover {

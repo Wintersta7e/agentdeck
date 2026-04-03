@@ -104,7 +104,7 @@
   padding: var(--sp-2) var(--sp-3);
   cursor: pointer;
   border-bottom: 2px solid transparent;
-  transition: all 0.12s;
+  transition: all var(--duration-base);
   letter-spacing: 0.05em;
   background: none;
   border-top: none;
@@ -192,7 +192,7 @@
   gap: var(--sp-3);
   padding: var(--sp-3) var(--sp-4);
   cursor: pointer;
-  transition: background 0.08s;
+  transition: background var(--duration-fast);
   position: relative;
 }
 

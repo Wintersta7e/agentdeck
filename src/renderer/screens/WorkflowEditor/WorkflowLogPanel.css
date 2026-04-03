@@ -32,7 +32,7 @@
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   cursor: pointer;
-  transition: color 0.12s;
+  transition: color var(--duration-base);
 }
 
 .wf-log-clear:hover {
@@ -53,7 +53,7 @@
   font-size: var(--fs-xs);
   color: var(--text2);
   cursor: pointer;
-  transition: all 0.12s;
+  transition: all var(--duration-base);
   border-bottom: 2px solid transparent;
   white-space: nowrap;
 }
@@ -256,7 +256,7 @@
   background: var(--purple-dim);
   color: var(--purple);
   cursor: pointer;
-  transition: all 0.12s;
+  transition: all var(--duration-base);
 }
 
 .wf-log-resume-btn:hover {

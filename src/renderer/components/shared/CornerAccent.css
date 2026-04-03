@@ -4,8 +4,8 @@
   height: var(--ca-size, var(--corner-accent-size));
   pointer-events: none;
   transition:
-    opacity 180ms ease,
-    border-color 180ms ease;
+    opacity var(--duration-base) var(--ease-default),
+    border-color var(--duration-base) var(--ease-default);
 }
 
 .corner-accent--tl {

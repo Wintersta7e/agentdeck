@@ -10,7 +10,7 @@
   border-radius: 6px;
   padding: var(--sp-3);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all var(--duration-base);
   text-align: center;
   font-family: inherit;
   color: inherit;
@@ -54,7 +54,7 @@
   align-items: center;
   justify-content: center;
   font-size: var(--fs-xs);
-  transition: all 0.15s;
+  transition: all var(--duration-base);
 }
 
 .agent-opt.selected .agent-opt-check {

@@ -7,7 +7,7 @@
   border: 1px solid var(--border);
   border-radius: var(--r);
   padding: var(--sp-2) var(--sp-3);
-  transition: border-color 0.12s;
+  transition: border-color var(--duration-base);
 }
 
 .sortable-item:hover {
@@ -39,7 +39,7 @@
   font-size: var(--fs-base);
   cursor: pointer;
   line-height: 1;
-  transition: color 0.12s;
+  transition: color var(--duration-base);
   flex-shrink: 0;
 }
 

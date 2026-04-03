@@ -21,7 +21,7 @@
   padding: var(--sp-2) var(--sp-3);
   border-radius: 6px;
   cursor: pointer;
-  transition: background 0.12s;
+  transition: background var(--duration-base);
 }
 
 .wf-add-menu-item:hover {

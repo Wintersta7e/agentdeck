@@ -60,8 +60,8 @@
   border-radius: var(--r);
   cursor: pointer;
   transition:
-    color 0.12s,
-    border-color 0.12s;
+    color var(--duration-base),
+    border-color var(--duration-base);
 }
 
 .confirm-dialog-btn-cancel:hover {
@@ -79,8 +79,8 @@
   border-radius: var(--r);
   cursor: pointer;
   transition:
-    color 0.12s,
-    border-color 0.12s;
+    color var(--duration-base),
+    border-color var(--duration-base);
 }
 
 .confirm-dialog-btn-extra:hover {
@@ -98,7 +98,7 @@
   border: 1px solid transparent;
   border-radius: var(--r);
   cursor: pointer;
-  transition: opacity 0.12s;
+  transition: opacity var(--duration-base);
 }
 
 .confirm-dialog-btn-confirm:hover {

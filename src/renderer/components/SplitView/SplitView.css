@@ -13,7 +13,7 @@
   background: var(--terminal-bg);
   border: 1px solid var(--terminal-border);
   position: relative;
-  transition: box-shadow 0.2s ease;
+  transition: box-shadow var(--duration-slow) var(--ease-default);
   border-radius: var(--r);
 }
 
@@ -29,7 +29,7 @@
   cursor: col-resize;
   flex-shrink: 0;
   z-index: 5;
-  transition: background 0.15s;
+  transition: background var(--duration-base);
   position: relative;
 }
 
@@ -92,7 +92,7 @@
   cursor: pointer;
   font-family: inherit;
   box-shadow: 0 2px 8px var(--bg0);
-  transition: all 0.12s;
+  transition: all var(--duration-base);
 }
 
 .lc-btn:hover {

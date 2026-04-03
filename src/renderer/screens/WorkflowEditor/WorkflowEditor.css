@@ -73,7 +73,7 @@
   font-family: var(--font-mono);
   font-size: var(--fs-sm);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all var(--duration-base);
 }
 
 .wf-btn:hover {
@@ -131,9 +131,9 @@
   font-size: var(--fs-sm);
   cursor: pointer;
   transition:
-    background 0.15s,
-    color 0.15s,
-    border-color 0.15s;
+    background var(--duration-base),
+    color var(--duration-base),
+    border-color var(--duration-base);
 }
 
 .wf-toolbar-btn:hover {
@@ -258,8 +258,8 @@
   font-size: var(--fs-sm);
   cursor: pointer;
   transition:
-    color 0.12s,
-    border-color 0.12s;
+    color var(--duration-base),
+    border-color var(--duration-base);
 }
 
 .wf-right-tab:hover {

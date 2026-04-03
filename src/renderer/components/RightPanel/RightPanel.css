@@ -36,7 +36,7 @@
   border: none;
   background: none;
   border-bottom: 2px solid transparent;
-  transition: all 0.12s;
+  transition: all var(--duration-base);
   letter-spacing: 0.05em;
   font-family: var(--font-mono);
 }
@@ -114,7 +114,7 @@
   padding: var(--sp-2) var(--sp-3);
   margin-bottom: var(--sp-2);
   cursor: pointer;
-  transition: all 0.12s;
+  transition: all var(--duration-base);
 }
 
 .context-item:hover {

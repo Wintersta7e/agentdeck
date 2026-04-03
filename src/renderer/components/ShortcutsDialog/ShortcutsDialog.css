@@ -33,7 +33,7 @@
   cursor: pointer;
   padding: var(--sp-1) var(--sp-2);
   border-radius: var(--r);
-  transition: all 0.12s;
+  transition: all var(--duration-base);
 }
 
 .shortcuts-close:hover {

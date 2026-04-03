@@ -22,7 +22,7 @@
     rgba(0, 0, 0, 0) 0%,
     transparent 100%
   );
-  transition: mask-image 150ms ease;
+  transition: mask-image var(--duration-base) var(--ease-default);
   z-index: 0;
 }
 
@@ -76,7 +76,7 @@
   border-radius: 6px;
   padding: var(--sp-3) var(--sp-4);
   cursor: text;
-  transition: border-color 0.15s;
+  transition: border-color var(--duration-base);
 }
 .quick-open:hover {
   border-color: var(--accent-border);
@@ -144,7 +144,7 @@
   font-size: var(--fs-xs);
   color: var(--text2);
   cursor: pointer;
-  transition: color 0.15s;
+  transition: color var(--duration-base);
   border: none;
   background: none;
   font-family: inherit;
@@ -217,7 +217,7 @@
   border-radius: 6px;
   padding: var(--sp-4);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all var(--duration-base);
   position: relative;
   overflow: hidden;
 }
@@ -229,7 +229,7 @@
   right: 0;
   height: 2px;
   background: var(--border);
-  transition: background 0.15s;
+  transition: background var(--duration-base);
 }
 .project-card::after {
   content: '';
@@ -354,7 +354,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.15s ease;
+  transition: color var(--duration-base) var(--ease-default);
 }
 .card-refresh:hover {
   color: var(--accent);
@@ -430,7 +430,7 @@
   border: 1px solid var(--border);
   border-radius: var(--r);
   padding: var(--sp-3);
-  transition: all 0.12s;
+  transition: all var(--duration-base);
   text-align: center;
 }
 .agent-card.add-agent {
@@ -488,7 +488,7 @@
   font-size: 0.7rem;
   font-family: var(--font-mono);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--duration-base) var(--ease-default);
 }
 .agent-update-btn:hover {
   border-color: var(--text2);
@@ -789,7 +789,7 @@
   border: none;
   border-radius: var(--r);
   cursor: pointer;
-  transition: opacity 150ms ease;
+  transition: opacity var(--duration-base) var(--ease-default);
 }
 
 .welcome-cta:hover {

@@ -39,8 +39,8 @@
   font-size: var(--fs-xs);
   cursor: pointer;
   transition:
-    color 0.12s,
-    border-color 0.12s;
+    color var(--duration-base),
+    border-color var(--duration-base);
 }
 
 .wf-history-refresh-btn:hover {
@@ -68,7 +68,7 @@
   gap: var(--sp-2);
   padding: var(--sp-2) var(--sp-3);
   cursor: pointer;
-  transition: background 0.1s;
+  transition: background var(--duration-base);
 }
 
 .wf-history-run-header:hover {
@@ -130,7 +130,7 @@
 
 .wf-history-run-chevron {
   color: var(--text3);
-  transition: transform 0.15s;
+  transition: transform var(--duration-base);
 }
 
 .wf-history-run-chevron.expanded {
@@ -152,8 +152,8 @@
   cursor: pointer;
   border-radius: var(--r);
   transition:
-    color 0.12s,
-    background 0.12s;
+    color var(--duration-base),
+    background var(--duration-base);
 }
 
 .wf-history-delete-btn:hover {

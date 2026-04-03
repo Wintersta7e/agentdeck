@@ -4,7 +4,7 @@
   cursor: col-resize;
   flex-shrink: 0;
   z-index: 5;
-  transition: background 0.15s;
+  transition: background var(--duration-base);
   position: relative;
 }
 

@@ -36,7 +36,7 @@
   display: flex;
   overflow: hidden;
   border-right: none;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width var(--duration-slow) cubic-bezier(0.4, 0, 0.2, 1);
   min-width: 0;
   will-change: width;
 }

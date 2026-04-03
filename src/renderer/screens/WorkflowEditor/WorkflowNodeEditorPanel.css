@@ -67,7 +67,7 @@
   font-family: var(--font-mono);
   font-size: var(--fs-sm);
   outline: none;
-  transition: border-color 0.12s;
+  transition: border-color var(--duration-base);
 }
 
 .wf-ne-input:focus,
@@ -160,8 +160,8 @@
   cursor: pointer;
   white-space: nowrap;
   transition:
-    background 0.12s,
-    color 0.12s;
+    background var(--duration-base),
+    color var(--duration-base);
 }
 
 .wf-ne-role-edit-btn:hover {
@@ -294,8 +294,8 @@
   cursor: pointer;
   border: 1px solid transparent;
   transition:
-    background 0.12s,
-    color 0.12s;
+    background var(--duration-base),
+    color var(--duration-base);
 }
 
 .wf-ne-btn-save {

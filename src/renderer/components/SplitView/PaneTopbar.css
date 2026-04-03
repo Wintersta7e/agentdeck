@@ -112,7 +112,7 @@
   border: 1px solid transparent;
   background: none;
   cursor: pointer;
-  transition: all 0.12s;
+  transition: all var(--duration-base);
 }
 
 .pane-btn:hover {

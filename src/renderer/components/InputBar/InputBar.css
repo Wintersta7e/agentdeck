@@ -56,7 +56,7 @@
   border: 1px solid var(--border);
   color: var(--text2);
   cursor: pointer;
-  transition: all 0.12s;
+  transition: all var(--duration-base);
   white-space: nowrap;
 }
 

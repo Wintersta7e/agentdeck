@@ -64,7 +64,7 @@
   font-size: var(--fs-lg);
   flex-shrink: 0;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all var(--duration-base);
   position: relative;
 }
 .project-icon-large:hover::after {
@@ -102,7 +102,7 @@
   cursor: pointer;
   padding: 2px var(--sp-1);
   border-radius: 3px;
-  transition: all 0.12s;
+  transition: all var(--duration-base);
   font-family: inherit;
 }
 .project-title-edit:hover {
@@ -139,7 +139,7 @@
   cursor: pointer;
   font-family: inherit;
   font-size: var(--fs-xs);
-  transition: all 0.12s;
+  transition: all var(--duration-base);
   display: flex;
   align-items: center;
   gap: var(--sp-1);
@@ -168,7 +168,7 @@
   padding: var(--sp-3) var(--sp-4);
   cursor: pointer;
   border-bottom: 2px solid transparent;
-  transition: all 0.12s;
+  transition: all var(--duration-base);
   letter-spacing: 0.03em;
   display: flex;
   align-items: center;
@@ -291,7 +291,7 @@
   font-family: var(--font-mono);
   font-size: var(--fs-sm);
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color var(--duration-base);
   caret-color: var(--amber);
 }
 .settings-input:focus {
@@ -345,7 +345,7 @@
   padding: var(--sp-2) var(--sp-3);
   border-radius: var(--r);
   cursor: pointer;
-  transition: all 0.12s;
+  transition: all var(--duration-base);
   border: 1px solid var(--border);
   background: var(--bg3);
   margin-bottom: var(--sp-1);
@@ -384,7 +384,7 @@
   font-size: var(--fs-base);
   flex-shrink: 0;
   color: var(--text3);
-  transition: color 0.12s;
+  transition: color var(--duration-base);
 }
 .agent-row.selected .agent-row-check {
   color: var(--accent);
@@ -405,7 +405,7 @@
   border-radius: 20px;
   padding: var(--sp-1) var(--sp-3);
   cursor: pointer;
-  transition: all 0.12s;
+  transition: all var(--duration-base);
   font-size: var(--fs-xs);
   color: var(--text2);
 }
@@ -422,7 +422,7 @@
   color: var(--text3);
   font-size: var(--fs-sm);
   line-height: 1;
-  transition: color 0.12s;
+  transition: color var(--duration-base);
   background: none;
   border: none;
   cursor: pointer;
@@ -455,7 +455,7 @@
   border-radius: 4px;
   cursor: pointer;
   border: 2px solid transparent;
-  transition: transform 0.12s;
+  transition: transform var(--duration-base);
 }
 .swatch:hover {
   transform: scale(1.15);
@@ -479,7 +479,7 @@
   justify-content: center;
   font-size: var(--fs-base);
   cursor: pointer;
-  transition: all 0.12s;
+  transition: all var(--duration-base);
 }
 .icon-opt:hover {
   border-color: var(--border-bright);
@@ -537,7 +537,7 @@
   cursor: pointer;
   font-family: inherit;
   font-size: var(--fs-xs);
-  transition: all 0.12s;
+  transition: all var(--duration-base);
   flex-shrink: 0;
   margin-left: var(--sp-4);
 }
@@ -566,7 +566,7 @@
   color: var(--text2);
   cursor: pointer;
   padding: var(--sp-2) 2px;
-  transition: color 0.12s;
+  transition: color var(--duration-base);
   background: none;
   border: none;
   font-family: inherit;
@@ -621,7 +621,7 @@
   cursor: pointer;
   font-family: inherit;
   font-size: var(--fs-sm);
-  transition: all 0.12s;
+  transition: all var(--duration-base);
 }
 .footer-btn:hover {
   border-color: var(--border-bright);

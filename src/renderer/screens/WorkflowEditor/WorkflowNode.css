@@ -8,8 +8,8 @@
   cursor: grab;
   user-select: none;
   transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
+    border-color var(--duration-base),
+    box-shadow var(--duration-base);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
@@ -110,7 +110,7 @@
   font-size: var(--fs-sm);
   flex-shrink: 0;
   color: var(--text3);
-  transition: color 0.3s;
+  transition: color var(--duration-slow);
 }
 
 .wf-node-inner.running .wf-node-type-icon {
@@ -158,7 +158,7 @@
   font-size: var(--fs-base);
   cursor: pointer;
   padding: 0 2px;
-  transition: color 0.12s;
+  transition: color var(--duration-base);
   font-family: inherit;
 }
 
@@ -266,7 +266,7 @@
   border-radius: 50% !important;
   background: var(--bg3) !important;
   border: 2px solid var(--border-bright) !important;
-  transition: all 0.12s !important;
+  transition: all var(--duration-base) !important;
 }
 
 .wf-handle:hover {
@@ -306,7 +306,7 @@
   font-size: var(--fs-xs);
   padding: var(--sp-1) var(--sp-2);
   outline: none;
-  transition: border-color 0.12s;
+  transition: border-color var(--duration-base);
 }
 
 .wf-node-edit-input:focus {
@@ -327,7 +327,7 @@
   line-height: 1.5;
   padding: var(--sp-1) var(--sp-2);
   outline: none;
-  transition: border-color 0.12s;
+  transition: border-color var(--duration-base);
 }
 
 .wf-node-edit-textarea:focus {
@@ -345,7 +345,7 @@
   padding: var(--sp-1) var(--sp-2);
   outline: none;
   cursor: pointer;
-  transition: border-color 0.12s;
+  transition: border-color var(--duration-base);
 }
 
 .wf-node-edit-select:focus {
@@ -367,7 +367,7 @@
   border: 1px solid var(--border-bright);
   background: none;
   color: var(--text1);
-  transition: all 0.12s;
+  transition: all var(--duration-base);
 }
 
 .wf-node-edit-btn.save {
@@ -414,8 +414,8 @@
   text-align: left;
   cursor: pointer;
   transition:
-    background 0.12s,
-    color 0.12s;
+    background var(--duration-base),
+    color var(--duration-base);
 }
 
 .wf-node-dropdown-item:hover {

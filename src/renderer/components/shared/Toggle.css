@@ -16,8 +16,8 @@
   padding: 0;
   flex-shrink: 0;
   transition:
-    background 0.2s,
-    border-color 0.2s;
+    background var(--duration-slow),
+    border-color var(--duration-slow);
 }
 
 .toggle-on {
@@ -33,7 +33,7 @@
   height: 14px;
   border-radius: 50%;
   background: var(--bg0);
-  transition: transform 0.2s;
+  transition: transform var(--duration-slow);
   pointer-events: none;
 }
 

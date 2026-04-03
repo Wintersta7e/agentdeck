@@ -21,7 +21,7 @@
   -webkit-app-region: no-drag;
   padding: 2px var(--sp-2);
   border-radius: var(--r);
-  transition: background 0.15s;
+  transition: background var(--duration-base);
 }
 
 .titlebar-logo:hover {
@@ -36,8 +36,8 @@
   flex-shrink: 0;
   filter: drop-shadow(0 0 5px rgba(var(--accent-rgb), 0.4));
   transition:
-    transform 0.2s ease,
-    filter 0.2s ease;
+    transform var(--duration-slow) var(--ease-default),
+    filter var(--duration-slow) var(--ease-default);
   animation: logo-breathe 4s ease-in-out infinite;
 }
 
@@ -56,11 +56,11 @@
   font-size: var(--fs-base);
   color: var(--text0);
   letter-spacing: 0.05em;
-  transition: color 0.15s;
+  transition: color var(--duration-base);
 }
 .logo-text span {
   color: var(--accent);
-  transition: color 0.15s;
+  transition: color var(--duration-base);
 }
 
 .titlebar-logo:hover .logo-text {
@@ -106,10 +106,10 @@
   font-size: var(--fs-sm);
   color: var(--text2);
   transition:
-    all 0.12s,
-    max-width 0.25s ease,
-    opacity 0.2s ease,
-    padding 0.25s ease;
+    all var(--duration-base),
+    max-width var(--duration-slow) var(--ease-default),
+    opacity var(--duration-slow) var(--ease-default),
+    padding var(--duration-slow) var(--ease-default);
   white-space: nowrap;
   flex-shrink: 1;
   min-width: 100px;
@@ -167,7 +167,7 @@
   justify-content: center;
   font-size: var(--fs-sm);
   color: var(--text3);
-  transition: all 0.12s;
+  transition: all var(--duration-base);
   margin-left: 2px;
   opacity: 0;
   background: none;
@@ -192,7 +192,7 @@
   color: var(--text3);
   cursor: pointer;
   font-size: var(--fs-md);
-  transition: color 0.12s;
+  transition: color var(--duration-base);
   flex-shrink: 0;
   -webkit-app-region: no-drag;
 }
@@ -230,8 +230,8 @@
   font-size: var(--fs-base);
   cursor: pointer;
   transition:
-    background 0.1s,
-    color 0.1s;
+    background var(--duration-base),
+    color var(--duration-base);
   font-family: inherit;
 }
 .window-btn:hover {
@@ -253,7 +253,7 @@
   font-family: inherit;
   font-size: var(--fs-xs);
   letter-spacing: 0.05em;
-  transition: all 0.15s;
+  transition: all var(--duration-base);
 }
 .titlebar-btn:hover {
   border-color: var(--amber);

@@ -74,8 +74,8 @@
   padding: 0;
   opacity: 0;
   transition:
-    opacity 150ms ease,
-    color 150ms ease;
+    opacity var(--duration-base) var(--ease-default),
+    color var(--duration-base) var(--ease-default);
 }
 
 .toast-close {

@@ -51,7 +51,7 @@
   flex-shrink: 0;
   padding: 2px;
   opacity: 0.7;
-  transition: opacity 0.12s;
+  transition: opacity var(--duration-base);
 }
 
 .secret-toggle:hover {

@@ -37,7 +37,7 @@
   outline: none;
   width: 220px;
   caret-color: var(--accent);
-  transition: border-color 0.15s;
+  transition: border-color var(--duration-base);
 }
 
 .term-search-input:focus {
@@ -86,7 +86,7 @@
   color: var(--text2);
   font-size: var(--fs-sm);
   cursor: pointer;
-  transition: all 0.12s;
+  transition: all var(--duration-base);
   background: none;
   font-family: inherit;
   font-weight: 600;
@@ -116,7 +116,7 @@
   font-size: var(--fs-sm);
   cursor: pointer;
   background: none;
-  transition: all 0.12s;
+  transition: all var(--duration-base);
   flex-shrink: 0;
 }
 
@@ -144,7 +144,7 @@
   font-size: var(--fs-base);
   cursor: pointer;
   background: none;
-  transition: all 0.12s;
+  transition: all var(--duration-base);
   flex-shrink: 0;
 }
 

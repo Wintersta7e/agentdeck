@@ -172,7 +172,7 @@ button:not([disabled]) {
   pointer-events: none;
   z-index: 0;
   transform: translate(-50%, -50%);
-  transition: opacity 0.3s;
+  transition: opacity var(--duration-slow);
 }
 
 /* ─── Circular theme reveal (View Transition API — typed) ─── */
@@ -199,7 +199,7 @@ button:active,
 .new-project-btn:active,
 .sidebar-new-wf:active {
   transform: scale(0.95);
-  transition: transform 0.06s ease;
+  transition: transform var(--duration-fast) var(--ease-default);
 }
 
 /* ─── View mount fade-in ─── */
