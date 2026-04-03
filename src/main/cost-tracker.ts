@@ -84,6 +84,27 @@ function wslExec(cmd: string): Promise<string> {
 
 export function createCostTracker(mainWindow: BrowserWindow, adapters: LogAdapter[]): CostTracker {
   const sessions = new Map<string, BoundSession>()
+  /** File paths already bound to a session — prevents cross-session matching. */
+  const boundFiles = new Set<string>()
+
+  // R4-01: Resolve $HOME once at tracker creation so all sessions share
+  // the cached value. Eliminates repeated wsl.exe calls that fail under
+  // WSL resource contention when multiple sessions start simultaneously.
+  let cachedHome: string | null = null
+  const homeReady: Promise<string> = wslExec('echo "$HOME"')
+    .then((out) => {
+      const home = out.trim()
+      cachedHome = home
+      log.info('Resolved WSL $HOME', { home })
+      return home
+    })
+    .catch((err) => {
+      log.warn('Failed to resolve WSL $HOME — cost tracking may not work', {
+        err: String(err),
+      })
+      cachedHome = ''
+      return ''
+    })
 
   // ── Discovery ───────────────────────────────────────────────────
 
@@ -91,26 +112,25 @@ export function createCostTracker(mainWindow: BrowserWindow, adapters: LogAdapte
     const rawDirs = session.adapter.getLogDirs(session.projectPath)
     const pattern = session.adapter.getFilePattern()
 
-    // R4-01: Resolve ~ to the actual WSL home directory BEFORE building
-    // shell commands. sq() wraps in single quotes which prevents $HOME
-    // expansion — so we must resolve it in Node, not in bash.
-    const resolveHome = wslExec('echo "$HOME"')
-      .then((out) => out.trim())
-      .catch(() => '')
+    // Use cached $HOME if available; otherwise wait for the initial resolution.
+    const homePromise = cachedHome !== null ? Promise.resolve(cachedHome) : homeReady
 
-    resolveHome
+    homePromise
       .then((home) => {
         if (!sessions.has(session.sessionId)) return
-        const dirs = rawDirs.map((d) => (d.startsWith('~') && home ? home + d.slice(1) : d))
+        const dirs = home
+          ? rawDirs.map((d) => (d.startsWith('~') ? home + d.slice(1) : d))
+          : rawDirs.filter((d) => !d.startsWith('~'))
+        if (dirs.length === 0) {
+          log.warn('No usable log dirs (HOME unknown, all dirs use ~)', {
+            sessionId: session.sessionId,
+          })
+          return
+        }
         runDiscoveryLoop(session, dirs, pattern)
       })
       .catch(() => {
-        // If home resolution fails, try dirs as-is (non-~ paths still work)
-        if (!sessions.has(session.sessionId)) return
-        const dirs = rawDirs.filter((d) => !d.startsWith('~'))
-        if (dirs.length > 0) {
-          runDiscoveryLoop(session, dirs, pattern)
-        }
+        /* homeReady never rejects (has .catch), but guard defensively */
       })
   }
 
@@ -180,8 +200,8 @@ export function createCostTracker(mainWindow: BrowserWindow, adapters: LogAdapte
   ): Promise<void> {
     if (!sessions.has(session.sessionId)) return Promise.resolve()
     if (index >= candidates.length) {
-      // No match in this batch — schedule another discovery poll
-      // R2-02: Re-check before scheduling
+      // No match in this batch — schedule another discovery poll.
+      // Re-enter runDiscoveryLoop directly (HOME is already resolved).
       if (!sessions.has(session.sessionId)) return Promise.resolve()
       session.pollTimer = setTimeout(() => {
         startDiscovery(session)
@@ -194,6 +214,11 @@ export function createCostTracker(mainWindow: BrowserWindow, adapters: LogAdapte
       return tryMatchCandidates(session, candidates, index + 1)
     }
 
+    // Skip files already bound to another session to prevent cross-session matching
+    if (boundFiles.has(candidate)) {
+      return tryMatchCandidates(session, candidates, index + 1)
+    }
+
     return wslExec(`head -n 3 ${sq(candidate)}`)
       .then((headOutput): Promise<void> | void => {
         if (!sessions.has(session.sessionId)) return
@@ -202,6 +227,7 @@ export function createCostTracker(mainWindow: BrowserWindow, adapters: LogAdapte
         if (session.adapter.matchSession(firstLines, session.cwd, session.spawnAt)) {
           // Match found — bind and start tailing
           session.filePath = candidate
+          boundFiles.add(candidate)
           log.info('Discovered log file for session', {
             sessionId: session.sessionId,
             filePath: candidate,
@@ -369,6 +395,11 @@ export function createCostTracker(mainWindow: BrowserWindow, adapters: LogAdapte
       session.pollTimer = null
     }
 
+    // Release bound file so other sessions can discover it
+    if (session.filePath) {
+      boundFiles.delete(session.filePath)
+    }
+
     log.info('Unbound session from cost tracking', {
       sessionId,
       usage: session.usage,
@@ -385,6 +416,7 @@ export function createCostTracker(mainWindow: BrowserWindow, adapters: LogAdapte
       }
     }
     sessions.clear()
+    boundFiles.clear()
     log.info('CostTracker destroyed')
   }
 

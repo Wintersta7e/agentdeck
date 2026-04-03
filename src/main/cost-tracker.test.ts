@@ -64,6 +64,44 @@ const BIND_OPTS = {
   spawnAt: Date.now(),
 }
 
+/**
+ * Standard mock that routes calls based on the shell command content.
+ * $HOME is resolved once at tracker creation; subsequent calls are
+ * find, head, and tail commands.
+ */
+function makeRoutingMock(overrides?: {
+  home?: string
+  findResult?: string
+  headResult?: string
+  tailResults?: string[]
+}): void {
+  const home = overrides?.home ?? '/home/rooty'
+  const findResult =
+    overrides?.findResult ?? '/home/rooty/.claude/projects/test/sessions/abc.jsonl\n'
+  const headResult = overrides?.headResult ?? '{"cwd":"/home/rooty/project"}\n'
+  const tailResults = overrides?.tailResults ?? ['80\n{"line":"one"}\n{"line":"two"}\n', '80\n']
+  let tailIndex = 0
+
+  mockExecFile.mockImplementation(
+    (_bin: string, args: string[], _opts: unknown, cb: ExecFileCb) => {
+      const cmd = Array.isArray(args) ? args.join(' ') : ''
+      if (cmd.includes('echo "$HOME"')) {
+        cb(null, `${home}\n`, '')
+      } else if (cmd.includes('find ')) {
+        cb(null, findResult, '')
+      } else if (cmd.includes('head ')) {
+        cb(null, headResult, '')
+      } else if (cmd.includes('stat ') || cmd.includes('tail ')) {
+        const result = tailResults[tailIndex] ?? tailResults[tailResults.length - 1] ?? '0\n'
+        if (tailIndex < tailResults.length - 1) tailIndex++
+        cb(null, result, '')
+      } else {
+        cb(null, '', '')
+      }
+    },
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -80,36 +118,45 @@ afterEach(() => {
 // ─── bindSession ────────────────────────────────────────────────────
 
 describe('bindSession', () => {
-  it('is a no-op for unsupported agents', () => {
+  it('is a no-op for unsupported agents', async () => {
+    makeRoutingMock()
     const win = makeMockWindow()
     const adapter = makeTestAdapter({ agent: 'claude-code' })
     const tracker = createCostTracker(win, [adapter])
 
+    // Wait for $HOME resolution
+    await vi.advanceTimersByTimeAsync(0)
+
+    mockExecFile.mockReset()
     tracker.bindSession('s1', { ...BIND_OPTS, agent: 'goose' })
 
-    // No WSL calls should have been made
+    // No WSL calls should have been made (beyond the initial $HOME)
     expect(mockExecFile).not.toHaveBeenCalled()
 
     tracker.destroy()
   })
 
   it('starts discovery polling for a supported agent', async () => {
+    makeRoutingMock()
     const win = makeMockWindow()
     const adapter = makeTestAdapter()
     const tracker = createCostTracker(win, [adapter])
 
-    mockExecFile.mockImplementation(
-      (_bin: string, _args: string[], _opts: unknown, cb: ExecFileCb) => {
-        cb(null, '', '')
-      },
-    )
+    // Wait for $HOME resolution
+    await vi.advanceTimersByTimeAsync(0)
 
     tracker.bindSession('s1', BIND_OPTS)
 
-    // Advance past first discovery poll — async version flushes microtasks
+    // Advance past first discovery poll
     await vi.advanceTimersByTimeAsync(2000)
 
-    expect(mockExecFile).toHaveBeenCalled()
+    // find command should have been called
+    const findCalls = mockExecFile.mock.calls.filter((c: unknown[]) => {
+      const args = c[1] as string[]
+      const cmd = Array.isArray(args) ? args.join(' ') : ''
+      return cmd.includes('find ')
+    })
+    expect(findCalls.length).toBeGreaterThan(0)
 
     tracker.destroy()
   })
@@ -119,15 +166,12 @@ describe('bindSession', () => {
 
 describe('unbindSession', () => {
   it('clears session and stops timers', async () => {
+    makeRoutingMock()
     const win = makeMockWindow()
     const adapter = makeTestAdapter()
     const tracker = createCostTracker(win, [adapter])
 
-    mockExecFile.mockImplementation(
-      (_bin: string, _args: string[], _opts: unknown, cb: ExecFileCb) => {
-        cb(null, '', '')
-      },
-    )
+    await vi.advanceTimersByTimeAsync(0)
 
     tracker.bindSession('s1', BIND_OPTS)
     tracker.unbindSession('s1')
@@ -141,6 +185,11 @@ describe('unbindSession', () => {
   })
 
   it('is a no-op for unknown sessionId', () => {
+    mockExecFile.mockImplementation(
+      (_bin: string, _args: string[], _opts: unknown, cb: ExecFileCb) => {
+        cb(null, '/home/rooty\n', '')
+      },
+    )
     const win = makeMockWindow()
     const tracker = createCostTracker(win, [])
 
@@ -155,15 +204,12 @@ describe('unbindSession', () => {
 
 describe('destroy', () => {
   it('clears all sessions and stops all timers', async () => {
+    makeRoutingMock()
     const win = makeMockWindow()
     const adapter = makeTestAdapter()
     const tracker = createCostTracker(win, [adapter])
 
-    mockExecFile.mockImplementation(
-      (_bin: string, _args: string[], _opts: unknown, cb: ExecFileCb) => {
-        cb(null, '', '')
-      },
-    )
+    await vi.advanceTimersByTimeAsync(0)
 
     tracker.bindSession('s1', BIND_OPTS)
     tracker.bindSession('s2', { ...BIND_OPTS, agent: 'claude-code' })
@@ -179,29 +225,46 @@ describe('destroy', () => {
 // ─── File discovery ─────────────────────────────────────────────────
 
 describe('file discovery', () => {
-  it('finds a log file and begins tailing', async () => {
+  it('resolves $HOME once and reuses for all sessions', async () => {
+    makeRoutingMock()
     const win = makeMockWindow()
-    const adapter = makeTestAdapter({
-      matchSession: () => true,
-    })
+    const adapter = makeTestAdapter()
     const tracker = createCostTracker(win, [adapter])
 
-    let callCount = 0
-    mockExecFile.mockImplementation(
-      (_bin: string, _args: string[], _opts: unknown, cb: ExecFileCb) => {
-        callCount++
-        if (callCount === 1) {
-          // Discovery: find returns a file
-          cb(null, '/home/rooty/.claude/projects/test/sessions/abc.jsonl\n', '')
-        } else if (callCount === 2) {
-          // Read first 3 lines for matchSession
-          cb(null, '{"cwd":"/home/rooty/project"}\n{"type":"init"}\n{"type":"start"}\n', '')
-        } else {
-          // Tailing poll: stat size + new content
-          cb(null, '50\n{"message":{"usage":{"input_tokens":100}}}\n', '')
-        }
-      },
-    )
+    // Wait for initial $HOME resolution
+    await vi.advanceTimersByTimeAsync(0)
+
+    // Count $HOME calls so far
+    const homeCallsBefore = mockExecFile.mock.calls.filter((c: unknown[]) => {
+      const args = c[1] as string[]
+      return Array.isArray(args) && args.join(' ').includes('echo "$HOME"')
+    }).length
+    expect(homeCallsBefore).toBe(1)
+
+    // Bind two sessions
+    tracker.bindSession('s1', BIND_OPTS)
+    tracker.bindSession('s2', { ...BIND_OPTS })
+
+    // Advance through several discovery cycles
+    await vi.advanceTimersByTimeAsync(10_000)
+
+    // $HOME should still have been called only once (at creation)
+    const homeCallsAfter = mockExecFile.mock.calls.filter((c: unknown[]) => {
+      const args = c[1] as string[]
+      return Array.isArray(args) && args.join(' ').includes('echo "$HOME"')
+    }).length
+    expect(homeCallsAfter).toBe(1)
+
+    tracker.destroy()
+  })
+
+  it('finds a log file and begins tailing', async () => {
+    makeRoutingMock()
+    const win = makeMockWindow()
+    const adapter = makeTestAdapter({ matchSession: () => true })
+    const tracker = createCostTracker(win, [adapter])
+
+    await vi.advanceTimersByTimeAsync(0)
 
     tracker.bindSession('s1', BIND_OPTS)
 
@@ -220,28 +283,82 @@ describe('file discovery', () => {
   })
 
   it('stops discovery after 30s with no match', async () => {
+    makeRoutingMock()
     const win = makeMockWindow()
-    const adapter = makeTestAdapter({
-      matchSession: () => false,
-    })
+    const adapter = makeTestAdapter({ matchSession: () => false })
     const tracker = createCostTracker(win, [adapter])
 
-    mockExecFile.mockImplementation(
-      (_bin: string, _args: string[], _opts: unknown, cb: ExecFileCb) => {
-        // find always returns a file, but matchSession always returns false
-        cb(null, '/home/rooty/.claude/projects/test/sessions/abc.jsonl\n', '')
-      },
-    )
+    await vi.advanceTimersByTimeAsync(0)
 
     tracker.bindSession('s1', BIND_OPTS)
 
     // Advance 32s — well past the 30s discovery timeout
     await vi.advanceTimersByTimeAsync(32_000)
 
-    // After discovery timeout, no more calls should happen
-    mockExecFile.mockReset()
+    // After discovery timeout, no more find/head calls should happen
+    const callsBefore = mockExecFile.mock.calls.length
     await vi.advanceTimersByTimeAsync(10_000)
-    expect(mockExecFile).not.toHaveBeenCalled()
+    // Only the existing calls, no new find/head calls
+    const newCalls = mockExecFile.mock.calls.slice(callsBefore).filter((c: unknown[]) => {
+      const args = c[1] as string[]
+      const cmd = Array.isArray(args) ? args.join(' ') : ''
+      return cmd.includes('find ') || cmd.includes('head ')
+    })
+    expect(newCalls.length).toBe(0)
+
+    tracker.destroy()
+  })
+
+  it('skips files already bound to another session', async () => {
+    const file = '/home/rooty/.claude/projects/test/sessions/abc.jsonl'
+    const matchSession = vi.fn(() => true)
+    makeRoutingMock({ findResult: `${file}\n` })
+    const win = makeMockWindow()
+    const adapter = makeTestAdapter({ matchSession })
+    const tracker = createCostTracker(win, [adapter])
+
+    await vi.advanceTimersByTimeAsync(0)
+
+    // Session 1 binds to the file
+    tracker.bindSession('s1', BIND_OPTS)
+    await vi.advanceTimersByTimeAsync(2000) // discovery finds and matches
+
+    // Reset to track calls for session 2
+    matchSession.mockClear()
+
+    // Session 2 starts — find returns the same file
+    tracker.bindSession('s2', BIND_OPTS)
+    await vi.advanceTimersByTimeAsync(2000)
+
+    // matchSession should NOT have been called for session 2 (file was skipped)
+    expect(matchSession).not.toHaveBeenCalled()
+
+    tracker.destroy()
+  })
+
+  it('releases bound file on unbind so other sessions can claim it', async () => {
+    const file = '/home/rooty/.claude/projects/test/sessions/abc.jsonl'
+    makeRoutingMock({ findResult: `${file}\n` })
+    const win = makeMockWindow()
+    const adapter = makeTestAdapter({ matchSession: () => true })
+    const tracker = createCostTracker(win, [adapter])
+
+    await vi.advanceTimersByTimeAsync(0)
+
+    // Session 1 binds, then unbinds
+    tracker.bindSession('s1', BIND_OPTS)
+    await vi.advanceTimersByTimeAsync(2000)
+    tracker.unbindSession('s1')
+
+    // Session 2 should now be able to claim the same file
+    tracker.bindSession('s2', BIND_OPTS)
+    await vi.advanceTimersByTimeAsync(2000)
+    await vi.advanceTimersByTimeAsync(3000) // tail poll
+
+    expect(win.webContents.send).toHaveBeenCalledWith(
+      'cost:update',
+      expect.objectContaining({ sessionId: 's2' }),
+    )
 
     tracker.destroy()
   })
@@ -263,31 +380,13 @@ describe('file tailing', () => {
       }
     })
     const adapter = makeTestAdapter({ parseUsage })
-    const tracker = createCostTracker(win, [adapter])
 
-    let callCount = 0
-    mockExecFile.mockImplementation(
-      (_bin: string, args: string[], _opts: unknown, cb: ExecFileCb) => {
-        callCount++
-        const cmd = Array.isArray(args) ? args.join(' ') : ''
-        if (cmd.includes('echo "$HOME"')) {
-          // R4-01: Home resolution call added by startDiscovery
-          cb(null, '/home/rooty\n', '')
-        } else if (callCount === 2) {
-          // Discovery: find returns a file
-          cb(null, '/home/rooty/.claude/sessions/abc.jsonl\n', '')
-        } else if (callCount === 3) {
-          // head: session match
-          cb(null, '{"cwd":"/home/rooty/project"}\n', '')
-        } else if (callCount === 4) {
-          // First tail poll: stat + content with two complete lines
-          cb(null, '80\n{"line":"one"}\n{"line":"two"}\n', '')
-        } else {
-          // Subsequent polls: no new data
-          cb(null, '80\n', '')
-        }
-      },
-    )
+    makeRoutingMock({
+      tailResults: ['80\n{"line":"one"}\n{"line":"two"}\n', '80\n'],
+    })
+
+    const tracker = createCostTracker(win, [adapter])
+    await vi.advanceTimersByTimeAsync(0) // $HOME
 
     tracker.bindSession('s1', BIND_OPTS)
 
@@ -327,37 +426,22 @@ describe('file tailing', () => {
       }
     })
     const adapter = makeTestAdapter({ parseUsage })
-    const tracker = createCostTracker(win, [adapter])
 
-    let callCount = 0
-    mockExecFile.mockImplementation(
-      (_bin: string, args: string[], _opts: unknown, cb: ExecFileCb) => {
-        callCount++
-        const cmd = Array.isArray(args) ? args.join(' ') : ''
-        if (cmd.includes('echo "$HOME"')) {
-          cb(null, '/home/rooty\n', '')
-        } else if (callCount === 2) {
-          cb(null, '/home/rooty/.claude/sessions/abc.jsonl\n', '')
-        } else if (callCount === 3) {
-          cb(null, '{"cwd":"/home/rooty/project"}\n', '')
-        } else if (callCount === 4) {
-          // First tail: one complete line + one partial (no trailing newline)
-          cb(null, '60\n{"line":"one"}\n{"line":"tw', '')
-        } else if (callCount === 5) {
-          // Second tail: completes the partial line
-          cb(null, '80\no"}\n', '')
-        } else {
-          cb(null, '80\n', '')
-        }
-      },
-    )
+    makeRoutingMock({
+      tailResults: [
+        '60\n{"line":"one"}\n{"line":"tw', // partial line
+        '80\no"}\n', // completes the partial
+        '80\n',
+      ],
+    })
+
+    const tracker = createCostTracker(win, [adapter])
+    await vi.advanceTimersByTimeAsync(0)
 
     tracker.bindSession('s1', BIND_OPTS)
 
-    // Discovery (home resolve + find + head)
+    // Discovery (find + head) + first tail
     await vi.advanceTimersByTimeAsync(2000)
-
-    // First tail — only line one is complete
     await vi.advanceTimersByTimeAsync(3000)
     expect(parseUsage).toHaveBeenCalledTimes(1)
 
@@ -380,35 +464,21 @@ describe('file tailing', () => {
       }
     })
     const adapter = makeTestAdapter({ parseUsage })
-    const tracker = createCostTracker(win, [adapter])
 
-    let callCount = 0
-    mockExecFile.mockImplementation(
-      (_bin: string, args: string[], _opts: unknown, cb: ExecFileCb) => {
-        callCount++
-        const cmd = Array.isArray(args) ? args.join(' ') : ''
-        if (cmd.includes('echo "$HOME"')) {
-          cb(null, '/home/rooty\n', '')
-        } else if (callCount === 2) {
-          cb(null, '/home/rooty/.claude/sessions/abc.jsonl\n', '')
-        } else if (callCount === 3) {
-          cb(null, '{"cwd":"/home/rooty/project"}\n', '')
-        } else if (callCount === 4) {
-          // First tail: 80 bytes of content
-          cb(null, '80\n{"line":"one"}\n', '')
-        } else if (callCount === 5) {
-          // File was truncated: stat says 20 bytes, which is less than our offset
-          // The tracker should reset and re-read from beginning
-          cb(null, '20\n{"line":"reset"}\n', '')
-        } else {
-          cb(null, '20\n', '')
-        }
-      },
-    )
+    makeRoutingMock({
+      tailResults: [
+        '80\n{"line":"one"}\n', // first tail: 80 bytes
+        '20\n{"line":"reset"}\n', // truncated: stat says 20, less than offset
+        '20\n', // after reset and re-read
+      ],
+    })
+
+    const tracker = createCostTracker(win, [adapter])
+    await vi.advanceTimersByTimeAsync(0)
 
     tracker.bindSession('s1', BIND_OPTS)
 
-    // Discovery (home resolve + find + head) + first tail
+    // Discovery + first tail
     await vi.advanceTimersByTimeAsync(2000)
     await vi.advanceTimersByTimeAsync(3000)
     expect(parseUsage).toHaveBeenCalledTimes(1)
@@ -423,22 +493,11 @@ describe('file tailing', () => {
   it('does not send IPC when window is destroyed', async () => {
     const win = makeMockWindow(true) // destroyed
     const send = (win.webContents as unknown as { send: ReturnType<typeof vi.fn> }).send
+
+    makeRoutingMock()
     const adapter = makeTestAdapter()
     const tracker = createCostTracker(win, [adapter])
-
-    let callCount = 0
-    mockExecFile.mockImplementation(
-      (_bin: string, _args: string[], _opts: unknown, cb: ExecFileCb) => {
-        callCount++
-        if (callCount === 1) {
-          cb(null, '/home/rooty/.claude/sessions/abc.jsonl\n', '')
-        } else if (callCount === 2) {
-          cb(null, '{"cwd":"/home/rooty/project"}\n', '')
-        } else {
-          cb(null, '80\n{"line":"one"}\n', '')
-        }
-      },
-    )
+    await vi.advanceTimersByTimeAsync(0)
 
     tracker.bindSession('s1', BIND_OPTS)
     await vi.advanceTimersByTimeAsync(2000)
@@ -453,22 +512,13 @@ describe('file tailing', () => {
     const win = makeMockWindow()
     const parseUsage = vi.fn()
     const adapter = makeTestAdapter({ parseUsage })
-    const tracker = createCostTracker(win, [adapter])
 
-    let callCount = 0
-    mockExecFile.mockImplementation(
-      (_bin: string, _args: string[], _opts: unknown, cb: ExecFileCb) => {
-        callCount++
-        if (callCount === 1) {
-          cb(null, '/home/rooty/.claude/sessions/abc.jsonl\n', '')
-        } else if (callCount === 2) {
-          cb(null, '{"cwd":"/home/rooty/project"}\n', '')
-        } else {
-          // Tail returns stat + empty lines only
-          cb(null, '10\n\n\n', '')
-        }
-      },
-    )
+    makeRoutingMock({
+      tailResults: ['10\n\n\n', '10\n'],
+    })
+
+    const tracker = createCostTracker(win, [adapter])
+    await vi.advanceTimersByTimeAsync(0)
 
     tracker.bindSession('s1', BIND_OPTS)
     await vi.advanceTimersByTimeAsync(2000)

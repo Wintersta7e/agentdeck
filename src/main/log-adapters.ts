@@ -111,7 +111,11 @@ export function createClaudeAdapter(): LogAdapter {
     getLogDirs(projectPath: string): string[] {
       // Replace every `/` with `-` to match Claude's path-slug convention.
       const pathSlug = projectPath.replace(/\//g, '-')
-      return [`~/.claude/projects/${pathSlug}/sessions/`, `~/.claude/projects/`]
+      // Only search the project-specific sessions directory.
+      // The old fallback `~/.claude/projects/` recursively scanned ALL projects,
+      // returning hundreds of candidates and causing discovery timeouts with
+      // multiple concurrent sessions (each candidate requires a `wsl.exe head` call).
+      return [`~/.claude/projects/${pathSlug}/sessions/`]
     },
 
     getFilePattern(): string {
