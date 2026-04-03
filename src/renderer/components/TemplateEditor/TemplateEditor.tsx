@@ -298,6 +298,7 @@ export function TemplateEditor(): React.JSX.Element {
                 className="te-name-input"
                 type="text"
                 placeholder="Template name..."
+                aria-label="Template name"
                 value={editingName}
                 onChange={(e) => setEditingName(e.target.value)}
               />

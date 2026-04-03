@@ -59,6 +59,36 @@
   --badge-python: #ffd43b;
   --badge-python-bg: rgba(255, 212, 59, 0.2);
 
+  /* Badge colour tokens */
+  --badge-java: #e55934;
+  --badge-java-bg: rgba(229, 89, 52, 0.2);
+  --badge-js: #4caf7d;
+  --badge-js-bg: rgba(76, 175, 125, 0.2);
+  --badge-ts: #3178c6;
+  --badge-ts-bg: rgba(49, 120, 198, 0.2);
+  --badge-rust: #ce6432;
+  --badge-rust-bg: rgba(206, 100, 50, 0.2);
+  --badge-go: #00add8;
+  --badge-go-bg: rgba(0, 173, 216, 0.2);
+  --badge-dotnet: #512bd4;
+  --badge-dotnet-bg: rgba(91, 45, 168, 0.2);
+  --badge-agent: #9b72cf;
+  --badge-agent-bg: rgba(155, 114, 207, 0.2);
+  --badge-other: #6e6b66;
+  --badge-other-bg: rgba(110, 107, 102, 0.2);
+  --badge-cc: #00599c;
+  --badge-cc-bg: rgba(0, 89, 156, 0.2);
+  --badge-ruby: #cc342d;
+  --badge-ruby-bg: rgba(204, 52, 45, 0.2);
+  --badge-php: #777bb4;
+  --badge-php-bg: rgba(119, 123, 180, 0.2);
+  --badge-kotlin: #7f52ff;
+  --badge-kotlin-bg: rgba(127, 82, 255, 0.2);
+  --badge-swift: #f05138;
+  --badge-swift-bg: rgba(240, 81, 56, 0.2);
+  --badge-dart: #01a7dc;
+  --badge-dart-bg: rgba(1, 167, 220, 0.2);
+
   /* RGB triplets for rgba() usage */
   --accent-rgb: 245, 166, 35;
   --bg1-rgb: 17, 18, 19;

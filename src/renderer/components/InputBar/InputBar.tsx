@@ -55,10 +55,15 @@ export const InputBar = memo(function InputBar({
     <div className="input-bar">
       <div className="input-row">
         <span className={`input-prompt-sym ${focused ? 'focused' : 'dim'}`}>&gt;</span>
+        <label htmlFor="agentdeck-input" className="sr-only">
+          Terminal input
+        </label>
         <input
+          id="agentdeck-input"
           ref={inputRef}
           className="input-field"
           type="text"
+          aria-label="Terminal input"
           placeholder="Type a message or paste file paths..."
           value={value}
           onChange={(e) => setValue(e.target.value)}

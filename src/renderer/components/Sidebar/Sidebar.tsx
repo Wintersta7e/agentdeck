@@ -646,6 +646,7 @@ export function Sidebar({
                       <input
                         ref={renameInputRef}
                         className="sidebar-rename-input"
+                        aria-label="Rename workflow"
                         value={renameValue}
                         onChange={(e) => setRenameValue(e.target.value)}
                         onBlur={commitRename}

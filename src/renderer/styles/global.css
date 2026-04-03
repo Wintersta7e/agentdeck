@@ -98,64 +98,64 @@ button:not([disabled]) {
 
 /* ─── Stack badge colours (shared across Sidebar, HomeScreen, etc.) ─── */
 .badge-java {
-  background: rgba(229, 89, 52, 0.2);
-  color: #e55934;
+  background: var(--badge-java-bg);
+  color: var(--badge-java);
 }
 .badge-js {
-  background: rgba(76, 175, 125, 0.2);
-  color: var(--green);
+  background: var(--badge-js-bg);
+  color: var(--badge-js);
 }
 .badge-ts {
-  background: rgba(49, 120, 198, 0.2);
-  color: #3178c6;
+  background: var(--badge-ts-bg);
+  color: var(--badge-ts);
 }
 .badge-python {
   background: var(--badge-python-bg);
   color: var(--badge-python);
 }
 .badge-rust {
-  background: rgba(206, 100, 50, 0.2);
-  color: #ce6432;
+  background: var(--badge-rust-bg);
+  color: var(--badge-rust);
 }
 .badge-go {
-  background: rgba(0, 173, 216, 0.2);
-  color: #00add8;
+  background: var(--badge-go-bg);
+  color: var(--badge-go);
 }
 .badge-net {
-  background: rgba(91, 45, 168, 0.2);
-  color: #512bd4;
+  background: var(--badge-dotnet-bg);
+  color: var(--badge-dotnet);
 }
 .badge-agent {
-  background: rgba(155, 114, 207, 0.2);
-  color: var(--purple);
+  background: var(--badge-agent-bg);
+  color: var(--badge-agent);
 }
 .badge-other {
-  background: rgba(110, 107, 102, 0.2);
-  color: var(--text2);
+  background: var(--badge-other-bg);
+  color: var(--badge-other);
 }
 .badge-cc {
-  background: rgba(0, 89, 156, 0.2);
-  color: #00599c;
+  background: var(--badge-cc-bg);
+  color: var(--badge-cc);
 }
 .badge-ruby {
-  background: rgba(204, 52, 45, 0.2);
-  color: #cc342d;
+  background: var(--badge-ruby-bg);
+  color: var(--badge-ruby);
 }
 .badge-php {
-  background: rgba(119, 123, 180, 0.2);
-  color: #777bb4;
+  background: var(--badge-php-bg);
+  color: var(--badge-php);
 }
 .badge-kotlin {
-  background: rgba(127, 82, 255, 0.2);
-  color: #7f52ff;
+  background: var(--badge-kotlin-bg);
+  color: var(--badge-kotlin);
 }
 .badge-swift {
-  background: rgba(240, 81, 56, 0.2);
-  color: #f05138;
+  background: var(--badge-swift-bg);
+  color: var(--badge-swift);
 }
 .badge-dart {
-  background: rgba(1, 167, 220, 0.2);
-  color: #01a7dc;
+  background: var(--badge-dart-bg);
+  color: var(--badge-dart);
 }
 
 /* ─── Spotlight cursor effect ─── */

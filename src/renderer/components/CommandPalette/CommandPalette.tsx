@@ -646,6 +646,7 @@ function PaletteInner({
             ref={inputRef}
             className="palette-input"
             placeholder="Open project, run template, switch session..."
+            aria-label="Command palette search"
             value={query}
             onChange={(e) => handleQueryChange(e.target.value)}
           />

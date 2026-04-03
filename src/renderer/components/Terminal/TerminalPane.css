@@ -103,7 +103,7 @@
 
 .term-context-menu {
   position: fixed;
-  z-index: 2000;
+  z-index: var(--z-modal);
   background: var(--bg1);
   border: 1px solid var(--bg3);
   border-radius: var(--r);
