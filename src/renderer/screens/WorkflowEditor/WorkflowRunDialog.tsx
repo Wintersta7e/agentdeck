@@ -85,17 +85,18 @@ export default function WorkflowRunDialog({
   )
 
   return (
-    <div
-      className="wf-run-dialog-backdrop"
-      ref={trapRef}
-      onClick={handleBackdropClick}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Configure workflow variables"
-    >
-      <form className="wf-run-dialog" onSubmit={handleSubmit}>
+    <div className="wf-run-dialog-backdrop" ref={trapRef} onClick={handleBackdropClick}>
+      <form
+        className="wf-run-dialog"
+        onSubmit={handleSubmit}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="wf-run-dialog-heading"
+      >
         <div className="wf-run-dialog-header">
-          <h3 className="wf-run-dialog-title">Configure Variables</h3>
+          <h3 id="wf-run-dialog-heading" className="wf-run-dialog-title">
+            Configure Variables
+          </h3>
         </div>
 
         <div className="wf-run-dialog-body">

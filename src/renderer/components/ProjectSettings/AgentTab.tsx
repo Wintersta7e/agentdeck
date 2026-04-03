@@ -93,6 +93,11 @@ export function AgentTab({ draft, onChange }: TabProps): React.JSX.Element {
                     <button
                       className={`agent-star-btn${isDefaultAgent ? ' active' : ''}`}
                       title={isDefaultAgent ? 'Default agent' : 'Set as default'}
+                      aria-label={
+                        isDefaultAgent
+                          ? `${agentDef.name} is the default agent`
+                          : `Set ${agentDef.name} as default agent`
+                      }
                       onClick={(e) => {
                         e.stopPropagation()
                         setDefault(agentDef.id)
@@ -105,6 +110,11 @@ export function AgentTab({ draft, onChange }: TabProps): React.JSX.Element {
                     <button
                       className="agent-expand-btn"
                       title="Configure flags"
+                      aria-label={
+                        isExpanded
+                          ? `Collapse ${agentDef.name} flags`
+                          : `Expand ${agentDef.name} flags`
+                      }
                       onClick={(e) => {
                         e.stopPropagation()
                         setExpandedAgent(isExpanded ? null : agentDef.id)
@@ -129,6 +139,7 @@ export function AgentTab({ draft, onChange }: TabProps): React.JSX.Element {
                           onChange={(e) => updateAgentFlags(agentDef.id, e.target.value)}
                           maxLength={200}
                           placeholder="e.g. --model claude-opus-4-5"
+                          aria-label={`Custom flags for ${agentDef.name}`}
                         />
                         {getAgentFlags(agentDef.id) &&
                           !SAFE_FLAGS_RE.test(getAgentFlags(agentDef.id)) && (
@@ -162,6 +173,7 @@ export function AgentTab({ draft, onChange }: TabProps): React.JSX.Element {
                 value={draft.contextFile ?? ''}
                 onChange={(e) => onChange({ contextFile: e.target.value })}
                 placeholder="AGENTS.md"
+                aria-label="Context file"
               />
             </div>
           </div>

@@ -419,6 +419,7 @@ export function HomeScreen({
                           className={`card-refresh${refreshingId === p.id ? ' spinning' : ''}`}
                           onClick={(e) => void handleRefreshMeta(e, p.id)}
                           title="Refresh project metadata"
+                          aria-label="Refresh project metadata"
                           type="button"
                         >
                           <RefreshCw size={14} />

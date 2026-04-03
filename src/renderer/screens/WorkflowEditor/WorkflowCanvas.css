@@ -130,3 +130,16 @@
     opacity: 0;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .wf-edge-active {
+    animation: none !important;
+  }
+  .wf-edge-loop {
+    animation: none !important;
+  }
+  .wf-edge-particle,
+  .wf-edge-particle-2 {
+    animation: none !important;
+  }
+}

@@ -54,13 +54,23 @@ export function IdentityTab({ draft, onChange }: TabProps): React.JSX.Element {
             {/* Accent color */}
             <div>
               <div className="picker-label">Accent Color</div>
-              <div className="color-swatches">
+              <div className="color-swatches" role="radiogroup" aria-label="Accent color">
                 {COLORS.map((color) => (
                   <div
                     key={color}
                     className={`swatch${currentColor === color ? ' selected' : ''}`}
                     style={{ background: color }}
                     onClick={() => setColor(color)}
+                    role="radio"
+                    tabIndex={0}
+                    aria-label={color}
+                    aria-checked={currentColor === color}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setColor(color)
+                      }
+                    }}
                   />
                 ))}
               </div>
@@ -69,12 +79,22 @@ export function IdentityTab({ draft, onChange }: TabProps): React.JSX.Element {
             {/* Icon */}
             <div>
               <div className="picker-label">Icon</div>
-              <div className="icon-row">
+              <div className="icon-row" role="radiogroup" aria-label="Project icon">
                 {ICONS.map((icon) => (
                   <div
                     key={icon}
                     className={`icon-opt${currentIcon === icon ? ' selected' : ''}`}
                     onClick={() => setIcon(icon)}
+                    role="radio"
+                    tabIndex={0}
+                    aria-label={`Icon: ${icon}`}
+                    aria-checked={currentIcon === icon}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setIcon(icon)
+                      }
+                    }}
                   >
                     {icon}
                   </div>

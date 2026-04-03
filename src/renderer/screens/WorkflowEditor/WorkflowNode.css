@@ -430,3 +430,18 @@
 .wf-node-dropdown-item.danger:hover {
   background: var(--red-dim);
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .wf-node-inner.running::after {
+    animation: none !important;
+  }
+  .wf-node-inner.done {
+    animation: none !important;
+  }
+  .wf-node-inner.error {
+    animation: none !important;
+  }
+  .wf-node-inner.running .wf-node-type-icon {
+    animation: none !important;
+  }
+}
