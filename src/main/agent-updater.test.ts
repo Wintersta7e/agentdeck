@@ -283,7 +283,7 @@ describe('updateAgent', () => {
       { stdout: '2.3.0\n' }, // resolve latest
       { stdout: 'added 1 package\n' }, // update cmd
       { stdout: '', err: new Error('not found') }, // binary check: GONE!
-      { stdout: '', err: new Error('file not found') }, // bin link repair: fails
+      { stdout: '', err: new Error('src missing') }, // bin link repair (node -e): fails
       { stdout: 'added 1 package\n' }, // rollback install
       { stdout: '/usr/local/bin/claude\n' }, // rollback binary check: recovered
     )
@@ -296,6 +296,27 @@ describe('updateAgent', () => {
     expect(result.message).toContain('Rolled back to v2.1.0')
   })
 
+  it('repairs bin link after rollback when both install and rollback lose symlink', async () => {
+    enqueue(
+      { stdout: '2.1.0\n' }, // pre-flight: version (had v2.1.0)
+      { stdout: '2.3.0\n' }, // pre-flight: latest
+      { stdout: '2.3.0\n' }, // resolve latest
+      { stdout: 'added 1 package\n' }, // update cmd
+      { stdout: '', err: new Error('not found') }, // binary check: GONE!
+      { stdout: '', err: new Error('src missing') }, // bin link repair: fails (0.118.0 broken)
+      { stdout: 'added 1 package\n' }, // rollback install
+      { stdout: '', err: new Error('not found') }, // rollback binary check: STILL GONE!
+      { stdout: 'repaired\n' }, // post-rollback bin link repair: succeeds (0.117.0 has codex.js)
+      { stdout: '/usr/local/bin/claude\n' }, // post-rollback binary verify: found
+    )
+
+    const result = await updateAgent('claude-code')
+
+    expect(result.success).toBe(false)
+    expect(result.newVersion).toBe('2.1.0')
+    expect(result.message).toContain('Rolled back to v2.1.0')
+  })
+
   it('reports unrecoverable deletion when repair and rollback both fail', async () => {
     enqueue(
       { stdout: '2.1.0\n' }, // pre-flight: version
@@ -303,8 +324,8 @@ describe('updateAgent', () => {
       { stdout: '2.3.0\n' }, // resolve latest
       { stdout: 'added 1 package\n' }, // update cmd
       { stdout: '', err: new Error('not found') }, // binary check: GONE!
-      { stdout: '', err: new Error('file not found') }, // bin link repair: fails
-      { stdout: '', err: new Error('npm error') }, // rollback also fails
+      { stdout: '', err: new Error('src missing') }, // bin link repair: fails
+      { stdout: '', err: new Error('npm error') }, // rollback install also fails
     )
 
     const result = await updateAgent('claude-code')

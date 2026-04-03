@@ -20,7 +20,10 @@ function detectFocusedPanel(): FocusedPanel {
 }
 
 export function useAmbientState(): AmbientState {
-  const sessions = useAppStore((s) => s.sessions)
+  // Narrow selector: only re-render when the running-session count changes
+  const activeSessionCount = useAppStore(
+    (s) => Object.values(s.sessions).filter((sess) => sess.status === 'running').length,
+  )
 
   const [focusedPanel, setFocusedPanel] = useState<FocusedPanel>('none')
 
@@ -35,15 +38,13 @@ export function useAmbientState(): AmbientState {
   }, [])
 
   const derived = useMemo(() => {
-    const activeSessionCount = Object.values(sessions).filter((s) => s.status === 'running').length
-
     let veinSpeed: number
     if (activeSessionCount === 0) veinSpeed = 0.3
     else if (activeSessionCount === 1) veinSpeed = 0.6
     else veinSpeed = 0.85
 
     return { activeSessionCount, veinSpeed }
-  }, [sessions])
+  }, [activeSessionCount])
 
   const isIdle = derived.activeSessionCount === 0 && focusedPanel !== 'terminal'
 

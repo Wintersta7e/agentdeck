@@ -1,4 +1,4 @@
-import { app, BrowserWindow, safeStorage, screen } from 'electron'
+import { app, BrowserWindow, ipcMain, safeStorage, screen } from 'electron'
 import { join } from 'path'
 import { createPtyManager, type PtyManager } from './pty-manager'
 import { createProjectStore, type AppStore } from './project-store'
@@ -8,6 +8,11 @@ import { initLogger, createLogger, closeLogger } from './logger'
 import { seedWorkflows } from './workflow-seeds'
 import { createWorkflowEngine } from './workflow-engine'
 import type { WorkflowEngine } from './workflow-engine'
+import { createWorktreeManager, type WorktreeManager } from './worktree-manager'
+import { createWslGitPort } from './git-port'
+import { createCostTracker, type CostTracker } from './cost-tracker'
+import { SAFE_ID_RE } from './validation'
+import { createClaudeAdapter, createCodexAdapter } from './log-adapters'
 import {
   registerPtyHandlers,
   registerWindowHandlers,
@@ -16,6 +21,7 @@ import {
   registerWorkflowHandlers,
   registerUtilHandlers,
   registerSkillHandlers,
+  registerWorktreeHandlers,
 } from './ipc'
 
 const log = createLogger('app')
@@ -24,6 +30,8 @@ let mainWindow: BrowserWindow | null = null
 let ptyManager: PtyManager | null = null
 let workflowEngine: WorkflowEngine | null = null
 let appStore: AppStore | null = null
+let worktreeManager: WorktreeManager | null = null
+let costTracker: CostTracker | null = null
 
 // --- Crash cleanup handlers (REL-4) ---
 process.on('uncaughtException', (err) => {
@@ -155,6 +163,7 @@ function registerIpcHandlers(store: AppStore): void {
     },
   )
   registerUtilHandlers()
+  registerWorktreeHandlers(() => worktreeManager)
 }
 
 app
@@ -167,10 +176,91 @@ app
     seedTemplates(appStore)
     seedRoles(appStore)
     await seedWorkflows(appStore)
+
+    const gitPort = createWslGitPort()
+    // Resolve WSL $HOME for worktree storage (can't use ~ — Node treats it literally)
+    let wslHome: string | null = null
+    try {
+      const { execFile: execFileCb } = await import('child_process')
+      wslHome = await new Promise<string>((resolve, reject) => {
+        execFileCb(
+          'wsl.exe',
+          // R5-02: Use '--' separator consistent with all other WSL calls
+          ['--', 'bash', '-lc', 'echo $HOME'],
+          { timeout: 5000, encoding: 'utf-8' },
+          (err, stdout) => {
+            if (err) reject(err)
+            else resolve(stdout.trim())
+          },
+        )
+      })
+    } catch (err) {
+      log.warn('Could not resolve WSL $HOME — worktree isolation disabled', {
+        err: String(err),
+      })
+    }
+
+    const registryDir = join(app.getPath('userData'), 'worktree-registry')
+    if (wslHome) {
+      const wslWorktreeDir = `${wslHome}/.agentdeck/worktrees`
+      worktreeManager = await createWorktreeManager(
+        gitPort,
+        (id) => {
+          const projects = appStore?.get('projects') ?? []
+          return projects.find((p) => p.id === id)?.path
+        },
+        registryDir,
+        wslWorktreeDir,
+      )
+    } else {
+      log.warn('Worktree manager not created — WSL $HOME unknown')
+    }
+
     registerIpcHandlers(appStore)
 
     createWindow()
     log.info('Window created')
+
+    if (mainWindow) {
+      costTracker = createCostTracker(mainWindow, [createClaudeAdapter(), createCodexAdapter()])
+    }
+
+    ipcMain.handle(
+      'cost:bind',
+      (
+        _,
+        sessionId: string,
+        opts: { agent: string; projectPath: string; cwd: string; spawnAt: number },
+      ) => {
+        // R3-01: Validate sessionId with SAFE_ID_RE consistent with all other IPC handlers
+        if (typeof sessionId !== 'string' || !SAFE_ID_RE.test(sessionId)) {
+          throw new Error('cost:bind requires a valid sessionId')
+        }
+        if (!opts || typeof opts !== 'object') {
+          throw new Error('cost:bind requires an opts object')
+        }
+        if (typeof opts.agent !== 'string' || !opts.agent) {
+          throw new Error('cost:bind requires a non-empty agent')
+        }
+        if (typeof opts.cwd !== 'string' || !opts.cwd) {
+          throw new Error('cost:bind requires a non-empty cwd')
+        }
+        // R2-23: Validate spawnAt and projectPath types
+        if (typeof opts.spawnAt !== 'number' || !Number.isFinite(opts.spawnAt)) {
+          throw new Error('cost:bind requires a finite numeric spawnAt')
+        }
+        if (opts.projectPath !== undefined && typeof opts.projectPath !== 'string') {
+          throw new Error('cost:bind requires a string projectPath')
+        }
+        costTracker?.bindSession(sessionId, opts)
+      },
+    )
+    ipcMain.handle('cost:unbind', (_, sessionId: string) => {
+      if (typeof sessionId !== 'string' || !SAFE_ID_RE.test(sessionId)) {
+        throw new Error('cost:unbind requires a valid sessionId')
+      }
+      costTracker?.unbindSession(sessionId)
+    })
 
     // Warn renderer if encryption is unavailable (secrets stored as plaintext)
     if (!safeStorage.isEncryptionAvailable() && mainWindow) {
@@ -179,6 +269,11 @@ app
         mainWindow?.webContents.send('security:encryption-unavailable')
       })
     }
+
+    // Prune orphaned worktrees from previous sessions (fire-and-forget).
+    worktreeManager?.pruneOrphans().catch((err: unknown) => {
+      log.warn('Worktree prune failed', { err: String(err) })
+    })
 
     // Check WSL2 availability asynchronously after the window is shown,
     // then push the result to the renderer via IPC.
@@ -202,6 +297,7 @@ app
 
 app.on('before-quit', () => {
   log.info('App quitting')
+  costTracker?.destroy()
   workflowEngine?.stopAll()
   ptyManager?.killAll()
   closeLogger()

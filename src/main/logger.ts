@@ -51,7 +51,14 @@ export function initLogger(): void {
 function write(level: LogLevel, mod: string, message: string, data?: unknown): void {
   if (level === 'DEBUG' && !DEBUG_ENABLED) return
 
-  const extra = data !== undefined ? ' ' + JSON.stringify(data) : ''
+  let extra = ''
+  if (data !== undefined) {
+    try {
+      extra = ' ' + JSON.stringify(data)
+    } catch {
+      extra = ' [unserializable]'
+    }
+  }
   const line = `[${timestamp()}] [${level}]${level.length < 5 ? ' ' : ''} [${mod}] ${message}${extra}\n`
 
   stream?.write(line)

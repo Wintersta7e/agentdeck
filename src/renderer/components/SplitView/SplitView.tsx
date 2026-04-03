@@ -114,6 +114,8 @@ export function SplitView(): React.JSX.Element {
       unsubs.forEach((u) => u())
       Object.values(pulseTimers.current).forEach(clearTimeout)
       pulseTimers.current = {}
+      // BUG-8: Reset pulseState on cleanup to prevent stale pulse on layout change
+      setPulseState({})
     }
   }, [paneLayout, paneSessions])
 

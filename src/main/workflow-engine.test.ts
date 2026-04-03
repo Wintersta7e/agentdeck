@@ -1,12 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import {
-  stripAnsi,
-  shellQuote,
-  topoSort,
-  validateWorkflow,
-  AGENT_IDLE_TIMEOUT,
-} from './workflow-engine'
-import type { WorkflowNode } from '../shared/types'
+import { stripAnsi, shellQuote, topoSort, validateWorkflow } from './workflow-engine'
+
 import { makeWorkflowNode, makeWorkflowEdge, makeWorkflow, resetCounter } from '../__test__/helpers'
 
 beforeEach(() => {
@@ -726,33 +720,5 @@ describe('validateWorkflow', () => {
       edges: [],
     })
     expect(result.errors.length).toBeGreaterThanOrEqual(2)
-  })
-})
-
-// ── AGENT_IDLE_TIMEOUT ────────────────────────────────────
-
-describe('AGENT_IDLE_TIMEOUT', () => {
-  it('is exported and equals 300000 (5 minutes)', () => {
-    expect(AGENT_IDLE_TIMEOUT).toBe(300_000)
-  })
-})
-
-// ── continueOnError type ──────────────────────────────────
-
-describe('WorkflowNode continueOnError', () => {
-  // T1: Verify the type accepts continueOnError flag
-  it('accepts continueOnError as optional boolean on WorkflowNode', () => {
-    const node: WorkflowNode = makeWorkflowNode({
-      id: 'n-coe',
-      type: 'shell',
-      command: 'npm test',
-      continueOnError: true,
-    })
-    expect(node.continueOnError).toBe(true)
-  })
-
-  it('defaults continueOnError to undefined when not set', () => {
-    const node: WorkflowNode = makeWorkflowNode({ id: 'n-default' })
-    expect(node.continueOnError).toBeUndefined()
   })
 })

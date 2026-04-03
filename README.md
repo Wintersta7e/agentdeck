@@ -6,7 +6,7 @@ A desktop terminal manager for WSL AI coding agents. Launch, manage, and orchest
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)
 ![License: Elastic-2.0](https://img.shields.io/badge/License-Elastic--2.0-blue.svg)
-![Tests](https://img.shields.io/badge/Tests-499_passing-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-610_passing-brightgreen)
 ![CI](https://github.com/Wintersta7e/agentdeck/actions/workflows/ci.yml/badge.svg?branch=main)
 
 ## Why AgentDeck?
@@ -28,6 +28,8 @@ AgentDeck provides a unified desktop environment for working with AI coding agen
 - **Project Management** - Configure projects with paths, agents, prompt templates, and stack badges
 - **Split Terminal Views** - 1/2/3 pane layouts with independent sessions
 - **Agentic Workflows** - Visual node-graph editor with conditions, loops, variables, and execution history
+- **Cost/Token Tracking** - Live per-session cost and token usage for Claude Code and Codex
+- **Git Worktree Isolation** - Per-session git branches with Keep/Discard review flow
 - **8 Themes** - 4 dark + 4 light themes with smooth view transitions
 - **Command Palette** - Quick access to projects, sessions, templates, and tools
 
@@ -75,6 +77,21 @@ AgentDeck provides a unified desktop environment for working with AI coding agen
 - **Theme Switcher** - Live-preview themes before applying
 - **Agent Visibility** - Toggle which agents appear on the home screen
 - **Keyboard Shortcuts** - Full shortcut reference (Ctrl+/)
+
+### Cost/Token Tracking
+
+- **Live Cost Badge** - Per-session USD cost and token count in the pane topbar
+- **Claude Code Support** - Parses JSONL session logs with cache-aware pricing (write 1.25x, read 0.1x)
+- **Codex CLI Support** - Parses JSONL rollout logs with per-model pricing maps
+- **Tooltip Breakdown** - Hover for input, output, cache read, and cache write token counts
+- **Automatic Discovery** - Finds active log files via WSL polling, no configuration needed
+
+### Git Worktree Isolation
+
+- **Per-Session Branches** - Each agent session gets its own git worktree and branch
+- **Branch Badge** - Active branch shown in pane topbar
+- **Review Flow** - Inspect changes on close, then Keep (merge) / Discard / Cancel
+- **Automatic Cleanup** - Orphaned worktrees pruned on startup
 
 ### Agent Updates
 
@@ -133,7 +150,7 @@ npm run dev
 # Build for production (validates TypeScript)
 npm run build
 
-# Run tests (499 tests)
+# Run tests (610 tests)
 npm test
 
 # Lint code (zero-warning policy)
@@ -158,13 +175,17 @@ Output: `dist/AgentDeck-{version}-portable.exe` (~89 MB)
 src/
 ├── main/                    # Electron main process
 │   ├── index.ts             # App lifecycle, IPC handler registration
-│   ├── ipc/                 # 6 IPC modules (pty, window, agents, projects, workflows, utils)
+│   ├── ipc/                 # 8 IPC modules (pty, window, agents, projects, workflows, skills, worktree, utils)
 │   ├── pty-manager.ts       # node-pty: spawn, resize, kill, activity parsing
 │   ├── workflow-engine.ts   # Edge-activation scheduler DAG execution
 │   ├── edge-scheduler.ts    # Pure scheduler: ready queue, branching, skip, loop reset
 │   ├── variable-substitution.ts # {{VAR}} replacement in workflow nodes
 │   ├── workflow-run-store.ts # Execution history persistence
 │   ├── agent-updater.ts     # Agent version checking and updating via WSL
+│   ├── log-adapters.ts      # Claude + Codex JSONL cost/token parsing
+│   ├── cost-tracker.ts      # Log file discovery, tailing, and IPC push
+│   ├── git-port.ts          # Git command abstraction (WSL)
+│   ├── worktree-manager.ts  # Per-session git worktree lifecycle
 │   └── project-store.ts     # electron-store: CRUD + safeStorage for API keys
 ├── preload/
 │   └── index.ts             # contextBridge: safe IPC surface (window.agentDeck)
@@ -193,7 +214,7 @@ src/
 | [node-pty](https://github.com/microsoft/node-pty) | Pseudo-terminal (WSL sessions) |
 | [Zustand](https://zustand-demo.pmnd.rs) | State management |
 | [React Flow](https://reactflow.dev) | Visual workflow node editor |
-| [Vitest 4](https://vitest.dev) | Testing framework (499 tests) |
+| [Vitest 4](https://vitest.dev) | Testing framework (610 tests) |
 | [ESLint 9](https://eslint.org) | Linting (flat config, zero-warning policy) |
 
 ## Documentation

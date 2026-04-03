@@ -178,6 +178,7 @@ function PaletteInner({
   const setTheme = useAppStore((s) => s.setTheme)
   const visibleAgents = useAppStore((s) => s.visibleAgents)
   const setVisibleAgents = useAppStore((s) => s.setVisibleAgents)
+  const activeSessionId = useAppStore((s) => s.activeSessionId)
   const setWorkflows = useAppStore((s) => s.setWorkflows)
   const openWorkflow = useAppStore((s) => s.openWorkflow)
 
@@ -334,8 +335,9 @@ function PaletteInner({
             return { id: parts[0] ?? '', projectId: parts[1] ?? '' }
           })
         : []
-      const activeId = useAppStore.getState().activeSessionId
-      const activeSess = activeId ? sessEntries.find((s) => s.id === activeId) : undefined
+      const activeSess = activeSessionId
+        ? sessEntries.find((s) => s.id === activeSessionId)
+        : undefined
       if (activeSess?.projectId) {
         const p = projects.find((proj) => proj.id === activeSess.projectId)
         if (p) return p
@@ -401,7 +403,7 @@ function PaletteInner({
     })
 
     return items
-  }, [sessionSnapshot, projects, templates])
+  }, [sessionSnapshot, projects, templates, activeSessionId])
 
   // Filter items by scope and query
   const filteredItems: PaletteItem[] = useMemo(() => {

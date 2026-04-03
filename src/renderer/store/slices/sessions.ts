@@ -20,21 +20,46 @@ export interface SessionsSlice {
   activityFeeds: Record<string, ActivityEvent[]>
   addActivityEvent: (sessionId: string, event: ActivityEvent) => void
   clearActivityFeed: (sessionId: string) => void
+
+  // Usage tracking (per-session)
+  sessionUsage: Record<
+    string,
+    {
+      inputTokens: number
+      outputTokens: number
+      cacheReadTokens: number
+      cacheWriteTokens: number
+      totalCostUsd: number
+    }
+  >
+  setSessionUsage: (
+    sessionId: string,
+    usage: {
+      inputTokens: number
+      outputTokens: number
+      cacheReadTokens: number
+      cacheWriteTokens: number
+      totalCostUsd: number
+    },
+  ) => void
 }
 
 export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> = (set, get) => ({
   sessions: {},
   activeSessionId: null,
+  sessionUsage: {},
 
   addSession: (sessionId, projectId, overrides) =>
     set((state) => {
       const paneSessions = [...state.paneSessions]
       // Place new session in the focused pane so it's always visible
-      const targetPane = state.focusedPane
+      const targetPane = Math.min(state.focusedPane, 2) // ARCH-11: Cap at max 3 panes
       while (paneSessions.length <= targetPane) {
         paneSessions.push('')
       }
       paneSessions[targetPane] = sessionId
+      // ARCH-11: Cap paneSessions to max 3 entries to prevent unbounded growth
+      paneSessions.length = Math.min(paneSessions.length, 3)
       const session: Session = {
         id: sessionId,
         projectId,
@@ -85,6 +110,7 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
     set((state) => {
       const { [sessionId]: _, ...rest } = state.sessions
       const { [sessionId]: _feed, ...remainingFeeds } = state.activityFeeds
+      const { [sessionId]: _usage, ...remainingUsage } = state.sessionUsage
       const remainingIds = Object.keys(rest)
       // Clear removed session from pane slots, then compact left so pane 0 always
       // has a session if any exist (prevents empty pane with sessions in hidden slots)
@@ -100,6 +126,7 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
       return {
         sessions: rest,
         activityFeeds: remainingFeeds,
+        sessionUsage: remainingUsage,
         activeSessionId: state.activeSessionId === sessionId ? newActive : state.activeSessionId,
         currentView:
           remainingIds.length === 0
@@ -129,6 +156,8 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
       // Remove old session
       const { [oldSessionId]: _, ...rest } = s.sessions
       const { [oldSessionId]: _feed, ...remainingFeeds } = s.activityFeeds
+      // LEAK-13: Clean up sessionUsage for the old session
+      const { [oldSessionId]: _usage, ...remainingUsage } = s.sessionUsage
 
       // Find which pane slot the old session occupies (read from live state)
       const paneIndex = s.paneSessions.indexOf(oldSessionId)
@@ -152,6 +181,7 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
           },
         },
         activityFeeds: remainingFeeds,
+        sessionUsage: remainingUsage,
         activeSessionId: freshId,
         paneSessions,
       }
@@ -164,6 +194,10 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
     const { sessions } = get()
     return Object.values(sessions).find((s) => s.projectId === projectId)
   },
+
+  // Usage tracking
+  setSessionUsage: (sessionId, usage) =>
+    set((s) => ({ sessionUsage: { ...s.sessionUsage, [sessionId]: usage } })),
 
   // Activity Feed
   activityFeeds: {},

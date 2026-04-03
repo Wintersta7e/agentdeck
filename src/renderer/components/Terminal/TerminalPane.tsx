@@ -98,10 +98,17 @@ export function TerminalPane({
   const fitCallbacksRef = useRef<FitCallbacks | null>(null)
   // Write batching: coalesce PTY data chunks into one write per animation frame.
   // Prevents scroll guard race conditions during rapid agent output bursts.
+  // LEAK-10: Track copy flash timer so it can be cancelled on unmount
+  const copyFlashTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const writeBufferRef = useRef<string[]>([])
   const writeRafRef = useRef(0)
   const setSessionStatus = useAppStore((s) => s.setSessionStatus)
   const removeSession = useAppStore((s) => s.removeSession)
+  const setWorktreePath = useAppStore((s) => s.setWorktreePath)
+  const clearWorktreePath = useAppStore((s) => s.clearWorktreePath)
+  // Look up projectId from session (stable per sessionId lifetime)
+  const projectId = useAppStore((s) => s.sessions[sessionId]?.projectId ?? '')
+  const projectIdRef = useRef(projectId)
 
   /**
    * Schedule a single coalesced fit in the next animation frame.
@@ -142,6 +149,7 @@ export function TerminalPane({
     let term: Terminal
     let fit: FitAddon
     let webglAddon: WebglAddon | null = null
+    let unicode11Addon: Unicode11Addon | null = null
     let search: SearchAddon | null = null
     let isReattached = false
     // M12: StrictMode double-spawn protection
@@ -149,6 +157,8 @@ export function TerminalPane({
     // Capture write buffer ref for cleanup (avoids react-hooks/exhaustive-deps warning).
     // The array reference stays stable — we push/splice in place, never reassign.
     const writeBuffer = writeBufferRef.current
+    // Capture projectId for cleanup (CDX-2 worktree release on implicit exit)
+    const capturedProjectId = projectIdRef.current
 
     // Prevent onData from writing before the visibility effect's rAF completes
     // fit+flush. Without this, visibleRef starts as true (from useRef init) and
@@ -228,7 +238,8 @@ export function TerminalPane({
             .writeText(term.getSelection())
             .then(() => {
               setCopyFlash(true)
-              setTimeout(() => setCopyFlash(false), 1200)
+              clearTimeout(copyFlashTimerRef.current)
+              copyFlashTimerRef.current = setTimeout(() => setCopyFlash(false), 1200)
             })
             .catch((err: unknown) => {
               window.agentDeck.log.send('warn', 'terminal', 'Clipboard copy failed', {
@@ -276,9 +287,10 @@ export function TerminalPane({
       term.open(containerRef.current)
 
       // Enable Unicode 11 for proper emoji & CJK character width
+      // LEAK-11: Store reference so it can be disposed in session-removed path
       try {
-        const unicode11 = new Unicode11Addon()
-        term.loadAddon(unicode11)
+        unicode11Addon = new Unicode11Addon()
+        term.loadAddon(unicode11Addon)
         term.unicode.activeVersion = '11'
       } catch (err: unknown) {
         window.agentDeck.log.send('warn', 'terminal', `Unicode11 addon failed for ${sessionId}`, {
@@ -363,23 +375,76 @@ export function TerminalPane({
 
     // Only spawn on first mount — reattached terminals already have a live PTY
     if (!isReattached) {
-      spawnTimestamp = Date.now()
-      const { cols, rows } = term
-      window.agentDeck.pty
-        .spawn(
-          sessionId,
-          cols,
-          rows,
-          projectPathRef.current,
-          startupRef.current,
-          envRef.current,
-          agentRef.current,
-          agentFlagsRef.current,
-        )
-        .then(() => {
-          if (!cancelled) setSessionStatus(sessionId, 'running')
-        })
-        .catch((err: unknown) => {
+      const doSpawn = async (): Promise<void> => {
+        if (cancelled) return
+
+        // Resolve worktree path for project sessions (bare terminals use projectPath directly)
+        let spawnPath = projectPathRef.current
+        const pid = projectIdRef.current
+        if (pid) {
+          try {
+            const result = await window.agentDeck.worktree.acquire(pid, sessionId)
+            if (cancelled) {
+              // Tab closed while acquire was in-flight — discard the orphaned worktree
+              if (result.isolated) {
+                window.agentDeck.worktree.discard(sessionId).catch((err: unknown) => {
+                  window.agentDeck.log.send('warn', 'terminal', 'Orphan worktree cleanup failed', {
+                    sessionId,
+                    err: String(err),
+                  })
+                })
+              }
+              return
+            }
+            setWorktreePath(sessionId, result)
+            spawnPath = result.path
+          } catch (err: unknown) {
+            if (cancelled) return
+            window.agentDeck.log.send(
+              'error',
+              'terminal',
+              `Worktree acquire failed for ${sessionId}`,
+              { err: String(err) },
+            )
+            try {
+              term.write(
+                '\r\n\x1b[31m Failed to acquire worktree. Falling back to project path.\x1b[0m\r\n',
+              )
+            } catch {
+              /* terminal disposed */
+            }
+            // Fall back to original project path
+          }
+        }
+
+        if (cancelled) return
+        spawnTimestamp = Date.now()
+        const { cols, rows } = term
+        try {
+          await window.agentDeck.pty.spawn(
+            sessionId,
+            cols,
+            rows,
+            spawnPath,
+            startupRef.current,
+            envRef.current,
+            agentRef.current,
+            agentFlagsRef.current,
+          )
+          if (cancelled) return
+          // Bind cost tracking (best-effort, fire-and-forget)
+          window.agentDeck.cost
+            .bind(sessionId, {
+              agent: agentRef.current ?? '',
+              projectPath: projectPathRef.current ?? '',
+              cwd: spawnPath ?? projectPathRef.current ?? '',
+              spawnAt: spawnTimestamp,
+            })
+            .catch(() => {
+              /* cost tracking is best-effort */
+            })
+          setSessionStatus(sessionId, 'running')
+        } catch (err: unknown) {
           if (cancelled) return
           window.agentDeck.log.send('error', 'terminal', `PTY spawn failed for ${sessionId}`, {
             err: String(err),
@@ -390,7 +455,13 @@ export function TerminalPane({
             /* terminal disposed */
           }
           setSessionStatus(sessionId, 'exited')
+        }
+      }
+      doSpawn().catch((err: unknown) => {
+        window.agentDeck.log.send('error', 'terminal', `Spawn sequence failed for ${sessionId}`, {
+          err: String(err),
         })
+      })
     }
 
     // Buffer data received while hidden, batch visible writes per animation frame.
@@ -524,6 +595,8 @@ export function TerminalPane({
       // next mount cycle's scheduleFit is not blocked by a stale true value.
       cancelAnimationFrame(fitRafRef.current)
       fitPendingRef.current = false
+      // LEAK-10: Cancel copy flash timer on unmount
+      clearTimeout(copyFlashTimerRef.current)
 
       // Cancel pending write batch rAF and flush any buffered data into the
       // terminal before caching (rAF won't fire after cleanup, so unflushed
@@ -567,6 +640,40 @@ export function TerminalPane({
         })
       } else {
         // Session removed → dispose everything
+        // CDX-4/CDX-2: Clean up worktree resources for project sessions that exited
+        // without going through the explicit close flow (PTY exits on its own).
+        // Use `keep` instead of `discard` for isolated worktrees to prevent data loss —
+        // the user may have uncommitted work. The explicit close flow prompts Keep/Discard.
+        const wt = useAppStore.getState().worktreePaths[sessionId]
+        if (wt?.isolated) {
+          window.agentDeck.worktree.keep(sessionId).catch((err: unknown) => {
+            window.agentDeck.log.send('warn', 'worktree', 'Implicit exit keep failed', {
+              sessionId,
+              err: String(err),
+            })
+          })
+        } else if (capturedProjectId) {
+          window.agentDeck.worktree
+            .releasePrimary(capturedProjectId, sessionId)
+            .catch((err: unknown) => {
+              window.agentDeck.log.send(
+                'debug',
+                'worktree',
+                'Implicit exit releasePrimary failed',
+                {
+                  sessionId,
+                  err: String(err),
+                },
+              )
+            })
+        }
+        clearWorktreePath(sessionId)
+        window.agentDeck.cost.unbind(sessionId).catch((err: unknown) => {
+          window.agentDeck.log.send('debug', 'cost', 'unbind failed', {
+            sessionId,
+            err: String(err),
+          })
+        })
         try {
           webglAddon?.dispose()
         } catch {
@@ -582,7 +689,7 @@ export function TerminalPane({
         })
       }
     }
-  }, [sessionId, setSessionStatus, removeSession, scheduleFit])
+  }, [sessionId, setSessionStatus, removeSession, scheduleFit, setWorktreePath, clearWorktreePath])
 
   // Clear search decorations when search is dismissed via Ctrl+Shift+F toggle
   // (Escape already clears in the TerminalSearchBar component)
@@ -702,7 +809,8 @@ export function TerminalPane({
               .writeText(term.getSelection())
               .then(() => {
                 setCopyFlash(true)
-                setTimeout(() => setCopyFlash(false), 1200)
+                clearTimeout(copyFlashTimerRef.current)
+                copyFlashTimerRef.current = setTimeout(() => setCopyFlash(false), 1200)
               })
               .catch(() => {})
           }

@@ -112,6 +112,37 @@ declare global {
       security: {
         onEncryptionUnavailable: (cb: () => void) => () => void
       }
+      worktree: {
+        acquire(
+          projectId: string,
+          sessionId: string,
+        ): Promise<{ path: string; isolated: boolean; branch?: string }>
+        inspect(
+          sessionId: string,
+        ): Promise<{ hasChanges: boolean; hasUnmerged: boolean; branch: string }>
+        discard(sessionId: string): Promise<void>
+        keep(sessionId: string): Promise<void>
+        releasePrimary(projectId: string, sessionId: string): Promise<void>
+      }
+      cost: {
+        bind(
+          sessionId: string,
+          opts: { agent: string; projectPath: string; cwd: string; spawnAt: number },
+        ): Promise<void>
+        unbind(sessionId: string): Promise<void>
+        onUpdate(
+          cb: (data: {
+            sessionId: string
+            usage: {
+              inputTokens: number
+              outputTokens: number
+              cacheReadTokens: number
+              cacheWriteTokens: number
+              totalCostUsd: number
+            }
+          }) => void,
+        ): () => void
+      }
       pickFolder: () => Promise<string | null>
       log: {
         send: (level: string, mod: string, message: string, data?: unknown) => Promise<void>

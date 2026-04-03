@@ -39,24 +39,27 @@ const writeLocks = new Map<string, Promise<Workflow>>()
 export async function listWorkflows(): Promise<WorkflowMeta[]> {
   const dir = getWorkflowsDir()
   const files = await fs.promises.readdir(dir)
-  const metas: WorkflowMeta[] = []
-  for (const f of files) {
-    if (!f.endsWith('.json')) continue
-    try {
-      const raw = JSON.parse(await fs.promises.readFile(path.join(dir, f), 'utf-8')) as Workflow
-      const meta: WorkflowMeta = {
-        id: raw.id,
-        name: raw.name,
-        nodeCount: raw.nodes?.length ?? 0,
-        updatedAt: raw.updatedAt,
+  const jsonFiles = files.filter((f) => f.endsWith('.json'))
+  // PERF-11: Read all workflow files concurrently instead of sequentially
+  const results = await Promise.all(
+    jsonFiles.map(async (f) => {
+      try {
+        const raw = JSON.parse(await fs.promises.readFile(path.join(dir, f), 'utf-8')) as Workflow
+        const meta: WorkflowMeta = {
+          id: raw.id,
+          name: raw.name,
+          nodeCount: raw.nodes?.length ?? 0,
+          updatedAt: raw.updatedAt,
+        }
+        if (raw.description !== undefined) meta.description = raw.description
+        return meta
+      } catch (err) {
+        log.warn('Failed to parse workflow file', { file: f, err: String(err) })
+        return null
       }
-      if (raw.description !== undefined) meta.description = raw.description
-      metas.push(meta)
-    } catch (err) {
-      log.warn('Failed to parse workflow file', { file: f, err: String(err) })
-    }
-  }
-  return metas
+    }),
+  )
+  return results.filter((m): m is WorkflowMeta => m !== null)
 }
 
 export async function loadWorkflow(id: string): Promise<Workflow | null> {

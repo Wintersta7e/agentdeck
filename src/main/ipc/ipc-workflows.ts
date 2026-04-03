@@ -12,6 +12,7 @@ import { validateWorkflow, validateRole } from '../../shared/workflow-utils'
 import { toWslPath } from '../wsl-utils'
 import type { WorkflowEngine } from '../workflow-engine'
 import type { Role, Workflow, WorkflowExport } from '../../shared/types'
+import { SAFE_ID_RE } from '../validation'
 
 /**
  * Workflow IPC handlers: CRUD + execution (run, stop, resume) + export/import/duplicate.
@@ -26,15 +27,22 @@ export function registerWorkflowHandlers(
 ): void {
   /* ── Workflow CRUD ──────────────────────────────────────────────── */
   ipcMain.handle('workflows:list', () => listWorkflows())
-  ipcMain.handle('workflows:load', (_, id: string) => loadWorkflow(id))
-  ipcMain.handle('workflows:save', (_, workflow: Workflow) => saveWorkflow(workflow))
+  ipcMain.handle('workflows:load', (_, id: string) => {
+    if (typeof id !== 'string' || !SAFE_ID_RE.test(id)) throw new Error('Invalid workflow ID')
+    return loadWorkflow(id)
+  })
+  ipcMain.handle('workflows:save', (_, workflow: Workflow) => {
+    if (!workflow || typeof workflow !== 'object') throw new Error('Invalid workflow')
+    return saveWorkflow(workflow)
+  })
   ipcMain.handle('workflows:rename', (_, id: string, name: string) => {
-    if (typeof id !== 'string' || !id) throw new Error('Invalid workflow id')
+    if (typeof id !== 'string' || !SAFE_ID_RE.test(id)) throw new Error('Invalid workflow id')
     if (typeof name !== 'string' || !name.trim() || name.length > 200)
       throw new Error('Invalid workflow name')
     return renameWorkflow(id, name)
   })
   ipcMain.handle('workflows:delete', async (_, id: string) => {
+    if (typeof id !== 'string' || !SAFE_ID_RE.test(id)) throw new Error('Invalid workflow id')
     // C6: Stop running workflow before deleting to avoid orphaned PTYs
     getWorkflowEngine()?.stop(id)
     await deleteWorkflow(id)
@@ -173,7 +181,6 @@ export function registerWorkflowHandlers(
   })
 
   /* ── Workflow Run History ──────────────────────────────────────── */
-  const SAFE_ID_RE = /^[a-zA-Z0-9_-]+$/
 
   ipcMain.handle('workflows:listRuns', async (_, workflowId: string) => {
     if (typeof workflowId !== 'string' || !SAFE_ID_RE.test(workflowId)) {
@@ -200,6 +207,10 @@ export function registerWorkflowHandlers(
   ipcMain.handle(
     'workflow:run',
     async (_, workflowId: string, projectPath?: string, variables?: Record<string, string>) => {
+      // R2-05: Validate workflowId before filesystem access
+      if (typeof workflowId !== 'string' || !SAFE_ID_RE.test(workflowId)) {
+        throw new Error('Invalid workflow ID')
+      }
       const workflow = await loadWorkflow(workflowId)
       if (!workflow) throw new Error(`Workflow not found: ${workflowId}`)
       const engine = getWorkflowEngine()
@@ -217,7 +228,7 @@ export function registerWorkflowHandlers(
         if (typeof wslPath !== 'string' || wslPath.length > 1024 || !wslPath.startsWith('/')) {
           throw new Error(`Invalid project path: must be an absolute WSL path`)
         }
-        if (wslPath.includes('..')) {
+        if (/(?:^|\/)\.\.(?:\/|$)/.test(wslPath)) {
           throw new Error(`Invalid project path: path traversal not allowed`)
         }
       }
@@ -243,13 +254,14 @@ export function registerWorkflowHandlers(
   )
 
   ipcMain.handle('workflow:stop', (_, workflowId: string) => {
-    if (typeof workflowId !== 'string' || !workflowId) return
+    // R5-01: Use SAFE_ID_RE consistent with all other handlers
+    if (typeof workflowId !== 'string' || !SAFE_ID_RE.test(workflowId)) return
     getWorkflowEngine()?.stop(workflowId)
   })
 
   ipcMain.handle('workflow:resume', (_, workflowId: string, nodeId: string) => {
-    if (typeof workflowId !== 'string' || !workflowId) return
-    if (typeof nodeId !== 'string' || !nodeId) return
+    if (typeof workflowId !== 'string' || !SAFE_ID_RE.test(workflowId)) return
+    if (typeof nodeId !== 'string' || !SAFE_ID_RE.test(nodeId)) return
     getWorkflowEngine()?.resume(workflowId, nodeId)
   })
 }

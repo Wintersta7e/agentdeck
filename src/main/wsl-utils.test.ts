@@ -2,14 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock child_process before importing module under test
 vi.mock('child_process', () => ({
-  execFileSync: vi.fn(),
   execFile: vi.fn(),
 }))
 
-import { wslPathToWindows, getDefaultDistro } from './wsl-utils'
-import { execFileSync } from 'child_process'
+import { wslPathToWindows } from './wsl-utils'
+import { execFile } from 'child_process'
 
-const mockedExecFileSync = vi.mocked(execFileSync)
+const mockedExecFile = vi.mocked(execFile)
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -55,23 +54,30 @@ describe('wslPathToWindows', () => {
   })
 })
 
-describe('getDefaultDistro', () => {
-  it('parses wsl.exe output for first distro name', () => {
-    // Need fresh module to reset cache — use dynamic import
-    // For now, test the mock behavior
-    mockedExecFileSync.mockReturnValue('Ubuntu-24.04\n' as never)
-    const result = getDefaultDistro()
+describe('getDefaultDistroAsync', () => {
+  it('parses wsl.exe output for first distro name', async () => {
+    vi.resetModules()
+    mockedExecFile.mockImplementation(
+      (_cmd: unknown, _args: unknown, _opts: unknown, cb: unknown) => {
+        ;(cb as (err: null, stdout: string) => void)(null, 'Ubuntu-24.04\n')
+        return undefined as never
+      },
+    )
+    const { getDefaultDistroAsync: freshGet } = await import('./wsl-utils')
+    const result = await freshGet()
     expect(result).toBe('Ubuntu-24.04')
   })
 
-  it('falls back on error', () => {
-    // Reset by calling with error first
-    mockedExecFileSync.mockImplementation(() => {
-      throw new Error('wsl.exe not found')
-    })
-    // The function caches, so this tests the error path only if cache is empty
-    // In practice the first test populates the cache. This is a known limitation.
-    // We verify the function doesn't throw.
-    expect(() => getDefaultDistro()).not.toThrow()
+  it('falls back to "Ubuntu" on error', async () => {
+    vi.resetModules()
+    mockedExecFile.mockImplementation(
+      (_cmd: unknown, _args: unknown, _opts: unknown, cb: unknown) => {
+        ;(cb as (err: Error) => void)(new Error('wsl.exe not found'))
+        return undefined as never
+      },
+    )
+    const { getDefaultDistroAsync: freshGet } = await import('./wsl-utils')
+    const result = await freshGet()
+    expect(result).toBe('Ubuntu')
   })
 })

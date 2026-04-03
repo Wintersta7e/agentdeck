@@ -176,7 +176,10 @@ describe('checkpoint pause/resume', () => {
     await tick()
 
     const outputs = getEvents(sendSpy, 'wf-cp2', 'node:output')
-    expect(outputs.some((e) => String(e.message).includes('unknown checkpoint'))).toBe(true)
+    // COV-12: Use toContainEqual for actionable failure messages
+    expect(outputs).toContainEqual(
+      expect.objectContaining({ message: expect.stringContaining('unknown checkpoint') }),
+    )
   })
 
   it('handles multiple sequential checkpoints', async () => {
@@ -276,6 +279,7 @@ describe('concurrent execution', () => {
     engine.run(wf)
     await tick()
 
+    // MAX_TIER_CONCURRENCY = 5 (defined in workflow-engine.ts)
     expect(mockSpawn).toHaveBeenCalledTimes(5)
 
     // Close the first child — the 6th node should now spawn
@@ -536,6 +540,10 @@ describe('error scenarios', () => {
     const errors = getEvents(sendSpy, 'wf-idle', 'node:error')
     expect(errors).toHaveLength(1)
     expect(String(errors[0]?.message)).toContain('idle')
+
+    // Verify workflow-level terminal event was emitted (stopped due to node failure)
+    const workflowStopped = getEvents(sendSpy, 'wf-idle', 'workflow:stopped')
+    expect(workflowStopped).toHaveLength(1)
   })
 
   it('kills agent after absolute timeout (node.timeout)', async () => {
@@ -806,7 +814,9 @@ describe('lifecycle events', () => {
     await tick()
 
     const outputs = getEvents(sendSpy, 'wf-lc4', 'node:output')
-    expect(outputs.some((e) => String(e.message).includes('hello world'))).toBe(true)
+    expect(outputs).toContainEqual(
+      expect.objectContaining({ message: expect.stringContaining('hello world') }),
+    )
   })
 
   it('runs shell node successfully', async () => {
@@ -897,7 +907,7 @@ describe('condition node with exitCode branching', () => {
     // False branch should be skipped
     expect(hasEvent(sendSpy, 'wf-cond1', 'node:skipped')).toBe(true)
     const skipped = getEvents(sendSpy, 'wf-cond1', 'node:skipped')
-    expect(skipped.some((e) => e.nodeId === 'false-branch')).toBe(true)
+    expect(skipped).toContainEqual(expect.objectContaining({ nodeId: 'false-branch' }))
 
     expect(hasEvent(sendSpy, 'wf-cond1', 'workflow:done')).toBe(true)
   })
@@ -963,7 +973,7 @@ describe('condition node with exitCode branching', () => {
 
     // True branch should be skipped
     const skipped = getEvents(sendSpy, 'wf-cond2', 'node:skipped')
-    expect(skipped.some((e) => e.nodeId === 'true-branch')).toBe(true)
+    expect(skipped).toContainEqual(expect.objectContaining({ nodeId: 'true-branch' }))
 
     expect(hasEvent(sendSpy, 'wf-cond2', 'workflow:done')).toBe(true)
   })

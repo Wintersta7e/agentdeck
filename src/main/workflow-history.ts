@@ -46,12 +46,18 @@ export function createRunRecorder(
     nodes: [],
   }
 
+  let finalized = false
+
   return {
     recordNode(entry: WorkflowNodeRun): void {
       run.nodes.push(entry)
     },
 
     finalize(status: WorkflowStatus): void {
+      // REL-1: Guard against double finalization (normal completion + error handler race)
+      if (finalized) return
+      finalized = true
+
       run.status = status
       run.finishedAt = Date.now()
       run.durationMs = run.finishedAt - run.startedAt

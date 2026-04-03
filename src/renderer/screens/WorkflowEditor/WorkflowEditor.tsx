@@ -94,7 +94,18 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
 
   useEffect(() => {
     return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current)
+        saveTimerRef.current = null
+        // Flush pending save on unmount (fire-and-forget)
+        if (latestWorkflowRef.current) {
+          window.agentDeck.workflows.save(latestWorkflowRef.current).catch((err: unknown) => {
+            window.agentDeck.log.send('error', 'workflow-editor', 'Unmount flush failed', {
+              err: String(err),
+            })
+          })
+        }
+      }
     }
   }, [])
 

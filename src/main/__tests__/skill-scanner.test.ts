@@ -5,6 +5,7 @@ import {
   parseFrontmatter,
   invalidateAllCaches,
   scanSkillDirectory,
+  getProjectSkills,
 } from '../skill-scanner'
 
 vi.mock('child_process', () => ({
@@ -259,16 +260,32 @@ describe('parseFrontmatter', () => {
 // ── Cache helpers ──────────────────────────────────────────────────
 
 describe('invalidateAllCaches', () => {
-  it('resets state without errors', () => {
-    // Should not throw even when caches are already empty
-    expect(() => invalidateAllCaches()).not.toThrow()
-  })
+  it('forces a fresh WSL call after invalidation', async () => {
+    const output = [
+      '---SKILL-BLOCK---',
+      '/home/user/project/.agents/skills/deploy/SKILL.md',
+      'deploy',
+      '---',
+      'name: deploy',
+      'description: Deploy to prod',
+      '---',
+    ].join('\n')
 
-  it('can be called multiple times', () => {
+    mockWslOutput(output)
+
+    // First call populates the project cache
+    await getProjectSkills('/home/user/project', 'Ubuntu')
+    const callsAfterFirst = vi.mocked(cp.execFile).mock.calls.length
+
+    // Second call should hit the cache — no new execFile call
+    await getProjectSkills('/home/user/project', 'Ubuntu')
+    expect(vi.mocked(cp.execFile).mock.calls.length).toBe(callsAfterFirst)
+
+    // Invalidate and call again — must trigger a fresh WSL call
     invalidateAllCaches()
-    invalidateAllCaches()
-    invalidateAllCaches()
-    // No error means success
+    mockWslOutput(output)
+    await getProjectSkills('/home/user/project', 'Ubuntu')
+    expect(vi.mocked(cp.execFile).mock.calls.length).toBeGreaterThan(callsAfterFirst)
   })
 })
 

@@ -22,6 +22,13 @@ export function registerProjectHandlers(
   getStore?: (() => AppStore | null) | undefined,
 ): void {
   ipcMain.handle('projects:detectStack', async (_, p: string, distro?: string) => {
+    // R6-02: Validate path and distro inputs
+    if (typeof p !== 'string' || !p || p.length > 1024) {
+      throw new Error('projects:detectStack requires a valid path')
+    }
+    if (distro !== undefined && typeof distro !== 'string') {
+      throw new Error('projects:detectStack requires a string distro')
+    }
     const resolvedDistro = distro || (await getDefaultDistroAsync())
     return detectStack(p, resolvedDistro)
   })
@@ -31,8 +38,20 @@ export function registerProjectHandlers(
   })
 
   ipcMain.handle('projects:readFile', async (_event, projectPath: string, filename: string) => {
+    if (typeof projectPath !== 'string' || !projectPath) {
+      throw new Error('projects:readFile requires a non-empty projectPath')
+    }
+    // SEC-34: Normalize to forward slashes before traversal check to cover Windows backslash sequences
+    const normalizedPath = projectPath.replace(/\\/g, '/')
+    if (/(?:^|\/)\.\.(?:\/|$)/.test(normalizedPath)) {
+      throw new Error('projects:readFile rejects path traversal in projectPath')
+    }
+    // R6-01: Validate filename type before allowlist check
+    if (typeof filename !== 'string' || !filename) {
+      throw new Error('projects:readFile requires a non-empty filename')
+    }
     if (!ALLOWED_FILES.has(filename)) {
-      throw new Error(`File not permitted: ${filename}`)
+      throw new Error('File not permitted')
     }
     try {
       // Determine the Windows-readable path
@@ -91,8 +110,9 @@ export function registerProjectHandlers(
 
   /* ── Project Metadata Refresh ──────────────────────────────────── */
   ipcMain.handle('projects:refreshMeta', async (_, projectId: string) => {
-    if (typeof projectId !== 'string' || !projectId) {
-      throw new Error('projects:refreshMeta requires a projectId string')
+    // R4-07: Validate with SAFE_ID_RE consistent with all other handlers
+    if (typeof projectId !== 'string' || !/^[a-zA-Z0-9_-]+$/.test(projectId)) {
+      throw new Error('projects:refreshMeta requires a valid projectId')
     }
 
     const store = getStore?.()

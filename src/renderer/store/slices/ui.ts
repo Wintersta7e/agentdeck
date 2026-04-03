@@ -63,9 +63,17 @@ export interface UiSlice {
   // Theme
   theme: string
   setTheme: (name: string) => void
+
+  // Worktree isolation paths (per-session)
+  worktreePaths: Record<string, { path: string; isolated: boolean; branch?: string | undefined }>
+  setWorktreePath: (
+    sessionId: string,
+    result: { path: string; isolated: boolean; branch?: string | undefined },
+  ) => void
+  clearWorktreePath: (sessionId: string) => void
 }
 
-export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set) => ({
+export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get) => ({
   currentView: 'home',
   setCurrentView: (view) => set({ currentView: view }),
 
@@ -169,11 +177,8 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set) => (
   wfLogPanelWidth: 320,
 
   toggleSidebar: () => {
-    let next = false
-    set((state) => {
-      next = !state.sidebarOpen
-      return { sidebarOpen: next }
-    })
+    set((state) => ({ sidebarOpen: !state.sidebarOpen }))
+    const next = get().sidebarOpen
     window.agentDeck.layout.set({ sidebarOpen: next }).catch((err: unknown) => {
       window.agentDeck.log.send('debug', 'layout', 'Layout persist failed', { err: String(err) })
     })
@@ -187,15 +192,13 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set) => (
   },
 
   toggleSidebarSection: (key) => {
-    let sections: UiSlice['sidebarSections'] | undefined
-    set((state) => {
-      sections = { ...state.sidebarSections, [key]: !state.sidebarSections[key] }
-      return { sidebarSections: sections }
+    set((state) => ({
+      sidebarSections: { ...state.sidebarSections, [key]: !state.sidebarSections[key] },
+    }))
+    const sections = get().sidebarSections
+    window.agentDeck.layout.set({ sidebarSections: sections }).catch((err: unknown) => {
+      window.agentDeck.log.send('debug', 'layout', 'Layout persist failed', { err: String(err) })
     })
-    if (sections)
-      window.agentDeck.layout.set({ sidebarSections: sections }).catch((err: unknown) => {
-        window.agentDeck.log.send('debug', 'layout', 'Layout persist failed', { err: String(err) })
-      })
   },
 
   setRightPanelWidth: (w) => {
@@ -229,4 +232,14 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set) => (
     window.agentDeck.theme.set(name)
     set({ theme: name })
   },
+
+  // Worktree isolation paths
+  worktreePaths: {},
+  setWorktreePath: (sessionId, result) =>
+    set((s) => ({ worktreePaths: { ...s.worktreePaths, [sessionId]: result } })),
+  clearWorktreePath: (sessionId) =>
+    set((s) => {
+      const { [sessionId]: _, ...rest } = s.worktreePaths
+      return { worktreePaths: rest }
+    }),
 })

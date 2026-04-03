@@ -108,3 +108,7 @@
   color: var(--text3);
   font-size: 9px;
 }
+
+.status-worktree {
+  color: var(--accent);
+}

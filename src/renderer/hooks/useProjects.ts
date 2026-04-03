@@ -31,7 +31,12 @@ export function useProjects(): UseProjectsReturn {
   useEffect(() => {
     let cancelled = false
     async function load(): Promise<void> {
-      if (useAppStore.getState().projects.length > 0 || loadingInFlight) return
+      const state = useAppStore.getState()
+      if (
+        (state.projects.length > 0 && state.templates.length > 0 && state.roles.length > 0) ||
+        loadingInFlight
+      )
+        return
       loadingInFlight = true
       try {
         const [p, t, r] = await Promise.all([

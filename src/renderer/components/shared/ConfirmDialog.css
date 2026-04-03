@@ -69,6 +69,25 @@
   border-color: var(--border-bright);
 }
 
+.confirm-dialog-btn-extra {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 6px 16px;
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--r);
+  cursor: pointer;
+  transition:
+    color 0.12s,
+    border-color 0.12s;
+}
+
+.confirm-dialog-btn-extra:hover {
+  color: var(--text0);
+  border-color: var(--accent);
+}
+
 .confirm-dialog-btn-confirm {
   font-family: var(--font-mono);
   font-size: 12px;

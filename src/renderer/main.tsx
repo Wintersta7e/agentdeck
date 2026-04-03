@@ -64,6 +64,11 @@ async function initAndRender(): Promise<void> {
 
   // Clean up version info listener on window unload
   window.addEventListener('unload', () => unsubVersionInfo())
+  // LEAK-17: Clean up on Vite HMR to prevent duplicate listeners in dev
+  const meta = import.meta as unknown as { hot?: { dispose: (cb: () => void) => void } }
+  if (meta.hot) {
+    meta.hot.dispose(() => unsubVersionInfo())
+  }
 
   // Fetch WSL data after render so the UI is interactive immediately.
   // On WSL cold boot the first call can take 15s+ while the VM starts.

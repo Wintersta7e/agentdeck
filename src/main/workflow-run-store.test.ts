@@ -100,39 +100,7 @@ describe('saveRun', () => {
         id: `run-${i}`,
         startedAt: 1000 + i,
       })
-      // Give each file a distinct mtime so pruning sorts correctly
-      const origWriteFile = vi.mocked(fs.promises.writeFile)
-      const origRename = vi.mocked(fs.promises.rename)
-
-      // We need the mtime to differ, so we set it manually after save
       await saveRun(run)
-
-      // Override the mtime of the final file (after rename) for deterministic sorting
-      // WF-9: filename now includes run ID: workflowId_startedAt_runId.json
-      const filename = `wf-abc_${1000 + i}_run-${i}.json`
-      const filepath = `/tmp/mock-electron/userData/workflow-runs/${filename}`
-      testStats.set(filepath, { mtimeMs: 1000 + i })
-
-      // Reset mocks so readdir returns all files
-      origWriteFile.mockImplementation(async (fp, data) => {
-        testStore.set(String(fp), String(data))
-        testStats.set(String(fp), { mtimeMs: Date.now() })
-      })
-      origRename.mockImplementation(async (src, dest) => {
-        const srcStr = String(src)
-        const destStr = String(dest)
-        const d = testStore.get(srcStr)
-        if (d === undefined) {
-          const err = new Error('ENOENT') as NodeJS.ErrnoException
-          err.code = 'ENOENT'
-          throw err
-        }
-        const srcStat = testStats.get(srcStr)
-        testStore.delete(srcStr)
-        testStats.delete(srcStr)
-        testStore.set(destStr, d)
-        testStats.set(destStr, srcStat ?? { mtimeMs: Date.now() })
-      })
     }
 
     // Count remaining files for this workflow
@@ -140,7 +108,7 @@ describe('saveRun', () => {
       const basename = k.split('/').pop() ?? ''
       return basename.startsWith('wf-abc_') && basename.endsWith('.json')
     })
-    expect(remainingFiles.length).toBeLessThanOrEqual(20)
+    expect(remainingFiles.length).toBe(20)
   })
 })
 

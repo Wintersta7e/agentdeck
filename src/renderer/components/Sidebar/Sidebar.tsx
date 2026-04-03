@@ -37,8 +37,17 @@ export function Sidebar({
 }: SidebarProps): React.JSX.Element {
   const projects = useAppStore((s) => s.projects)
   const templates = useAppStore((s) => s.templates)
-  const sessions = useAppStore((s) => s.sessions)
   const activeSessionId = useAppStore((s) => s.activeSessionId)
+
+  // Serialized session data — only re-renders when the derived string changes
+  const sessionDataStr = useAppStore((s) => {
+    const entries: string[] = []
+    for (const sess of Object.values(s.sessions)) {
+      entries.push(`${sess.id}|${sess.projectId ?? ''}|${sess.status}`)
+    }
+    return entries.join(',')
+  })
+
   const openWizard = useAppStore((s) => s.openWizard)
   const openSettings = useAppStore((s) => s.openSettings)
   const openTemplateEditor = useAppStore((s) => s.openTemplateEditor)
@@ -142,11 +151,23 @@ export function Sidebar({
     const projectName = project?.name ?? 'this project'
     const projectId = contextMenu.projectId
     closeMenu()
+    // BUG-4: Check for active sessions before deletion to prevent orphaned worktrees
+    const activeSessions = Object.values(useAppStore.getState().sessions).filter(
+      (s) => s.projectId === projectId,
+    )
+    const warningMsg =
+      activeSessions.length > 0
+        ? `Remove "${projectName}"? ${String(activeSessions.length)} active session(s) will be closed. This cannot be undone.`
+        : `Remove "${projectName}"? This cannot be undone.`
     setConfirmDialog({
       title: 'Remove Project',
-      message: `Remove "${projectName}"? This cannot be undone.`,
+      message: warningMsg,
       confirmLabel: 'Remove',
       onConfirm: () => {
+        // Kill active sessions first to trigger proper worktree cleanup
+        for (const s of activeSessions) {
+          window.agentDeck.pty.kill(s.id).catch(() => {})
+        }
         void deleteProject(projectId)
         setConfirmDialog(null)
       },
@@ -214,13 +235,19 @@ export function Sidebar({
       setRenamingWorkflowId(null)
       return
     }
-    // Persist to disk
-    window.agentDeck.workflows.rename(renamingWorkflowId, trimmed).catch((err: unknown) => {
+    // BUG-9: Persist to disk, revert optimistic update on failure
+    const oldName = wf.name
+    const renameId = renamingWorkflowId
+    window.agentDeck.workflows.rename(renameId, trimmed).catch((err: unknown) => {
       window.agentDeck.log.send('error', 'sidebar', 'Failed to rename workflow', {
         err: String(err),
       })
+      // Revert optimistic update
+      const latest = useAppStore.getState().workflows
+      setWorkflows(latest.map((w) => (w.id === renameId ? { ...w, name: oldName } : w)))
+      useAppStore.getState().updateWorkflowMeta(renameId, { name: oldName })
     })
-    // Update Zustand store
+    // Optimistic update: apply both store mutations together
     setWorkflows(current.map((w) => (w.id === renamingWorkflowId ? { ...w, name: trimmed } : w)))
     useAppStore.getState().updateWorkflowMeta(renamingWorkflowId, { name: trimmed })
     setRenamingWorkflowId(null)
@@ -236,19 +263,29 @@ export function Sidebar({
     }
   }
 
+  // Parse serialized session data into structured entries
+  const sessionEntries = useMemo(() => {
+    if (!sessionDataStr) return []
+    return sessionDataStr.split(',').map((entry) => {
+      const [id, projectId, status] = entry.split('|')
+      return { id: id ?? '', projectId: projectId ?? '', status: status ?? '' }
+    })
+  }, [sessionDataStr])
+
   // Memoize project status map — avoids O(n) find per project per render
   const projectStatusMap = useMemo(() => {
     const map: Record<string, string> = {}
-    for (const s of Object.values(sessions)) {
+    for (const s of sessionEntries) {
       if (s.projectId) map[s.projectId] = s.status
     }
     return map
-  }, [sessions])
+  }, [sessionEntries])
 
   // Memoize active project ID for the current session
   const activeProjectId = useMemo(
-    () => (activeSessionId ? sessions[activeSessionId]?.projectId : undefined),
-    [sessions, activeSessionId],
+    () =>
+      activeSessionId ? sessionEntries.find((s) => s.id === activeSessionId)?.projectId : undefined,
+    [sessionEntries, activeSessionId],
   )
 
   function getProjectStatus(projectId: string): string {
@@ -651,9 +688,9 @@ export function Sidebar({
           </button>
         </div>
 
-        {Object.values(sessions).length > 0 && (
+        {sessionEntries.length > 0 && (
           <div className="sidebar-summary">
-            {Object.values(sessions).map((s) => (
+            {sessionEntries.map((s) => (
               <HexDot
                 key={s.id}
                 status={s.status === 'running' ? 'live' : s.status === 'error' ? 'error' : 'idle'}
@@ -661,8 +698,7 @@ export function Sidebar({
               />
             ))}
             <span className="sidebar-summary-label">
-              {Object.values(sessions).length}{' '}
-              {Object.values(sessions).length === 1 ? 'session' : 'sessions'}
+              {sessionEntries.length} {sessionEntries.length === 1 ? 'session' : 'sessions'}
             </span>
           </div>
         )}

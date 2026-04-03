@@ -86,6 +86,15 @@ export function createWorkflowEngine(
       })
       return
     }
+    // BUG-10: Reject empty workflows instead of persisting 0ms run records
+    if (workflow.nodes.length === 0) {
+      push(workflow.id, {
+        type: 'workflow:error',
+        workflowId: workflow.id,
+        message: 'Workflow has no nodes',
+      })
+      return
+    }
     log.info('Starting workflow', {
       id: workflow.id,
       name: workflow.name,
@@ -162,6 +171,11 @@ export function createWorkflowEngine(
         try {
           return new RegExp(node.conditionPattern ?? '').test(testOutput) ? 'true' : 'false'
         } catch {
+          // PERF-3: Catch regex syntax errors so they don't crash the engine
+          log.warn('Condition regex failed', {
+            nodeId: node.id,
+            pattern: node.conditionPattern,
+          })
           return 'false'
         }
       }
@@ -235,7 +249,27 @@ export function createWorkflowEngine(
                 maxIterations: le.maxIterations,
                 message: `Loop iteration ${String(count)}/${String(le.maxIterations)}`,
               })
-              scheduler.resetLoopSubgraph(le.toNodeId, node.id)
+              const resetIds = scheduler.resetLoopSubgraph(le.toNodeId, node.id)
+              // REL-7: Clear loop counters for inner loop edges within the reset subgraph
+              // so nested loops restart correctly on each outer iteration.
+              // BUG-5/CDX-5: Also check toNodeId is in resetIds — prevents sibling loop
+              // edges from the same condition node from having their counters cleared
+              for (const innerLoops of loopEdgesByCondition.values()) {
+                for (const innerLe of innerLoops) {
+                  if (
+                    innerLe.id !== le.id &&
+                    resetIds.has(innerLe.fromNodeId) &&
+                    resetIds.has(innerLe.toNodeId)
+                  ) {
+                    loopCounters.delete(innerLe.id)
+                  }
+                }
+              }
+              // PERF-4: Clear output maps for re-executing nodes to prevent unbounded growth
+              for (const nid of resetIds) {
+                nodeOutputs.delete(nid)
+                conditionOutputs.delete(nid)
+              }
             }
           }
         }
@@ -416,13 +450,18 @@ export function createWorkflowEngine(
 
       // Track which nodes we've emitted skip events for
       const emittedSkipped = new Set<string>()
+      // R2-01: Track deadlock (nodes stuck pending after upstream failure)
+      let deadlocked = false
 
       try {
         while (!scheduler.isDone()) {
           if (stopped) break
 
           const ready = scheduler.getReady()
-          if (ready.length === 0 && !scheduler.isDone()) break // deadlock
+          if (ready.length === 0 && !scheduler.isDone()) {
+            deadlocked = true
+            break
+          }
 
           // Execute batch with concurrency limit
           const queue = [...ready]
@@ -470,7 +509,15 @@ export function createWorkflowEngine(
         }
       }
 
-      if (!stopped) {
+      if (deadlocked) {
+        // R2-01: Report stall as error, not false success
+        log.warn('Workflow stalled — unreachable nodes', { id: workflow.id })
+        push(workflow.id, {
+          type: 'workflow:error',
+          workflowId: workflow.id,
+          message: 'Workflow stalled — some nodes unreachable due to upstream failure',
+        })
+      } else if (!stopped) {
         log.info('Workflow completed', { id: workflow.id, name: workflow.name })
         push(workflow.id, {
           type: 'workflow:done',
@@ -486,8 +533,14 @@ export function createWorkflowEngine(
         })
       }
 
+      // REL-6: Resolve any pending checkpoint promises so execute() can complete
+      for (const [, resolve] of runCheckpoints) {
+        resolve()
+      }
+      runCheckpoints.clear()
+
       // ── Flush run history to disk ────────────────────────────────
-      recorder.finalize(stopped ? 'stopped' : 'done')
+      recorder.finalize(deadlocked ? 'error' : stopped ? 'stopped' : 'done')
     }
 
     const handle = {
