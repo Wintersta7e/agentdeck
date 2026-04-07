@@ -22,6 +22,7 @@ import {
   registerUtilHandlers,
   registerSkillHandlers,
   registerWorktreeHandlers,
+  registerHomeHandlers,
 } from './ipc'
 
 const log = createLogger('app')
@@ -164,6 +165,11 @@ function registerIpcHandlers(store: AppStore): void {
   )
   registerUtilHandlers()
   registerWorktreeHandlers(() => worktreeManager)
+  registerHomeHandlers((projectId) => {
+    const projects = store.get('projects') ?? []
+    const project = projects.find((p: { id: string }) => p.id === projectId)
+    return project?.path ?? null
+  })
 }
 
 app

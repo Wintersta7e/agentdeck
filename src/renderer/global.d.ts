@@ -1,8 +1,11 @@
 import type {
   ActivityEvent,
+  DailyCostEntry,
   DetectedStack,
+  GitStatus,
   Project,
   ProjectMeta,
+  ReviewItem,
   Role,
   SkillInfo,
   Template,
@@ -142,6 +145,14 @@ declare global {
             }
           }) => void,
         ): () => void
+      }
+      home: {
+        gitStatus: (projectId: string) => Promise<GitStatus | null>
+        pendingReviews: (projectId: string) => Promise<ReviewItem[]>
+        dismissReview: (reviewId: string) => Promise<void>
+        costHistory: (days: number) => Promise<DailyCostEntry[]>
+        getBudget: () => Promise<number | null>
+        setBudget: (amount: number | null) => Promise<void>
       }
       pickFolder: () => Promise<string | null>
       log: {

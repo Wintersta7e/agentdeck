@@ -1,0 +1,53 @@
+.daily-digest {
+  width: 280px;
+  flex-shrink: 0;
+  padding: var(--sp-4);
+  background: rgba(255, 255, 255, 0.012);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+.daily-digest::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(var(--accent-rgb), 0.15), transparent);
+}
+
+.daily-digest-title {
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-weight: 600;
+  color: var(--text3);
+  margin-bottom: var(--sp-2);
+}
+
+.daily-digest-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 0;
+  font-size: var(--fs-sm);
+}
+
+.daily-digest-label {
+  color: var(--text3);
+}
+
+.daily-digest-value {
+  font-weight: 700;
+  color: var(--text1);
+}
+
+.daily-digest-cost {
+  color: var(--accent);
+}
+
+.daily-digest-rate {
+  color: var(--green);
+}

@@ -1,0 +1,92 @@
+.suggestions-panel,
+.review-panel,
+.recent-workflows-panel {
+  padding: var(--sp-3) var(--sp-4);
+  background: rgba(255, 255, 255, 0.012);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  margin-bottom: var(--sp-3);
+  position: relative;
+  overflow: hidden;
+}
+
+.suggestions-panel::before,
+.review-panel::before,
+.recent-workflows-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.04), transparent);
+}
+
+.panel-header {
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-weight: 600;
+  color: var(--text3);
+  margin-bottom: var(--sp-2);
+}
+
+.panel-empty {
+  font-size: var(--fs-xs);
+  color: var(--text3);
+  font-style: italic;
+  padding: var(--sp-1) 0;
+}
+
+.suggestion-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  padding: var(--sp-2) 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.suggestion-icon {
+  font-size: var(--fs-sm);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.suggestion-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.suggestion-text {
+  font-size: var(--fs-sm);
+  color: var(--text2);
+  line-height: 1.4;
+}
+
+.suggestion-action {
+  font-size: var(--fs-xs);
+  color: var(--accent);
+  margin-top: 2px;
+  cursor: pointer;
+}
+
+.suggestion-dismiss {
+  background: none;
+  border: none;
+  color: var(--text3);
+  cursor: pointer;
+  padding: var(--sp-1);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  font-family: inherit;
+  transition: color var(--duration-base);
+}
+
+.suggestion-dismiss:hover {
+  color: var(--text1);
+}

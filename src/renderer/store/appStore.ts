@@ -5,13 +5,15 @@ import { createProjectsSlice, type ProjectsSlice } from './slices/projects'
 import { createWorkflowsSlice, type WorkflowsSlice } from './slices/workflows'
 import { createTemplatesSlice, type TemplatesSlice } from './slices/templates'
 import { createNotificationsSlice, type NotificationsSlice } from './slices/notifications'
+import { createHomeSlice, type HomeSlice } from './slices/home'
 
 export type AppState = SessionsSlice &
   UiSlice &
   ProjectsSlice &
   WorkflowsSlice &
   TemplatesSlice &
-  NotificationsSlice
+  NotificationsSlice &
+  HomeSlice
 
 export const useAppStore = create<AppState>()((...a) => ({
   ...createSessionsSlice(...a),
@@ -20,4 +22,5 @@ export const useAppStore = create<AppState>()((...a) => ({
   ...createWorkflowsSlice(...a),
   ...createTemplatesSlice(...a),
   ...createNotificationsSlice(...a),
+  ...createHomeSlice(...a),
 }))

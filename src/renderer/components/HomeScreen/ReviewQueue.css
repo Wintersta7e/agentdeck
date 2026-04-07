@@ -1,0 +1,64 @@
+.review-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+  font-size: var(--fs-sm);
+}
+
+.review-item:last-child {
+  border-bottom: none;
+}
+
+.review-agent {
+  color: var(--text1);
+  font-weight: 500;
+}
+
+.review-diff {
+  display: flex;
+  gap: var(--sp-1);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+
+.review-plus {
+  color: var(--green);
+}
+
+.review-minus {
+  color: var(--red);
+}
+
+.review-btn {
+  font-size: var(--fs-xs);
+  padding: 3px var(--sp-2);
+  border-radius: var(--r);
+  background: rgba(var(--accent-rgb), 0.06);
+  border: 1px solid rgba(var(--accent-rgb), 0.12);
+  color: var(--accent);
+  cursor: pointer;
+  margin-left: auto;
+  font-family: inherit;
+  transition: background-color var(--duration-base);
+}
+
+.review-btn:hover {
+  background: rgba(var(--accent-rgb), 0.12);
+}
+
+.review-dismiss {
+  background: none;
+  border: none;
+  color: var(--text3);
+  cursor: pointer;
+  font-size: var(--fs-base);
+  padding: var(--sp-1);
+  font-family: inherit;
+  transition: color var(--duration-base);
+}
+
+.review-dismiss:hover {
+  color: var(--text1);
+}

@@ -1,0 +1,218 @@
+/* ── LiveSessionCard ── */
+.live-card {
+  padding: var(--sp-4);
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+.live-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(var(--green-rgb), 0.2), transparent);
+}
+
+.live-card-empty {
+  display: none;
+}
+
+/* Header */
+.live-card-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+}
+
+.live-card-agent-icon {
+  font-size: var(--fs-base);
+}
+
+.live-card-agent-name {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--green);
+}
+
+.live-card-project {
+  font-size: var(--fs-xs);
+  padding: 2px var(--sp-2);
+  border-radius: var(--r);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text3);
+}
+
+.live-card-elapsed {
+  font-size: var(--fs-xs);
+  font-family: var(--font-mono);
+  color: var(--text3);
+  margin-left: auto;
+}
+
+/* Activity */
+.live-card-activity {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+}
+
+.live-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.live-pulse.thinking {
+  background: var(--accent);
+  box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.4);
+  animation: live-pulse-anim var(--duration-slow) ease-in-out infinite;
+}
+
+.live-pulse.writing {
+  background: var(--green);
+  box-shadow: 0 0 8px rgba(var(--green-rgb), 0.4);
+}
+
+.live-pulse.tool-use {
+  background: var(--blue);
+  box-shadow: 0 0 6px rgba(var(--blue-rgb), 0.3);
+}
+
+.live-pulse.reading {
+  background: var(--text3);
+  opacity: 0.6;
+}
+
+.live-pulse.idle {
+  background: var(--text3);
+  opacity: 0.3;
+}
+
+@keyframes live-pulse-anim {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.live-card-activity-text {
+  font-size: var(--fs-xs);
+  color: var(--text2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Token gauge */
+.live-card-gauge {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+}
+
+.live-card-gauge-label {
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text3);
+  width: 48px;
+  flex-shrink: 0;
+}
+
+.live-card-gauge-bar {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.live-card-gauge-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.3), rgba(var(--accent-rgb), 0.5));
+  transition: width var(--duration-slow) var(--ease-out);
+}
+
+.live-card-gauge-val {
+  font-size: var(--fs-xs);
+  font-family: var(--font-mono);
+  color: var(--text3);
+  width: 80px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* Footer */
+.live-card-footer {
+  display: flex;
+  justify-content: space-between;
+  padding-top: var(--sp-2);
+  border-top: 1px solid rgba(255, 255, 255, 0.025);
+  font-size: var(--fs-xs);
+  color: var(--text3);
+}
+
+.live-card-cost strong {
+  color: var(--accent);
+  font-family: var(--font-mono);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .live-pulse.thinking {
+    animation: none;
+  }
+  .live-card-gauge-fill {
+    transition: none;
+  }
+}
+
+/* ── LiveSessionGrid ── */
+.live-grid-wrapper {
+  margin-bottom: var(--sp-5);
+}
+
+.live-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-3);
+}
+
+.live-grid-empty {
+  padding: var(--sp-6);
+  text-align: center;
+  color: var(--text3);
+  font-size: var(--fs-sm);
+  background: rgba(255, 255, 255, 0.008);
+  border: 1px dashed rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  margin-bottom: var(--sp-5);
+}
+
+.live-grid-empty kbd {
+  font-size: var(--fs-xs);
+  padding: 2px var(--sp-1);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 3px;
+}
+
+.live-grid-overflow {
+  text-align: center;
+  font-size: var(--fs-xs);
+  color: var(--text3);
+  margin-top: var(--sp-2);
+}

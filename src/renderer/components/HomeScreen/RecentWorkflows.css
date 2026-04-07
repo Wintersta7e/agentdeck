@@ -1,0 +1,47 @@
+.wf-run-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) 0;
+  font-size: var(--fs-sm);
+}
+
+.wf-run-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  background: var(--purple);
+  flex-shrink: 0;
+}
+
+.wf-run-name {
+  flex: 1;
+  color: var(--text1);
+  font-weight: 500;
+}
+
+.wf-run-badge {
+  font-size: var(--fs-xs);
+  padding: 1px var(--sp-2);
+  border-radius: 10px;
+}
+
+.wf-run-badge.pass {
+  background: rgba(var(--green-rgb), 0.08);
+  color: var(--green);
+}
+
+.wf-run-badge.fail {
+  background: rgba(var(--red-rgb), 0.08);
+  color: var(--red);
+}
+
+.wf-run-badge.other {
+  background: rgba(var(--accent-rgb), 0.08);
+  color: var(--accent);
+}
+
+.wf-run-time {
+  font-size: var(--fs-xs);
+  color: var(--text3);
+}
