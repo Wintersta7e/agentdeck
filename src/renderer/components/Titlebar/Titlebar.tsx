@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
-import { X, Minus, Square, ArrowLeft, Plus, Hexagon } from 'lucide-react'
+import { X, Minus, Square, ArrowLeft, Plus } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
-import { HexDot } from '../shared/HexDot'
 import type { Session } from '../../../shared/types'
 import './Titlebar.css'
 
@@ -9,14 +8,12 @@ interface TitlebarProps {
   onCloseTab: (sessionId: string) => void
   onCloseWorkflowTab: (workflowId: string) => void
   onAddTab: () => void
-  isIdle?: boolean | undefined
 }
 
 export function Titlebar({
   onCloseTab,
   onCloseWorkflowTab,
   onAddTab,
-  isIdle,
 }: TitlebarProps): React.JSX.Element {
   const [closingTabs, setClosingTabs] = useState<Set<string>>(() => new Set())
   const closeTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
@@ -138,7 +135,7 @@ export function Titlebar({
         tabIndex={0}
         title="Home"
       >
-        <div className={`logo-mark${isIdle ? '' : ' logo-mark--active'}`} />
+        <div className="logo-mark" />
         <div className="logo-text">
           Agent<span>Deck</span>
         </div>
@@ -174,9 +171,8 @@ export function Titlebar({
               tabIndex={0}
               aria-selected={s.id === activeSessionId && currentView === 'session'}
             >
-              <HexDot
-                status={s.status === 'running' ? 'live' : s.status === 'error' ? 'error' : 'idle'}
-                size={6}
+              <div
+                className={`tab-dot tab-dot--${s.status === 'running' ? 'running' : s.status === 'error' ? 'error' : 'idle'}`}
               />
               {getProjectName(s)}
               <button
@@ -206,9 +202,7 @@ export function Titlebar({
               tabIndex={0}
               aria-selected={wfId === activeWorkflowId && currentView === 'workflow'}
             >
-              <span className="tab-wf-icon">
-                <Hexagon size={12} />
-              </span>
+              <div className="tab-dot tab-dot--workflow" />
               {workflowNameMap.get(wfId) ?? 'Workflow'}
               <button
                 className="tab-close"

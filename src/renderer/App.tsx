@@ -13,7 +13,6 @@ import { NotificationToast } from './components/NotificationToast/NotificationTo
 import { ConfirmDialog } from './components/shared/ConfirmDialog'
 import { useAppStore } from './store/appStore'
 import { useProjects } from './hooks/useProjects'
-import { useAmbientState } from './hooks/useAmbientState'
 import type { ActivityEvent, AgentConfig, Project } from '../shared/types'
 import './App.css'
 
@@ -87,8 +86,6 @@ export function App(): React.JSX.Element {
     const sessionId = `terminal-${Date.now()}`
     addSession(sessionId, '')
   }, [addSession])
-
-  const { isIdle } = useAmbientState()
 
   const { updateProject } = useProjects()
 
@@ -473,7 +470,6 @@ export function App(): React.JSX.Element {
         onCloseTab={handleCloseTab}
         onCloseWorkflowTab={handleCloseWorkflowTab}
         onAddTab={handleAddTab}
-        isIdle={isIdle}
       />
       <div className="app-body">
         {wslAvailable === false && (

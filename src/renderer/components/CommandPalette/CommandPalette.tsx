@@ -18,8 +18,6 @@ import { useAppStore } from '../../store/appStore'
 import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
 import type { Project } from '../../../shared/types'
 import { createBlankWorkflow } from '../../utils/workflowUtils'
-import { PanelBox } from '../shared/PanelBox'
-import { HexGrid } from '../shared/HexGrid'
 import { ThemeSubmenu } from './ThemeSubmenu'
 import { AgentsSubmenu } from './AgentsSubmenu'
 import './CommandPalette.css'
@@ -639,8 +637,7 @@ function PaletteInner({
       aria-modal="true"
       aria-label="Command palette"
     >
-      <HexGrid rotation={15} opacity={0.01} />
-      <PanelBox corners="all" glow="none" className="palette">
+      <div className="palette">
         {/* Search input */}
         <div className="palette-search">
           <span className="palette-search-icon">
@@ -775,7 +772,7 @@ function PaletteInner({
             {flatItems.length} result{flatItems.length !== 1 ? 's' : ''}
           </div>
         </div>
-      </PanelBox>
+      </div>
     </div>
   )
 }

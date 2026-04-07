@@ -67,9 +67,6 @@ function parseActivityLine(line: string): { type: string; title: string; detail:
   if (/\b(?:Error|Failed|FAIL|ERR)\b/i.test(clean))
     return { type: 'error', title: 'Error', detail: clean }
 
-  // Fallback: any substantial output line counts as generic activity
-  if (clean.length > 10) return { type: 'read', title: 'Output', detail: clean }
-
   return null
 }
 

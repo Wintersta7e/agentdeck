@@ -105,6 +105,18 @@ export function useSessionTimeline(): TimelineRow[] {
 
   const projectMap = useMemo(() => new Map(projects.map((p) => [p.id, p.name])), [projects])
 
+  // Eagerly cache labels while sessions are still alive — before removeSession deletes them
+  useEffect(() => {
+    for (const [sessionId, session] of Object.entries(sessions)) {
+      if (!labelCache.has(sessionId)) {
+        const projectName = session.projectId ? projectMap.get(session.projectId) : undefined
+        if (projectName) {
+          labelCache.set(sessionId, projectName)
+        }
+      }
+    }
+  }, [sessions, projectMap])
+
   // H14: Reactive midnight boundary — recomputes at day rollover
   const [midnight, setMidnight] = useState(getMidnight)
   useEffect(() => {
