@@ -37,9 +37,7 @@ export const createHomeSlice: StateCreator<AppState, [], [], HomeSlice> = (set) 
 
   dismissReview: (id) =>
     set((state) => ({
-      reviewItems: state.reviewItems.map((item) =>
-        item.id === id ? { ...item, status: 'dismissed' as const } : item,
-      ),
+      reviewItems: state.reviewItems.filter((item) => item.id !== id),
     })),
 
   costHistory: [],

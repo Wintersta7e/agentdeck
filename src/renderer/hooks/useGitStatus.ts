@@ -2,29 +2,44 @@ import { useEffect, useRef } from 'react'
 import { useAppStore } from '../store/appStore'
 
 const REFRESH_MS = 30_000
+const MAX_CONCURRENT = 4
 
-export function useGitStatus(projectId: string): void {
+/** Fetches git status for all provided project IDs in parallel batches */
+export function useGitStatusBatch(projectIds: string[]): void {
   const setGitStatus = useAppStore((s) => s.setGitStatus)
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const idsRef = useRef(projectIds)
+
+  // Keep the ref current without triggering re-renders
+  useEffect(() => {
+    idsRef.current = projectIds
+  })
 
   useEffect(() => {
     let cancelled = false
 
-    async function fetch(): Promise<void> {
-      try {
-        const status = await window.agentDeck.home.gitStatus(projectId)
-        if (!cancelled) setGitStatus(projectId, status)
-      } catch {
-        // IPC error — silently ignore, git status is best-effort
+    async function fetchAll(): Promise<void> {
+      const ids = [...idsRef.current]
+      // Process in parallel batches of MAX_CONCURRENT
+      for (let i = 0; i < ids.length; i += MAX_CONCURRENT) {
+        if (cancelled) return
+        const batch = ids.slice(i, i + MAX_CONCURRENT)
+        const results = await Promise.allSettled(
+          batch.map((id) => window.agentDeck.home.gitStatus(id).then((status) => ({ id, status }))),
+        )
+        for (const result of results) {
+          if (cancelled) return
+          if (result.status === 'fulfilled') {
+            setGitStatus(result.value.id, result.value.status)
+          }
+        }
       }
     }
 
-    void fetch()
-    intervalRef.current = setInterval(() => void fetch(), REFRESH_MS)
-
+    void fetchAll()
+    const interval = setInterval(() => void fetchAll(), REFRESH_MS)
     return () => {
       cancelled = true
-      if (intervalRef.current) clearInterval(intervalRef.current)
+      clearInterval(interval)
     }
-  }, [projectId, setGitStatus])
+  }, [setGitStatus]) // stable dep — project list read from ref
 }

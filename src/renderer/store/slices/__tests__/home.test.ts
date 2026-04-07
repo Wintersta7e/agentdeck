@@ -43,7 +43,7 @@ describe('home slice', () => {
     useAppStore.getState().setReviewItems(items)
     expect(useAppStore.getState().reviewItems).toHaveLength(1)
     useAppStore.getState().dismissReview('r1')
-    expect(useAppStore.getState().reviewItems[0]?.status).toBe('dismissed')
+    expect(useAppStore.getState().reviewItems).toHaveLength(0)
   })
 
   it('manages cost history', () => {

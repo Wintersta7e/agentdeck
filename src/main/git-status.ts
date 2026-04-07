@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import type { GitStatus } from '../shared/types'
+import { toWslPath } from './wsl-utils'
 
 const execFileAsync = promisify(execFile)
 
@@ -52,39 +53,71 @@ export function parseGitDiffStat(output: string): { insertions: number; deletion
 }
 
 const cache = new Map<string, { status: GitStatus; fetchedAt: number }>()
+const inFlight = new Map<string, Promise<GitStatus | null>>()
 const CACHE_TTL_MS = 30_000
+const MAX_CACHE = 200
+
+function normalizePath(p: string): string {
+  return p.endsWith('/') ? p.slice(0, -1) : p
+}
 
 export async function getGitStatus(projectPath: string): Promise<GitStatus | null> {
+  const key = normalizePath(projectPath)
   const now = Date.now()
-  const cached = cache.get(projectPath)
+  const cached = cache.get(key)
   if (cached && now - cached.fetchedAt < CACHE_TTL_MS) {
     return cached.status
   }
-
-  try {
-    const [statusResult, diffResult] = await Promise.all([
-      execFileAsync('git', ['-C', projectPath, 'status', '--porcelain=v2', '--branch'], {
-        timeout: 5000,
-      }),
-      execFileAsync('git', ['-C', projectPath, 'diff', '--stat'], { timeout: 5000 }),
-    ])
-
-    const porcelain = parseGitStatusPorcelainV2(statusResult.stdout)
-    const diffStat = parseGitDiffStat(diffResult.stdout)
-
-    const status: GitStatus = {
-      ...porcelain,
-      insertions: diffStat.insertions,
-      deletions: diffStat.deletions,
-    }
-
-    cache.set(projectPath, { status, fetchedAt: now })
-    return status
-  } catch {
-    return null
+  if (cached) {
+    cache.delete(key) // evict stale before re-fetch
   }
+
+  // In-flight dedup: coalesce concurrent requests for the same path into one promise.
+  const existing = inFlight.get(key)
+  if (existing) return existing
+
+  const promise = (async (): Promise<GitStatus | null> => {
+    try {
+      const wslPath = toWslPath(projectPath)
+      const [statusResult, diffResult] = await Promise.all([
+        execFileAsync(
+          'wsl.exe',
+          ['--', 'git', '-C', wslPath, 'status', '--porcelain=v2', '--branch'],
+          {
+            timeout: 10000,
+          },
+        ),
+        execFileAsync('wsl.exe', ['--', 'git', '-C', wslPath, 'diff', '--stat'], {
+          timeout: 10000,
+        }),
+      ])
+
+      const porcelain = parseGitStatusPorcelainV2(statusResult.stdout)
+      const diffStat = parseGitDiffStat(diffResult.stdout)
+
+      const status: GitStatus = {
+        ...porcelain,
+        insertions: diffStat.insertions,
+        deletions: diffStat.deletions,
+      }
+
+      cache.set(key, { status, fetchedAt: Date.now() })
+      if (cache.size > MAX_CACHE) {
+        const oldest = cache.keys().next().value
+        if (oldest !== undefined) cache.delete(oldest)
+      }
+      return status
+    } catch {
+      return null
+    } finally {
+      inFlight.delete(key)
+    }
+  })()
+
+  inFlight.set(key, promise)
+  return promise
 }
 
 export function invalidateGitCache(projectPath: string): void {
-  cache.delete(projectPath)
+  cache.delete(normalizePath(projectPath))
 }

@@ -1,6 +1,5 @@
 import { useMemo } from 'react'
 import { useAppStore } from '../../store/appStore'
-import { useGitStatus } from '../../hooks/useGitStatus'
 import { GitStatusRow } from './GitStatusRow'
 import { AGENTS } from '../../../shared/agents'
 import { getProjectAgents } from '../../../shared/agent-helpers'
@@ -49,13 +48,28 @@ export function ProjectCardV2({
   onOpen,
   onContextMenu,
 }: ProjectCardV2Props): React.JSX.Element {
-  useGitStatus(project.id)
   const gitStatus = useAppStore((s) => s.gitStatuses[project.id])
-  const sessions = useAppStore((s) => s.sessions)
 
-  const isRunning = useMemo(
-    () => Object.values(sessions).some((s) => s.projectId === project.id && s.status === 'running'),
-    [sessions, project.id],
+  // Primitive selector: returns true/false, avoiding a full sessions object subscription.
+  const isRunning = useAppStore((s) =>
+    Object.values(s.sessions).some(
+      (sess) => sess.projectId === project.id && sess.status === 'running',
+    ),
+  )
+
+  // Serialize running agent IDs to a stable string to avoid new Set reference each render.
+  const runningAgentStr = useAppStore((s) => {
+    const ids: string[] = []
+    for (const sess of Object.values(s.sessions)) {
+      if (sess.projectId === project.id && sess.status === 'running' && sess.agentOverride) {
+        ids.push(sess.agentOverride)
+      }
+    }
+    return ids.sort().join(',')
+  })
+  const runningAgents = useMemo(
+    () => new Set(runningAgentStr ? runningAgentStr.split(',') : []),
+    [runningAgentStr],
   )
 
   const agents = useMemo(() => getProjectAgents(project), [project])
@@ -88,18 +102,17 @@ export function ProjectCardV2({
         {isRunning && <div className="pcv2-dot" aria-label="Running" />}
       </div>
 
-      {gitStatus !== null && gitStatus !== undefined && <GitStatusRow status={gitStatus} />}
+      {gitStatus !== null && gitStatus !== undefined ? (
+        <GitStatusRow status={gitStatus} />
+      ) : gitStatus === undefined ? (
+        <div className="git-status-row git-loading">loading git status…</div>
+      ) : null}
 
       {agents.length > 0 && (
         <div className="pcv2-agents">
           {agents.map((ac) => {
             const meta = AGENT_META.get(ac.agent)
-            const running = Object.values(sessions).some(
-              (s) =>
-                s.projectId === project.id &&
-                s.agentOverride === ac.agent &&
-                s.status === 'running',
-            )
+            const running = runningAgents.has(ac.agent)
             return (
               <span key={ac.agent} className={`pcv2-pill${running ? ' live' : ''}`}>
                 {meta?.icon ?? '\u25C8'} {meta?.name ?? ac.agent}

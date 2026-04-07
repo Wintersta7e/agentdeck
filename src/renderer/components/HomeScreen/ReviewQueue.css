@@ -2,9 +2,9 @@
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  padding: var(--sp-2) 0;
+  padding: 6px 0; /* mockup-specific */
   border-bottom: 1px solid rgba(255, 255, 255, 0.02);
-  font-size: var(--fs-sm);
+  font-size: 11px; /* mockup-specific */
 }
 
 .review-item:last-child {
@@ -20,7 +20,7 @@
   display: flex;
   gap: var(--sp-1);
   font-family: var(--font-mono);
-  font-size: var(--fs-xs);
+  font-size: 9px; /* mockup-specific */
 }
 
 .review-plus {
@@ -32,7 +32,7 @@
 }
 
 .review-btn {
-  font-size: var(--fs-xs);
+  font-size: 9px; /* mockup-specific */
   padding: 3px var(--sp-2);
   border-radius: var(--r);
   background: rgba(var(--accent-rgb), 0.06);

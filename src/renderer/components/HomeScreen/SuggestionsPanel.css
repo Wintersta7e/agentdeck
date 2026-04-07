@@ -1,11 +1,11 @@
 .suggestions-panel,
 .review-panel,
 .recent-workflows-panel {
-  padding: var(--sp-3) var(--sp-4);
+  padding: 14px var(--sp-4); /* mockup-specific 14px vertical */
   background: rgba(255, 255, 255, 0.012);
   border: 1px solid rgba(255, 255, 255, 0.03);
   border-radius: 10px;
-  margin-bottom: var(--sp-3);
+  margin-bottom: 10px; /* mockup-specific */
   position: relative;
   overflow: hidden;
 }
@@ -23,7 +23,7 @@
 }
 
 .panel-header {
-  font-size: var(--fs-xs);
+  font-size: 9px; /* mockup-specific */
   text-transform: uppercase;
   letter-spacing: 1.5px;
   font-weight: 600;
@@ -32,7 +32,7 @@
 }
 
 .panel-empty {
-  font-size: var(--fs-xs);
+  font-size: 9px; /* mockup-specific */
   color: var(--text3);
   font-style: italic;
   padding: var(--sp-1) 0;
@@ -42,7 +42,7 @@
   display: flex;
   align-items: flex-start;
   gap: var(--sp-2);
-  padding: var(--sp-2) 0;
+  padding: 6px 0; /* mockup-specific */
   border-bottom: 1px solid rgba(255, 255, 255, 0.02);
 }
 
@@ -51,7 +51,7 @@
 }
 
 .suggestion-icon {
-  font-size: var(--fs-sm);
+  font-size: 11px; /* mockup-specific */
   flex-shrink: 0;
   margin-top: 1px;
 }
@@ -62,13 +62,13 @@
 }
 
 .suggestion-text {
-  font-size: var(--fs-sm);
+  font-size: 11px; /* mockup-specific */
   color: var(--text2);
   line-height: 1.4;
 }
 
 .suggestion-action {
-  font-size: var(--fs-xs);
+  font-size: 9px; /* mockup-specific */
   color: var(--accent);
   margin-top: 2px;
   cursor: pointer;

@@ -1,5 +1,5 @@
 .project-card-v2 {
-  padding: var(--sp-4);
+  padding: 14px var(--sp-4); /* mockup-specific 14px vertical */
   background: rgba(255, 255, 255, 0.015);
   border: 1px solid rgba(255, 255, 255, 0.035);
   border-radius: 10px;
@@ -41,8 +41,8 @@
 .pcv2-top {
   display: flex;
   align-items: center;
-  gap: var(--sp-3);
-  margin-bottom: var(--sp-2);
+  gap: 10px; /* mockup-specific */
+  margin-bottom: 6px; /* mockup-specific */
 }
 
 .pcv2-icon {
@@ -52,7 +52,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--fs-xs);
+  font-size: var(--fs-sm);
   font-weight: 700;
   flex-shrink: 0;
   background: rgba(var(--accent-rgb), 0.06);
@@ -118,7 +118,7 @@
 }
 
 .pcv2-name {
-  font-size: var(--fs-sm);
+  font-size: 13px; /* mockup-specific */
   font-weight: 600;
   color: var(--text0);
   white-space: nowrap;
@@ -127,7 +127,7 @@
 }
 
 .pcv2-sub {
-  font-size: var(--fs-xs);
+  font-size: 9px; /* mockup-specific */
   color: var(--text3);
   margin-top: 1px;
 }
@@ -147,12 +147,17 @@
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  font-size: var(--fs-xs);
+  font-size: 9px; /* mockup-specific */
   font-family: var(--font-mono);
-  padding: var(--sp-1) var(--sp-2);
+  padding: 5px var(--sp-2); /* mockup-specific 5px vertical */
   background: rgba(255, 255, 255, 0.01);
-  border-radius: var(--r);
-  margin-bottom: var(--sp-2);
+  border-radius: 5px; /* mockup-specific */
+  margin: 6px 0; /* mockup-specific */
+}
+
+.git-loading {
+  color: var(--text3);
+  font-style: italic;
 }
 
 .git-branch {
@@ -187,12 +192,12 @@
   display: flex;
   gap: var(--sp-1);
   flex-wrap: wrap;
-  margin-bottom: var(--sp-2);
+  margin-top: var(--sp-1);
 }
 
 .pcv2-pill {
-  font-size: var(--fs-xs);
-  padding: 2px var(--sp-2);
+  font-size: 9px; /* mockup-specific */
+  padding: 3px var(--sp-2); /* mockup-specific 3px vertical */
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.025);
   border: 1px solid rgba(255, 255, 255, 0.04);
@@ -207,6 +212,9 @@
 
 /* Footer */
 .pcv2-footer {
-  font-size: var(--fs-xs);
+  margin-top: 6px; /* mockup-specific */
+  padding-top: 6px; /* mockup-specific */
+  border-top: 1px solid rgba(255, 255, 255, 0.025);
+  font-size: 9px; /* mockup-specific */
   color: var(--text3);
 }

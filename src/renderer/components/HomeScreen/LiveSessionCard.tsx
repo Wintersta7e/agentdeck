@@ -7,15 +7,6 @@ import './LiveSessionCard.css'
 
 const AGENT_META = new Map(AGENTS.map((a) => [a.id, a]))
 
-const CONTEXT_WINDOWS: Record<string, number> = {
-  'claude-code': 200_000,
-  codex: 100_000,
-  aider: 128_000,
-  goose: 128_000,
-  'gemini-cli': 1_000_000,
-  'amazon-q': 128_000,
-  opencode: 128_000,
-}
 const DEFAULT_CONTEXT = 128_000
 
 function formatTokens(n: number): string {
@@ -46,7 +37,19 @@ interface LiveSessionCardProps {
 
 export function LiveSessionCard({ sessionId }: LiveSessionCardProps): React.JSX.Element {
   const session = useAppStore((s) => s.sessions[sessionId])
-  const feed = useAppStore((s) => s.activityFeeds[sessionId])
+  // Narrow selector: only the last event in this session's feed — only re-renders
+  // when a new event is appended (object reference changes for the new item).
+  const latestActivity = useAppStore((s): ActivityEvent | null => {
+    const feed = s.activityFeeds[sessionId]
+    if (!feed || feed.length === 0) return null
+    return feed[feed.length - 1] ?? null
+  })
+  // Narrow selector: primitive count — only re-renders when write count changes.
+  const filesChanged = useAppStore((s) => {
+    const feed = s.activityFeeds[sessionId]
+    if (!feed) return 0
+    return feed.filter((e) => e.type === 'write').length
+  })
   const usage = useAppStore((s) => s.sessionUsage[sessionId])
   const projects = useAppStore((s) => s.projects)
 
@@ -59,14 +62,11 @@ export function LiveSessionCard({ sessionId }: LiveSessionCardProps): React.JSX.
 
   const agentId = session?.agentOverride ?? 'claude-code'
   const meta = AGENT_META.get(agentId)
-  const latestActivity = feed?.[feed.length - 1]
-  const pulseClass = getPulseClass(latestActivity)
+  const pulseClass = getPulseClass(latestActivity ?? undefined)
 
   const totalTokens = (usage?.inputTokens ?? 0) + (usage?.outputTokens ?? 0)
-  const contextWindow = CONTEXT_WINDOWS[agentId] ?? DEFAULT_CONTEXT
+  const contextWindow = meta?.contextWindow ?? DEFAULT_CONTEXT
   const tokenPct = Math.min(100, (totalTokens / contextWindow) * 100)
-
-  const filesChanged = useMemo(() => (feed ?? []).filter((e) => e.type === 'write').length, [feed])
 
   if (!session) return <div className="live-card live-card-empty" />
 

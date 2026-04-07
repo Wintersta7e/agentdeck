@@ -62,25 +62,30 @@ export function AgentStrip(): React.JSX.Element {
           return (
             <button
               key={agent.id}
-              className={`agent-chip-v2${installed ? ' installed' : ''}`}
+              className={`agent-chip-v2${installed ? ' installed' : ''}${updating ? ' updating' : ''}`}
               onClick={hasUpdate && !updating ? () => void handleUpdate(agent.id) : undefined}
-              disabled={!hasUpdate || updating}
+              disabled={updating}
               type="button"
               title={
-                hasUpdate
-                  ? `Update ${agent.name}`
-                  : installed
-                    ? `${agent.name} installed`
-                    : `${agent.name} not installed`
+                updating
+                  ? `Updating ${agent.name}…`
+                  : hasUpdate
+                    ? `Update ${agent.name}`
+                    : installed
+                      ? `${agent.name} installed`
+                      : `${agent.name} not installed`
               }
-              aria-label={`${agent.name} ${statusLabel}`}
+              aria-label={`${agent.name} ${updating ? 'updating' : statusLabel}`}
             >
               <div className={`agent-chip-emoji${installed ? '' : ' dimmed'}`}>{agent.icon}</div>
               <div className="agent-chip-name">{agent.name}</div>
               {version?.current !== undefined && (
                 <div className="agent-chip-ver">{version.current}</div>
               )}
-              <div className={`agent-chip-badge ${statusClass}`}>{statusLabel}</div>
+              <div className={`agent-chip-badge ${statusClass}`}>
+                {updating ? 'UPD…' : statusLabel}
+              </div>
+              {updating && <div className="agent-chip-progress" />}
             </button>
           )
         })}

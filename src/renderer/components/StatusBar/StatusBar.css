@@ -13,16 +13,6 @@
   color: var(--text2);
 }
 
-.statusbar::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 10%;
-  right: 10%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(var(--accent-rgb), 0.25), transparent);
-}
-
 .status-item {
   display: flex;
   align-items: center;

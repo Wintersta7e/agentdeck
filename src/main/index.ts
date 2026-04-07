@@ -23,6 +23,8 @@ import {
   registerSkillHandlers,
   registerWorktreeHandlers,
   registerHomeHandlers,
+  costHistory,
+  reviewTracker,
 } from './ipc'
 
 const log = createLogger('app')
@@ -141,7 +143,14 @@ function createWindow(): void {
 }
 
 function registerIpcHandlers(store: AppStore): void {
-  registerPtyHandlers(() => ptyManager)
+  registerPtyHandlers(() => ptyManager, {
+    getMainWindow: () => mainWindow,
+    getProjectId: (projectPath) => {
+      const projects = store.get('projects') ?? []
+      return projects.find((p: { path: string }) => p.path === projectPath)?.id ?? null
+    },
+    reviewTracker,
+  })
   registerWindowHandlers(() => mainWindow, store)
   registerAgentHandlers(() => mainWindow, store)
   registerProjectHandlers(
@@ -303,6 +312,7 @@ app
 
 app.on('before-quit', () => {
   log.info('App quitting')
+  costHistory.flush()
   costTracker?.destroy()
   workflowEngine?.stopAll()
   ptyManager?.killAll()

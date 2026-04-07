@@ -2,8 +2,8 @@
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  padding: var(--sp-1) 0;
-  font-size: var(--fs-sm);
+  padding: 6px 0; /* mockup-specific */
+  font-size: 11px; /* mockup-specific */
 }
 
 .wf-run-dot {
@@ -21,7 +21,7 @@
 }
 
 .wf-run-badge {
-  font-size: var(--fs-xs);
+  font-size: 9px; /* mockup-specific */
   padding: 1px var(--sp-2);
   border-radius: 10px;
 }
@@ -42,6 +42,6 @@
 }
 
 .wf-run-time {
-  font-size: var(--fs-xs);
+  font-size: 9px; /* mockup-specific */
   color: var(--text3);
 }

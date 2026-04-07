@@ -1,5 +1,5 @@
 .tl-container {
-  padding: var(--sp-3) var(--sp-4);
+  padding: 14px var(--sp-4); /* mockup-specific 14px vertical */
   background: rgba(255, 255, 255, 0.012);
   border: 1px solid rgba(255, 255, 255, 0.03);
   border-radius: 10px;
@@ -18,7 +18,7 @@
 }
 
 .tl-empty {
-  font-size: var(--fs-xs);
+  font-size: 9px; /* mockup-specific */
   color: var(--text3);
   font-style: italic;
   padding: var(--sp-2) 0;
@@ -32,7 +32,7 @@
 }
 
 .tl-label {
-  font-size: var(--fs-xs);
+  font-size: 9px; /* mockup-specific */
   font-family: var(--font-mono);
   color: var(--text3);
   width: 90px;
@@ -45,7 +45,7 @@
 
 .tl-track {
   flex: 1;
-  height: 14px;
+  height: 14px; /* mockup-specific */
   background: rgba(255, 255, 255, 0.02);
   border-radius: 3px;
   overflow: hidden;
@@ -73,7 +73,7 @@
 }
 
 .tl-duration {
-  font-size: var(--fs-xs);
+  font-size: 9px; /* mockup-specific */
   font-family: var(--font-mono);
   color: var(--text3);
   width: 48px;
@@ -91,7 +91,7 @@
   display: flex;
   align-items: center;
   gap: var(--sp-1);
-  font-size: var(--fs-xs);
+  font-size: 9px; /* mockup-specific */
   color: var(--text3);
 }
 

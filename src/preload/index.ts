@@ -233,6 +233,11 @@ contextBridge.exposeInMainWorld('agentDeck', {
       ipcRenderer.invoke('cost:getBudget') as Promise<number | null>,
     setBudget: (amount: number | null): Promise<void> =>
       ipcRenderer.invoke('cost:setBudget', amount) as Promise<void>,
+    onReviewsUpdated: (cb: (items: ReviewItem[]) => void): (() => void) => {
+      const handler = (_: Electron.IpcRendererEvent, items: ReviewItem[]): void => cb(items)
+      ipcRenderer.on('home:reviewsUpdated', handler)
+      return () => ipcRenderer.removeListener('home:reviewsUpdated', handler)
+    },
   },
   cost: {
     bind: (

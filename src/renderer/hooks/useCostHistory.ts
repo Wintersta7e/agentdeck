@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAppStore } from '../store/appStore'
 import type { DailyCostEntry } from '../../shared/types'
 
@@ -7,6 +7,12 @@ export interface CostDashboardData {
   budget: number | null
   todayCost: number
   perAgentToday: Record<string, number>
+}
+
+function getMidnight(): number {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  return d.getTime()
 }
 
 export function useCostHistory(): CostDashboardData {
@@ -39,24 +45,30 @@ export function useCostHistory(): CostDashboardData {
     }
   }, [setCostHistory, setDailyBudget])
 
+  // H14: Reactive midnight boundary — recomputes at day rollover
+  const [midnight, setMidnight] = useState(getMidnight)
+  useEffect(() => {
+    const nextMidnight = midnight + 86_400_000
+    // Use Math.max(0, ...) so the timer fires ASAP if we're already past midnight
+    const ms = Math.max(0, nextMidnight - Date.now())
+    const id = setTimeout(() => setMidnight(getMidnight()), ms)
+    return () => clearTimeout(id)
+  }, [midnight])
+
   const { todayCost, perAgentToday } = useMemo(() => {
     let total = 0
     const perAgent: Record<string, number> = {}
 
-    const midnight = new Date()
-    midnight.setHours(0, 0, 0, 0)
-    const dayStart = midnight.getTime()
-
     for (const [sessionId, usage] of Object.entries(sessionUsage)) {
       const session = sessions[sessionId]
-      if (!session || session.startedAt < dayStart) continue
+      if (!session || session.startedAt < midnight) continue
       total += usage.totalCostUsd
       const agent = session.agentOverride ?? 'unknown'
       perAgent[agent] = (perAgent[agent] ?? 0) + usage.totalCostUsd
     }
 
     return { todayCost: total, perAgentToday: perAgent }
-  }, [sessionUsage, sessions])
+  }, [sessionUsage, sessions, midnight])
 
   return { history: costHistory, budget: dailyBudget, todayCost, perAgentToday }
 }

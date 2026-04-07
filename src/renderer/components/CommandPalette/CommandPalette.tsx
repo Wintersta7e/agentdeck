@@ -182,8 +182,12 @@ function PaletteInner({
   const setWorkflows = useAppStore((s) => s.setWorkflows)
   const openWorkflow = useAppStore((s) => s.openWorkflow)
 
-  const [query, setQuery] = useState('')
-  const [scope, setScope] = useState<ScopeTab>('tools')
+  const paletteMode = useAppStore((s) => s.commandPaletteMode)
+  const initialScope: ScopeTab =
+    paletteMode === 'template' ? 'templates' : paletteMode === 'workflow' ? 'tools' : 'tools'
+
+  const [query, setQuery] = useState(paletteMode === 'workflow' ? 'workflow' : '')
+  const [scope, setScope] = useState<ScopeTab>(initialScope)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const initialSubMenu = useAppStore((s) => s.commandPaletteInitialSubMenu)
   const [subMenu, setSubMenu] = useState<'theme' | 'agents' | null>(initialSubMenu)

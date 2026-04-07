@@ -11,18 +11,9 @@ import { AboutDialog } from './components/AboutDialog/AboutDialog'
 import { ShortcutsDialog } from './components/ShortcutsDialog/ShortcutsDialog'
 import { NotificationToast } from './components/NotificationToast/NotificationToast'
 import { ConfirmDialog } from './components/shared/ConfirmDialog'
-import { HexGrid } from './components/shared/HexGrid'
-import { EnergyVein } from './components/shared/EnergyVein'
-import { AmbientGlow } from './components/shared/AmbientGlow'
-
-// PERF-17: Hoist static position tuples to module scope to avoid new array references on every render
-const GLOW_POS_1: [number, number] = [25, 15]
-const GLOW_POS_2: [number, number] = [75, 80]
-
 import { useAppStore } from './store/appStore'
 import { useProjects } from './hooks/useProjects'
 import { useAmbientState } from './hooks/useAmbientState'
-import { useReducedMotion } from './hooks/useReducedMotion'
 import type { ActivityEvent, AgentConfig, Project } from '../shared/types'
 import './App.css'
 
@@ -97,8 +88,7 @@ export function App(): React.JSX.Element {
     addSession(sessionId, '')
   }, [addSession])
 
-  const { veinSpeed, isIdle } = useAmbientState()
-  const reducedMotion = useReducedMotion()
+  const { isIdle } = useAmbientState()
 
   const { updateProject } = useProjects()
 
@@ -479,28 +469,6 @@ export function App(): React.JSX.Element {
 
   return (
     <div className="app">
-      {/* Fusion ambient layer */}
-      <div
-        className="fusion-ambient"
-        style={{
-          position: 'fixed',
-          inset: 0,
-          overflow: 'hidden',
-          pointerEvents: 'none',
-          zIndex: 0,
-          contain: 'strict',
-        }}
-      >
-        <HexGrid rotation={15} />
-        <EnergyVein color="var(--accent)" count={2} speed={reducedMotion ? 0 : veinSpeed} />
-        <AmbientGlow
-          color="rgba(var(--accent-rgb), 0.15)"
-          position={GLOW_POS_1}
-          size={600}
-          skew={-12}
-        />
-        <AmbientGlow color="rgba(100, 180, 255, 0.08)" position={GLOW_POS_2} size={500} skew={5} />
-      </div>
       <Titlebar
         onCloseTab={handleCloseTab}
         onCloseWorkflowTab={handleCloseWorkflowTab}

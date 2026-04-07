@@ -2,14 +2,14 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: var(--sp-2);
-  margin-bottom: var(--sp-5);
+  margin-bottom: var(--sp-4);
 }
 
 .quick-action {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  padding: var(--sp-3);
+  padding: 10px var(--sp-3); /* mockup-specific 10px vertical */
   background: rgba(255, 255, 255, 0.012);
   border: 1px solid rgba(255, 255, 255, 0.03);
   border-radius: 8px;
@@ -59,20 +59,18 @@
 }
 
 .quick-action-label {
-  font-size: var(--fs-sm);
+  font-size: 11px; /* mockup-specific */
   font-weight: 500;
   color: var(--text1);
 }
 
 .quick-action-sub {
-  font-size: var(--fs-xs);
-  color: var(--text3);
-  margin-top: 1px;
+  display: none;
 }
 
 .quick-action-kbd {
-  font-size: 8px;
-  padding: 2px var(--sp-1);
+  font-size: 8px; /* mockup-specific */
+  padding: 2px 5px; /* mockup-specific */
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 3px;

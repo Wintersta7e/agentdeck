@@ -1,7 +1,16 @@
 import { ipcMain } from 'electron'
+import type { BrowserWindow } from 'electron'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import type { PtyManager } from '../pty-manager'
 import { SAFE_ID_RE } from '../validation'
 import { KNOWN_AGENT_IDS } from '../../shared/agents'
+import { ptyBus } from '../pty-bus'
+import { invalidateGitCache } from '../git-status'
+import type { ReviewFile } from '../../shared/types'
+import type { ReviewTracker } from '../review-tracker'
+
+const execFileAsync = promisify(execFile)
 
 /**
  * PTY IPC handlers: spawn, write, resize, kill.
@@ -26,7 +35,43 @@ const MAX_STARTUP_COMMANDS = 50
 /** Maximum length of a single startup command. */
 const MAX_STARTUP_CMD_LEN = 4096
 
-export function registerPtyHandlers(getPtyManager: () => PtyManager | null): void {
+interface SessionMeta {
+  projectPath: string
+  projectId: string
+  agentId: string
+}
+
+interface PtyHandlerDeps {
+  getMainWindow: () => BrowserWindow | null
+  getProjectId: (projectPath: string) => string | null
+  reviewTracker: ReviewTracker
+}
+
+/**
+ * Parse `git diff --name-stat` output into ReviewFile entries.
+ * Lines are in format: "<status>\t<file>" where status is A/M/D/R/C.
+ */
+function parseNameStat(output: string): ReviewFile[] {
+  const files: ReviewFile[] = []
+  for (const line of output.trim().split('\n')) {
+    if (!line) continue
+    const tab = line.indexOf('\t')
+    if (tab === -1) continue
+    const code = line.slice(0, tab).trim()
+    const filePath = line.slice(tab + 1).trim()
+    if (!filePath) continue
+    let status: ReviewFile['status'] = 'modified'
+    if (code.startsWith('A')) status = 'added'
+    else if (code.startsWith('D')) status = 'deleted'
+    files.push({ path: filePath, insertions: 0, deletions: 0, status })
+  }
+  return files
+}
+
+export function registerPtyHandlers(
+  getPtyManager: () => PtyManager | null,
+  deps: PtyHandlerDeps,
+): void {
   ipcMain.handle(
     'pty:spawn',
     (
@@ -81,6 +126,54 @@ export function registerPtyHandlers(getPtyManager: () => PtyManager | null): voi
       const mgr = getPtyManager()
       if (!mgr) throw new Error('PTY manager not initialized')
       mgr.spawn(sessionId, cols, rows, projectPath, startupCommands, safeEnv, agent, agentFlags)
+
+      // Track session metadata and register a one-shot exit listener for review detection.
+      // ptyBus emits `exit:${sessionId}` from pty-manager.ts onExit handler.
+      if (projectPath) {
+        const projectId = deps.getProjectId(projectPath)
+        if (projectId) {
+          const meta: SessionMeta = {
+            projectPath,
+            projectId,
+            agentId: agent ?? 'unknown',
+          }
+
+          const { getMainWindow, reviewTracker: tracker } = deps
+          const capturedSessionId = sessionId
+          ptyBus.once(`exit:${capturedSessionId}`, () => {
+            void (async () => {
+              try {
+                invalidateGitCache(meta.projectPath)
+                const { stdout } = await execFileAsync(
+                  'wsl.exe',
+                  ['--', 'git', '-C', meta.projectPath, 'diff', '--name-stat', 'HEAD'],
+                  { timeout: 10000 },
+                )
+                const files = parseNameStat(stdout)
+                if (files.length === 0) return
+
+                tracker.addReview({
+                  sessionId: capturedSessionId,
+                  agentId: meta.agentId,
+                  projectId: meta.projectId,
+                  files,
+                  totalInsertions: 0,
+                  totalDeletions: 0,
+                })
+
+                const win = getMainWindow()
+                if (win && !win.isDestroyed()) {
+                  // Signal-only — renderer re-fetches per-project to avoid leaking
+                  // cross-project file paths in the broadcast payload.
+                  win.webContents.send('home:reviewsUpdated', [])
+                }
+              } catch {
+                // Best-effort: swallow all errors so PTY exit is never blocked
+              }
+            })()
+          })
+        }
+      }
     },
   )
 

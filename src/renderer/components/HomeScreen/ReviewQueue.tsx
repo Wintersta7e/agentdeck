@@ -6,30 +6,34 @@ import './ReviewQueue.css'
 const AGENT_META = new Map<string, (typeof AGENTS)[number]>(AGENTS.map((a) => [a.id, a]))
 
 export function ReviewQueue(): React.JSX.Element {
-  const projects = useAppStore((s) => s.projects)
+  const projectIds = useAppStore((s) => s.projects.map((p) => p.id).join(','))
   const reviewItems = useAppStore((s) => s.reviewItems)
   const setReviewItems = useAppStore((s) => s.setReviewItems)
   const dismissReview = useAppStore((s) => s.dismissReview)
 
   useEffect(() => {
     let cancelled = false
-    async function load(): Promise<void> {
-      const allItems = []
-      for (const p of projects) {
-        try {
-          const items = await window.agentDeck.home.pendingReviews(p.id)
-          allItems.push(...items)
-        } catch {
-          // Ignore IPC errors for individual projects
-        }
-      }
-      if (!cancelled) setReviewItems(allItems)
-    }
-    void load()
+    const ids = projectIds ? projectIds.split(',') : []
+    if (ids.length === 0) return
+
+    void Promise.all(
+      ids.map((id) => window.agentDeck.home.pendingReviews(id).catch(() => [])),
+    ).then((results) => {
+      if (cancelled) return
+      setReviewItems(results.flat())
+    })
+
     return () => {
       cancelled = true
     }
-  }, [projects, setReviewItems])
+  }, [projectIds, setReviewItems])
+
+  useEffect(() => {
+    const unsub = window.agentDeck.home.onReviewsUpdated((items) => {
+      setReviewItems(items)
+    })
+    return unsub
+  }, [setReviewItems])
 
   const pending = useMemo(() => reviewItems.filter((r) => r.status === 'pending'), [reviewItems])
 

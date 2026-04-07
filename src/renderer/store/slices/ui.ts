@@ -26,7 +26,8 @@ export interface UiSlice {
   // Command Palette
   commandPaletteOpen: boolean
   commandPaletteInitialSubMenu: 'theme' | 'agents' | null
-  openCommandPalette: (subMenu?: 'theme' | 'agents') => void
+  commandPaletteMode: 'all' | 'workflow' | 'template'
+  openCommandPalette: (subMenu?: 'theme' | 'agents', mode?: 'all' | 'workflow' | 'template') => void
   closeCommandPalette: () => void
 
   // Right Panel
@@ -142,9 +143,19 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   // Command Palette
   commandPaletteOpen: false,
   commandPaletteInitialSubMenu: null,
-  openCommandPalette: (subMenu) =>
-    set({ commandPaletteOpen: true, commandPaletteInitialSubMenu: subMenu ?? null }),
-  closeCommandPalette: () => set({ commandPaletteOpen: false, commandPaletteInitialSubMenu: null }),
+  commandPaletteMode: 'all',
+  openCommandPalette: (subMenu, mode) =>
+    set({
+      commandPaletteOpen: true,
+      commandPaletteInitialSubMenu: subMenu ?? null,
+      commandPaletteMode: mode ?? 'all',
+    }),
+  closeCommandPalette: () =>
+    set({
+      commandPaletteOpen: false,
+      commandPaletteInitialSubMenu: null,
+      commandPaletteMode: 'all',
+    }),
 
   // Right Panel
   rightPanelOpen: false,

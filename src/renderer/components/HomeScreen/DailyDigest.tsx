@@ -23,7 +23,7 @@ export function DailyDigest(): React.JSX.Element {
       <div className="daily-digest-row">
         <span className="daily-digest-label">Clean exits</span>
         <span className="daily-digest-value daily-digest-rate">
-          {digest.sessionsToday > 0 ? `${Math.round(digest.cleanExitRate)}%` : '\u2014'}
+          {digest.cleanExitRate !== null ? `${Math.round(digest.cleanExitRate)}%` : '\u2014'}
         </span>
       </div>
       <div className="daily-digest-row">

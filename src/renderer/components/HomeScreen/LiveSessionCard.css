@@ -1,6 +1,6 @@
 /* ── LiveSessionCard ── */
 .live-card {
-  padding: var(--sp-4);
+  padding: 14px var(--sp-4); /* mockup-specific 14px vertical */
   background: rgba(255, 255, 255, 0.015);
   border: 1px solid rgba(255, 255, 255, 0.04);
   border-radius: 10px;
@@ -41,7 +41,7 @@
 }
 
 .live-card-project {
-  font-size: var(--fs-xs);
+  font-size: 9px; /* mockup-specific */
   padding: 2px var(--sp-2);
   border-radius: var(--r);
   background: rgba(255, 255, 255, 0.03);
@@ -49,7 +49,7 @@
 }
 
 .live-card-elapsed {
-  font-size: var(--fs-xs);
+  font-size: 9px; /* mockup-specific */
   font-family: var(--font-mono);
   color: var(--text3);
   margin-left: auto;
@@ -107,7 +107,7 @@
 }
 
 .live-card-activity-text {
-  font-size: var(--fs-xs);
+  font-size: 9px; /* mockup-specific */
   color: var(--text2);
   white-space: nowrap;
   overflow: hidden;
@@ -123,7 +123,7 @@
 }
 
 .live-card-gauge-label {
-  font-size: var(--fs-xs);
+  font-size: 9px; /* mockup-specific */
   text-transform: uppercase;
   letter-spacing: 1.5px;
   color: var(--text3);
@@ -147,7 +147,7 @@
 }
 
 .live-card-gauge-val {
-  font-size: var(--fs-xs);
+  font-size: 9px; /* mockup-specific */
   font-family: var(--font-mono);
   color: var(--text3);
   width: 80px;
@@ -159,9 +159,9 @@
 .live-card-footer {
   display: flex;
   justify-content: space-between;
-  padding-top: var(--sp-2);
+  padding-top: 6px; /* mockup-specific */
   border-top: 1px solid rgba(255, 255, 255, 0.025);
-  font-size: var(--fs-xs);
+  font-size: 9px; /* mockup-specific */
   color: var(--text3);
 }
 
@@ -182,29 +182,29 @@
 
 /* ── LiveSessionGrid ── */
 .live-grid-wrapper {
-  margin-bottom: var(--sp-5);
+  margin-bottom: var(--sp-4);
 }
 
 .live-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--sp-3);
+  gap: 10px; /* mockup-specific */
 }
 
 .live-grid-empty {
-  padding: var(--sp-6);
+  padding: var(--sp-4);
   text-align: center;
   color: var(--text3);
-  font-size: var(--fs-sm);
+  font-size: 11px; /* mockup-specific */
   background: rgba(255, 255, 255, 0.008);
   border: 1px dashed rgba(255, 255, 255, 0.04);
   border-radius: 10px;
-  margin-bottom: var(--sp-5);
+  margin-bottom: var(--sp-4);
 }
 
 .live-grid-empty kbd {
-  font-size: var(--fs-xs);
-  padding: 2px var(--sp-1);
+  font-size: 8px; /* mockup-specific */
+  padding: 2px 5px; /* mockup-specific */
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 3px;
@@ -212,7 +212,7 @@
 
 .live-grid-overflow {
   text-align: center;
-  font-size: var(--fs-xs);
+  font-size: 9px; /* mockup-specific */
   color: var(--text3);
   margin-top: var(--sp-2);
 }

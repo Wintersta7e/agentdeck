@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { useProjects } from '../../hooks/useProjects'
-import { PanelBox } from '../shared/PanelBox'
-import { HexDot } from '../shared/HexDot'
 import { ConfirmDialog } from '../shared/ConfirmDialog'
 import type { AgentConfig, Project } from '../../../shared/types'
 import { getProjectAgents } from '../../../shared/agent-helpers'
@@ -298,7 +296,7 @@ export function Sidebar({
 
   return (
     <div className="sidebar" role="navigation" aria-label="Sidebar">
-      <PanelBox corners={['tl', 'br']} glow="left" className="sidebar-panel">
+      <div className="sidebar-panel">
         <div className="sidebar-section">
           <div
             className="sidebar-label sidebar-label-clickable"
@@ -350,15 +348,14 @@ export function Sidebar({
                   tabIndex={0}
                   onContextMenu={(e) => handleContextMenu(e, p.id)}
                 >
-                  <HexDot
-                    status={
+                  <div
+                    className={`sidebar-dot ${
                       getProjectStatus(p.id) === 'running'
-                        ? 'live'
+                        ? 'dot-running'
                         : getProjectStatus(p.id) === 'error'
-                          ? 'error'
-                          : 'idle'
-                    }
-                    size={8}
+                          ? 'dot-error'
+                          : 'dot-idle'
+                    }`}
                   />
                   <div className="sidebar-item-info">
                     <div className="sidebar-item-name">{p.name}</div>
@@ -691,22 +688,7 @@ export function Sidebar({
             </>
           </button>
         </div>
-
-        {sessionEntries.length > 0 && (
-          <div className="sidebar-summary">
-            {sessionEntries.map((s) => (
-              <HexDot
-                key={s.id}
-                status={s.status === 'running' ? 'live' : s.status === 'error' ? 'error' : 'idle'}
-                size={5}
-              />
-            ))}
-            <span className="sidebar-summary-label">
-              {sessionEntries.length} {sessionEntries.length === 1 ? 'session' : 'sessions'}
-            </span>
-          </div>
-        )}
-      </PanelBox>
+      </div>
 
       <ConfirmDialog
         open={confirmDialog !== null}

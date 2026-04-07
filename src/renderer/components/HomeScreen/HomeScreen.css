@@ -5,10 +5,9 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: var(--sp-5) var(--sp-6) var(--sp-9);
+  padding: var(--sp-5) var(--sp-6) var(--sp-7);
   position: relative;
 }
 
@@ -29,28 +28,26 @@
 
 .home-glow-healthy {
   background:
-    radial-gradient(ellipse at 20% 8%, rgba(var(--accent-rgb), 0.014) 0%, transparent 50%),
-    radial-gradient(ellipse at 85% 90%, rgba(var(--green-rgb), 0.006) 0%, transparent 40%),
+    radial-gradient(ellipse at 15% 0%, rgba(var(--accent-rgb), 0.01) 0%, transparent 50%),
     var(--bg0);
 }
 
 .home-glow-error {
   background:
-    radial-gradient(ellipse at 20% 8%, rgba(var(--accent-rgb), 0.008) 0%, transparent 50%),
+    radial-gradient(ellipse at 15% 0%, rgba(var(--accent-rgb), 0.008) 0%, transparent 50%),
     radial-gradient(ellipse at 85% 90%, rgba(var(--blue-rgb), 0.008) 0%, transparent 40%),
     var(--bg0);
 }
 
 .home-glow-neutral {
   background:
-    radial-gradient(ellipse at 20% 8%, rgba(var(--accent-rgb), 0.01) 0%, transparent 50%),
+    radial-gradient(ellipse at 15% 0%, rgba(var(--accent-rgb), 0.01) 0%, transparent 50%),
     var(--bg0);
 }
 
 /* ── Tier 1 — Critical ─────────────────────────────────────── */
 
 .home-tier1 {
-  max-width: 1200px;
   width: 100%;
 }
 
@@ -58,8 +55,7 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: var(--sp-5);
-  margin-bottom: var(--sp-5);
+  margin-bottom: var(--sp-4);
 }
 
 .home-greeting-left {
@@ -67,14 +63,14 @@
 }
 
 .home-date {
-  font-size: var(--fs-sm);
+  font-size: 11px; /* mockup-specific */
   letter-spacing: 0.4px;
   color: var(--text3);
   margin-bottom: 2px;
 }
 
 .home-headline {
-  font-size: var(--fs-2xl);
+  font-size: 26px; /* mockup-specific */
   font-weight: 800;
   letter-spacing: -0.5px;
   line-height: 1.15;
@@ -90,7 +86,9 @@
 .home-sub {
   font-size: var(--fs-sm);
   color: var(--text3);
-  margin-top: var(--sp-2);
+  margin-top: var(--sp-1);
+  display: flex;
+  gap: 14px; /* mockup-specific */
 }
 
 /* ── Tier 2 — Operational ──────────────────────────────────── */
@@ -98,14 +96,24 @@
 .home-tier2 {
   display: grid;
   grid-template-columns: 1fr 300px;
-  gap: var(--sp-4);
-  max-width: 1200px;
+  gap: 16px; /* mockup-specific */
   width: 100%;
-  margin-bottom: var(--sp-5);
+  margin-bottom: 20px; /* mockup-specific */
 }
 
 .home-tier2-left {
   min-width: 0;
+  max-height: 420px; /* cap project area — scroll when many projects */
+  overflow-y: auto;
+}
+
+.home-tier2-left::-webkit-scrollbar {
+  width: 3px;
+}
+
+.home-tier2-left::-webkit-scrollbar-thumb {
+  background: var(--bg4);
+  border-radius: 2px;
 }
 
 .home-tier2-right {
@@ -120,10 +128,11 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: var(--sp-2);
+  margin-top: var(--sp-5);
 }
 
 .home-sec-title {
-  font-size: var(--fs-xs);
+  font-size: 9px; /* mockup-specific */
   text-transform: uppercase;
   letter-spacing: 1.8px;
   font-weight: 600;
@@ -150,11 +159,11 @@
 .home-project-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--sp-3);
+  gap: 10px; /* mockup-specific */
 }
 
 .home-add-card {
-  padding: var(--sp-4);
+  padding: var(--sp-3);
   border: 1px dashed rgba(255, 255, 255, 0.06);
   border-radius: 10px;
   display: flex;
@@ -162,12 +171,12 @@
   align-items: center;
   justify-content: center;
   gap: var(--sp-1);
-  min-height: 120px;
+  min-height: 80px;
   background: none;
   cursor: pointer;
   color: var(--text3);
   font-family: inherit;
-  font-size: var(--fs-xs);
+  font-size: 9px; /* mockup-specific */
   text-transform: uppercase;
   letter-spacing: 1.5px;
   transition:

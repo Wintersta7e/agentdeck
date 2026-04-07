@@ -21,7 +21,7 @@ body,
 body {
   background: var(--bg0);
   color: var(--text0);
-  font-family: var(--font-mono);
+  font-family: var(--font-ui);
   font-size: var(--fs-base);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

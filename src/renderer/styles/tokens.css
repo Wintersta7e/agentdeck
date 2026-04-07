@@ -168,6 +168,7 @@
   --r: 4px;
 
   /* Typography */
+  --font-ui: -apple-system, 'Segoe UI', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
   --font-display: 'Syne Variable', 'Syne', sans-serif;
 

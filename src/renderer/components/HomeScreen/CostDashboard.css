@@ -5,7 +5,7 @@
 }
 
 .cost-card {
-  padding: var(--sp-3);
+  padding: var(--sp-3) 14px; /* mockup-specific 14px horizontal */
   background: rgba(255, 255, 255, 0.012);
   border: 1px solid rgba(255, 255, 255, 0.03);
   border-radius: 8px;
@@ -28,7 +28,7 @@
 }
 
 .cost-val {
-  font-size: var(--fs-lg);
+  font-size: 18px; /* mockup-specific */
   font-weight: 800;
   color: var(--text0);
 }
@@ -42,7 +42,7 @@
 }
 
 .cost-lbl {
-  font-size: var(--fs-xs);
+  font-size: 8px; /* mockup-specific */
   text-transform: uppercase;
   letter-spacing: 2px;
   color: var(--text3);
@@ -72,7 +72,7 @@
   display: flex;
   justify-content: space-between;
   margin-top: var(--sp-1);
-  font-size: var(--fs-xs);
+  font-size: 8px; /* mockup-specific */
   color: var(--text3);
 }
 

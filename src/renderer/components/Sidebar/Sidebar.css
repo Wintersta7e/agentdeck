@@ -1,21 +1,22 @@
 .sidebar {
   width: 100%;
-  background: var(--glass-bg);
+  background: #0a0b0e; /* solid dark — mockup sidebar */
+  border-right: 1px solid rgba(255, 255, 255, 0.03);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-radius: var(--r);
+  border-radius: 0;
 }
 
 .sidebar-section {
-  padding: var(--sp-3) var(--sp-3) var(--sp-2);
+  padding: 14px 14px var(--sp-2); /* mockup: 14px outer padding */
   flex: 0 1 auto;
   overflow-y: auto;
 }
 
 .sidebar-section.flex-fill {
   flex: 1;
-  min-height: 120px;
+  min-height: 160px;
   overflow-y: auto;
   mask-image: linear-gradient(
     to bottom,
@@ -34,13 +35,13 @@
 }
 
 .sidebar-label {
-  font-size: var(--fs-xs);
-  color: var(--text2);
-  letter-spacing: 0.12em;
+  font-size: 9px; /* mockup: .side-lbl */
+  color: #3a3832; /* mockup: .side-lbl muted label */
+  letter-spacing: 1.8px; /* mockup: .side-lbl */
   text-transform: uppercase;
-  font-weight: 700;
-  padding: 0 var(--sp-1);
-  margin-bottom: var(--sp-2);
+  font-weight: 600; /* mockup: .side-lbl */
+  padding: 0 4px; /* mockup: .side-lbl */
+  margin-bottom: 8px; /* mockup: .side-lbl */
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -82,44 +83,33 @@
 .sidebar-item {
   display: flex;
   align-items: center;
-  gap: var(--sp-2);
-  padding: var(--sp-2) var(--sp-3);
-  border-radius: var(--r);
+  gap: 8px; /* mockup: .side-item */
+  padding: 6px 10px; /* mockup: .side-item */
+  border-radius: 6px; /* mockup: .side-item */
   cursor: pointer;
-  transition:
-    background-color var(--duration-base) var(--ease-default),
-    box-shadow var(--duration-base) var(--ease-default),
-    border-color var(--duration-base) var(--ease-default);
-  margin-bottom: 3px;
-  border: 1px solid transparent;
+  transition: background-color var(--duration-base) var(--ease-default);
+  margin-bottom: 2px; /* mockup: .side-item */
+  font-size: 12px; /* mockup: .side-item */
 }
 .sidebar-item:hover {
   background: var(--bg3);
-  box-shadow:
-    inset 2px 0 0 var(--accent),
-    0 0 8px rgba(var(--accent-rgb, 245, 166, 35), 0.05);
 }
 .sidebar-item.active {
-  background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.04), transparent);
-  border-color: transparent;
-  box-shadow: none;
+  background: rgba(var(--accent-rgb), 0.04); /* mockup: .side-item.active */
 }
 .sidebar-item.active .sidebar-item-name {
   color: var(--amber);
 }
 
 .sidebar-dot {
-  width: 6px;
-  height: 6px;
+  width: 5px; /* mockup: .side-dot */
+  height: 5px; /* mockup: .side-dot */
   border-radius: 50%;
   flex-shrink: 0;
 }
 .dot-running {
   background: var(--green);
-  box-shadow:
-    0 0 6px var(--green),
-    0 0 12px rgba(var(--green-rgb), 0.3);
-  animation: pulse-dot 2s ease-in-out infinite;
+  box-shadow: 0 0 4px rgba(var(--green-rgb), 0.3);
 }
 .dot-idle {
   background: var(--text3);
@@ -127,16 +117,6 @@
 .dot-error {
   background: var(--red);
 }
-@keyframes pulse-dot {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.4;
-  }
-}
-
 .sidebar-item-info {
   flex: 1;
   min-width: 0;
@@ -162,8 +142,8 @@
   width: 100%;
 }
 .sidebar-item-sub {
-  color: var(--text2);
-  font-size: var(--fs-xs);
+  color: var(--text3);
+  font-size: 9px; /* mockup-aligned sub-label */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -345,12 +325,12 @@
 
 /* ─── Template category groups ─── */
 .sidebar-group-label {
-  font-size: var(--fs-xs);
+  font-size: 9px; /* match sidebar-label */
   text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--text3);
+  letter-spacing: 1.8px;
+  color: #3a3832;
   font-weight: 600;
-  padding: var(--sp-2) var(--sp-1) 2px;
+  padding: 8px 4px 2px;
 }
 
 .sidebar-tpl-group + .sidebar-tpl-group .sidebar-group-label {
@@ -359,13 +339,22 @@
 
 .sidebar-divider {
   height: 1px;
-  background: var(--border);
-  margin: var(--sp-2) var(--sp-3);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.04),
+    transparent
+  ); /* mockup: .side-sep */
+  margin: 10px 4px; /* mockup: .side-sep */
 }
 
 .sidebar-bottom {
   margin-top: auto;
-  padding: var(--sp-2) var(--sp-3);
+  padding-top: 10px; /* mockup: .side-bottom */
+  padding-left: 14px;
+  padding-right: 14px;
+  padding-bottom: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.03); /* mockup: .side-bottom */
 }
 
 .new-project-btn {
@@ -373,26 +362,22 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--sp-2);
-  padding: var(--sp-2);
-  border: 1px dashed var(--border-bright);
-  border-radius: var(--r);
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
   background: none;
-  color: var(--text2);
+  color: var(--text3);
   font-family: inherit;
-  font-size: var(--fs-sm);
+  font-size: 12px;
   cursor: pointer;
   transition:
     border-color var(--duration-base),
-    color var(--duration-base),
-    background-color var(--duration-base),
-    box-shadow var(--duration-base);
+    color var(--duration-base);
 }
 .new-project-btn:hover {
-  border-color: var(--accent-dim);
+  border-color: rgba(var(--accent-rgb), 0.15);
   color: var(--accent);
-  background: var(--accent-glow2);
-  box-shadow: 0 0 12px rgba(var(--accent-rgb, 245, 166, 35), 0.08);
 }
 
 /* ─── Workflow sidebar items ─── */
@@ -401,7 +386,6 @@
 }
 .sidebar-item.sidebar-item-wf-active {
   background: var(--purple-dim);
-  border-color: rgba(var(--purple-rgb), 0.25);
 }
 .sidebar-item-wf-active .sidebar-item-name {
   color: var(--purple);
@@ -410,18 +394,17 @@
 /* New Workflow button */
 .sidebar-new-wf {
   width: 100%;
-  padding: var(--sp-2);
-  border: 1px dashed var(--border-bright);
-  border-radius: var(--r);
+  padding: 6px 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
   background: none;
-  color: var(--text2);
+  color: var(--text3);
   font-family: var(--font-mono);
-  font-size: var(--fs-sm);
+  font-size: 12px;
   cursor: pointer;
   transition:
     border-color var(--duration-base),
-    color var(--duration-base),
-    background-color var(--duration-base);
+    color var(--duration-base);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -429,9 +412,8 @@
   margin-top: var(--sp-1);
 }
 .sidebar-new-wf:hover {
-  border-color: rgba(var(--purple-rgb), 0.5);
+  border-color: rgba(var(--purple-rgb), 0.3);
   color: var(--purple);
-  background: var(--purple-dim);
 }
 
 /* ─── Agent launch sub-panel ─── */
@@ -479,9 +461,7 @@
   padding: var(--sp-2) var(--sp-2);
 }
 
-/* ─── Fusion design system additions ─── */
-
-/* Sidebar PanelBox fill */
+/* ─── Sidebar panel layout ─── */
 .sidebar-panel {
   display: flex;
   flex-direction: column;
@@ -489,51 +469,37 @@
   background: transparent;
 }
 
-/* Section header gradient line */
-.sidebar-label::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.25), transparent);
-  margin-left: var(--sp-2);
-}
-
-/* Connecting vein between pinned project items */
+/* Cap pinned section so it cannot squeeze flex-fill sections */
 .sidebar-section:first-of-type {
   position: relative;
-  max-height: 45vh; /* cap so pinned projects cannot squeeze flex-fill sections */
+  max-height: 30vh;
 }
 
-.sidebar-section:first-of-type::before {
-  content: '';
-  position: absolute;
-  left: 18px;
-  top: 40px;
-  bottom: 20px;
-  width: 1px;
-  background: linear-gradient(
-    to bottom,
-    rgba(var(--green-rgb), 0.4),
-    rgba(255, 255, 255, 0.08),
-    rgba(var(--red-rgb), 0.3)
-  );
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Session summary cluster at bottom */
-.sidebar-summary {
+/* ─── WSL environment health indicator ─── */
+.sidebar-env-health {
   display: flex;
   align-items: center;
-  gap: 3px;
-  padding: var(--sp-2) var(--sp-3);
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  gap: 8px;
+  padding: 4px 10px;
+  margin-bottom: 4px;
 }
 
-.sidebar-summary-label {
-  margin-left: var(--sp-1);
+.sidebar-env-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sidebar-env-dot.healthy {
+  background: var(--green);
+}
+
+.sidebar-env-dot.error {
+  background: var(--red);
+}
+
+.sidebar-env-text {
+  font-size: var(--fs-xs);
   color: var(--text3);
-  font-size: 7px;
-  font-family: var(--font-mono);
-  letter-spacing: 0.5px;
 }

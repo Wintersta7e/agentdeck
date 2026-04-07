@@ -1,3 +1,4 @@
+import { writeFileSync, readFileSync, existsSync } from 'node:fs'
 import type { DailyCostEntry } from '../shared/types'
 
 export interface CostHistory {
@@ -5,15 +6,62 @@ export interface CostHistory {
   getHistory: (days: number) => DailyCostEntry[]
   getBudget: () => number | null
   setBudget: (amount: number | null) => void
+  flush: () => void
+}
+
+interface PersistedData {
+  entries: DailyCostEntry[]
+  budget: number | null
 }
 
 function todayStr(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
-export function createCostHistory(): CostHistory {
-  const entries = new Map<string, DailyCostEntry>()
-  let dailyBudget: number | null = null
+function loadFromDisk(storePath: string): {
+  entries: Map<string, DailyCostEntry>
+  budget: number | null
+} {
+  try {
+    if (!existsSync(storePath)) return { entries: new Map(), budget: null }
+    const raw = readFileSync(storePath, 'utf-8')
+    const data = JSON.parse(raw) as PersistedData
+    const entries = new Map<string, DailyCostEntry>((data.entries ?? []).map((e) => [e.date, e]))
+    return { entries, budget: data.budget ?? null }
+  } catch {
+    return { entries: new Map(), budget: null }
+  }
+}
+
+export function createCostHistory(storePath?: string): CostHistory {
+  const { entries, budget: savedBudget } = storePath
+    ? loadFromDisk(storePath)
+    : { entries: new Map<string, DailyCostEntry>(), budget: null }
+  let dailyBudget: number | null = savedBudget
+
+  let flushTimer: ReturnType<typeof setTimeout> | null = null
+
+  function schedulFlush(): void {
+    if (!storePath) return
+    if (flushTimer !== null) return
+    flushTimer = setTimeout(() => {
+      flushTimer = null
+      writeToDisk()
+    }, 5_000)
+  }
+
+  function writeToDisk(): void {
+    if (!storePath) return
+    try {
+      const data: PersistedData = {
+        entries: Array.from(entries.values()),
+        budget: dailyBudget,
+      }
+      writeFileSync(storePath, JSON.stringify(data, null, 2), 'utf-8')
+    } catch {
+      // best-effort — ignore disk errors
+    }
+  }
 
   return {
     recordCost(agentId, costUsd, tokens) {
@@ -33,6 +81,7 @@ export function createCostHistory(): CostHistory {
           tokenCount: tokens,
         })
       }
+      schedulFlush()
     },
 
     getHistory(days) {
@@ -51,6 +100,15 @@ export function createCostHistory(): CostHistory {
 
     setBudget(amount) {
       dailyBudget = amount
+      schedulFlush()
+    },
+
+    flush() {
+      if (flushTimer !== null) {
+        clearTimeout(flushTimer)
+        flushTimer = null
+      }
+      writeToDisk()
     },
   }
 }

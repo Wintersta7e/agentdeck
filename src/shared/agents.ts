@@ -12,6 +12,7 @@ export const AGENTS = [
     icon: '⬡',
     name: 'Claude Code',
     description: 'Anthropic AI coding agent',
+    contextWindow: 200_000,
     versionArgs: ['--version'],
     latestCmd: 'npm view @anthropic-ai/claude-code version 2>/dev/null',
     updateCmd: 'npm install -g @anthropic-ai/claude-code@latest',
@@ -22,6 +23,7 @@ export const AGENTS = [
     icon: '◈',
     name: 'Codex',
     description: 'OpenAI CLI agent',
+    contextWindow: 100_000,
     versionArgs: ['--version'],
     installedCmd: 'npm list -g @openai/codex --json 2>/dev/null',
     latestCmd: 'npm view @openai/codex version 2>/dev/null',
@@ -33,6 +35,7 @@ export const AGENTS = [
     icon: '◇',
     name: 'Aider',
     description: 'AI pair programming in terminal',
+    contextWindow: 128_000,
     versionArgs: ['--version'],
     latestCmd: 'pip index versions aider-chat 2>/dev/null | head -1',
     updateCmd: 'pip install --upgrade aider-chat',
@@ -43,6 +46,7 @@ export const AGENTS = [
     icon: '🪿',
     name: 'Goose',
     description: 'Block open-source AI agent',
+    contextWindow: 128_000,
     versionArgs: ['version'],
     // Goose is installed via shell script (curl | bash), not pip.
     // No reliable remote version check — leave empty to skip update notifications.
@@ -55,6 +59,7 @@ export const AGENTS = [
     icon: '◆',
     name: 'Gemini CLI',
     description: 'Google AI terminal agent',
+    contextWindow: 1_000_000,
     versionArgs: ['--version'],
     latestCmd: 'npm view @google/gemini-cli version 2>/dev/null',
     updateCmd: 'npm install -g @google/gemini-cli@latest',
@@ -65,6 +70,7 @@ export const AGENTS = [
     icon: '▣',
     name: 'Amazon Q',
     description: 'AWS AI developer assistant',
+    contextWindow: 128_000,
     versionArgs: ['--version'],
     // Amazon Q CLI moved from npm (@amzn/amazon-q-developer-cli-autoinstall, now 404)
     // to a standalone installer. No reliable npm version check available.
@@ -78,6 +84,7 @@ export const AGENTS = [
     icon: '⊡',
     name: 'OpenCode',
     description: 'Open-source terminal AI',
+    contextWindow: 128_000,
     versionArgs: ['version'],
     // Package renamed from 'opencode' to 'opencode-ai' on npm
     latestCmd: 'npm view opencode-ai version 2>/dev/null',

@@ -5,6 +5,7 @@ describe('CostHistory', () => {
   let history: ReturnType<typeof createCostHistory>
 
   beforeEach(() => {
+    // No storePath — pure in-memory mode for tests
     history = createCostHistory()
   })
 

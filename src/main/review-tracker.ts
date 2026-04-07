@@ -1,5 +1,7 @@
 import type { ReviewItem, ReviewFile } from '../shared/types'
 
+const MAX_REVIEWS = 100
+
 interface AddReviewInput {
   sessionId: string
   agentId: string
@@ -36,14 +38,15 @@ export function createReviewTracker(): ReviewTracker {
         status: 'pending',
       }
       items.set(id, item)
+      if (items.size > MAX_REVIEWS) {
+        const oldest = items.keys().next().value
+        if (oldest !== undefined) items.delete(oldest)
+      }
       return item
     },
 
     dismissReview(id) {
-      const item = items.get(id)
-      if (item) {
-        items.set(id, { ...item, status: 'dismissed' })
-      }
+      items.delete(id)
     },
 
     getReviews(projectId) {

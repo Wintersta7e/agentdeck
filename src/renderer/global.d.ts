@@ -153,6 +153,7 @@ declare global {
         costHistory: (days: number) => Promise<DailyCostEntry[]>
         getBudget: () => Promise<number | null>
         setBudget: (amount: number | null) => Promise<void>
+        onReviewsUpdated: (cb: (items: ReviewItem[]) => void) => () => void
       }
       pickFolder: () => Promise<string | null>
       log: {

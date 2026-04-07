@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowRight, Plus, FolderOpen, Bot, Terminal } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
+import { useGitStatusBatch } from '../../hooks/useGitStatus'
 import { DailyDigest } from './DailyDigest'
 import { QuickActions } from './QuickActions'
 import { LiveSessionGrid } from './LiveSessionGrid'
@@ -20,17 +21,6 @@ import './HomeScreen.css'
 const AGENT_META_MAP = new Map<string, (typeof SHARED_AGENTS)[number]>(
   SHARED_AGENTS.map((a) => [a.id, a]),
 )
-
-function timeAgo(timestamp: number | undefined): string {
-  if (!timestamp) return ''
-  const diff = Date.now() - timestamp
-  const mins = Math.floor(diff / 60000)
-  if (mins < 60) return `${mins}m ago`
-  const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  return `${days}d ago`
-}
 
 function getGreeting(): string {
   const h = new Date().getHours()
@@ -59,7 +49,6 @@ export function HomeScreen({
 }: HomeScreenProps): React.JSX.Element {
   const projects = useAppStore((s) => s.projects)
   const templates = useAppStore((s) => s.templates)
-  const sessions = useAppStore((s) => s.sessions)
   const openWizard = useAppStore((s) => s.openWizard)
   const openCommandPalette = useAppStore((s) => s.openCommandPalette)
   const setActiveSession = useAppStore((s) => s.setActiveSession)
@@ -83,6 +72,8 @@ export function HomeScreen({
   const cardMenuRef = useRef<HTMLDivElement>(null)
 
   const pinned = useMemo(() => projects.filter((p) => p.pinned), [projects])
+  const pinnedIds = useMemo(() => pinned.map((p) => p.id), [pinned])
+  useGitStatusBatch(pinnedIds)
   const hasProjects = projects.length > 0
 
   // Ambient glow class based on session health
@@ -112,21 +103,20 @@ export function HomeScreen({
     }
   }, [cardMenu])
 
+  // Read sessions on-invoke via getState() — no reactive subscription needed.
+  // HomeScreen only needs sessions to resume the last one; subscribing to the
+  // full sessions object would cause a full re-render on every session change.
   const handleResumeLast = useCallback(() => {
-    const sessionList = Object.values(sessions)
-    if (sessionList.length === 0) return
-    // Find most recently started session
-    const sorted = [...sessionList].sort((a, b) => b.startedAt - a.startedAt)
-    const newest = sorted[0]
+    const allSessions = Object.values(useAppStore.getState().sessions)
+    // H13: Only resume running sessions — skip exited/errored ones
+    const running = allSessions.filter((s) => s.status === 'running')
+    if (running.length === 0) return
+    const newest = running.sort((a, b) => b.startedAt - a.startedAt)[0]
     if (newest) {
       setActiveSession(newest.id)
       setCurrentView('session')
     }
-  }, [sessions, setActiveSession, setCurrentView])
-
-  // Suppress unused warnings — kept for context menu and potential future use
-  void timeAgo
-  void AGENT_META_MAP
+  }, [setActiveSession, setCurrentView])
 
   return (
     <div className={`home-main ${glowClass}`}>
@@ -147,9 +137,9 @@ export function HomeScreen({
         </div>
 
         <QuickActions
-          onNewSession={() => openCommandPalette()}
-          onRunWorkflow={() => openCommandPalette()}
-          onFromTemplate={() => openCommandPalette()}
+          onNewSession={() => openCommandPalette(undefined, 'all')}
+          onRunWorkflow={() => openCommandPalette(undefined, 'workflow')}
+          onFromTemplate={() => openCommandPalette(undefined, 'template')}
           onResumeLast={handleResumeLast}
           resumeDisabled={runningCount === 0}
         />

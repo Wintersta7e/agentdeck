@@ -1,11 +1,12 @@
-import { ipcMain } from 'electron'
+import { ipcMain, app } from 'electron'
+import { join } from 'node:path'
 import { SAFE_ID_RE } from '../validation'
 import { getGitStatus } from '../git-status'
 import { createReviewTracker } from '../review-tracker'
 import { createCostHistory } from '../cost-history'
 
 const reviewTracker = createReviewTracker()
-const costHistory = createCostHistory()
+const costHistory = createCostHistory(join(app.getPath('userData'), 'cost-history.json'))
 
 export { reviewTracker, costHistory }
 
@@ -27,7 +28,9 @@ export function registerHomeHandlers(getProjectPath: (projectId: string) => stri
   })
 
   ipcMain.handle('projects:dismissReview', (_, reviewId: string) => {
-    if (typeof reviewId !== 'string') throw new Error('Invalid reviewId')
+    if (typeof reviewId !== 'string' || !SAFE_ID_RE.test(reviewId)) {
+      throw new Error('Invalid reviewId')
+    }
     reviewTracker.dismissReview(reviewId)
   })
 
