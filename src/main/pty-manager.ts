@@ -42,14 +42,34 @@ export interface PtyManager {
 const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b\].*?(?:\x07|\x1b\\)/g
 
 function parseActivityLine(line: string): { type: string; title: string; detail: string } | null {
-  const clean = line.replace(ANSI_RE, '')
-  if (/\bRead\b/i.test(clean)) return { type: 'read', title: 'Reading file', detail: clean.trim() }
-  if (/\bWrit(?:e|ing)\b/i.test(clean))
-    return { type: 'write', title: 'Writing file', detail: clean.trim() }
-  if (/\b(?:Execute|Running|Bash)\b/i.test(clean))
-    return { type: 'command', title: 'Running command', detail: clean.trim() }
-  if (/\bTool\b/i.test(clean)) return { type: 'tool', title: 'Tool use', detail: clean.trim() }
+  const clean = line.replace(ANSI_RE, '').trim()
+  // Skip empty lines, prompts, and very short lines (noise)
+  if (clean.length < 3) return null
+  // Skip common shell prompt patterns
+  if (/^[$#>❯➜%]\s*$/.test(clean)) return null
+
+  // Specific agent patterns (highest priority)
   if (/\b[Tt]hinking\b/.test(clean)) return { type: 'think', title: 'Thinking', detail: '' }
+  if (/\bWrit(?:e|ing)\b/i.test(clean))
+    return { type: 'write', title: 'Writing file', detail: clean }
+  if (/\bRead(?:ing)?\b/i.test(clean)) return { type: 'read', title: 'Reading file', detail: clean }
+  if (/\b(?:Execute|Running|Bash|bash)\b/i.test(clean))
+    return { type: 'command', title: 'Running command', detail: clean }
+  if (/\bTool\b/i.test(clean)) return { type: 'tool', title: 'Tool use', detail: clean }
+
+  // Agent-specific patterns
+  if (/\b(?:Created?|Modified|Updated|Deleted|Removed)\b/i.test(clean))
+    return { type: 'write', title: 'File change', detail: clean }
+  if (/\b(?:Searching|Looking|Scanning|Analyzing|Reviewing)\b/i.test(clean))
+    return { type: 'read', title: 'Analyzing', detail: clean }
+  if (/\b(?:Installing|Building|Compiling|Testing)\b/i.test(clean))
+    return { type: 'command', title: 'Build/test', detail: clean }
+  if (/\b(?:Error|Failed|FAIL|ERR)\b/i.test(clean))
+    return { type: 'error', title: 'Error', detail: clean }
+
+  // Fallback: any substantial output line counts as generic activity
+  if (clean.length > 10) return { type: 'read', title: 'Output', detail: clean }
+
   return null
 }
 

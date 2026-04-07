@@ -4,6 +4,7 @@ import { createPtyManager, type PtyManager } from './pty-manager'
 import { createProjectStore, type AppStore } from './project-store'
 import { seedTemplates, seedRoles } from './store-seeds'
 import { toWslPath } from './wsl-utils'
+import { initGitStatusCache } from './git-status'
 import { initLogger, createLogger, closeLogger } from './logger'
 import { seedWorkflows } from './workflow-seeds'
 import { createWorkflowEngine } from './workflow-engine'
@@ -185,6 +186,7 @@ app
   .whenReady()
   .then(async () => {
     initLogger()
+    initGitStatusCache(app.getPath('userData'))
     log.info('App ready')
 
     appStore = createProjectStore()

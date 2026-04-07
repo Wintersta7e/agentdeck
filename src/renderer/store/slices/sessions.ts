@@ -109,8 +109,10 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
   removeSession: (sessionId) =>
     set((state) => {
       const { [sessionId]: _, ...rest } = state.sessions
-      const { [sessionId]: _feed, ...remainingFeeds } = state.activityFeeds
-      const { [sessionId]: _usage, ...remainingUsage } = state.sessionUsage
+      // Keep activityFeeds and sessionUsage after session close —
+      // the timeline and daily digest need this data for the rest of the day.
+      const remainingFeeds = state.activityFeeds
+      const remainingUsage = state.sessionUsage
       const remainingIds = Object.keys(rest)
       // Clear removed session from pane slots, then compact left so pane 0 always
       // has a session if any exist (prevents empty pane with sessions in hidden slots)

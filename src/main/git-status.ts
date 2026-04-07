@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
+import { readFileSync, writeFileSync } from 'node:fs'
 import type { GitStatus } from '../shared/types'
 import { toWslPath } from './wsl-utils'
 
@@ -57,21 +58,48 @@ const inFlight = new Map<string, Promise<GitStatus | null>>()
 const CACHE_TTL_MS = 30_000
 const MAX_CACHE = 200
 
+let diskCachePath: string | null = null
+let flushTimer: ReturnType<typeof setTimeout> | null = null
+
+/** Initialize disk cache path — call once at startup with app.getPath('userData') */
+export function initGitStatusCache(userDataPath: string): void {
+  diskCachePath = `${userDataPath}/git-status-cache.json`
+  try {
+    const raw = readFileSync(diskCachePath, 'utf8')
+    const entries = JSON.parse(raw) as Array<{ key: string; status: GitStatus; fetchedAt: number }>
+    for (const entry of entries) {
+      if (entry.key && entry.status) {
+        cache.set(entry.key, { status: entry.status, fetchedAt: entry.fetchedAt })
+      }
+    }
+  } catch {
+    // No cache file or corrupt — start fresh
+  }
+}
+
+function scheduleDiskFlush(): void {
+  if (flushTimer || !diskCachePath) return
+  flushTimer = setTimeout(() => {
+    flushTimer = null
+    if (!diskCachePath) return
+    try {
+      const entries = Array.from(cache.entries()).map(([key, val]) => ({
+        key,
+        status: val.status,
+        fetchedAt: val.fetchedAt,
+      }))
+      writeFileSync(diskCachePath, JSON.stringify(entries), 'utf8')
+    } catch {
+      // Best-effort persistence
+    }
+  }, 5000)
+}
+
 function normalizePath(p: string): string {
   return p.endsWith('/') ? p.slice(0, -1) : p
 }
 
-export async function getGitStatus(projectPath: string): Promise<GitStatus | null> {
-  const key = normalizePath(projectPath)
-  const now = Date.now()
-  const cached = cache.get(key)
-  if (cached && now - cached.fetchedAt < CACHE_TTL_MS) {
-    return cached.status
-  }
-  if (cached) {
-    cache.delete(key) // evict stale before re-fetch
-  }
-
+async function refreshGitStatus(key: string, projectPath: string): Promise<GitStatus | null> {
   // In-flight dedup: coalesce concurrent requests for the same path into one promise.
   const existing = inFlight.get(key)
   if (existing) return existing
@@ -83,9 +111,7 @@ export async function getGitStatus(projectPath: string): Promise<GitStatus | nul
         execFileAsync(
           'wsl.exe',
           ['--', 'git', '-C', wslPath, 'status', '--porcelain=v2', '--branch'],
-          {
-            timeout: 10000,
-          },
+          { timeout: 10000 },
         ),
         execFileAsync('wsl.exe', ['--', 'git', '-C', wslPath, 'diff', '--stat'], {
           timeout: 10000,
@@ -106,6 +132,7 @@ export async function getGitStatus(projectPath: string): Promise<GitStatus | nul
         const oldest = cache.keys().next().value
         if (oldest !== undefined) cache.delete(oldest)
       }
+      scheduleDiskFlush()
       return status
     } catch {
       return null
@@ -116,6 +143,24 @@ export async function getGitStatus(projectPath: string): Promise<GitStatus | nul
 
   inFlight.set(key, promise)
   return promise
+}
+
+export async function getGitStatus(projectPath: string): Promise<GitStatus | null> {
+  const key = normalizePath(projectPath)
+  const now = Date.now()
+  const cached = cache.get(key)
+  if (cached && now - cached.fetchedAt < CACHE_TTL_MS) {
+    return cached.status
+  }
+  // If stale but exists (e.g. loaded from disk on startup), return stale data
+  // immediately AND refresh in the background. The caller gets instant results.
+  if (cached) {
+    // Fire background refresh (don't await)
+    void refreshGitStatus(key, projectPath)
+    return cached.status
+  }
+
+  return refreshGitStatus(key, projectPath)
 }
 
 export function invalidateGitCache(projectPath: string): void {

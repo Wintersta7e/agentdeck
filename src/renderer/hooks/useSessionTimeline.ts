@@ -26,10 +26,14 @@ function getMidnight(): number {
   return d.getTime()
 }
 
+// Cache labels so closed sessions keep their agent + project name
+const labelCache = new Map<string, string>()
+
 export function computeTimeline(
   sessions: Record<string, Session>,
   activityFeeds: Record<string, ActivityEvent[]>,
   dayStart: number,
+  projectMap?: Map<string, string>,
 ): TimelineRow[] {
   const now = Date.now()
   const totalSpan = now - dayStart
@@ -38,12 +42,14 @@ export function computeTimeline(
 
   const rows: TimelineRow[] = []
 
-  for (const [sessionId, session] of Object.entries(sessions)) {
-    // H11: Only include sessions that started today — exclude yesterday's sessions entirely
-    if (session.startedAt < dayStart) continue
-
-    const feed = activityFeeds[sessionId]
+  // Iterate activityFeeds (not sessions) so closed sessions still appear in the timeline
+  for (const [sessionId, feed] of Object.entries(activityFeeds)) {
     if (!feed || feed.length === 0) continue
+
+    const session = sessions[sessionId]
+    // If session still exists, check it started today. If removed, check feed timestamps.
+    if (session && session.startedAt < dayStart) continue
+    if (!session && feed[0] && feed[0].timestamp < dayStart) continue
 
     const segments: TimelineSegment[] = []
     // Activity events are appended in chronological order by addActivityEvent
@@ -69,11 +75,17 @@ export function computeTimeline(
       const firstTs = events[0]?.timestamp ?? Date.now()
       const lastTs = events[events.length - 1]?.timestamp ?? Date.now()
       const duration = formatDuration(lastTs - firstTs + 30_000)
-      const agent = session.agentOverride ?? 'agent'
+      // Build label from live session data, or use cached label for closed sessions
+      let label = labelCache.get(sessionId)
+      if (!label && session) {
+        const projectName = session.projectId ? projectMap?.get(session.projectId) : undefined
+        label = projectName ?? 'session'
+        labelCache.set(sessionId, label)
+      }
 
       rows.push({
         sessionId,
-        label: agent,
+        label: label ?? 'session',
         segments,
         duration,
       })
@@ -85,10 +97,13 @@ export function computeTimeline(
 
 export function useSessionTimeline(): TimelineRow[] {
   const sessions = useAppStore((s) => s.sessions)
+  const projects = useAppStore((s) => s.projects)
   // NOTE: This hook legitimately needs the full feed data for timeline computation.
   // The re-render cost is acceptable — the timeline is in a collapsible Tier 3
   // section (SessionTimeline) and only mounts when expanded.
   const activityFeeds = useAppStore((s) => s.activityFeeds)
+
+  const projectMap = useMemo(() => new Map(projects.map((p) => [p.id, p.name])), [projects])
 
   // H14: Reactive midnight boundary — recomputes at day rollover
   const [midnight, setMidnight] = useState(getMidnight)
@@ -101,7 +116,7 @@ export function useSessionTimeline(): TimelineRow[] {
   }, [midnight])
 
   return useMemo(
-    () => computeTimeline(sessions, activityFeeds, midnight),
-    [sessions, activityFeeds, midnight],
+    () => computeTimeline(sessions, activityFeeds, midnight, projectMap),
+    [sessions, activityFeeds, midnight, projectMap],
   )
 }
