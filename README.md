@@ -4,9 +4,9 @@ A desktop terminal manager for WSL AI coding agents. Launch, manage, and orchest
 
 ![Electron](https://img.shields.io/badge/Electron-41-47848F?logo=electron)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)
+![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript)
 ![License: Elastic-2.0](https://img.shields.io/badge/License-Elastic--2.0-blue.svg)
-![Tests](https://img.shields.io/badge/Tests-608_passing-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-644_passing-brightgreen)
 ![CI](https://github.com/Wintersta7e/agentdeck/actions/workflows/ci.yml/badge.svg?branch=main)
 
 ## Why AgentDeck?
@@ -161,7 +161,7 @@ npm run dev
 # Build for production (validates TypeScript)
 npm run build
 
-# Run tests (608 tests)
+# Run tests (644 tests)
 npm test
 
 # Lint code (zero-warning policy)
@@ -220,13 +220,13 @@ src/
 |------------|---------|
 | [Electron 41](https://electronjs.org) | Desktop application shell |
 | [React 19](https://react.dev) | UI framework |
-| [TypeScript 5](https://typescriptlang.org) | Type-safe development (strict mode) |
+| [TypeScript 6](https://typescriptlang.org) | Type-safe development (strict mode) |
 | [electron-vite 5](https://electron-vite.org) | Build tooling |
 | [xterm.js 5](https://xtermjs.org) | Terminal emulator |
 | [node-pty](https://github.com/microsoft/node-pty) | Pseudo-terminal (WSL sessions) |
 | [Zustand](https://zustand-demo.pmnd.rs) | State management |
 | [React Flow](https://reactflow.dev) | Visual workflow node editor |
-| [Vitest 4](https://vitest.dev) | Testing framework (608 tests) |
+| [Vitest 4](https://vitest.dev) | Testing framework (644 tests) |
 | [ESLint 9](https://eslint.org) | Linting (flat config, zero-warning policy) |
 
 ## Documentation
