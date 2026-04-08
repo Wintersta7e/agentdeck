@@ -163,13 +163,16 @@ export async function scanSkillDirectory(
   // 2. Finds SKILL.md files (maxdepth 3)
   // 3. For each: prints separator, path, parent dirname, first 100 lines
   const quotedRoot = shellQuote(rootPath)
+  // NOTE: wsl.exe strips unescaped $ in arguments — loop variables like $f
+  // must be escaped as \\$f so they survive to bash. Environment variables
+  // like $HOME work unescaped because they're set before bash starts.
   const cmd = [
     `if [ ! -d ${quotedRoot} ]; then echo '__DIR_MISSING__'; exit 0; fi`,
     `find ${quotedRoot} -maxdepth 3 -name SKILL.md -type f | sort | while IFS= read -r f; do`,
     `  echo '${BLOCK_SEPARATOR}'`,
-    `  echo "$f"`,
-    `  echo "$(basename "$(dirname "$f")")"`,
-    `  head -n 100 "$f"`,
+    '  echo "\\$f"',
+    '  echo "\\$(basename "\\$(dirname "\\$f")")"',
+    '  head -n 100 "\\$f"',
     'done',
   ].join('\n')
 
