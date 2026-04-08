@@ -78,6 +78,8 @@
 .term-search-toggle {
   width: 26px;
   height: 26px;
+  min-width: 32px;
+  min-height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -107,6 +109,8 @@
 .term-search-nav {
   width: 26px;
   height: 26px;
+  min-width: 32px;
+  min-height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -135,6 +139,8 @@
 .term-search-close {
   width: 26px;
   height: 26px;
+  min-width: 32px;
+  min-height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -151,4 +157,17 @@
 .term-search-close:hover {
   background: var(--bg3);
   color: var(--red);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .term-search-bar {
+    animation: none;
+  }
+
+  .term-search-input,
+  .term-search-toggle,
+  .term-search-nav,
+  .term-search-close {
+    transition: none;
+  }
 }

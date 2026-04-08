@@ -147,3 +147,9 @@
   background: var(--bg3);
   margin: var(--sp-1) 0;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .term-copy-flash {
+    animation: none;
+  }
+}

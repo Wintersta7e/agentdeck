@@ -3,6 +3,7 @@
   align-items: center;
   gap: var(--sp-2);
   cursor: pointer;
+  min-height: 32px;
 }
 
 .toggle {
@@ -13,7 +14,8 @@
   border: 1px solid var(--border);
   background: var(--bg4);
   cursor: pointer;
-  padding: 0;
+  padding: 7px 0;
+  box-sizing: content-box;
   flex-shrink: 0;
   transition:
     background var(--duration-slow),
@@ -27,7 +29,7 @@
 
 .toggle-thumb {
   position: absolute;
-  top: 1px;
+  top: 8px;
   left: 1px;
   width: 14px;
   height: 14px;

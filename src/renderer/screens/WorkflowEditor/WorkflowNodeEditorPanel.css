@@ -447,3 +447,9 @@
 .wf-ne-summary:hover {
   color: var(--text0);
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .wf-ne-role-form {
+    animation: none;
+  }
+}
