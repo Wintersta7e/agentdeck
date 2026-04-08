@@ -80,6 +80,26 @@ describe('ClaudeAdapter', () => {
     expect(first).toMatch(/~\/\.claude\/projects\/-home-rooty-my-project\/$/)
   })
 
+  it('getLogDirs uses CLAUDE_CONFIG_DIR from env context', () => {
+    const dirs = adapter.getLogDirs('/home/rooty/my-project', {
+      claudeConfigDir: '/custom/claude-config',
+    })
+    expect(dirs).toHaveLength(1)
+    const first = dirs[0]
+    if (!first) throw new Error('Expected first dir')
+    expect(first).toMatch(/^\/custom\/claude-config\/projects\/-home-rooty-my-project\/$/)
+    // Should NOT contain tilde
+    expect(first).not.toContain('~')
+  })
+
+  it('getLogDirs falls back to ~/.claude when env context has no claudeConfigDir', () => {
+    const dirs = adapter.getLogDirs('/home/rooty/my-project', {})
+    expect(dirs).toHaveLength(1)
+    const first = dirs[0]
+    if (!first) throw new Error('Expected first dir')
+    expect(first).toMatch(/^~\/\.claude\/projects\//)
+  })
+
   it('getFilePattern returns "*.jsonl"', () => {
     expect(adapter.getFilePattern()).toBe('*.jsonl')
   })
@@ -229,6 +249,24 @@ describe('CodexAdapter', () => {
     expect(dir).toContain('~/.codex/sessions/')
     // Should match YYYY/MM/DD pattern at the end
     expect(dir).toMatch(/\d{4}\/\d{2}\/\d{2}$/)
+  })
+
+  it('getLogDirs uses CODEX_HOME from env context', () => {
+    const dirs = adapter.getLogDirs('/home/rooty/any', { codexHome: '/custom/codex' })
+    expect(dirs).toHaveLength(1)
+    const dir = dirs[0]
+    if (!dir) throw new Error('Expected dir')
+    expect(dir).toMatch(/^\/custom\/codex\/sessions\/\d{4}\/\d{2}\/\d{2}$/)
+    // Should NOT contain tilde
+    expect(dir).not.toContain('~')
+  })
+
+  it('getLogDirs falls back to ~/.codex when env context has no codexHome', () => {
+    const dirs = adapter.getLogDirs('/home/rooty/any', {})
+    expect(dirs).toHaveLength(1)
+    const dir = dirs[0]
+    if (!dir) throw new Error('Expected dir')
+    expect(dir).toContain('~/.codex/sessions/')
   })
 
   it('getFilePattern returns "rollout-*.jsonl"', () => {

@@ -87,6 +87,9 @@ function makeRoutingMock(overrides?: {
       const cmd = Array.isArray(args) ? args.join(' ') : ''
       if (cmd.includes('echo "$HOME"')) {
         cb(null, `${home}\n`, '')
+      } else if (cmd.includes('CLAUDE_CONFIG_DIR') || cmd.includes('CODEX_HOME')) {
+        // Agent env var resolution — return empty (use defaults)
+        cb(null, '\n', '')
       } else if (cmd.includes('find ')) {
         cb(null, findResult, '')
       } else if (cmd.includes('head ')) {

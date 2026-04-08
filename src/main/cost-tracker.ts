@@ -10,7 +10,7 @@ import type { BrowserWindow } from 'electron'
 import { execFile } from 'child_process'
 import { toWslPath } from './wsl-utils'
 import { createLogger } from './logger'
-import type { LogAdapter, TokenUsage } from './log-adapters'
+import type { AgentEnvContext, LogAdapter, TokenUsage } from './log-adapters'
 import { ZERO_USAGE } from './log-adapters'
 
 const log = createLogger('cost-tracker')
@@ -106,18 +106,50 @@ export function createCostTracker(mainWindow: BrowserWindow, adapters: LogAdapte
       return ''
     })
 
+  // Resolve agent config env vars from WSL (CLAUDE_CONFIG_DIR, CODEX_HOME).
+  // These override the default ~/.claude and ~/.codex base paths.
+  // Resolved in parallel with $HOME since they're independent.
+  let cachedEnv: AgentEnvContext | null = null
+  const envReady: Promise<AgentEnvContext> = Promise.all([
+    // eslint-disable-next-line no-template-curly-in-string -- bash variable expansion, not JS
+    wslExec('echo "${CLAUDE_CONFIG_DIR:-}"')
+      .then((o) => o.trim())
+      .catch(() => ''),
+    // eslint-disable-next-line no-template-curly-in-string -- bash variable expansion, not JS
+    wslExec('echo "${CODEX_HOME:-}"')
+      .then((o) => o.trim())
+      .catch(() => ''),
+  ])
+    .then(([rawClaude, rawCodex]) => {
+      const claudeConfigDir = rawClaude || undefined
+      const codexHome = rawCodex || undefined
+      const env: AgentEnvContext = { claudeConfigDir, codexHome }
+      cachedEnv = env
+      log.info('Resolved WSL agent env vars', { claudeConfigDir, codexHome })
+      return env
+    })
+    .catch((err) => {
+      log.warn('Failed to resolve WSL agent env vars — using defaults', {
+        err: String(err),
+      })
+      const env: AgentEnvContext = {}
+      cachedEnv = env
+      return env
+    })
+
   // ── Discovery ───────────────────────────────────────────────────
 
   function startDiscovery(session: BoundSession): void {
-    const rawDirs = session.adapter.getLogDirs(session.projectPath)
     const pattern = session.adapter.getFilePattern()
 
-    // Use cached $HOME if available; otherwise wait for the initial resolution.
+    // Use cached values if available; otherwise wait for initial resolution.
     const homePromise = cachedHome !== null ? Promise.resolve(cachedHome) : homeReady
+    const envPromise = cachedEnv !== null ? Promise.resolve(cachedEnv) : envReady
 
-    homePromise
-      .then((home) => {
+    Promise.all([homePromise, envPromise])
+      .then(([home, env]) => {
         if (!sessions.has(session.sessionId)) return
+        const rawDirs = session.adapter.getLogDirs(session.projectPath, env)
         const dirs = home
           ? rawDirs.map((d) => (d.startsWith('~') ? home + d.slice(1) : d))
           : rawDirs.filter((d) => !d.startsWith('~'))
@@ -130,7 +162,7 @@ export function createCostTracker(mainWindow: BrowserWindow, adapters: LogAdapte
         runDiscoveryLoop(session, dirs, pattern)
       })
       .catch(() => {
-        /* homeReady never rejects (has .catch), but guard defensively */
+        /* homeReady/envReady never reject (have .catch), but guard defensively */
       })
   }
 

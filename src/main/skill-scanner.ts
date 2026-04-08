@@ -42,6 +42,7 @@ interface SkillCache {
 
 let globalCache: SkillCache | null = null
 const cachedHomePaths = new Map<string, string>()
+const cachedCodexHomes = new Map<string, string>()
 const projectCache = new Map<string, SkillCache>()
 const inFlight = new Map<string, Promise<SkillCache>>()
 
@@ -84,6 +85,18 @@ async function resolveHomePath(distro: string): Promise<string | null> {
   const home = output?.trim() ?? null
   if (home) cachedHomePaths.set(distro, home)
   return home
+}
+
+// ── Cached $CODEX_HOME resolution ────────────────────────────────
+
+async function resolveCodexHome(distro: string, homePath: string): Promise<string> {
+  const cached = cachedCodexHomes.get(distro)
+  if (cached) return cached
+  // eslint-disable-next-line no-template-curly-in-string -- bash variable expansion, not JS
+  const output = await wslExec('echo "${CODEX_HOME:-}"', distro)
+  const resolved = output?.trim() || `${homePath}/.codex`
+  cachedCodexHomes.set(distro, resolved)
+  return resolved
 }
 
 // ── Frontmatter parsing ───────────────────────────────────────────
@@ -270,7 +283,8 @@ export async function getGlobalSkills(
     return { skills: [], skipped: 0, timestamp: Date.now() }
   }
 
-  const globalSkillsPath = `${homePath}/.codex/skills`
+  const codexHome = await resolveCodexHome(resolvedDistro, homePath)
+  const globalSkillsPath = `${codexHome}/skills`
   const key = cacheKey('global', globalSkillsPath, resolvedDistro)
 
   // Deduplicate in-flight requests
@@ -417,6 +431,7 @@ export function invalidateProjectCache(projectPath: string): void {
 export function invalidateAllCaches(): void {
   globalCache = null
   cachedHomePaths.clear()
+  cachedCodexHomes.clear()
   projectCache.clear()
   inFlight.clear()
 }
