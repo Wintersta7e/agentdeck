@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, safeStorage, screen } from 'electron'
+import { app, BrowserWindow, safeStorage, screen } from 'electron'
 import { join } from 'path'
 import { readFileSync } from 'fs'
 import { createPtyManager, type PtyManager } from './pty-manager'
@@ -13,7 +13,6 @@ import type { WorkflowEngine } from './workflow-engine'
 import { createWorktreeManager, type WorktreeManager } from './worktree-manager'
 import { createWslGitPort } from './git-port'
 import { createCostTracker, type CostTracker } from './cost-tracker'
-import { SAFE_ID_RE } from './validation'
 
 /** Read persisted theme at startup to match BrowserWindow background to the active theme */
 const THEME_BG0: Record<string, string> = {
@@ -48,6 +47,7 @@ import {
   registerSkillHandlers,
   registerWorktreeHandlers,
   registerHomeHandlers,
+  registerCostHandlers,
   costHistory,
   reviewTracker,
 } from './ipc'
@@ -266,42 +266,7 @@ app
       costTracker = createCostTracker(mainWindow, [createClaudeAdapter(), createCodexAdapter()])
     }
 
-    ipcMain.handle(
-      'cost:bind',
-      (
-        _,
-        sessionId: string,
-        opts: { agent: string; projectPath: string; cwd: string; spawnAt: number },
-      ) => {
-        // R3-01: Validate sessionId with SAFE_ID_RE consistent with all other IPC handlers
-        if (typeof sessionId !== 'string' || !SAFE_ID_RE.test(sessionId)) {
-          throw new Error('cost:bind requires a valid sessionId')
-        }
-        if (!opts || typeof opts !== 'object') {
-          throw new Error('cost:bind requires an opts object')
-        }
-        if (typeof opts.agent !== 'string' || !opts.agent) {
-          throw new Error('cost:bind requires a non-empty agent')
-        }
-        if (typeof opts.cwd !== 'string' || !opts.cwd) {
-          throw new Error('cost:bind requires a non-empty cwd')
-        }
-        // R2-23: Validate spawnAt and projectPath types
-        if (typeof opts.spawnAt !== 'number' || !Number.isFinite(opts.spawnAt)) {
-          throw new Error('cost:bind requires a finite numeric spawnAt')
-        }
-        if (opts.projectPath !== undefined && typeof opts.projectPath !== 'string') {
-          throw new Error('cost:bind requires a string projectPath')
-        }
-        costTracker?.bindSession(sessionId, opts)
-      },
-    )
-    ipcMain.handle('cost:unbind', (_, sessionId: string) => {
-      if (typeof sessionId !== 'string' || !SAFE_ID_RE.test(sessionId)) {
-        throw new Error('cost:unbind requires a valid sessionId')
-      }
-      costTracker?.unbindSession(sessionId)
-    })
+    registerCostHandlers(() => costTracker)
 
     // Warn renderer if encryption is unavailable (secrets stored as plaintext)
     if (!safeStorage.isEncryptionAvailable() && mainWindow) {

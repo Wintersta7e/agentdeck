@@ -195,6 +195,8 @@
 .tab-close {
   width: 20px;
   height: 20px;
+  min-width: 32px;
+  min-height: 32px;
   border-radius: var(--r);
   display: flex;
   align-items: center;
