@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAppStore } from '../store/appStore'
 import type { ActivityEvent, Session } from '../../shared/types'
 import { useMidnight } from './useMidnight'
@@ -30,6 +30,7 @@ export function computeTimeline(
   activityFeeds: Record<string, ActivityEvent[]>,
   dayStart: number,
   projectMap?: Map<string, string>,
+  _tick?: number, // unused value — forces recomputation when it changes
 ): TimelineRow[] {
   const now = Date.now()
 
@@ -76,7 +77,10 @@ export function computeTimeline(
     }
 
     if (segments.length > 0) {
-      const duration = formatDuration(lastTs - firstTs + TIMELINE_EVENT_DURATION_MS)
+      // For running sessions, use current time as end; for closed sessions, use last event
+      const isRunning = session?.status === 'running' || session?.status === 'starting'
+      const endTs = isRunning ? now : lastTs + TIMELINE_EVENT_DURATION_MS
+      const duration = formatDuration(endTs - firstTs)
       // Build label from live session data, or use cached label for closed sessions
       let label = labelCache.get(sessionId)
       if (!label && session) {
@@ -122,8 +126,15 @@ export function useSessionTimeline(): TimelineRow[] {
   // H14: Reactive midnight boundary — recomputes at day rollover
   const midnight = useMidnight()
 
+  // Tick every 30s to keep duration fresh for running sessions
+  const [tick, setTick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 30_000)
+    return () => clearInterval(id)
+  }, [])
+
   return useMemo(
-    () => computeTimeline(sessions, activityFeeds, midnight, projectMap),
-    [sessions, activityFeeds, midnight, projectMap],
+    () => computeTimeline(sessions, activityFeeds, midnight, projectMap, tick),
+    [sessions, activityFeeds, midnight, projectMap, tick],
   )
 }

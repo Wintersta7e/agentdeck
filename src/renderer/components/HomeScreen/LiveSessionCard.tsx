@@ -60,7 +60,8 @@ export function LiveSessionCard({ sessionId }: LiveSessionCardProps): React.JSX.
     [projects, session?.projectId],
   )
 
-  const agentId = session?.agentOverride ?? 'claude-code'
+  const defaultAgent = project?.agents?.find((a) => a.isDefault)?.agent ?? project?.agent
+  const agentId = session?.agentOverride ?? defaultAgent ?? 'claude-code'
   const meta = AGENT_META.get(agentId)
   const pulseClass = getPulseClass(latestActivity ?? undefined)
 
