@@ -3,7 +3,7 @@
   align-items: center;
   gap: var(--sp-2);
   padding: 6px 0; /* mockup-specific */
-  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--surface-sep);
   font-size: 11px; /* mockup-specific */
 }
 

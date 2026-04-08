@@ -1,7 +1,7 @@
 .about-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--overlay-scrim);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   display: flex;
@@ -31,9 +31,7 @@
   align-items: center;
   gap: var(--sp-4);
   position: relative;
-  box-shadow:
-    0 24px 64px rgba(0, 0, 0, 0.6),
-    0 8px 24px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--dialog-shadow);
 }
 
 .about-dialog::before {
@@ -63,7 +61,7 @@
 
 .about-close:hover {
   color: var(--text0);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--surface-hover);
 }
 
 .about-name {

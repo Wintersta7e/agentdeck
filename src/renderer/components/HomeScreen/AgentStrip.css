@@ -6,8 +6,8 @@
 
 .agent-chip-v2 {
   padding: var(--sp-2);
-  background: rgba(255, 255, 255, 0.012);
-  border: 1px solid rgba(255, 255, 255, 0.03);
+  background: var(--surface-tint);
+  border: 1px solid var(--surface-border);
   border-radius: 8px;
   text-align: center;
   position: relative;
@@ -23,7 +23,7 @@
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.04), transparent);
+  background: linear-gradient(90deg, transparent, var(--edge-highlight), transparent);
 }
 
 .agent-chip-v2.installed {

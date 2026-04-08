@@ -2,8 +2,8 @@
 .review-panel,
 .recent-workflows-panel {
   padding: 14px var(--sp-4); /* mockup-specific 14px vertical */
-  background: rgba(255, 255, 255, 0.012);
-  border: 1px solid rgba(255, 255, 255, 0.03);
+  background: var(--surface-tint);
+  border: 1px solid var(--surface-border);
   border-radius: 10px;
   margin-bottom: 10px; /* mockup-specific */
   position: relative;
@@ -19,7 +19,7 @@
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.04), transparent);
+  background: linear-gradient(90deg, transparent, var(--edge-highlight), transparent);
 }
 
 .panel-header {
@@ -43,7 +43,7 @@
   align-items: flex-start;
   gap: var(--sp-2);
   padding: 6px 0; /* mockup-specific */
-  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--surface-sep);
 }
 
 .suggestion-item:last-child {

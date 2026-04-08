@@ -1,7 +1,7 @@
 .sidebar {
   width: 100%;
-  background: #0a0b0e; /* solid dark — mockup sidebar */
-  border-right: 1px solid rgba(255, 255, 255, 0.03);
+  background: var(--bg0);
+  border-right: 1px solid var(--surface-border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -188,7 +188,7 @@
   border: 1px solid var(--border-bright);
   border-radius: var(--r);
   padding: var(--sp-1);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--context-shadow);
   min-width: 140px;
 }
 
@@ -342,7 +342,7 @@
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(255, 255, 255, 0.04),
+    var(--edge-highlight),
     transparent
   ); /* mockup: .side-sep */
   margin: 10px 4px; /* mockup: .side-sep */
@@ -354,7 +354,7 @@
   padding-left: 14px;
   padding-right: 14px;
   padding-bottom: 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.03); /* mockup: .side-bottom */
+  border-top: 1px solid var(--surface-border); /* mockup: .side-bottom */
 }
 
 .new-project-btn {
@@ -364,7 +364,7 @@
   justify-content: center;
   gap: 8px;
   padding: 6px 10px;
-  border: 1px dashed rgba(255, 255, 255, 0.06);
+  border: 1px dashed var(--surface-border-hover);
   border-radius: 6px;
   background: none;
   color: var(--text3);
@@ -395,7 +395,7 @@
 .sidebar-new-wf {
   width: 100%;
   padding: 6px 10px;
-  border: 1px dashed rgba(255, 255, 255, 0.06);
+  border: 1px dashed var(--surface-border-hover);
   border-radius: 6px;
   background: none;
   color: var(--text3);

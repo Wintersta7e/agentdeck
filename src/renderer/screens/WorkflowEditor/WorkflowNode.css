@@ -10,19 +10,19 @@
   transition:
     border-color var(--duration-base),
     box-shadow var(--duration-base);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--context-shadow);
 }
 
 .wf-node-inner:hover {
   border-color: var(--border-bright);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--dialog-shadow);
 }
 
 .wf-node-inner.selected {
   border-color: var(--accent-border);
   box-shadow:
     0 0 0 1px rgba(var(--accent-rgb), 0.2),
-    0 6px 24px rgba(0, 0, 0, 0.5);
+    var(--dialog-shadow);
 }
 
 .wf-node-inner.running {
@@ -415,7 +415,7 @@
   background: var(--bg3);
   border: 1px solid var(--border-bright);
   border-radius: var(--r);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--context-shadow);
   z-index: 50;
   min-width: 120px;
   overflow: hidden;

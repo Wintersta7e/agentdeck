@@ -144,8 +144,19 @@
   --ease-default: ease;
   --ease-out: ease-out;
 
-  /* Edge highlight for Editorial surfaces (dark: white tint, light: black tint) */
+  /* ── Surface tokens (theme-adaptive: white tints on dark, black tints on light) ── */
   --edge-highlight: rgba(255, 255, 255, 0.08);
+  --surface-tint: rgba(255, 255, 255, 0.012);
+  --surface-tint-2: rgba(255, 255, 255, 0.025);
+  --surface-border: rgba(255, 255, 255, 0.035);
+  --surface-border-hover: rgba(255, 255, 255, 0.07);
+  --surface-hover: rgba(255, 255, 255, 0.04);
+  --surface-hover-2: rgba(255, 255, 255, 0.06);
+  --surface-sep: rgba(255, 255, 255, 0.025);
+  --surface-kbd: rgba(255, 255, 255, 0.03);
+  --overlay-scrim: rgba(0, 0, 0, 0.5);
+  --dialog-shadow: 0 24px 64px rgba(0, 0, 0, 0.6), 0 8px 24px rgba(0, 0, 0, 0.3);
+  --context-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 
   /* Shape */
   --r: 4px;
@@ -288,6 +299,17 @@
   --badge-python: #b08800;
   --badge-python-bg: rgba(176, 136, 0, 0.15);
   --edge-highlight: rgba(0, 0, 0, 0.08);
+  --surface-tint: rgba(0, 0, 0, 0.02);
+  --surface-tint-2: rgba(0, 0, 0, 0.04);
+  --surface-border: rgba(0, 0, 0, 0.08);
+  --surface-border-hover: rgba(0, 0, 0, 0.12);
+  --surface-hover: rgba(0, 0, 0, 0.04);
+  --surface-hover-2: rgba(0, 0, 0, 0.06);
+  --surface-sep: rgba(0, 0, 0, 0.06);
+  --surface-kbd: rgba(0, 0, 0, 0.05);
+  --overlay-scrim: rgba(0, 0, 0, 0.3);
+  --dialog-shadow: 0 16px 48px rgba(0, 0, 0, 0.15), 0 6px 16px rgba(0, 0, 0, 0.08);
+  --context-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
 /* ─── Theme: Fog (light) ─── */
@@ -325,6 +347,17 @@
   --badge-python: #b08800;
   --badge-python-bg: rgba(176, 136, 0, 0.15);
   --edge-highlight: rgba(0, 0, 0, 0.08);
+  --surface-tint: rgba(0, 0, 0, 0.02);
+  --surface-tint-2: rgba(0, 0, 0, 0.04);
+  --surface-border: rgba(0, 0, 0, 0.08);
+  --surface-border-hover: rgba(0, 0, 0, 0.12);
+  --surface-hover: rgba(0, 0, 0, 0.04);
+  --surface-hover-2: rgba(0, 0, 0, 0.06);
+  --surface-sep: rgba(0, 0, 0, 0.06);
+  --surface-kbd: rgba(0, 0, 0, 0.05);
+  --overlay-scrim: rgba(0, 0, 0, 0.3);
+  --dialog-shadow: 0 16px 48px rgba(0, 0, 0, 0.15), 0 6px 16px rgba(0, 0, 0, 0.08);
+  --context-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
 /* ─── Theme: Lavender (light) ─── */
@@ -362,6 +395,17 @@
   --badge-python: #b08800;
   --badge-python-bg: rgba(176, 136, 0, 0.15);
   --edge-highlight: rgba(0, 0, 0, 0.08);
+  --surface-tint: rgba(0, 0, 0, 0.02);
+  --surface-tint-2: rgba(0, 0, 0, 0.04);
+  --surface-border: rgba(0, 0, 0, 0.08);
+  --surface-border-hover: rgba(0, 0, 0, 0.12);
+  --surface-hover: rgba(0, 0, 0, 0.04);
+  --surface-hover-2: rgba(0, 0, 0, 0.06);
+  --surface-sep: rgba(0, 0, 0, 0.06);
+  --surface-kbd: rgba(0, 0, 0, 0.05);
+  --overlay-scrim: rgba(0, 0, 0, 0.3);
+  --dialog-shadow: 0 16px 48px rgba(0, 0, 0, 0.15), 0 6px 16px rgba(0, 0, 0, 0.08);
+  --context-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
 /* ─── Theme: Stone (light) ─── */
@@ -399,6 +443,17 @@
   --badge-python: #b08800;
   --badge-python-bg: rgba(176, 136, 0, 0.15);
   --edge-highlight: rgba(0, 0, 0, 0.08);
+  --surface-tint: rgba(0, 0, 0, 0.02);
+  --surface-tint-2: rgba(0, 0, 0, 0.04);
+  --surface-border: rgba(0, 0, 0, 0.08);
+  --surface-border-hover: rgba(0, 0, 0, 0.12);
+  --surface-hover: rgba(0, 0, 0, 0.04);
+  --surface-hover-2: rgba(0, 0, 0, 0.06);
+  --surface-sep: rgba(0, 0, 0, 0.06);
+  --surface-kbd: rgba(0, 0, 0, 0.05);
+  --overlay-scrim: rgba(0, 0, 0, 0.3);
+  --dialog-shadow: 0 16px 48px rgba(0, 0, 0, 0.15), 0 6px 16px rgba(0, 0, 0, 0.08);
+  --context-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
 /* ─── Theme transition — scoped to UI containers ─── */

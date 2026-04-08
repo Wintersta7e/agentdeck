@@ -169,7 +169,7 @@
 
 .home-add-card {
   padding: var(--sp-3);
-  border: 1px dashed rgba(255, 255, 255, 0.06);
+  border: 1px dashed var(--surface-border-hover);
   border-radius: 10px;
   display: flex;
   flex-direction: column;
@@ -201,8 +201,8 @@
   text-align: center;
   margin: var(--sp-7) auto;
   padding: var(--sp-7) var(--sp-6);
-  background: rgba(255, 255, 255, 0.012);
-  border: 1px solid rgba(255, 255, 255, 0.03);
+  background: var(--surface-tint);
+  border: 1px solid var(--surface-border);
   border-radius: 10px;
   position: relative;
   overflow: hidden;
@@ -308,7 +308,7 @@
   border-radius: var(--r);
   padding: var(--sp-1) 0;
   min-width: 180px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--context-shadow);
 }
 
 .home-context-header {

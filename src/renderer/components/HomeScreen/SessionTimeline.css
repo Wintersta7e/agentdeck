@@ -1,7 +1,7 @@
 .tl-container {
   padding: 14px var(--sp-4); /* mockup-specific 14px vertical */
-  background: rgba(255, 255, 255, 0.012);
-  border: 1px solid rgba(255, 255, 255, 0.03);
+  background: var(--surface-tint);
+  border: 1px solid var(--surface-border);
   border-radius: 10px;
   position: relative;
   overflow: hidden;
@@ -14,7 +14,7 @@
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.04), transparent);
+  background: linear-gradient(90deg, transparent, var(--edge-highlight), transparent);
 }
 
 .tl-empty {
@@ -46,7 +46,7 @@
 .tl-track {
   flex: 1;
   height: 14px; /* mockup-specific */
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--surface-sep);
   border-radius: 3px;
   overflow: hidden;
   display: flex;
@@ -69,7 +69,7 @@
   background: rgba(var(--red-rgb), 0.3);
 }
 .tl-idle {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--surface-sep);
 }
 
 .tl-duration {
