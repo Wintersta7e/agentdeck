@@ -1,6 +1,7 @@
 import type { StateCreator } from 'zustand'
 import type { AppState } from '../appStore'
 import type { AgentType, Session, SessionStatus, ActivityEvent } from '../../../shared/types'
+import { ACTIVITY_FEED_CAP, MAX_PANE_COUNT } from '../../../shared/constants'
 
 export interface SessionsSlice {
   sessions: Record<string, Session>
@@ -53,13 +54,13 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
     set((state) => {
       const paneSessions = [...state.paneSessions]
       // Place new session in the focused pane so it's always visible
-      const targetPane = Math.min(state.focusedPane, 2) // ARCH-11: Cap at max 3 panes
+      const targetPane = Math.min(state.focusedPane, MAX_PANE_COUNT - 1) // ARCH-11: Cap at max panes
       while (paneSessions.length <= targetPane) {
         paneSessions.push('')
       }
       paneSessions[targetPane] = sessionId
-      // ARCH-11: Cap paneSessions to max 3 entries to prevent unbounded growth
-      paneSessions.length = Math.min(paneSessions.length, 3)
+      // ARCH-11: Cap paneSessions to max entries to prevent unbounded growth
+      paneSessions.length = Math.min(paneSessions.length, MAX_PANE_COUNT)
       const session: Session = {
         id: sessionId,
         projectId,
@@ -108,34 +109,38 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
 
   removeSession: (sessionId) =>
     set((state) => {
-      const { [sessionId]: _, ...rest } = state.sessions
-      const { [sessionId]: _feed, ...remainingFeeds } = state.activityFeeds
-      const { [sessionId]: _usage, ...remainingUsage } = state.sessionUsage
-      const remainingIds = Object.keys(rest)
+      // Keep the session in the sessions map (for cost/timeline/digest after close)
+      // but mark it as exited. Only remove from pane slots and tab navigation.
+      const session = state.sessions[sessionId]
+      const sessions = session
+        ? { ...state.sessions, [sessionId]: { ...session, status: 'exited' as SessionStatus } }
+        : state.sessions
+      // Count sessions still visible in the UI (not closed/exited) for view logic
+      const openIds = Object.entries(sessions)
+        .filter(([, s]) => s.status !== 'exited')
+        .map(([id]) => id)
       // Clear removed session from pane slots, then compact left so pane 0 always
       // has a session if any exist (prevents empty pane with sessions in hidden slots)
       const cleared = state.paneSessions.map((id) => (id === sessionId ? '' : id))
       const filled = cleared.filter((id) => id !== '')
       const paneSessions = [...filled, ...Array<string>(cleared.length - filled.length).fill('')]
       const firstPane = paneSessions[0]
-      const newActive = firstPane && firstPane !== '' ? firstPane : (remainingIds[0] ?? null)
+      const newActive = firstPane && firstPane !== '' ? firstPane : (openIds[0] ?? null)
       // If pane 0 is empty but we still have sessions, place the new active there
       if (paneSessions[0] === '' && newActive) {
         paneSessions[0] = newActive
       }
       return {
-        sessions: rest,
-        activityFeeds: remainingFeeds,
-        sessionUsage: remainingUsage,
+        sessions,
         activeSessionId: state.activeSessionId === sessionId ? newActive : state.activeSessionId,
         currentView:
-          remainingIds.length === 0
+          openIds.length === 0
             ? state.openWorkflowIds.length > 0
               ? ('workflow' as const)
               : ('home' as const)
             : state.currentView,
         activeWorkflowId:
-          remainingIds.length === 0 && state.openWorkflowIds.length > 0
+          openIds.length === 0 && state.openWorkflowIds.length > 0
             ? (state.activeWorkflowId ?? state.openWorkflowIds[0] ?? null)
             : state.activeWorkflowId,
         paneSessions,
@@ -192,7 +197,8 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
 
   getSessionForProject: (projectId) => {
     const { sessions } = get()
-    return Object.values(sessions).find((s) => s.projectId === projectId)
+    // Only return live sessions — exited sessions are preserved for cost/timeline only
+    return Object.values(sessions).find((s) => s.projectId === projectId && s.status !== 'exited')
   },
 
   // Usage tracking
@@ -209,7 +215,9 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
         return { activityFeeds: { ...state.activityFeeds, [sessionId]: [event] } }
       }
       const updated =
-        existing.length >= 500 ? [...existing.slice(-(500 - 1)), event] : [...existing, event]
+        existing.length >= ACTIVITY_FEED_CAP
+          ? [...existing.slice(-(ACTIVITY_FEED_CAP - 1)), event]
+          : [...existing, event]
       return {
         activityFeeds: { ...state.activityFeeds, [sessionId]: updated },
       }

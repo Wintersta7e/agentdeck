@@ -9,7 +9,7 @@
 }
 
 .context-notes {
-  padding: 4px 0;
+  padding: var(--sp-1) 0;
 }
 
 .panel-placeholder--hint {

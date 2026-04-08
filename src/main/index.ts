@@ -1,9 +1,11 @@
 import { app, BrowserWindow, ipcMain, safeStorage, screen } from 'electron'
 import { join } from 'path'
+import { readFileSync } from 'fs'
 import { createPtyManager, type PtyManager } from './pty-manager'
 import { createProjectStore, type AppStore } from './project-store'
 import { seedTemplates, seedRoles } from './store-seeds'
 import { toWslPath } from './wsl-utils'
+import { initGitStatusCache } from './git-status'
 import { initLogger, createLogger, closeLogger } from './logger'
 import { seedWorkflows } from './workflow-seeds'
 import { createWorkflowEngine } from './workflow-engine'
@@ -12,6 +14,29 @@ import { createWorktreeManager, type WorktreeManager } from './worktree-manager'
 import { createWslGitPort } from './git-port'
 import { createCostTracker, type CostTracker } from './cost-tracker'
 import { SAFE_ID_RE } from './validation'
+
+/** Read persisted theme at startup to match BrowserWindow background to the active theme */
+const THEME_BG0: Record<string, string> = {
+  '': '#0d0e0f',
+  amber: '#0d0e0f',
+  cyan: '#080b14',
+  violet: '#0a0a12',
+  ice: '#0c0d10',
+  parchment: '#f5f0e8',
+  fog: '#f0f4f8',
+  lavender: '#f4f2f8',
+  stone: '#f2f1ef',
+}
+function getStartupBg(): string {
+  try {
+    const configPath = join(app.getPath('userData'), 'config.json')
+    const raw = readFileSync(configPath, 'utf-8')
+    const data = JSON.parse(raw) as { appPrefs?: { theme?: string } }
+    return THEME_BG0[data.appPrefs?.theme ?? ''] ?? '#0d0e0f'
+  } catch {
+    return '#0d0e0f'
+  }
+}
 import { createClaudeAdapter, createCodexAdapter } from './log-adapters'
 import {
   registerPtyHandlers,
@@ -22,6 +47,9 @@ import {
   registerUtilHandlers,
   registerSkillHandlers,
   registerWorktreeHandlers,
+  registerHomeHandlers,
+  costHistory,
+  reviewTracker,
 } from './ipc'
 
 const log = createLogger('app')
@@ -54,7 +82,7 @@ function createWindow(): void {
     minHeight: 600,
     frame: false,
     show: false,
-    backgroundColor: '#0d0e0f',
+    backgroundColor: getStartupBg(),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -140,7 +168,14 @@ function createWindow(): void {
 }
 
 function registerIpcHandlers(store: AppStore): void {
-  registerPtyHandlers(() => ptyManager)
+  registerPtyHandlers(() => ptyManager, {
+    getMainWindow: () => mainWindow,
+    getProjectId: (projectPath) => {
+      const projects = store.get('projects') ?? []
+      return projects.find((p: { path: string }) => p.path === projectPath)?.id ?? null
+    },
+    reviewTracker,
+  })
   registerWindowHandlers(() => mainWindow, store)
   registerAgentHandlers(() => mainWindow, store)
   registerProjectHandlers(
@@ -164,12 +199,18 @@ function registerIpcHandlers(store: AppStore): void {
   )
   registerUtilHandlers()
   registerWorktreeHandlers(() => worktreeManager)
+  registerHomeHandlers((projectId) => {
+    const projects = store.get('projects') ?? []
+    const project = projects.find((p: { id: string }) => p.id === projectId)
+    return project?.path ?? null
+  })
 }
 
 app
   .whenReady()
   .then(async () => {
     initLogger()
+    initGitStatusCache(app.getPath('userData'))
     log.info('App ready')
 
     appStore = createProjectStore()
@@ -297,6 +338,7 @@ app
 
 app.on('before-quit', () => {
   log.info('App quitting')
+  costHistory.flush()
   costTracker?.destroy()
   workflowEngine?.stopAll()
   ptyManager?.killAll()

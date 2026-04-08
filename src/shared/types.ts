@@ -299,3 +299,54 @@ export interface ProjectMeta {
   skippedSkills?: number | undefined
   lastScanned: number
 }
+
+/** Git repository status for a project directory */
+export interface GitStatus {
+  branch: string
+  ahead: number
+  behind: number
+  staged: number
+  unstaged: number
+  untracked: number
+  insertions: number
+  deletions: number
+}
+
+/** A set of agent-produced changes awaiting human review */
+export interface ReviewItem {
+  id: string
+  sessionId: string
+  agentId: string
+  projectId: string
+  timestamp: number
+  files: ReviewFile[]
+  totalInsertions: number
+  totalDeletions: number
+  status: 'pending' | 'reviewed' | 'dismissed'
+}
+
+export interface ReviewFile {
+  path: string
+  insertions: number
+  deletions: number
+  status: 'added' | 'modified' | 'deleted'
+}
+
+/** Aggregated cost data for a single day */
+export interface DailyCostEntry {
+  date: string // YYYY-MM-DD
+  totalCostUsd: number
+  perAgent: Record<string, number>
+  sessionCount: number
+  tokenCount: number
+}
+
+/** A proactive suggestion shown on the home screen */
+export interface Suggestion {
+  id: string
+  priority: number
+  icon: string
+  text: string
+  actionLabel: string
+  dismissKey: string
+}

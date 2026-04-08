@@ -7,12 +7,12 @@
 .input-row {
   display: flex;
   align-items: center;
-  padding: 7px 12px;
-  gap: 8px;
+  padding: var(--sp-2) var(--sp-3);
+  gap: var(--sp-2);
 }
 
 .input-prompt-sym {
-  font-size: 13px;
+  font-size: var(--fs-base);
   line-height: 1.4;
   flex-shrink: 0;
 }
@@ -31,7 +31,7 @@
   border: none;
   outline: none;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   line-height: 1.4;
   color: var(--text0);
   caret-color: var(--amber);
@@ -43,20 +43,20 @@
 
 .input-chips {
   display: flex;
-  gap: 5px;
-  padding: 0 12px 7px;
+  gap: var(--sp-1);
+  padding: 0 var(--sp-3) var(--sp-2);
   flex-wrap: wrap;
 }
 
 .input-chip {
-  font-size: 9px;
-  padding: 3px 8px;
+  font-size: var(--fs-xs);
+  padding: 3px var(--sp-2);
   border-radius: 20px;
   background: var(--bg3);
   border: 1px solid var(--border);
   color: var(--text2);
   cursor: pointer;
-  transition: all 0.12s;
+  transition: all var(--duration-base);
   white-space: nowrap;
 }
 

@@ -1,64 +1,84 @@
 .statusbar {
   height: 26px;
   line-height: 26px;
-  background: var(--statusbar-bg);
-  border-top: 1px solid var(--chrome-border);
+  background: var(--bg1);
+  border-top: 1px solid var(--border);
   position: relative;
   display: flex;
   align-items: center;
-  padding: 0 12px;
-  gap: 16px;
+  padding: 0 var(--sp-3);
+  gap: var(--sp-4);
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text2);
-}
-
-.statusbar::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 10%;
-  right: 10%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(var(--accent-rgb), 0.25), transparent);
 }
 
 .status-item {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--sp-1);
 }
+
 .status-item.green {
   color: var(--green);
 }
+
 .status-item.amber {
-  color: var(--amber);
+  color: var(--accent);
 }
+
 .status-item.purple {
   color: var(--purple);
+}
+
+.status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--text3);
+  flex-shrink: 0;
+}
+
+.status-dot.active {
+  background: var(--green);
+  box-shadow: 0 0 4px rgba(var(--green-rgb), 0.5);
+  animation: status-dot-pulse 2s ease-in-out infinite;
+}
+
+@keyframes status-dot-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 
 .status-right {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
 }
 
 .status-cmd {
   background: var(--bg2);
-  border: 1px solid var(--border-bright);
+  border: 1px solid var(--border);
   color: var(--text1);
-  padding: 0 8px;
-  height: 20px;
+  padding: 0 var(--sp-2);
+  height: 22px;
   border-radius: 3px;
-  font-size: 10px;
+  font-size: var(--fs-xs);
   cursor: pointer;
-  font-family: var(--font-mono);
-  transition: all 0.15s;
+  font-family: inherit;
+  transition:
+    border-color var(--duration-base),
+    color var(--duration-base),
+    background-color var(--duration-base);
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--sp-1);
 }
 
 .status-cmd:hover {
@@ -68,13 +88,13 @@
 }
 
 .status-cmd-icon {
-  font-size: 13px;
+  font-size: var(--fs-base);
   line-height: 1;
 }
 
 .status-cmd-kbd {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-xs);
   color: var(--text3);
   background: var(--bg0);
   border: 1px solid var(--border);
@@ -93,22 +113,34 @@
   background: none;
   border: none;
   color: var(--text2);
-  font-size: 11px;
+  font-size: var(--fs-sm);
   font-family: var(--font-mono);
   cursor: pointer;
   padding: 0;
-  transition: color 0.12s;
+  transition: color var(--duration-base);
 }
 
 .status-version:hover {
-  color: var(--amber);
+  color: var(--accent);
 }
 
 .status-sep {
   color: var(--text3);
-  font-size: 9px;
+  font-size: var(--fs-xs);
 }
 
 .status-worktree {
   color: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-cmd,
+  .status-version,
+  .status-dot {
+    transition: none;
+  }
+
+  .status-dot.active {
+    animation: none;
+  }
 }

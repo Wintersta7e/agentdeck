@@ -2,13 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useStoreWithEqualityFn } from 'zustand/traditional'
 import { useAppStore } from '../../store/appStore'
 import { getDefaultAgent } from '../../../shared/agent-helpers'
-import { PanelBox } from '../shared/PanelBox'
+import { MAX_PANE_COUNT } from '../../../shared/constants'
 import { PaneTopbar } from './PaneTopbar'
 import { TerminalPane } from '../Terminal/TerminalPane'
 import type { PaneLayout } from '../../../shared/types'
 import './SplitView.css'
 
-const PANE_INDICES = [0, 1, 2] as const
+const PANE_INDICES = Array.from({ length: MAX_PANE_COUNT }, (_, i) => i)
 const MIN_PANE_WIDTH = 200
 
 /** Static style object hoisted to module scope to avoid allocating on every render */
@@ -18,7 +18,7 @@ export function SplitView(): React.JSX.Element {
   const paneLayout = useAppStore((s) => s.paneLayout)
   const focusedPane = useAppStore((s) => s.focusedPane)
   const paneSessions = useAppStore((s) => s.paneSessions)
-  // Narrow selector: only re-render when session IDs, projectIds, or agent overrides change
+  // Narrow selector: only re-render when session IDs, projectIds, status, or agent overrides change
   const sessions = useStoreWithEqualityFn(
     useAppStore,
     (s) => {
@@ -27,6 +27,7 @@ export function SplitView(): React.JSX.Element {
         {
           id: string
           projectId: string
+          status: string
           agentOverride?: string | undefined
           agentFlagsOverride?: string | undefined
         }
@@ -35,6 +36,7 @@ export function SplitView(): React.JSX.Element {
         result[id] = {
           id: session.id,
           projectId: session.projectId,
+          status: session.status,
           agentOverride: session.agentOverride,
           agentFlagsOverride: session.agentFlagsOverride,
         }
@@ -47,28 +49,9 @@ export function SplitView(): React.JSX.Element {
       if (aKeys.length !== bKeys.length) return false
       for (const key of aKeys) {
         if (a[key]?.projectId !== b[key]?.projectId) return false
+        if (a[key]?.status !== b[key]?.status) return false
         if (a[key]?.agentOverride !== b[key]?.agentOverride) return false
         if (a[key]?.agentFlagsOverride !== b[key]?.agentFlagsOverride) return false
-      }
-      return true
-    },
-  )
-  // Separate selector for session running status (drives active-session class)
-  const sessionStatuses = useStoreWithEqualityFn(
-    useAppStore,
-    (s) => {
-      const result: Record<string, string> = {}
-      for (const [id, session] of Object.entries(s.sessions)) {
-        result[id] = session.status
-      }
-      return result
-    },
-    (a, b) => {
-      const aKeys = Object.keys(a)
-      const bKeys = Object.keys(b)
-      if (aKeys.length !== bKeys.length) return false
-      for (const key of aKeys) {
-        if (a[key] !== b[key]) return false
       }
       return true
     },
@@ -83,41 +66,6 @@ export function SplitView(): React.JSX.Element {
   const setFocusedPane = useAppStore((s) => s.setFocusedPane)
 
   const [draggingDivider, setDraggingDivider] = useState<number | null>(null)
-
-  // Activity-driven pulse state for PanelBox
-  const [pulseState, setPulseState] = useState<Record<number, boolean>>({})
-  const pulseTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({})
-
-  // Subscribe to activity for pulse effect on each pane's session.
-  // Skip re-render when pulse is already active — the 400ms CSS animation
-  // is already playing, so additional setState calls are pure waste.
-  useEffect(() => {
-    const unsubs: (() => void)[] = []
-    for (const idx of PANE_INDICES) {
-      if (idx >= paneLayout) continue
-      const sid = paneSessions[idx]
-      if (!sid) continue
-      const paneIdx = idx
-      const unsub = window.agentDeck.pty.onActivity(sid, () => {
-        setPulseState((prev) => {
-          if (prev[paneIdx]) return prev // already pulsing — skip re-render
-          return { ...prev, [paneIdx]: true }
-        })
-        clearTimeout(pulseTimers.current[paneIdx])
-        pulseTimers.current[paneIdx] = setTimeout(() => {
-          setPulseState((prev) => ({ ...prev, [paneIdx]: false }))
-        }, 400)
-      })
-      unsubs.push(unsub)
-    }
-    return () => {
-      unsubs.forEach((u) => u())
-      Object.values(pulseTimers.current).forEach(clearTimeout)
-      pulseTimers.current = {}
-      // BUG-8: Reset pulseState on cleanup to prevent stale pulse on layout change
-      setPulseState({})
-    }
-  }, [paneLayout, paneSessions])
 
   const paneRefs = useRef<(HTMLDivElement | null)[]>([null, null, null])
   const splitAreaRef = useRef<HTMLDivElement>(null)
@@ -248,10 +196,16 @@ export function SplitView(): React.JSX.Element {
   const paneSessionIds = PANE_INDICES.map((i) => paneSessions[i] ?? '')
 
   // Find all session IDs that are NOT assigned to any visible pane slot
+  // Exclude exited sessions that were closed (preserved for cost/timeline only)
   const visiblePaneSessionIds = new Set(
     paneSessionIds.slice(0, paneLayout).filter((id) => id !== ''),
   )
-  const allSessionIds = Object.keys(sessions)
+  const paneSet = new Set(paneSessions.filter(Boolean))
+  const allSessionIds = Object.keys(sessions).filter((sid) => {
+    const s = sessions[sid]
+    // Keep running/starting sessions, and exited sessions only if still in a pane
+    return s && (s.status !== 'exited' || paneSet.has(sid))
+  })
   const hiddenSessionIds = allSessionIds.filter((sid) => !visiblePaneSessionIds.has(sid))
 
   return (
@@ -279,16 +233,10 @@ export function SplitView(): React.JSX.Element {
               ref={(el) => {
                 paneRefs.current[paneIndex] = el
               }}
-              className={`split-pane ${isVisible ? 'split-pane--visible' : 'split-pane--hidden'}${isFocused ? ' focused' : ''}${sessionId && sessionStatuses[sessionId] === 'running' ? ' active-session' : ''}`}
+              className={`split-pane ${isVisible ? 'split-pane--visible' : 'split-pane--hidden'}${isFocused ? ' focused' : ''}`}
               onClick={() => setFocusedPane(paneIndex)}
             >
-              <PanelBox
-                corners={isFocused ? ['tl', 'tr', 'br'] : ['tl', 'br']}
-                glow="none"
-                intensity={isFocused ? 0.3 : 0.1}
-                pulse={pulseState[paneIndex] ?? false}
-                className="split-pane-inner"
-              >
+              <div className="split-pane-inner">
                 {session ? (
                   <>
                     <PaneTopbar sessionId={sessionId} focused={isFocused} />
@@ -310,7 +258,7 @@ export function SplitView(): React.JSX.Element {
                     No session &mdash; open a project to start
                   </div>
                 )}
-              </PanelBox>
+              </div>
             </div>
           </div>
         )
@@ -341,7 +289,7 @@ export function SplitView(): React.JSX.Element {
 
       {/* Layout controls */}
       <div className="layout-controls">
-        {([1, 2, 3] as PaneLayout[]).map((n) => (
+        {Array.from({ length: MAX_PANE_COUNT }, (_, i) => (i + 1) as PaneLayout).map((n) => (
           <button
             key={n}
             className={`lc-btn${paneLayout === n ? ' active' : ''}`}

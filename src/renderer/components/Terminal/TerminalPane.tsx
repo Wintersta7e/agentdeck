@@ -6,6 +6,12 @@ import { Unicode11Addon } from '@xterm/addon-unicode11'
 import { SearchAddon } from '@xterm/addon-search'
 import '@xterm/xterm/css/xterm.css'
 import { useAppStore } from '../../store/appStore'
+import {
+  TERMINAL_FONT_FAMILY,
+  TERMINAL_DEFAULT_FONT_SIZE,
+  HIDDEN_BUFFER_HIGH_WATER,
+  HIDDEN_BUFFER_TRIM_TARGET,
+} from '../../../shared/constants'
 import { subscribeTheme } from '../../utils/themeObserver'
 import {
   getXtermTheme,
@@ -199,7 +205,7 @@ export function TerminalPane({
         .then(() => {
           if (cancelled) return
           try {
-            const ff = term.options.fontFamily ?? "'JetBrains Mono', monospace"
+            const ff = term.options.fontFamily ?? TERMINAL_FONT_FAMILY
             term.options.fontFamily = ff
           } catch {
             /* terminal disposed before fonts loaded */
@@ -213,8 +219,8 @@ export function TerminalPane({
     } else {
       // ── Create fresh terminal ──
       term = new Terminal({
-        fontFamily: "'JetBrains Mono', monospace",
-        fontSize: 12,
+        fontFamily: TERMINAL_FONT_FAMILY,
+        fontSize: TERMINAL_DEFAULT_FONT_SIZE,
         lineHeight: 1.2,
         cursorBlink: true,
         cursorInactiveStyle: 'none',
@@ -334,7 +340,7 @@ export function TerminalPane({
         .then(() => {
           if (cancelled) return
           try {
-            const ff = term.options.fontFamily ?? "'JetBrains Mono', monospace"
+            const ff = term.options.fontFamily ?? TERMINAL_FONT_FAMILY
             term.options.fontFamily = ff
           } catch {
             /* terminal disposed before fonts loaded */
@@ -490,10 +496,9 @@ export function TerminalPane({
         const buf = hiddenBufferRef.current
         buf.push(data)
         // Cap buffer to prevent unbounded memory growth.
-        // 5000 chunks ≈ 5000 setImmediate batches ≈ several minutes of output.
-        // Trim to 4000 to avoid re-trimming on every chunk at the boundary.
-        if (buf.length > 5000) {
-          buf.splice(0, buf.length - 4000)
+        // Trim to HIDDEN_BUFFER_TRIM_TARGET to avoid re-trimming on every chunk at the boundary.
+        if (buf.length > HIDDEN_BUFFER_HIGH_WATER) {
+          buf.splice(0, buf.length - HIDDEN_BUFFER_TRIM_TARGET)
         }
       }
     })
