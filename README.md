@@ -6,7 +6,7 @@ A desktop terminal manager for WSL AI coding agents. Launch, manage, and orchest
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)
 ![License: Elastic-2.0](https://img.shields.io/badge/License-Elastic--2.0-blue.svg)
-![Tests](https://img.shields.io/badge/Tests-610_passing-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-608_passing-brightgreen)
 ![CI](https://github.com/Wintersta7e/agentdeck/actions/workflows/ci.yml/badge.svg?branch=main)
 
 ## Why AgentDeck?
@@ -31,6 +31,7 @@ AgentDeck provides a unified desktop environment for working with AI coding agen
 - **Cost/Token Tracking** - Live per-session cost and token usage for Claude Code and Codex
 - **Git Worktree Isolation** - Per-session git branches with Keep/Discard review flow
 - **8 Themes** - 4 dark + 4 light themes with smooth view transitions
+- **Home Screen Dashboard** - Daily digest, live session monitoring, session timeline, cost dashboard, suggestions
 - **Command Palette** - Quick access to projects, sessions, templates, and tools
 
 ## Features
@@ -43,6 +44,16 @@ AgentDeck provides a unified desktop environment for working with AI coding agen
 - **Terminal Search** - Find text in terminal output (Ctrl+Shift+F) with regex and case-sensitive modes
 - **Activity Tracking** - Real-time parsing of agent tool use (file reads, writes, commands)
 - **Right Panel** - Context, Activity, and Memory tabs per session
+
+### Home Screen Dashboard
+
+- **Daily Digest** — today's session count, cost, exit rate, top agent
+- **Live Session Grid** — real-time agent monitoring with activity pulse, token gauge
+- **Session Timeline** — horizontal activity bars per session
+- **Cost Dashboard** — daily cost with per-agent breakdown, 7-day sparkline
+- **Project Cards** — git status (branch, uncommitted changes), agent pills
+- **Suggestions Panel** — proactive recommendations based on project state
+- **Quick Actions** — New Session, Run Workflow, From Template, Resume Last
 
 ### Project Management
 
@@ -150,7 +161,7 @@ npm run dev
 # Build for production (validates TypeScript)
 npm run build
 
-# Run tests (610 tests)
+# Run tests (608 tests)
 npm test
 
 # Lint code (zero-warning policy)
@@ -193,12 +204,13 @@ src/
 │   ├── components/          # Titlebar, Sidebar, SplitView, CommandPalette,
 │   │                        # HomeScreen, StatusBar, Terminal, RightPanel, etc.
 │   ├── screens/             # WorkflowEditor, ProjectSettings, TemplateEditor
-│   ├── store/               # Zustand store (6 slices: sessions, ui, projects, workflows, templates, notifications)
-│   ├── hooks/               # useProjects, usePty, useRolesMap
+│   ├── store/               # Zustand store (7 slices: sessions, ui, projects, workflows, templates, notifications, home)
+│   ├── hooks/               # useProjects, usePty, useRolesMap, useMidnight, useSessionTimeline, useCostHistory
 │   └── styles/              # tokens.css (design system), global.css
 └── shared/
     ├── agents.ts            # Agent registry (7 agents with metadata)
     ├── types.ts             # Shared TypeScript interfaces
+    ├── constants.ts         # Named constants (MAX_PANE_COUNT, etc.)
     └── workflow-utils.ts    # Workflow validation + topological sort
 ```
 
@@ -214,7 +226,7 @@ src/
 | [node-pty](https://github.com/microsoft/node-pty) | Pseudo-terminal (WSL sessions) |
 | [Zustand](https://zustand-demo.pmnd.rs) | State management |
 | [React Flow](https://reactflow.dev) | Visual workflow node editor |
-| [Vitest 4](https://vitest.dev) | Testing framework (610 tests) |
+| [Vitest 4](https://vitest.dev) | Testing framework (608 tests) |
 | [ESLint 9](https://eslint.org) | Linting (flat config, zero-warning policy) |
 
 ## Documentation
