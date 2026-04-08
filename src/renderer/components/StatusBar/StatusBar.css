@@ -72,7 +72,10 @@
   font-size: var(--fs-xs);
   cursor: pointer;
   font-family: inherit;
-  transition: all var(--duration-base);
+  transition:
+    border-color var(--duration-base),
+    color var(--duration-base),
+    background-color var(--duration-base);
   display: flex;
   align-items: center;
   gap: var(--sp-1);

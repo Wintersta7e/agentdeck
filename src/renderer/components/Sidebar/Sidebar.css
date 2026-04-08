@@ -36,7 +36,7 @@
 
 .sidebar-label {
   font-size: 9px; /* mockup: .side-lbl */
-  color: #3a3832; /* mockup: .side-lbl muted label */
+  color: var(--text3);
   letter-spacing: 1.8px; /* mockup: .side-lbl */
   text-transform: uppercase;
   font-weight: 600; /* mockup: .side-lbl */
@@ -199,7 +199,7 @@
   background: none;
   border: none;
   color: var(--text1);
-  font-family: var(--font-mono);
+  font-family: inherit;
   font-size: var(--fs-sm);
   padding: var(--sp-2) var(--sp-3);
   border-radius: 2px;
@@ -290,7 +290,7 @@
   background: none;
   border: none;
   color: var(--text1);
-  font-family: var(--font-mono);
+  font-family: inherit;
   font-size: var(--fs-sm);
   padding: var(--sp-1) var(--sp-3);
   cursor: pointer;
@@ -328,7 +328,7 @@
   font-size: 9px; /* match sidebar-label */
   text-transform: uppercase;
   letter-spacing: 1.8px;
-  color: #3a3832;
+  color: var(--text3);
   font-weight: 600;
   padding: 8px 4px 2px;
 }
@@ -399,8 +399,8 @@
   border-radius: 6px;
   background: none;
   color: var(--text3);
-  font-family: var(--font-mono);
-  font-size: 12px;
+  font-family: inherit;
+  font-size: var(--fs-sm);
   cursor: pointer;
   transition:
     border-color var(--duration-base),

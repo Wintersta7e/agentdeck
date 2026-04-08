@@ -226,9 +226,10 @@ function PaletteInner({
 
   // Focus input on mount
   useEffect(() => {
-    requestAnimationFrame(() => {
+    const rafId = requestAnimationFrame(() => {
       inputRef.current?.focus()
     })
+    return () => cancelAnimationFrame(rafId)
   }, [])
 
   // Stable session snapshot — only changes when session list or statuses change,

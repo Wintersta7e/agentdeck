@@ -3,9 +3,7 @@
 .confirm-dialog-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.65);
   z-index: var(--z-modal);
   display: flex;
   align-items: center;
@@ -23,8 +21,8 @@
 }
 
 .confirm-dialog {
-  background: rgba(14, 15, 18, 0.97);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--bg1);
+  border: 1px solid var(--border);
   border-radius: 10px;
   max-width: 420px;
   width: 90%;
@@ -43,7 +41,7 @@
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+  background: linear-gradient(90deg, transparent, var(--edge-highlight), transparent);
   z-index: 1;
 }
 

@@ -19,18 +19,26 @@ export function AboutDialog({ onClose }: AboutDialogProps): React.JSX.Element {
   const [versions, setVersions] = useState<VersionInfo | null>(null)
 
   useEffect(() => {
+    let cancelled = false
     window.agentDeck.app
       .version()
-      .then(setAppVersion)
+      .then((v) => {
+        if (!cancelled) setAppVersion(v)
+      })
       .catch((err: unknown) => {
         window.agentDeck.log.send('debug', 'about', 'Version fetch failed', { err: String(err) })
       })
     window.agentDeck.app
       .versions()
-      .then(setVersions)
+      .then((v) => {
+        if (!cancelled) setVersions(v)
+      })
       .catch((err: unknown) => {
         window.agentDeck.log.send('debug', 'about', 'Version fetch failed', { err: String(err) })
       })
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   useEffect(() => {

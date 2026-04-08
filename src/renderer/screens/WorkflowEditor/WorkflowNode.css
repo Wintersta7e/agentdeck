@@ -49,12 +49,39 @@
 
 .wf-node-inner.done {
   border-color: var(--green-border);
-  animation: wf-node-flash-done 0.4s ease;
+  position: relative;
+}
+
+/* GPU-composited flash: animate opacity on ::after instead of box-shadow directly */
+.wf-node-inner.done::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  box-shadow:
+    0 0 0 1px rgba(var(--green-rgb), 0.3),
+    0 0 20px 4px rgba(var(--green-rgb), 0.3);
+  opacity: 0;
+  animation: wf-node-flash 0.4s ease forwards;
+  pointer-events: none;
 }
 
 .wf-node-inner.error {
   border-color: rgba(var(--red-rgb), 0.5);
-  animation: wf-node-flash-error 0.4s ease;
+  position: relative;
+}
+
+.wf-node-inner.error::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  box-shadow:
+    0 0 0 1px rgba(var(--red-rgb), 0.3),
+    0 0 20px 4px rgba(var(--red-rgb), 0.3);
+  opacity: 0;
+  animation: wf-node-flash 0.4s ease forwards;
+  pointer-events: none;
 }
 
 .wf-node-inner.skipped {
@@ -62,27 +89,15 @@
   opacity: 0.55;
 }
 
-@keyframes wf-node-flash-done {
+@keyframes wf-node-flash {
   0% {
-    box-shadow: 0 0 0 0 rgba(var(--green-rgb), 0.5);
+    opacity: 0;
   }
-  50% {
-    box-shadow: 0 0 20px 4px rgba(var(--green-rgb), 0.3);
+  30% {
+    opacity: 1;
   }
   100% {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  }
-}
-
-@keyframes wf-node-flash-error {
-  0% {
-    box-shadow: 0 0 0 0 rgba(var(--red-rgb), 0.5);
-  }
-  50% {
-    box-shadow: 0 0 20px 4px rgba(var(--red-rgb), 0.3);
-  }
-  100% {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    opacity: 0;
   }
 }
 
@@ -266,7 +281,11 @@
   border-radius: 50% !important;
   background: var(--bg3) !important;
   border: 2px solid var(--border-bright) !important;
-  transition: all var(--duration-base) !important;
+  transition:
+    background var(--duration-base),
+    border-color var(--duration-base),
+    box-shadow var(--duration-base),
+    transform var(--duration-base) !important;
 }
 
 .wf-handle:hover {
@@ -435,10 +454,10 @@
   .wf-node-inner.running::after {
     animation: none !important;
   }
-  .wf-node-inner.done {
+  .wf-node-inner.done::after {
     animation: none !important;
   }
-  .wf-node-inner.error {
+  .wf-node-inner.error::after {
     animation: none !important;
   }
   .wf-node-inner.running .wf-node-type-icon {

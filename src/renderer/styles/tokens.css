@@ -144,6 +144,9 @@
   --ease-default: ease;
   --ease-out: ease-out;
 
+  /* Edge highlight for Editorial surfaces (dark: white tint, light: black tint) */
+  --edge-highlight: rgba(255, 255, 255, 0.08);
+
   /* Shape */
   --r: 4px;
 
@@ -284,6 +287,7 @@
   --purple: #6b4c9a;
   --badge-python: #b08800;
   --badge-python-bg: rgba(176, 136, 0, 0.15);
+  --edge-highlight: rgba(0, 0, 0, 0.08);
 }
 
 /* ─── Theme: Fog (light) ─── */
@@ -320,6 +324,7 @@
   --purple: #7c3aed;
   --badge-python: #b08800;
   --badge-python-bg: rgba(176, 136, 0, 0.15);
+  --edge-highlight: rgba(0, 0, 0, 0.08);
 }
 
 /* ─── Theme: Lavender (light) ─── */
@@ -356,6 +361,7 @@
   --purple: #7c3aed;
   --badge-python: #b08800;
   --badge-python-bg: rgba(176, 136, 0, 0.15);
+  --edge-highlight: rgba(0, 0, 0, 0.08);
 }
 
 /* ─── Theme: Stone (light) ─── */
@@ -392,6 +398,7 @@
   --purple: #7c3aed;
   --badge-python: #b08800;
   --badge-python-bg: rgba(176, 136, 0, 0.15);
+  --edge-highlight: rgba(0, 0, 0, 0.08);
 }
 
 /* ─── Theme transition — scoped to UI containers ─── */

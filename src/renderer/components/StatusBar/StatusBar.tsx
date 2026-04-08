@@ -45,14 +45,20 @@ export function StatusBar({ onAboutClick, onShortcutsClick }: StatusBarProps): R
   const [appVersion, setAppVersion] = useState('')
 
   useEffect(() => {
+    let cancelled = false
     window.agentDeck.app
       .version()
-      .then(setAppVersion)
+      .then((v) => {
+        if (!cancelled) setAppVersion(v)
+      })
       .catch((err: unknown) => {
         window.agentDeck.log.send('warn', 'statusbar', 'Failed to get app version', {
           err: String(err),
         })
       })
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const layoutLabel = paneLayout === 1 ? 'single pane' : `${String(paneLayout)}-pane split`
@@ -106,7 +112,7 @@ export function StatusBar({ onAboutClick, onShortcutsClick }: StatusBarProps): R
             <span className="status-sep">|</span>
           </>
         )}
-        <button className="status-cmd" onClick={onShortcutsClick}>
+        <button className="status-cmd" onClick={onShortcutsClick} aria-label="Keyboard shortcuts">
           <span className="status-cmd-icon">
             <Keyboard size={14} />
           </span>

@@ -225,8 +225,8 @@ button:active,
 }
 
 /* ─── Reduced Motion ───
-   Disable UI transition animations but preserve ambient decorative effects
-   (HexGrid, EnergyVein, AmbientGlow). Windows "Animation effects" OFF
+   Disable UI transition animations but preserve semantic status indicators
+   (running dots, progress pulses). Windows "Animation effects" OFF
    triggers this preference — a blanket * rule would kill ALL effects. */
 @media (prefers-reduced-motion: reduce) {
   .home-main,
@@ -244,13 +244,11 @@ button:active,
   .sidebar-new-wf,
   .result-item,
   .toast,
-  .cmd-overlay,
   .cmd-palette {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
 
-  .home-aurora,
   .dot-running {
     animation: none !important;
   }

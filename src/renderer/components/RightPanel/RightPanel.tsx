@@ -29,6 +29,7 @@ export const RightPanel = memo(function RightPanel(): React.JSX.Element {
         {TABS.map((tab) => (
           <button
             key={tab.key}
+            id={`panel-tab-${tab.key}`}
             role="tab"
             aria-selected={rightPanelTab === tab.key}
             className={`panel-tab${rightPanelTab === tab.key ? ' active' : ''}`}
@@ -39,7 +40,7 @@ export const RightPanel = memo(function RightPanel(): React.JSX.Element {
           </button>
         ))}
       </div>
-      <div className="panel-body" role="tabpanel">
+      <div className="panel-body" role="tabpanel" aria-labelledby={`panel-tab-${rightPanelTab}`}>
         {rightPanelTab === 'context' && <ContextTab />}
         {rightPanelTab === 'activity' && <ActivityTab />}
         {rightPanelTab === 'memory' && <MemoryTab />}

@@ -52,26 +52,6 @@ export function SplitView(): React.JSX.Element {
       return true
     },
   )
-  // Separate selector for session running status (drives active-session class)
-  const sessionStatuses = useStoreWithEqualityFn(
-    useAppStore,
-    (s) => {
-      const result: Record<string, string> = {}
-      for (const [id, session] of Object.entries(s.sessions)) {
-        result[id] = session.status
-      }
-      return result
-    },
-    (a, b) => {
-      const aKeys = Object.keys(a)
-      const bKeys = Object.keys(b)
-      if (aKeys.length !== bKeys.length) return false
-      for (const key of aKeys) {
-        if (a[key] !== b[key]) return false
-      }
-      return true
-    },
-  )
   const projects = useAppStore((s) => s.projects)
   const projectMap = useMemo(() => {
     const m = new Map<string, (typeof projects)[number]>()
@@ -243,7 +223,7 @@ export function SplitView(): React.JSX.Element {
               ref={(el) => {
                 paneRefs.current[paneIndex] = el
               }}
-              className={`split-pane ${isVisible ? 'split-pane--visible' : 'split-pane--hidden'}${isFocused ? ' focused' : ''}${sessionId && sessionStatuses[sessionId] === 'running' ? ' active-session' : ''}`}
+              className={`split-pane ${isVisible ? 'split-pane--visible' : 'split-pane--hidden'}${isFocused ? ' focused' : ''}`}
               onClick={() => setFocusedPane(paneIndex)}
             >
               <div className="split-pane-inner">

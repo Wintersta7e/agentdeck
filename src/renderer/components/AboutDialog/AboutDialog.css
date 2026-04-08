@@ -21,8 +21,8 @@
 }
 
 .about-dialog {
-  background: rgba(14, 15, 18, 0.97);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--bg1);
+  border: 1px solid var(--border);
   border-radius: 10px;
   width: 360px;
   padding: var(--sp-7) var(--sp-7) var(--sp-6);
@@ -43,7 +43,7 @@
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+  background: linear-gradient(90deg, transparent, var(--edge-highlight), transparent);
   z-index: 1;
 }
 
