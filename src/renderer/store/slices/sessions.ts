@@ -43,6 +43,14 @@ export interface SessionsSlice {
       totalCostUsd: number
     },
   ) => void
+
+  // Worktree isolation paths (per-session)
+  worktreePaths: Record<string, { path: string; isolated: boolean; branch?: string | undefined }>
+  setWorktreePath: (
+    sessionId: string,
+    result: { path: string; isolated: boolean; branch?: string | undefined },
+  ) => void
+  clearWorktreePath: (sessionId: string) => void
 }
 
 export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> = (set, get) => ({
@@ -230,4 +238,14 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
         [sessionId]: [],
       },
     })),
+
+  // Worktree isolation paths
+  worktreePaths: {},
+  setWorktreePath: (sessionId, result) =>
+    set((s) => ({ worktreePaths: { ...s.worktreePaths, [sessionId]: result } })),
+  clearWorktreePath: (sessionId) =>
+    set((s) => {
+      const { [sessionId]: _, ...rest } = s.worktreePaths
+      return { worktreePaths: rest }
+    }),
 })
