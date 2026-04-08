@@ -1,16 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { ArrowLeft, Check } from 'lucide-react'
-
-interface ThemeOption {
-  id: string
-  label: string
-  accent: string
-}
-
-interface ThemeGroup {
-  label: string
-  themes: ThemeOption[]
-}
+import type { ThemeOption, ThemeGroup } from './themeUtils'
 
 interface ThemeSubmenuProps {
   themeGroups: ThemeGroup[]

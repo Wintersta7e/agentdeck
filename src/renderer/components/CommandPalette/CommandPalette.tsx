@@ -1,126 +1,27 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import {
-  Search,
-  Settings,
-  Info,
-  Keyboard,
-  SunMoon,
-  Hexagon,
-  PlusCircle,
-  Terminal,
-  Plus,
-  ArrowUp,
-  ArrowDown,
-  CornerDownLeft,
-  ClipboardList,
-} from 'lucide-react'
+import { Search, ArrowUp, ArrowDown, CornerDownLeft } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
-import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
 import type { Project } from '../../../shared/types'
 import { createBlankWorkflow } from '../../utils/workflowUtils'
 import { ThemeSubmenu } from './ThemeSubmenu'
 import { AgentsSubmenu } from './AgentsSubmenu'
+import {
+  type ScopeTab,
+  type PaletteItem,
+  SCOPE_TABS,
+  ALL_AGENTS,
+  buildPaletteItems,
+  filterPaletteItems,
+  groupBySections,
+} from './paletteItems'
+import { ALL_THEMES, THEME_GROUPS, applyThemeWithTransition } from './themeUtils'
 import './CommandPalette.css'
-
-type ScopeTab = 'projects' | 'templates' | 'sessions' | 'tools'
-
-type ResultType = 'session' | 'project' | 'template' | 'action'
-
-interface PaletteItem {
-  type: ResultType
-  id: string
-  icon: React.ReactNode
-  iconClass: string
-  name: string
-  detail: string
-  badge?: string | undefined
-  kbd?: string | undefined
-  disabled?: boolean | undefined
-  /** Original data reference for executing the action */
-  data?: Project | undefined
-}
 
 interface CommandPaletteProps {
   onOpenProject: (project: Project) => void
   onAbout?: (() => void) | undefined
   onShortcuts?: (() => void) | undefined
   onNewTerminal?: (() => void) | undefined
-}
-
-const SCOPE_TABS: { label: string; value: ScopeTab }[] = [
-  { label: 'Tools', value: 'tools' },
-  { label: 'Projects', value: 'projects' },
-  { label: 'Templates', value: 'templates' },
-  { label: 'Sessions', value: 'sessions' },
-]
-
-const SECTION_ORDER: { type: ResultType; label: string }[] = [
-  { type: 'session', label: 'Active sessions' },
-  { type: 'project', label: 'Projects' },
-  { type: 'template', label: 'Templates' },
-  { type: 'action', label: 'Tools' },
-]
-
-const ALL_AGENTS = SHARED_AGENTS.map((a) => ({ id: a.id, label: a.name, desc: a.description }))
-
-interface ThemeOption {
-  id: string
-  label: string
-  accent: string
-}
-
-const THEME_GROUPS: { label: string; themes: ThemeOption[] }[] = [
-  {
-    label: 'Dark',
-    themes: [
-      { id: '', label: 'Amber', accent: '#f5a623' },
-      { id: 'cyan', label: 'Navy + Cyan', accent: '#00d4ff' },
-      { id: 'violet', label: 'Midnight + Violet', accent: '#a78bfa' },
-      { id: 'ice', label: 'Charcoal + Ice', accent: '#60a5fa' },
-    ],
-  },
-  {
-    label: 'Light',
-    themes: [
-      { id: 'parchment', label: 'Parchment', accent: '#c87800' },
-      { id: 'fog', label: 'Fog', accent: '#2563eb' },
-      { id: 'lavender', label: 'Lavender', accent: '#6d28d9' },
-      { id: 'stone', label: 'Stone', accent: '#0d9488' },
-    ],
-  },
-]
-
-const ALL_THEMES: ThemeOption[] = THEME_GROUPS.flatMap((g) => g.themes)
-
-function applyThemeWithTransition(
-  themeId: string,
-  onApply?: () => void,
-  x?: number,
-  y?: number,
-): void {
-  const apply = (): void => {
-    document.documentElement.dataset.theme = themeId
-    onApply?.()
-  }
-
-  if (!document.startViewTransition) {
-    apply()
-    return
-  }
-
-  // Set custom properties for the circular clip origin
-  document.documentElement.style.setProperty('--reveal-x', `${x ?? window.innerWidth / 2}px`)
-  document.documentElement.style.setProperty('--reveal-y', `${y ?? window.innerHeight / 2}px`)
-
-  const transition = document.startViewTransition({
-    update: apply,
-    types: ['theme-reveal'],
-  })
-  const cleanupRevealProps = (): void => {
-    document.documentElement.style.removeProperty('--reveal-x')
-    document.documentElement.style.removeProperty('--reveal-y')
-  }
-  transition.finished.then(cleanupRevealProps).catch(cleanupRevealProps)
 }
 
 function highlightMatch(text: string, query: string): React.JSX.Element {
@@ -240,212 +141,25 @@ function PaletteInner({
   })
 
   // Build the full list of palette items from store data
-  const allItems: PaletteItem[] = useMemo(() => {
-    const items: PaletteItem[] = []
-
-    // Parse session snapshot
-    const sessionEntries = sessionSnapshot
-      ? sessionSnapshot.split(',').map((e) => {
-          const parts = e.split('|')
-          return { id: parts[0] ?? '', projectId: parts[1] ?? '', status: parts[2] ?? '' }
-        })
-      : []
-
-    for (const session of sessionEntries) {
-      const project = session.projectId
-        ? projects.find((p) => p.id === session.projectId)
-        : undefined
-      const name = project ? project.name : 'Terminal'
-      const detail = project ? `${project.path} \u00B7 ${session.status}` : session.status
-      items.push({
-        type: 'session',
-        id: `session-${session.id}`,
-        icon: project ? <Hexagon size={14} /> : <Terminal size={14} />,
-        iconClass: session.status === 'running' ? 'green' : session.status === 'error' ? 'red' : '',
-        name,
-        detail,
-        badge: session.status === 'running' ? '\u25CF running' : session.status,
-        data: project,
-      })
-    }
-
-    // Projects (exclude those already shown as sessions)
-    const sessionProjectIds = new Set(sessionEntries.map((s) => s.projectId))
-    const pinned = projects.filter((p) => p.pinned && !sessionProjectIds.has(p.id))
-    const recent = [...projects]
-      .filter((p) => !p.pinned && !sessionProjectIds.has(p.id) && p.lastOpened)
-      .sort((a, b) => (b.lastOpened ?? 0) - (a.lastOpened ?? 0))
-      .slice(0, 5)
-
-    for (const project of [...pinned, ...recent]) {
-      items.push({
-        type: 'project',
-        id: `project-${project.id}`,
-        icon: <Hexagon size={14} />,
-        iconClass: '',
-        name: project.name,
-        detail: project.path,
-        badge: project.badge,
-        data: project,
-      })
-    }
-
-    // Templates
-    for (const tmpl of templates) {
-      items.push({
-        type: 'template',
-        id: `template-${tmpl.id}`,
-        icon: <ClipboardList size={14} />,
-        iconClass: 'amber',
-        name: tmpl.name,
-        detail: tmpl.description || 'No description',
-      })
-    }
-
-    // Actions
-    items.push({
-      type: 'action',
-      id: 'action-new-project',
-      icon: <Plus size={14} />,
-      iconClass: 'blue',
-      name: 'New Project',
-      detail: 'Open folder and configure a new project',
-      kbd: 'Ctrl+N',
-    })
-    items.push({
-      type: 'action',
-      id: 'action-new-terminal',
-      icon: <Terminal size={14} />,
-      iconClass: '',
-      name: 'New Terminal',
-      detail: 'Open a plain WSL shell',
-      kbd: 'Ctrl+T',
-    })
-    items.push({
-      type: 'action',
-      id: 'action-new-template',
-      icon: <PlusCircle size={14} />,
-      iconClass: 'purple',
-      name: 'New Template',
-      detail: 'Create a new prompt template',
-    })
-    // Resolve the best project for Settings: active session's project > most recent > none
-    const settingsProject = (() => {
-      // Parse session snapshot to find active session's project
-      const sessEntries = sessionSnapshot
-        ? sessionSnapshot.split(',').map((e) => {
-            const parts = e.split('|')
-            return { id: parts[0] ?? '', projectId: parts[1] ?? '' }
-          })
-        : []
-      const activeSess = activeSessionId
-        ? sessEntries.find((s) => s.id === activeSessionId)
-        : undefined
-      if (activeSess?.projectId) {
-        const p = projects.find((proj) => proj.id === activeSess.projectId)
-        if (p) return p
-      }
-      // Fall back to most recently used project
-      const sorted = [...projects].sort((a, b) => (b.lastOpened ?? 0) - (a.lastOpened ?? 0))
-      return sorted[0]
-    })()
-
-    const hasProjects = projects.length > 0
-    items.push({
-      type: 'action',
-      id: 'action-settings',
-      icon: <Settings size={14} />,
-      iconClass: hasProjects ? '' : 'muted',
-      name: 'Settings',
-      detail: hasProjects
-        ? `Project settings \u00B7 ${settingsProject?.name ?? 'Unknown'}`
-        : 'Create a project first',
-      kbd: hasProjects ? 'Ctrl+,' : undefined,
-      disabled: !hasProjects,
-    })
-    items.push({
-      type: 'action',
-      id: 'action-about',
-      icon: <Info size={14} />,
-      iconClass: '',
-      name: 'About',
-      detail: 'Version info and credits',
-    })
-    items.push({
-      type: 'action',
-      id: 'action-shortcuts',
-      icon: <Keyboard size={14} />,
-      iconClass: '',
-      name: 'Keyboard Shortcuts',
-      detail: 'View all keyboard shortcuts',
-      kbd: 'Ctrl+/',
-    })
-    items.push({
-      type: 'action',
-      id: 'action-change-theme',
-      icon: <SunMoon size={14} />,
-      iconClass: '',
-      name: 'Change Theme',
-      detail: 'Switch between 8 dark and light themes',
-    })
-    items.push({
-      type: 'action',
-      id: 'action-pinned-agents',
-      icon: <Settings size={14} />,
-      iconClass: '',
-      name: 'Pinned Agents',
-      detail: 'Choose which agents appear on the home screen',
-    })
-    items.push({
-      type: 'action',
-      id: 'action-new-workflow',
-      icon: <Hexagon size={14} />,
-      iconClass: 'purple',
-      name: 'New Workflow',
-      detail: 'Create a new agentic workflow',
-    })
-
-    return items
-  }, [sessionSnapshot, projects, templates, activeSessionId])
+  const allItems = useMemo(
+    () => buildPaletteItems(sessionSnapshot, projects, templates, activeSessionId),
+    [sessionSnapshot, projects, templates, activeSessionId],
+  )
 
   // Filter items by scope and query
-  const filteredItems: PaletteItem[] = useMemo(() => {
-    let items = allItems
-
-    // Filter by scope tab
-    const scopeTypeMap: Record<ScopeTab, ResultType> = {
-      tools: 'action',
-      projects: 'project',
-      templates: 'template',
-      sessions: 'session',
-    }
-    items = items.filter((item) => item.type === scopeTypeMap[scope])
-
-    // Filter by fuzzy search (substring match)
-    if (query.trim()) {
-      const lowerQuery = query.toLowerCase().trim()
-      items = items.filter((item) => item.name.toLowerCase().includes(lowerQuery))
-    }
-
-    return items
-  }, [allItems, scope, query])
+  const filteredItems = useMemo(
+    () => filterPaletteItems(allItems, scope, query),
+    [allItems, scope, query],
+  )
 
   // Group filtered items by type with section headers
-  const groupedSections: { label: string; items: PaletteItem[] }[] = useMemo(() => {
-    const sections: { label: string; items: PaletteItem[] }[] = []
-    for (const { type, label } of SECTION_ORDER) {
-      const sectionItems = filteredItems.filter((item) => item.type === type)
-      if (sectionItems.length > 0) {
-        sections.push({ label, items: sectionItems })
-      }
-    }
-    return sections
-  }, [filteredItems])
+  const groupedSections = useMemo(() => groupBySections(filteredItems), [filteredItems])
 
   // Flat list for keyboard navigation
-  const flatItems: PaletteItem[] = useMemo(() => {
-    return groupedSections.flatMap((section) => section.items)
-  }, [groupedSections])
+  const flatItems = useMemo(
+    () => groupedSections.flatMap((section) => section.items),
+    [groupedSections],
+  )
 
   // Wrapper setters that also reset selectedIndex
   const handleQueryChange = useCallback((value: string) => {
@@ -628,7 +342,16 @@ function PaletteInner({
   )
 
   // Compute the global flat index offset for each section
-  let globalIndex = 0
+  // Pre-compute cumulative offsets so we don't mutate in render
+  const sectionOffsets = useMemo(() => {
+    const offsets: number[] = []
+    let acc = 0
+    for (const section of groupedSections) {
+      offsets.push(acc)
+      acc += section.items.length
+    }
+    return offsets
+  }, [groupedSections])
 
   return (
     <div
@@ -697,8 +420,8 @@ function PaletteInner({
               </div>
             )}
             {groupedSections.map((section, sectionIdx) => {
-              const sectionStartIndex = globalIndex
-              const elements = (
+              const sectionStartIndex = sectionOffsets[sectionIdx] ?? 0
+              return (
                 <div key={section.label}>
                   <div className="result-section">{section.label}</div>
                   {section.items.map((item, itemIdx) => {
@@ -741,8 +464,6 @@ function PaletteInner({
                   {sectionIdx < groupedSections.length - 1 && <div className="result-divider" />}
                 </div>
               )
-              globalIndex += section.items.length
-              return elements
             })}
           </div>
         )}
