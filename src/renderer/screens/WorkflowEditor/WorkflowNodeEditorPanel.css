@@ -156,7 +156,7 @@
   border-radius: var(--r);
   color: var(--text1);
   font-size: var(--fs-xs);
-  font-family: var(--font-mono);
+  font-family: inherit;
   cursor: pointer;
   white-space: nowrap;
   transition:
@@ -288,7 +288,7 @@
 .wf-ne-btn {
   padding: var(--sp-1) var(--sp-3);
   border-radius: var(--r);
-  font-family: var(--font-mono);
+  font-family: inherit;
   font-size: var(--fs-xs);
   font-weight: 600;
   cursor: pointer;

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Keyboard, Menu } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
-import { HexDot } from '../shared/HexDot'
 import './StatusBar.css'
 
 interface StatusBarProps {
@@ -61,7 +60,7 @@ export function StatusBar({ onAboutClick, onShortcutsClick }: StatusBarProps): R
   return (
     <div className="statusbar" role="status">
       <div className={`status-item ${activeCount > 0 ? 'green' : ''}`}>
-        <HexDot status={activeCount > 0 ? 'live' : 'idle'} size={5} />
+        <span className={`status-dot${activeCount > 0 ? ' active' : ''}`} />
         <span>
           {activeCount} session{activeCount !== 1 ? 's' : ''} active
         </span>

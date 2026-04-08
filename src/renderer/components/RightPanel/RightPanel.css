@@ -1,11 +1,24 @@
 .right-panel {
   width: 100%;
   height: 100%;
-  background: var(--glass-bg);
+  background: var(--bg1);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   border-radius: var(--r);
+  border: 1px solid var(--border);
+  position: relative;
+}
+
+.right-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+  z-index: 1;
 }
 
 .panel-tabs {
@@ -13,13 +26,6 @@
   align-items: center;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
-}
-
-.right-panel-box {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  background: transparent;
 }
 
 .panel-tab {
@@ -30,6 +36,7 @@
   font-size: var(--fs-sm);
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--sp-1);
   color: var(--text2);
   cursor: pointer;
@@ -37,13 +44,12 @@
   background: none;
   border-bottom: 2px solid transparent;
   transition: color var(--duration-base);
-  letter-spacing: 0.05em;
-  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  font-family: inherit;
 }
 
 .panel-tab.active {
-  color: var(--amber);
-  border-bottom-color: transparent;
+  color: var(--accent);
 }
 
 .panel-tab.active::after {
@@ -53,9 +59,8 @@
   left: 10%;
   right: 10%;
   height: 2px;
-  background: linear-gradient(90deg, transparent, var(--accent), transparent);
-  box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.4);
-  animation: energy-underline-in 200ms ease;
+  background: var(--accent);
+  box-shadow: 0 0 6px rgba(var(--accent-rgb), 0.3);
 }
 
 .panel-tab:hover {
@@ -148,8 +153,8 @@
   font-size: var(--fs-xs);
   padding: 1px var(--sp-1);
   border-radius: 2px;
-  background: var(--amber-glow);
-  color: var(--amber);
+  background: var(--accent-glow);
+  color: var(--accent);
 }
 
 .panel-placeholder {
@@ -175,4 +180,10 @@
   font-size: var(--fs-xs);
   line-height: 1.4;
   max-width: 90%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-tab {
+    transition: none;
+  }
 }

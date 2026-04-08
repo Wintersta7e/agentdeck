@@ -1,17 +1,29 @@
 .about-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: var(--z-modal);
+  animation: aboutFadeIn 0.15s ease;
+}
+
+@keyframes aboutFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .about-dialog {
-  background: var(--bg1);
-  border: 1px solid var(--border-bright);
-  border-radius: var(--r);
+  background: rgba(14, 15, 18, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
   width: 360px;
   padding: var(--sp-7) var(--sp-7) var(--sp-6);
   display: flex;
@@ -19,6 +31,20 @@
   align-items: center;
   gap: var(--sp-4);
   position: relative;
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.6),
+    0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.about-dialog::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+  z-index: 1;
 }
 
 .about-close {
@@ -37,25 +63,15 @@
 
 .about-close:hover {
   color: var(--text0);
-  background: var(--bg3);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .about-name {
   font-family: var(--font-display);
   font-size: var(--fs-xl);
   font-weight: 700;
-  color: var(--amber);
+  color: var(--accent);
   letter-spacing: 0.5px;
-  position: relative;
-}
-
-.about-name::after {
-  content: '';
-  display: block;
-  margin-top: var(--sp-2);
-  height: 2px;
-  background: linear-gradient(90deg, transparent, var(--accent), transparent);
-  box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.4);
 }
 
 .about-version {
@@ -90,4 +106,10 @@
 .about-copyright {
   font-size: var(--fs-xs);
   color: var(--text3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .about-overlay {
+    animation: none !important;
+  }
 }

@@ -4,21 +4,47 @@
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   z-index: var(--z-modal);
   display: flex;
   align-items: center;
   justify-content: center;
+  animation: confirmFadeIn 0.15s ease;
+}
+
+@keyframes confirmFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .confirm-dialog {
-  background: var(--bg1);
-  border: 1px solid var(--chrome-border);
-  border-radius: var(--r);
+  background: rgba(14, 15, 18, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
   max-width: 420px;
   width: 90%;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.6),
+    0 8px 24px rgba(0, 0, 0, 0.3);
+  position: relative;
+}
+
+.confirm-dialog::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+  z-index: 1;
 }
 
 .confirm-dialog-body {
@@ -34,7 +60,6 @@
 }
 
 .confirm-dialog-message {
-  font-family: var(--font-mono);
   font-size: var(--fs-sm);
   color: var(--text2);
   line-height: 1.5;
@@ -47,16 +72,16 @@
   justify-content: flex-end;
   gap: var(--sp-2);
   padding: var(--sp-3) var(--sp-5) var(--sp-4);
-  border-top: 1px solid var(--bg3);
+  border-top: 1px solid var(--border);
 }
 
 .confirm-dialog-btn-cancel {
-  font-family: var(--font-mono);
+  font-family: inherit;
   font-size: var(--fs-sm);
   padding: var(--sp-2) var(--sp-4);
   background: transparent;
   color: var(--text2);
-  border: 1px solid var(--bg3);
+  border: 1px solid var(--border);
   border-radius: var(--r);
   cursor: pointer;
   transition:
@@ -70,7 +95,7 @@
 }
 
 .confirm-dialog-btn-extra {
-  font-family: var(--font-mono);
+  font-family: inherit;
   font-size: var(--fs-sm);
   padding: var(--sp-2) var(--sp-4);
   background: transparent;
@@ -89,7 +114,7 @@
 }
 
 .confirm-dialog-btn-confirm {
-  font-family: var(--font-mono);
+  font-family: inherit;
   font-size: var(--fs-sm);
   font-weight: 600;
   padding: var(--sp-2) var(--sp-4);
@@ -103,4 +128,10 @@
 
 .confirm-dialog-btn-confirm:hover {
   opacity: 0.85;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confirm-dialog-backdrop {
+    animation: none !important;
+  }
 }

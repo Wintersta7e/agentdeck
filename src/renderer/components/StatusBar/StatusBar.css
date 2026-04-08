@@ -1,8 +1,8 @@
 .statusbar {
   height: 26px;
   line-height: 26px;
-  background: var(--statusbar-bg);
-  border-top: 1px solid var(--chrome-border);
+  background: var(--bg1);
+  border-top: 1px solid var(--border);
   position: relative;
   display: flex;
   align-items: center;
@@ -18,14 +18,41 @@
   align-items: center;
   gap: var(--sp-1);
 }
+
 .status-item.green {
   color: var(--green);
 }
+
 .status-item.amber {
-  color: var(--amber);
+  color: var(--accent);
 }
+
 .status-item.purple {
   color: var(--purple);
+}
+
+.status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--text3);
+  flex-shrink: 0;
+}
+
+.status-dot.active {
+  background: var(--green);
+  box-shadow: 0 0 4px rgba(var(--green-rgb), 0.5);
+  animation: status-dot-pulse 2s ease-in-out infinite;
+}
+
+@keyframes status-dot-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 
 .status-right {
@@ -37,14 +64,14 @@
 
 .status-cmd {
   background: var(--bg2);
-  border: 1px solid var(--border-bright);
+  border: 1px solid var(--border);
   color: var(--text1);
   padding: 0 var(--sp-2);
   height: 22px;
   border-radius: 3px;
   font-size: var(--fs-xs);
   cursor: pointer;
-  font-family: var(--font-mono);
+  font-family: inherit;
   transition: all var(--duration-base);
   display: flex;
   align-items: center;
@@ -91,7 +118,7 @@
 }
 
 .status-version:hover {
-  color: var(--amber);
+  color: var(--accent);
 }
 
 .status-sep {
@@ -101,4 +128,16 @@
 
 .status-worktree {
   color: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-cmd,
+  .status-version,
+  .status-dot {
+    transition: none;
+  }
+
+  .status-dot.active {
+    animation: none;
+  }
 }

@@ -50,7 +50,7 @@
 }
 
 .wf-run-field label {
-  font-family: var(--font-mono);
+  font-family: inherit;
   font-size: var(--fs-sm);
   color: var(--text1);
   font-weight: 500;
@@ -113,7 +113,7 @@
 }
 
 .wf-run-path-btn {
-  font-family: var(--font-mono);
+  font-family: inherit;
   font-size: var(--fs-sm);
   padding: var(--sp-1) var(--sp-3);
   background: var(--bg2);
@@ -142,7 +142,7 @@
 }
 
 .wf-run-btn-cancel {
-  font-family: var(--font-mono);
+  font-family: inherit;
   font-size: var(--fs-sm);
   padding: var(--sp-2) var(--sp-4);
   background: transparent;
@@ -161,7 +161,7 @@
 }
 
 .wf-run-btn-start {
-  font-family: var(--font-mono);
+  font-family: inherit;
   font-size: var(--fs-sm);
   font-weight: 600;
   padding: var(--sp-2) var(--sp-4);

@@ -213,57 +213,6 @@ button:active,
   }
 }
 
-/* === Fusion Animations === */
-@keyframes hex-pulse {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 0.8;
-  }
-  50% {
-    transform: scale(1.15);
-    opacity: 1;
-  }
-}
-
-@keyframes logo-breathe {
-  0%,
-  100% {
-    opacity: 0.12;
-  }
-  50% {
-    opacity: 0.25;
-  }
-}
-
-@keyframes vein-drift {
-  0% {
-    stroke-dashoffset: 0;
-  }
-  100% {
-    stroke-dashoffset: 600;
-  }
-}
-
-@keyframes edge-glow-pulse {
-  0%,
-  100% {
-    opacity: 0.55;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-@keyframes energy-underline-in {
-  0% {
-    transform: scaleX(0);
-  }
-  100% {
-    transform: scaleX(1);
-  }
-}
-
 /* ─── Focus Indicators ─── */
 :focus-visible {
   outline: 2px solid var(--accent);
@@ -301,11 +250,7 @@ button:active,
     transition-duration: 0.01ms !important;
   }
 
-  .hex-pulse,
-  .logo-breathe,
   .home-aurora,
-  .vein-drift,
-  .edge-glow-pulse,
   .dot-running {
     animation: none !important;
   }
