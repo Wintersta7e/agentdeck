@@ -110,10 +110,10 @@ async function refreshGitStatus(key: string, projectPath: string): Promise<GitSt
       const [statusResult, diffResult] = await Promise.all([
         execFileAsync(
           'wsl.exe',
-          ['--', 'git', '-C', wslPath, 'status', '--porcelain=v2', '--branch'],
+          ['--', 'env', 'LANG=C', 'git', '-C', wslPath, 'status', '--porcelain=v2', '--branch'],
           { timeout: 10000 },
         ),
-        execFileAsync('wsl.exe', ['--', 'git', '-C', wslPath, 'diff', '--stat'], {
+        execFileAsync('wsl.exe', ['--', 'env', 'LANG=C', 'git', '-C', wslPath, 'diff', '--stat'], {
           timeout: 10000,
         }),
       ])

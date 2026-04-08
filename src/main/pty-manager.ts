@@ -39,10 +39,10 @@ export interface PtyManager {
 }
 
 /* Fix 1 (PANEL-4): ANSI stripping + regex-based activity parsing */
-const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b\].*?(?:\x07|\x1b\\)/g
+import { stripAnsi } from './node-runners'
 
 function parseActivityLine(line: string): { type: string; title: string; detail: string } | null {
-  const clean = line.replace(ANSI_RE, '').trim()
+  const clean = stripAnsi(line).trim()
   // Skip empty lines, prompts, and very short lines (noise)
   if (clean.length < 3) return null
   // Skip common shell prompt patterns and box-drawing decoration

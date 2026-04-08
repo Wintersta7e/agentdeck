@@ -54,6 +54,27 @@ export function wslPathToWindows(wslPath: string, distro = FALLBACK_DISTRO): str
   return `\\\\wsl.localhost\\${distro}${wslPath.replace(/\//g, '\\')}`
 }
 
+/**
+ * Try a filesystem operation with UNC path fallback.
+ * `\\wsl.localhost\` (Win11 22H2+) is tried first; on failure, retries
+ * with `\\wsl$\` (Win10/older). Consolidates the fallback pattern that
+ * was previously duplicated across detect-stack.ts and ipc-projects.ts.
+ */
+export async function withUncFallback<T>(
+  windowsPath: string,
+  operation: (path: string) => Promise<T>,
+): Promise<T> {
+  try {
+    return await operation(windowsPath)
+  } catch (err) {
+    if (windowsPath.startsWith('\\\\wsl.localhost\\')) {
+      const fallback = windowsPath.replace('\\\\wsl.localhost\\', '\\\\wsl$\\')
+      return operation(fallback)
+    }
+    throw err
+  }
+}
+
 /** Cached distro name — populated by async detection */
 let cachedDistro: string | null = null
 

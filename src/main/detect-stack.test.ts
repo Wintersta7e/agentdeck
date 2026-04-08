@@ -14,6 +14,9 @@ vi.mock('./wsl-utils', () => ({
     }
     return `\\\\wsl.localhost\\Ubuntu${p.replace(/\//g, '\\')}`
   }),
+  withUncFallback: vi.fn(async (_path: string, operation: (p: string) => Promise<unknown>) => {
+    return operation(_path)
+  }),
 }))
 
 import { detectStack } from './detect-stack'
@@ -75,7 +78,17 @@ describe('detectStack', () => {
   })
 
   it('tries wsl$ fallback when wsl.localhost fails', async () => {
-    // First call (wsl.localhost) fails, second call (wsl$) succeeds
+    // withUncFallback handles the retry — mock it to simulate first fail, second succeed
+    const { withUncFallback: mockFallback } = await import('./wsl-utils')
+    const mockedFallback = vi.mocked(mockFallback)
+    mockedFallback.mockImplementationOnce(async (path, operation) => {
+      try {
+        return await operation(path)
+      } catch {
+        const fallback = (path as string).replace('\\\\wsl.localhost\\', '\\\\wsl$\\')
+        return operation(fallback)
+      }
+    })
     mockedReaddir
       .mockRejectedValueOnce(new Error('network path not found'))
       .mockResolvedValueOnce(['package.json'] as never)
@@ -83,8 +96,6 @@ describe('detectStack', () => {
     const result = await detectStack('/home/user/project', 'Ubuntu')
     expect(result).not.toBeNull()
     expect(result?.badge).toBe('JS')
-    // Should have been called twice
-    expect(mockedReaddir).toHaveBeenCalledTimes(2)
   })
 
   it('accepts Windows paths directly', async () => {

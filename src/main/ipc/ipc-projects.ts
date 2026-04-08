@@ -6,7 +6,7 @@ import type { Project, ProjectMeta } from '../../shared/types'
 import type { AppStore } from '../project-store'
 import { detectStack } from '../detect-stack'
 import { scanSkillDirectory, invalidateProjectCache } from '../skill-scanner'
-import { getDefaultDistroAsync, wslPathToWindows } from '../wsl-utils'
+import { getDefaultDistroAsync, wslPathToWindows, withUncFallback } from '../wsl-utils'
 import { createLogger } from '../logger'
 
 const log = createLogger('ipc-projects')
@@ -73,19 +73,8 @@ export function registerProjectHandlers(
 
       for (const filePath of candidates) {
         try {
-          const content = await fs.promises.readFile(filePath, 'utf-8')
-          return content
+          return await withUncFallback(filePath, (p) => fs.promises.readFile(p, 'utf-8'))
         } catch {
-          // If UNC path via wsl.localhost failed, try wsl$ fallback
-          if (filePath.startsWith('\\\\wsl.localhost\\')) {
-            try {
-              const fallbackFile = filePath.replace('\\\\wsl.localhost\\', '\\\\wsl$\\')
-              const content = await fs.promises.readFile(fallbackFile, 'utf-8')
-              return content
-            } catch {
-              // continue to next candidate
-            }
-          }
           // continue to next candidate
         }
       }
@@ -149,20 +138,11 @@ export function registerProjectHandlers(
       for (const filePath of candidates) {
         if (found) break
         try {
-          await fs.promises.access(filePath, fs.constants.F_OK)
+          await withUncFallback(filePath, (p) => fs.promises.access(p, fs.constants.F_OK))
           contextFiles.push(filename)
           found = true
         } catch {
-          if (filePath.startsWith('\\\\wsl.localhost\\')) {
-            try {
-              const fallback = filePath.replace('\\\\wsl.localhost\\', '\\\\wsl$\\')
-              await fs.promises.access(fallback, fs.constants.F_OK)
-              contextFiles.push(filename)
-              found = true
-            } catch {
-              // not found via wsl$ fallback
-            }
-          }
+          // not found
         }
       }
     }
