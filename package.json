@@ -1,6 +1,6 @@
 {
   "name": "agentdeck",
-  "version": "5.0.0",
+  "version": "5.0.1",
   "description": "Electron desktop app for managing WSL agent sessions",
   "main": "./out/main/index.js",
   "license": "Elastic-2.0",
