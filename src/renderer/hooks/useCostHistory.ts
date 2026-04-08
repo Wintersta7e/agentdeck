@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useAppStore } from '../store/appStore'
+import { getDefaultAgent } from '../../shared/agent-helpers'
 import type { DailyCostEntry } from '../../shared/types'
 
 export interface CostDashboardData {
@@ -22,6 +23,7 @@ export function useCostHistory(): CostDashboardData {
   const setDailyBudget = useAppStore((s) => s.setDailyBudget)
   const sessionUsage = useAppStore((s) => s.sessionUsage)
   const sessions = useAppStore((s) => s.sessions)
+  const projects = useAppStore((s) => s.projects)
 
   useEffect(() => {
     let cancelled = false
@@ -40,8 +42,11 @@ export function useCostHistory(): CostDashboardData {
       }
     }
     void load()
+    // Refresh cost history every 30s while the home screen is visible
+    const interval = setInterval(() => void load(), 30_000)
     return () => {
       cancelled = true
+      clearInterval(interval)
     }
   }, [setCostHistory, setDailyBudget])
 
@@ -59,16 +64,21 @@ export function useCostHistory(): CostDashboardData {
     let total = 0
     const perAgent: Record<string, number> = {}
 
+    const projectMap = new Map(projects.map((p) => [p.id, p]))
     for (const [sessionId, usage] of Object.entries(sessionUsage)) {
       const session = sessions[sessionId]
-      if (!session || session.startedAt < midnight) continue
+      // If session still exists, check it started today. If already closed/removed,
+      // keep its cost — all in-memory sessionUsage is from this app session.
+      if (session && session.startedAt < midnight) continue
       total += usage.totalCostUsd
-      const agent = session.agentOverride ?? 'unknown'
+      const project = session?.projectId ? projectMap.get(session.projectId) : undefined
+      const defaultAgent = project ? getDefaultAgent(project) : undefined
+      const agent = session?.agentOverride ?? defaultAgent?.agent ?? 'claude-code'
       perAgent[agent] = (perAgent[agent] ?? 0) + usage.totalCostUsd
     }
 
     return { todayCost: total, perAgentToday: perAgent }
-  }, [sessionUsage, sessions, midnight])
+  }, [sessionUsage, sessions, projects, midnight])
 
   return { history: costHistory, budget: dailyBudget, todayCost, perAgentToday }
 }

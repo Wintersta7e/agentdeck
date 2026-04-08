@@ -157,22 +157,24 @@ export function HomeScreen({
                 <Plus size={12} /> New
               </button>
             </div>
-            <div className="home-project-grid">
-              {pinned.map((p) => (
-                <ProjectCardV2
-                  key={p.id}
-                  project={p}
-                  onOpen={() => onOpenProject(p)}
-                  onContextMenu={(e) => {
-                    e.preventDefault()
-                    setCardMenu({ x: e.clientX, y: e.clientY, projectId: p.id })
-                  }}
-                />
-              ))}
-              <button className="home-add-card" onClick={openWizard} type="button">
-                <Plus size={16} />
-                <span>New project</span>
-              </button>
+            <div className="home-project-scroll">
+              <div className="home-project-grid">
+                {pinned.map((p) => (
+                  <ProjectCardV2
+                    key={p.id}
+                    project={p}
+                    onOpen={() => onOpenProject(p)}
+                    onContextMenu={(e) => {
+                      e.preventDefault()
+                      setCardMenu({ x: e.clientX, y: e.clientY, projectId: p.id })
+                    }}
+                  />
+                ))}
+                <button className="home-add-card" onClick={openWizard} type="button">
+                  <Plus size={16} />
+                  <span>New project</span>
+                </button>
+              </div>
             </div>
           </div>
           <div className="home-tier2-right">

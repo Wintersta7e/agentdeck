@@ -62,11 +62,14 @@ export function Titlebar({
   const currentView = useAppStore((s) => s.currentView)
   // PERF-10: Narrow session selector — only extract id/projectId/status to prevent
   // re-renders on every PTY data event (setSessionStatus creates a new sessions object)
-  const sessionDataStr = useAppStore((s) =>
-    Object.values(s.sessions)
+  // Only include sessions that are still in a pane slot (excludes closed-but-preserved sessions)
+  const sessionDataStr = useAppStore((s) => {
+    const paneSet = new Set(s.paneSessions.filter(Boolean))
+    return Object.values(s.sessions)
+      .filter((sess) => sess.status !== 'exited' || paneSet.has(sess.id))
       .map((sess) => `${sess.id}|${sess.projectId}|${sess.status}`)
-      .join(','),
-  )
+      .join(',')
+  })
   const activeSessionId = useAppStore((s) => s.activeSessionId)
   const projects = useAppStore((s) => s.projects)
   const setActiveSession = useAppStore((s) => s.setActiveSession)

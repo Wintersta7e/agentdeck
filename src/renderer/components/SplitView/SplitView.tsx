@@ -17,7 +17,7 @@ export function SplitView(): React.JSX.Element {
   const paneLayout = useAppStore((s) => s.paneLayout)
   const focusedPane = useAppStore((s) => s.focusedPane)
   const paneSessions = useAppStore((s) => s.paneSessions)
-  // Narrow selector: only re-render when session IDs, projectIds, or agent overrides change
+  // Narrow selector: only re-render when session IDs, projectIds, status, or agent overrides change
   const sessions = useStoreWithEqualityFn(
     useAppStore,
     (s) => {
@@ -26,6 +26,7 @@ export function SplitView(): React.JSX.Element {
         {
           id: string
           projectId: string
+          status: string
           agentOverride?: string | undefined
           agentFlagsOverride?: string | undefined
         }
@@ -34,6 +35,7 @@ export function SplitView(): React.JSX.Element {
         result[id] = {
           id: session.id,
           projectId: session.projectId,
+          status: session.status,
           agentOverride: session.agentOverride,
           agentFlagsOverride: session.agentFlagsOverride,
         }
@@ -46,6 +48,7 @@ export function SplitView(): React.JSX.Element {
       if (aKeys.length !== bKeys.length) return false
       for (const key of aKeys) {
         if (a[key]?.projectId !== b[key]?.projectId) return false
+        if (a[key]?.status !== b[key]?.status) return false
         if (a[key]?.agentOverride !== b[key]?.agentOverride) return false
         if (a[key]?.agentFlagsOverride !== b[key]?.agentFlagsOverride) return false
       }
@@ -192,10 +195,16 @@ export function SplitView(): React.JSX.Element {
   const paneSessionIds = PANE_INDICES.map((i) => paneSessions[i] ?? '')
 
   // Find all session IDs that are NOT assigned to any visible pane slot
+  // Exclude exited sessions that were closed (preserved for cost/timeline only)
   const visiblePaneSessionIds = new Set(
     paneSessionIds.slice(0, paneLayout).filter((id) => id !== ''),
   )
-  const allSessionIds = Object.keys(sessions)
+  const paneSet = new Set(paneSessions.filter(Boolean))
+  const allSessionIds = Object.keys(sessions).filter((sid) => {
+    const s = sessions[sid]
+    // Keep running/starting sessions, and exited sessions only if still in a pane
+    return s && (s.status !== 'exited' || paneSet.has(sid))
+  })
   const hiddenSessionIds = allSessionIds.filter((sid) => !visiblePaneSessionIds.has(sid))
 
   return (

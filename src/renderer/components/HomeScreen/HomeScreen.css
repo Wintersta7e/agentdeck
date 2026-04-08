@@ -103,15 +103,20 @@
 
 .home-tier2-left {
   min-width: 0;
-  max-height: 420px; /* cap project area — scroll when many projects */
+  display: flex;
+  flex-direction: column;
+}
+
+.home-project-scroll {
+  max-height: 380px;
   overflow-y: auto;
 }
 
-.home-tier2-left::-webkit-scrollbar {
+.home-project-scroll::-webkit-scrollbar {
   width: 3px;
 }
 
-.home-tier2-left::-webkit-scrollbar-thumb {
+.home-project-scroll::-webkit-scrollbar-thumb {
   background: var(--bg4);
   border-radius: 2px;
 }
@@ -126,9 +131,9 @@
 .home-sec-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: var(--sp-3);
   margin-bottom: var(--sp-2);
-  margin-top: var(--sp-5);
+  margin-top: var(--sp-3);
 }
 
 .home-sec-title {

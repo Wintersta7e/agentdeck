@@ -36,9 +36,8 @@ export function computeTimeline(
   projectMap?: Map<string, string>,
 ): TimelineRow[] {
   const now = Date.now()
-  const totalSpan = now - dayStart
 
-  if (totalSpan <= 0) return []
+  if (now <= dayStart) return []
 
   const rows: TimelineRow[] = []
 
@@ -52,8 +51,14 @@ export function computeTimeline(
     if (!session && feed[0] && feed[0].timestamp < dayStart) continue
 
     const segments: TimelineSegment[] = []
-    // Activity events are appended in chronological order by addActivityEvent
     const events = feed
+
+    // Use session's active span (first event → now) for proportional widths,
+    // not the full day span — otherwise short sessions produce invisible segments
+    const firstTs = events[0]?.timestamp ?? now
+    const lastTs = events[events.length - 1]?.timestamp ?? now
+    // Minimum 60s span so very short sessions still show proportional segments
+    const sessionSpan = Math.max(60_000, lastTs + 30_000 - firstTs)
 
     for (let i = 0; i < events.length; i++) {
       const event = events[i]
@@ -65,15 +70,11 @@ export function computeTimeline(
       // H11: Guard against zero/negative-width segments (e.g. events spanning midnight)
       if (end <= start) continue
 
-      const widthPct = ((end - start) / totalSpan) * 100
-      if (widthPct > 0.1) {
-        segments.push({ type: event.type, widthPct })
-      }
+      const widthPct = ((end - start) / sessionSpan) * 100
+      segments.push({ type: event.type, widthPct: Math.max(0.5, widthPct) })
     }
 
     if (segments.length > 0) {
-      const firstTs = events[0]?.timestamp ?? Date.now()
-      const lastTs = events[events.length - 1]?.timestamp ?? Date.now()
       const duration = formatDuration(lastTs - firstTs + 30_000)
       // Build label from live session data, or use cached label for closed sessions
       let label = labelCache.get(sessionId)

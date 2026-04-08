@@ -45,27 +45,43 @@ function parseActivityLine(line: string): { type: string; title: string; detail:
   const clean = line.replace(ANSI_RE, '').trim()
   // Skip empty lines, prompts, and very short lines (noise)
   if (clean.length < 3) return null
-  // Skip common shell prompt patterns
+  // Skip common shell prompt patterns and box-drawing decoration
   if (/^[$#>❯➜%]\s*$/.test(clean)) return null
+  if (/^[─━═│┃┌┐└┘├┤┬┴┼╭╮╰╯╔╗╚╝\s]+$/.test(clean)) return null
 
   // Specific agent patterns (highest priority)
   if (/\b[Tt]hinking\b/.test(clean)) return { type: 'think', title: 'Thinking', detail: '' }
   if (/\bWrit(?:e|ing)\b/i.test(clean))
     return { type: 'write', title: 'Writing file', detail: clean }
   if (/\bRead(?:ing)?\b/i.test(clean)) return { type: 'read', title: 'Reading file', detail: clean }
-  if (/\b(?:Execute|Running|Bash|bash)\b/i.test(clean))
+  if (/\b(?:Execute|Running|Bash|bash|Shell)\b/i.test(clean))
     return { type: 'command', title: 'Running command', detail: clean }
   if (/\bTool\b/i.test(clean)) return { type: 'tool', title: 'Tool use', detail: clean }
 
   // Agent-specific patterns
   if (/\b(?:Created?|Modified|Updated|Deleted|Removed)\b/i.test(clean))
     return { type: 'write', title: 'File change', detail: clean }
-  if (/\b(?:Searching|Looking|Scanning|Analyzing|Reviewing)\b/i.test(clean))
+  if (/\b(?:Searching|Looking|Scanning|Analyzing|Reviewing|Grep|Glob|List)\b/i.test(clean))
     return { type: 'read', title: 'Analyzing', detail: clean }
-  if (/\b(?:Installing|Building|Compiling|Testing)\b/i.test(clean))
+  if (/\b(?:Installing|Building|Compiling|Testing|Linting)\b/i.test(clean))
     return { type: 'command', title: 'Build/test', detail: clean }
-  if (/\b(?:Error|Failed|FAIL|ERR)\b/i.test(clean))
+  if (/\b(?:Error|Failed|FAIL|panic|exception)\b/.test(clean))
     return { type: 'error', title: 'Error', detail: clean }
+
+  // Claude Code / Codex tool-use indicator (⏺, ●, ◆, ▶)
+  if (/^[⏺●◆▶○◇▷]\s/.test(clean)) return { type: 'tool', title: 'Agent action', detail: clean }
+
+  // Agent output: lines containing file paths (src/..., /home/..., ./...)
+  if (clean.length >= 20 && /(?:^|\s)[.\/~][^\s]*\.[a-z]{1,6}\b/i.test(clean))
+    return { type: 'read', title: 'File reference', detail: clean }
+
+  // Completion / summary patterns
+  if (/\b(?:completed?|finished|done|success|passed)\b/i.test(clean))
+    return { type: 'command', title: 'Completed', detail: clean }
+
+  // Cost / token patterns (e.g. "Total cost: $0.12" or "tokens used")
+  if (/\b(?:cost|tokens?\s+used|context\s+window)\b/i.test(clean))
+    return { type: 'tool', title: 'Usage', detail: clean }
 
   return null
 }
@@ -230,7 +246,8 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
           if (lineBuffer.length > 8192) {
             lineBuffer = lineBuffer.slice(-8192)
           }
-          const parts = lineBuffer.split('\n')
+          // Split on \n or standalone \r (terminal apps use \r to overwrite lines)
+          const parts = lineBuffer.split(/\r?\n|\r/)
           lineBuffers.set(sessionId, parts[parts.length - 1] ?? '')
 
           for (let i = 0; i < parts.length - 1; i++) {

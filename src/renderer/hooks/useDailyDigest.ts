@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useAppStore } from '../store/appStore'
+import { getDefaultAgent } from '../../shared/agent-helpers'
 
 export interface DailyDigestData {
   sessionsToday: number
@@ -36,7 +37,7 @@ export function computeDailyDigest(
     const usage = sessionUsage[s.id]
     if (usage?.totalCostUsd) costToday += usage.totalCostUsd
 
-    const agent = s.agentOverride ?? 'unknown'
+    const agent = s.agentOverride ?? 'session'
     agentCounts[agent] = (agentCounts[agent] ?? 0) + 1
 
     if (s.status === 'exited') exitCount++
@@ -66,7 +67,26 @@ export function computeDailyDigest(
 
 export function useDailyDigest(): DailyDigestData {
   const sessions = useAppStore((s) => s.sessions)
+  const projects = useAppStore((s) => s.projects)
   const sessionUsage = useAppStore((s) => s.sessionUsage)
+
+  // Resolve actual agent names (agentOverride is empty for project-default agents)
+  const resolvedSessions = useMemo(() => {
+    const projectMap = new Map(projects.map((p) => [p.id, p]))
+    const result: Record<
+      string,
+      { id: string; status: string; startedAt: number; agentOverride?: string | undefined }
+    > = {}
+    for (const [id, s] of Object.entries(sessions)) {
+      const project = s.projectId ? projectMap.get(s.projectId) : undefined
+      const defaultAgent = project ? getDefaultAgent(project) : undefined
+      result[id] = {
+        ...s,
+        agentOverride: s.agentOverride ?? defaultAgent?.agent,
+      }
+    }
+    return result
+  }, [sessions, projects])
   // Narrow selector: compute total write count inline and return a primitive.
   // This avoids subscribing to the full activityFeeds map reference, which would
   // trigger re-renders for every session's feed update across all sessions.
@@ -91,7 +111,7 @@ export function useDailyDigest(): DailyDigestData {
   }, [midnight])
 
   return useMemo(
-    () => computeDailyDigest(sessions, sessionUsage, writeCount, midnight),
-    [sessions, sessionUsage, writeCount, midnight],
+    () => computeDailyDigest(resolvedSessions, sessionUsage, writeCount, midnight),
+    [resolvedSessions, sessionUsage, writeCount, midnight],
   )
 }

@@ -108,36 +108,38 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
 
   removeSession: (sessionId) =>
     set((state) => {
-      const { [sessionId]: _, ...rest } = state.sessions
-      // Keep activityFeeds and sessionUsage after session close —
-      // the timeline and daily digest need this data for the rest of the day.
-      const remainingFeeds = state.activityFeeds
-      const remainingUsage = state.sessionUsage
-      const remainingIds = Object.keys(rest)
+      // Keep the session in the sessions map (for cost/timeline/digest after close)
+      // but mark it as exited. Only remove from pane slots and tab navigation.
+      const session = state.sessions[sessionId]
+      const sessions = session
+        ? { ...state.sessions, [sessionId]: { ...session, status: 'exited' as SessionStatus } }
+        : state.sessions
+      // Count only sessions that are still open (not exited/error) for view logic
+      const openIds = Object.entries(sessions)
+        .filter(([, s]) => s.status === 'running' || s.status === 'starting')
+        .map(([id]) => id)
       // Clear removed session from pane slots, then compact left so pane 0 always
       // has a session if any exist (prevents empty pane with sessions in hidden slots)
       const cleared = state.paneSessions.map((id) => (id === sessionId ? '' : id))
       const filled = cleared.filter((id) => id !== '')
       const paneSessions = [...filled, ...Array<string>(cleared.length - filled.length).fill('')]
       const firstPane = paneSessions[0]
-      const newActive = firstPane && firstPane !== '' ? firstPane : (remainingIds[0] ?? null)
+      const newActive = firstPane && firstPane !== '' ? firstPane : (openIds[0] ?? null)
       // If pane 0 is empty but we still have sessions, place the new active there
       if (paneSessions[0] === '' && newActive) {
         paneSessions[0] = newActive
       }
       return {
-        sessions: rest,
-        activityFeeds: remainingFeeds,
-        sessionUsage: remainingUsage,
+        sessions,
         activeSessionId: state.activeSessionId === sessionId ? newActive : state.activeSessionId,
         currentView:
-          remainingIds.length === 0
+          openIds.length === 0
             ? state.openWorkflowIds.length > 0
               ? ('workflow' as const)
               : ('home' as const)
             : state.currentView,
         activeWorkflowId:
-          remainingIds.length === 0 && state.openWorkflowIds.length > 0
+          openIds.length === 0 && state.openWorkflowIds.length > 0
             ? (state.activeWorkflowId ?? state.openWorkflowIds[0] ?? null)
             : state.activeWorkflowId,
         paneSessions,

@@ -22,7 +22,8 @@ describe('Session lifecycle', () => {
     useAppStore.getState().addSession('s1', 'proj-1')
     useAppStore.getState().removeSession('s1')
     const state = useAppStore.getState()
-    expect(state.sessions['s1']).toBeUndefined()
+    // Session stays in map as exited (for cost/timeline), but view goes home
+    expect(state.sessions['s1']?.status).toBe('exited')
     expect(state.currentView).toBe('home')
   })
 
@@ -31,7 +32,7 @@ describe('Session lifecycle', () => {
     useAppStore.getState().addSession('s2', 'proj-2')
     useAppStore.getState().removeSession('s1')
     const state = useAppStore.getState()
-    expect(state.sessions['s1']).toBeUndefined()
+    expect(state.sessions['s1']?.status).toBe('exited')
     expect(state.sessions['s2']).toBeDefined()
   })
 

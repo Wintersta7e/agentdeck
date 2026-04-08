@@ -440,7 +440,6 @@ export function App(): React.JSX.Element {
   // Subscribe to PTY activity events for all active sessions (ref-based to avoid re-subscribing)
   const subscribedRef = useRef<Map<string, () => void>>(new Map())
 
-  // Incremental subscribe/unsubscribe — no teardown on dep change, only on unmount
   useEffect(() => {
     const subscriptions = subscribedRef.current
     // Subscribe to new sessions only
@@ -459,16 +458,11 @@ export function App(): React.JSX.Element {
         subscriptions.delete(sid)
       }
     }
-  }, [sessionIdList])
-
-  // Teardown all subscriptions on unmount only
-  useEffect(() => {
-    const subscriptions = subscribedRef.current
     return () => {
       for (const unsub of subscriptions.values()) unsub()
       subscriptions.clear()
     }
-  }, [])
+  }, [sessionIdList])
 
   return (
     <div className="app">
