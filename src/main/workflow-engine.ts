@@ -189,6 +189,132 @@ export function createWorkflowEngine(
       return 'false'
     }
 
+    // ── Retry-and-record helper ────────────────────────────────────
+    /** Execute a non-condition node with retry logic and record the result. */
+    async function executeWithRetry(
+      node: WorkflowNode,
+      contextSummary: string,
+    ): Promise<'success' | 'failed' | 'stopped'> {
+      const maxAttempts = (node.retryCount ?? 0) + 1
+      const retryDelay = node.retryDelayMs ?? 2000
+      let lastError: Error | undefined
+
+      const nodeStartTime = Date.now()
+      nodeExecCount.set(node.id, (nodeExecCount.get(node.id) ?? 0) + 1)
+
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        if (stopped) return 'stopped'
+        if (attempt > 1) {
+          push(workflow.id, {
+            type: 'node:retry',
+            workflowId: workflow.id,
+            nodeId: node.id,
+            attempt,
+            maxAttempts,
+            message: `Retry ${String(attempt)}/${String(maxAttempts)}`,
+          })
+          await new Promise<void>((r) => setTimeout(r, retryDelay))
+        }
+
+        runningNodeIds.add(node.id)
+        log.info('Node started', {
+          workflowId: workflow.id,
+          nodeId: node.id,
+          type: node.type,
+          agent: node.agent,
+        })
+        push(workflow.id, {
+          type: 'node:started',
+          workflowId: workflow.id,
+          nodeId: node.id,
+          message: `Starting ${node.name}`,
+        })
+
+        try {
+          if (node.type === 'agent') {
+            await runAgentNode(node, contextSummary, rolesMap, deps)
+          } else if (node.type === 'shell') {
+            await runShellNode(node, deps)
+          } else if (node.type === 'checkpoint') {
+            push(workflow.id, {
+              type: 'node:paused',
+              workflowId: workflow.id,
+              nodeId: node.id,
+              message: node.message ?? 'Waiting for user to continue...',
+            })
+            await onCheckpoint(node.id)
+            if (stopped) return 'stopped'
+            push(workflow.id, {
+              type: 'node:resumed',
+              workflowId: workflow.id,
+              nodeId: node.id,
+              message: 'Resumed',
+            })
+          }
+
+          runningNodeIds.delete(node.id)
+          log.info('Node completed', { workflowId: workflow.id, nodeId: node.id })
+          push(workflow.id, {
+            type: 'node:done',
+            workflowId: workflow.id,
+            nodeId: node.id,
+            message: `${node.name} completed`,
+          })
+
+          // Record success in run history
+          const doneTime = Date.now()
+          const doneNodeRun: WorkflowNodeRun = {
+            nodeId: node.id,
+            nodeName: node.name,
+            status: 'done',
+            startedAt: nodeStartTime,
+            finishedAt: doneTime,
+            durationMs: doneTime - nodeStartTime,
+          }
+          if (attempt > 1) doneNodeRun.retryAttempts = attempt
+          const execN = nodeExecCount.get(node.id) ?? 1
+          if (execN > 1) doneNodeRun.loopIterations = execN
+          recorder.recordNode(doneNodeRun)
+
+          return 'success'
+        } catch (err) {
+          runningNodeIds.delete(node.id)
+          lastError = err instanceof Error ? err : new Error(String(err))
+          if (attempt < maxAttempts) continue // retry
+        }
+      }
+
+      // All attempts exhausted — node failed
+      log.warn('Node failed', {
+        workflowId: workflow.id,
+        nodeId: node.id,
+        err: String(lastError),
+      })
+      push(workflow.id, {
+        type: 'node:error',
+        workflowId: workflow.id,
+        nodeId: node.id,
+        message: String(lastError),
+      })
+      // Record failure in run history
+      const errTime = Date.now()
+      const errNodeRun: WorkflowNodeRun = {
+        nodeId: node.id,
+        nodeName: node.name,
+        status: 'error',
+        startedAt: nodeStartTime,
+        finishedAt: errTime,
+        durationMs: errTime - nodeStartTime,
+        errorTail: getErrorTail(nodeOutputs.get(node.id)),
+      }
+      if (maxAttempts > 1) errNodeRun.retryAttempts = maxAttempts
+      const errExecN = nodeExecCount.get(node.id) ?? 1
+      if (errExecN > 1) errNodeRun.loopIterations = errExecN
+      recorder.recordNode(errNodeRun)
+
+      return 'failed'
+    }
+
     // ── Process a single node ──────────────────────────────────────
     async function processNode(
       node: WorkflowNode,
@@ -288,130 +414,21 @@ export function createWorkflowEngine(
         .filter(Boolean)
         .join('\n\n')
 
-      // Run with retry
-      const maxAttempts = (node.retryCount ?? 0) + 1
-      const retryDelay = node.retryDelayMs ?? 2000
-      let lastError: Error | undefined
+      // Run with retry, record result
+      const result = await executeWithRetry(node, contextSummary)
 
-      const nodeStartTime = Date.now()
-      nodeExecCount.set(node.id, (nodeExecCount.get(node.id) ?? 0) + 1)
+      if (result === 'stopped') return
 
-      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        if (stopped) return
-        if (attempt > 1) {
-          push(workflow.id, {
-            type: 'node:retry',
-            workflowId: workflow.id,
-            nodeId: node.id,
-            attempt,
-            maxAttempts,
-            message: `Retry ${String(attempt)}/${String(maxAttempts)}`,
-          })
-          await new Promise<void>((r) => setTimeout(r, retryDelay))
-        }
-
-        runningNodeIds.add(node.id)
-        log.info('Node started', {
-          workflowId: workflow.id,
-          nodeId: node.id,
-          type: node.type,
-          agent: node.agent,
-        })
-        push(workflow.id, {
-          type: 'node:started',
-          workflowId: workflow.id,
-          nodeId: node.id,
-          message: `Starting ${node.name}`,
-        })
-
-        try {
-          if (node.type === 'agent') {
-            await runAgentNode(node, contextSummary, rolesMap, deps)
-          } else if (node.type === 'shell') {
-            await runShellNode(node, deps)
-          } else if (node.type === 'checkpoint') {
-            push(workflow.id, {
-              type: 'node:paused',
-              workflowId: workflow.id,
-              nodeId: node.id,
-              message: node.message ?? 'Waiting for user to continue...',
-            })
-            await onCheckpoint(node.id)
-            if (stopped) return
-            push(workflow.id, {
-              type: 'node:resumed',
-              workflowId: workflow.id,
-              nodeId: node.id,
-              message: 'Resumed',
-            })
-          }
-
-          runningNodeIds.delete(node.id)
-          log.info('Node completed', { workflowId: workflow.id, nodeId: node.id })
-          push(workflow.id, {
-            type: 'node:done',
-            workflowId: workflow.id,
-            nodeId: node.id,
-            message: `${node.name} completed`,
-          })
-          scheduler.completeNode(node.id)
-
-          // Record success in run history
-          const doneTime = Date.now()
-          const doneNodeRun: WorkflowNodeRun = {
-            nodeId: node.id,
-            nodeName: node.name,
-            status: 'done',
-            startedAt: nodeStartTime,
-            finishedAt: doneTime,
-            durationMs: doneTime - nodeStartTime,
-          }
-          if (attempt > 1) doneNodeRun.retryAttempts = attempt
-          const execN = nodeExecCount.get(node.id) ?? 1
-          if (execN > 1) doneNodeRun.loopIterations = execN
-          recorder.recordNode(doneNodeRun)
-
-          return // success, no more retries
-        } catch (err) {
-          runningNodeIds.delete(node.id)
-          lastError = err instanceof Error ? err : new Error(String(err))
-          if (attempt < maxAttempts) continue // retry
-        }
-      }
-
-      // All attempts exhausted — node failed
-      log.warn('Node failed', {
-        workflowId: workflow.id,
-        nodeId: node.id,
-        err: String(lastError),
-      })
-      push(workflow.id, {
-        type: 'node:error',
-        workflowId: workflow.id,
-        nodeId: node.id,
-        message: String(lastError),
-      })
-      // Record failure in run history
-      const errTime = Date.now()
-      const errNodeRun: WorkflowNodeRun = {
-        nodeId: node.id,
-        nodeName: node.name,
-        status: 'error',
-        startedAt: nodeStartTime,
-        finishedAt: errTime,
-        durationMs: errTime - nodeStartTime,
-        errorTail: getErrorTail(nodeOutputs.get(node.id)),
-      }
-      if (maxAttempts > 1) errNodeRun.retryAttempts = maxAttempts
-      const errExecN = nodeExecCount.get(node.id) ?? 1
-      if (errExecN > 1) errNodeRun.loopIterations = errExecN
-      recorder.recordNode(errNodeRun)
-
-      if (node.continueOnError) {
-        scheduler.completeNode(node.id) // treat as done for scheduling
+      if (result === 'success') {
+        scheduler.completeNode(node.id)
       } else {
-        scheduler.failNode(node.id)
-        stopped = true
+        // result === 'failed'
+        if (node.continueOnError) {
+          scheduler.completeNode(node.id) // treat as done for scheduling
+        } else {
+          scheduler.failNode(node.id)
+          stopped = true
+        }
       }
     }
 
