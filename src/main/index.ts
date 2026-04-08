@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, safeStorage, screen } from 'electron'
 import { join } from 'path'
+import { readFileSync } from 'fs'
 import { createPtyManager, type PtyManager } from './pty-manager'
 import { createProjectStore, type AppStore } from './project-store'
 import { seedTemplates, seedRoles } from './store-seeds'
@@ -13,6 +14,29 @@ import { createWorktreeManager, type WorktreeManager } from './worktree-manager'
 import { createWslGitPort } from './git-port'
 import { createCostTracker, type CostTracker } from './cost-tracker'
 import { SAFE_ID_RE } from './validation'
+
+/** Read persisted theme at startup to match BrowserWindow background to the active theme */
+const THEME_BG0: Record<string, string> = {
+  '': '#0d0e0f',
+  amber: '#0d0e0f',
+  cyan: '#080b14',
+  violet: '#0a0a12',
+  ice: '#0c0d10',
+  parchment: '#f5f0e8',
+  fog: '#f0f4f8',
+  lavender: '#f4f2f8',
+  stone: '#f2f1ef',
+}
+function getStartupBg(): string {
+  try {
+    const configPath = join(app.getPath('userData'), 'config.json')
+    const raw = readFileSync(configPath, 'utf-8')
+    const data = JSON.parse(raw) as { appPrefs?: { theme?: string } }
+    return THEME_BG0[data.appPrefs?.theme ?? ''] ?? '#0d0e0f'
+  } catch {
+    return '#0d0e0f'
+  }
+}
 import { createClaudeAdapter, createCodexAdapter } from './log-adapters'
 import {
   registerPtyHandlers,
@@ -58,7 +82,7 @@ function createWindow(): void {
     minHeight: 600,
     frame: false,
     show: false,
-    backgroundColor: '#0d0e0f',
+    backgroundColor: getStartupBg(),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,

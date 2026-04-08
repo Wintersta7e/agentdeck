@@ -18,7 +18,7 @@
 }
 
 .env-key-input:focus {
-  border-color: rgba(245, 166, 35, 0.4);
+  border-color: var(--accent-border);
 }
 
 .env-eq {
@@ -40,7 +40,7 @@
 }
 
 .env-val-input:focus {
-  border-color: rgba(245, 166, 35, 0.4);
+  border-color: var(--accent-border);
 }
 
 .secret-toggle {

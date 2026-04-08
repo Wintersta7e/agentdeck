@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { WorkflowNode, WorkflowNodeStatus, AgentType, SkillInfo } from '../../../shared/types'
 import { AGENTS } from '../../../shared/agents'
+import { MS_PER_MINUTE } from '../../../shared/constants'
 import { useAppStore } from '../../store/appStore'
 import { useRolesMap } from '../../hooks/useRolesMap'
 import { useProjects } from '../../hooks/useProjects'
@@ -400,15 +401,19 @@ export default function WorkflowNodeEditorPanel({
               step={1}
               placeholder={node.type === 'agent' ? 'Idle timeout only (5 min silence)' : '1'}
               value={
-                node.timeout ? Math.round(node.timeout / 60_000) : node.type === 'shell' ? 1 : ''
+                node.timeout
+                  ? Math.round(node.timeout / MS_PER_MINUTE)
+                  : node.type === 'shell'
+                    ? 1
+                    : ''
               }
               onChange={(e) => {
                 const minutes = parseFloat(e.target.value)
-                const ms = Math.round(minutes * 60_000)
+                const ms = Math.round(minutes * MS_PER_MINUTE)
                 if (node.type === 'agent') {
                   update({ timeout: ms > 0 ? ms : undefined })
                 } else {
-                  update({ timeout: ms > 0 ? ms : 60_000 })
+                  update({ timeout: ms > 0 ? ms : MS_PER_MINUTE })
                 }
               }}
             />

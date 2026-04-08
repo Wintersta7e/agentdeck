@@ -101,7 +101,7 @@
 }
 
 .te-row.active {
-  background: rgba(245, 166, 35, 0.18);
+  background: rgba(var(--accent-rgb), 0.18);
   border-color: var(--amber-border);
   box-shadow: inset 2px 0 0 var(--amber);
 }

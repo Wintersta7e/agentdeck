@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 import { useAppStore } from '../store/appStore'
 import { getDefaultAgent } from '../../shared/agent-helpers'
+import { useMidnight } from './useMidnight'
 
 export interface DailyDigestData {
   sessionsToday: number
@@ -8,12 +9,6 @@ export interface DailyDigestData {
   costToday: number
   cleanExitRate: number | null
   topAgent: string
-}
-
-function getMidnight(): number {
-  const d = new Date()
-  d.setHours(0, 0, 0, 0)
-  return d.getTime()
 }
 
 /** Pure computation — exported for testing */
@@ -101,14 +96,7 @@ export function useDailyDigest(): DailyDigestData {
   })
 
   // H14: Reactive midnight boundary — recomputes at day rollover
-  const [midnight, setMidnight] = useState(getMidnight)
-  useEffect(() => {
-    const nextMidnight = midnight + 86_400_000
-    // Use Math.max(0, ...) so the timer fires ASAP if we're already past midnight
-    const ms = Math.max(0, nextMidnight - Date.now())
-    const id = setTimeout(() => setMidnight(getMidnight()), ms)
-    return () => clearTimeout(id)
-  }, [midnight])
+  const midnight = useMidnight()
 
   return useMemo(
     () => computeDailyDigest(resolvedSessions, sessionUsage, writeCount, midnight),

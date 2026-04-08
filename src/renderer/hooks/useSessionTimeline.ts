@@ -1,6 +1,8 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useAppStore } from '../store/appStore'
 import type { ActivityEvent, Session } from '../../shared/types'
+import { useMidnight } from './useMidnight'
+import { TIMELINE_EVENT_DURATION_MS, TIMELINE_MIN_SPAN_MS } from '../../shared/constants'
 
 export interface TimelineSegment {
   type: string
@@ -18,12 +20,6 @@ function formatDuration(ms: number): string {
   const h = Math.floor(ms / 3_600_000)
   const m = Math.floor((ms % 3_600_000) / 60_000)
   return `${h}h ${String(m).padStart(2, '0')}m`
-}
-
-function getMidnight(): number {
-  const d = new Date()
-  d.setHours(0, 0, 0, 0)
-  return d.getTime()
 }
 
 // Cache labels so closed sessions keep their agent + project name
@@ -57,15 +53,20 @@ export function computeTimeline(
     // not the full day span — otherwise short sessions produce invisible segments
     const firstTs = events[0]?.timestamp ?? now
     const lastTs = events[events.length - 1]?.timestamp ?? now
-    // Minimum 60s span so very short sessions still show proportional segments
-    const sessionSpan = Math.max(60_000, lastTs + 30_000 - firstTs)
+    // Minimum span so very short sessions still show proportional segments
+    const sessionSpan = Math.max(
+      TIMELINE_MIN_SPAN_MS,
+      lastTs + TIMELINE_EVENT_DURATION_MS - firstTs,
+    )
 
     for (let i = 0; i < events.length; i++) {
       const event = events[i]
       if (!event) continue
       const start = Math.max(event.timestamp, dayStart)
       const next = events[i + 1]
-      const end = next ? Math.min(next.timestamp, now) : Math.min(event.timestamp + 30_000, now)
+      const end = next
+        ? Math.min(next.timestamp, now)
+        : Math.min(event.timestamp + TIMELINE_EVENT_DURATION_MS, now)
 
       // H11: Guard against zero/negative-width segments (e.g. events spanning midnight)
       if (end <= start) continue
@@ -75,7 +76,7 @@ export function computeTimeline(
     }
 
     if (segments.length > 0) {
-      const duration = formatDuration(lastTs - firstTs + 30_000)
+      const duration = formatDuration(lastTs - firstTs + TIMELINE_EVENT_DURATION_MS)
       // Build label from live session data, or use cached label for closed sessions
       let label = labelCache.get(sessionId)
       if (!label && session) {
@@ -119,14 +120,7 @@ export function useSessionTimeline(): TimelineRow[] {
   }, [sessions, projectMap])
 
   // H14: Reactive midnight boundary — recomputes at day rollover
-  const [midnight, setMidnight] = useState(getMidnight)
-  useEffect(() => {
-    const nextMidnight = midnight + 86_400_000
-    // Use Math.max(0, ...) so the timer fires ASAP if we're already past midnight
-    const ms = Math.max(0, nextMidnight - Date.now())
-    const id = setTimeout(() => setMidnight(getMidnight()), ms)
-    return () => clearTimeout(id)
-  }, [midnight])
+  const midnight = useMidnight()
 
   return useMemo(
     () => computeTimeline(sessions, activityFeeds, midnight, projectMap),

@@ -314,7 +314,7 @@
 
 .window-btn-close:hover {
   background: var(--red);
-  color: #fff;
+  color: var(--bg0);
 }
 
 @media (prefers-reduced-motion: reduce) {

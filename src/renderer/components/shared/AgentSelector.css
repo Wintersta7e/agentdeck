@@ -22,7 +22,7 @@
 }
 
 .agent-opt.selected {
-  border-color: rgba(245, 166, 35, 0.5);
+  border-color: var(--accent-hover);
   background: var(--amber-glow);
 }
 

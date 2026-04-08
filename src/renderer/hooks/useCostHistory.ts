@@ -1,19 +1,15 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useAppStore } from '../store/appStore'
 import { getDefaultAgent } from '../../shared/agent-helpers'
 import type { DailyCostEntry } from '../../shared/types'
+import { useMidnight } from './useMidnight'
+import { COST_REFRESH_INTERVAL_MS } from '../../shared/constants'
 
 export interface CostDashboardData {
   history: DailyCostEntry[]
   budget: number | null
   todayCost: number
   perAgentToday: Record<string, number>
-}
-
-function getMidnight(): number {
-  const d = new Date()
-  d.setHours(0, 0, 0, 0)
-  return d.getTime()
 }
 
 export function useCostHistory(): CostDashboardData {
@@ -42,8 +38,8 @@ export function useCostHistory(): CostDashboardData {
       }
     }
     void load()
-    // Refresh cost history every 30s while the home screen is visible
-    const interval = setInterval(() => void load(), 30_000)
+    // Refresh cost history periodically while the home screen is visible
+    const interval = setInterval(() => void load(), COST_REFRESH_INTERVAL_MS)
     return () => {
       cancelled = true
       clearInterval(interval)
@@ -51,14 +47,7 @@ export function useCostHistory(): CostDashboardData {
   }, [setCostHistory, setDailyBudget])
 
   // H14: Reactive midnight boundary — recomputes at day rollover
-  const [midnight, setMidnight] = useState(getMidnight)
-  useEffect(() => {
-    const nextMidnight = midnight + 86_400_000
-    // Use Math.max(0, ...) so the timer fires ASAP if we're already past midnight
-    const ms = Math.max(0, nextMidnight - Date.now())
-    const id = setTimeout(() => setMidnight(getMidnight()), ms)
-    return () => clearTimeout(id)
-  }, [midnight])
+  const midnight = useMidnight()
 
   const { todayCost, perAgentToday } = useMemo(() => {
     let total = 0

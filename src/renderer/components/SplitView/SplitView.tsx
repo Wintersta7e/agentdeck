@@ -2,12 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useStoreWithEqualityFn } from 'zustand/traditional'
 import { useAppStore } from '../../store/appStore'
 import { getDefaultAgent } from '../../../shared/agent-helpers'
+import { MAX_PANE_COUNT } from '../../../shared/constants'
 import { PaneTopbar } from './PaneTopbar'
 import { TerminalPane } from '../Terminal/TerminalPane'
 import type { PaneLayout } from '../../../shared/types'
 import './SplitView.css'
 
-const PANE_INDICES = [0, 1, 2] as const
+const PANE_INDICES = Array.from({ length: MAX_PANE_COUNT }, (_, i) => i)
 const MIN_PANE_WIDTH = 200
 
 /** Static style object hoisted to module scope to avoid allocating on every render */
@@ -288,7 +289,7 @@ export function SplitView(): React.JSX.Element {
 
       {/* Layout controls */}
       <div className="layout-controls">
-        {([1, 2, 3] as PaneLayout[]).map((n) => (
+        {Array.from({ length: MAX_PANE_COUNT }, (_, i) => (i + 1) as PaneLayout).map((n) => (
           <button
             key={n}
             className={`lc-btn${paneLayout === n ? ' active' : ''}`}

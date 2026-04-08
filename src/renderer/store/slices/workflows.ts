@@ -80,14 +80,16 @@ export const createWorkflowsSlice: StateCreator<AppState, [], [], WorkflowsSlice
         }
       }
 
-      // No workflows left — fall to session or home
-      const sessionIds = Object.keys(state.sessions)
-      if (sessionIds.length > 0) {
+      // No workflows left — fall to session or home (only consider live sessions)
+      const liveSessionIds = Object.entries(state.sessions)
+        .filter(([, s]) => s.status !== 'exited')
+        .map(([id]) => id)
+      if (liveSessionIds.length > 0) {
         return {
           openWorkflowIds: [],
           activeWorkflowId: null,
           currentView: 'session' as const,
-          activeSessionId: state.activeSessionId ?? sessionIds[0] ?? null,
+          activeSessionId: state.activeSessionId ?? liveSessionIds[0] ?? null,
           ...pruned,
         }
       }

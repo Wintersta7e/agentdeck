@@ -1,6 +1,7 @@
 import type { StateCreator } from 'zustand'
 import type { AppState } from '../appStore'
 import type { ViewType, PaneLayout, RightPanelTab } from '../../../shared/types'
+import { MAX_PANE_COUNT } from '../../../shared/constants'
 
 export interface UiSlice {
   currentView: ViewType
@@ -118,7 +119,7 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
 
   cyclePaneLayout: () =>
     set((state) => {
-      const next = (state.paneLayout === 3 ? 1 : state.paneLayout + 1) as PaneLayout
+      const next = (state.paneLayout === MAX_PANE_COUNT ? 1 : state.paneLayout + 1) as PaneLayout
       return {
         paneLayout: next,
         focusedPane: state.focusedPane >= next ? 0 : state.focusedPane,

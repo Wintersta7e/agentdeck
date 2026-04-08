@@ -246,8 +246,10 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
           if (lineBuffer.length > 8192) {
             lineBuffer = lineBuffer.slice(-8192)
           }
-          // Split on \n or standalone \r (terminal apps use \r to overwrite lines)
-          const parts = lineBuffer.split(/\r?\n|\r/)
+          // Handle bare \r as line overwrite (progress bars, spinners) — only \n completes a line
+          // First, process \r within lines: keep only the text after the last \r (overwrite semantics)
+          lineBuffer = lineBuffer.replace(/[^\n]*\r(?!\n)/g, '')
+          const parts = lineBuffer.split('\n')
           lineBuffers.set(sessionId, parts[parts.length - 1] ?? '')
 
           for (let i = 0; i < parts.length - 1; i++) {

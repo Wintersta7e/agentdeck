@@ -12,7 +12,10 @@
   font-size: var(--fs-sm);
   cursor: pointer;
   border: 1px solid var(--border);
-  transition: all var(--duration-base);
+  transition:
+    border-color var(--duration-base),
+    background-color var(--duration-base),
+    color var(--duration-base);
   font-family: inherit;
 }
 
@@ -20,8 +23,84 @@
   border-color: var(--border-bright);
 }
 
-/* Selected state gets colored via inline style + this class */
+/* Selected state — use badge tokens from tokens.css */
 .badge-pill.selected {
   border-width: 2px;
   padding: 3px var(--sp-2); /* compensate for border width */
+  color: var(--bg0);
+}
+
+.badge-pill[data-badge='Java'].selected {
+  background: var(--badge-java);
+  border-color: var(--badge-java);
+}
+
+.badge-pill[data-badge='JS'].selected {
+  background: var(--badge-js);
+  border-color: var(--badge-js);
+}
+
+.badge-pill[data-badge='TS'].selected {
+  background: var(--badge-ts);
+  border-color: var(--badge-ts);
+}
+
+.badge-pill[data-badge='Python'].selected {
+  background: var(--badge-python);
+  border-color: var(--badge-python);
+}
+
+.badge-pill[data-badge='Rust'].selected {
+  background: var(--badge-rust);
+  border-color: var(--badge-rust);
+}
+
+.badge-pill[data-badge='Go'].selected {
+  background: var(--badge-go);
+  border-color: var(--badge-go);
+}
+
+.badge-pill[data-badge='.NET'].selected {
+  background: var(--badge-dotnet);
+  border-color: var(--badge-dotnet);
+}
+
+.badge-pill[data-badge='C/C++'].selected {
+  background: var(--badge-cc);
+  border-color: var(--badge-cc);
+}
+
+.badge-pill[data-badge='Ruby'].selected {
+  background: var(--badge-ruby);
+  border-color: var(--badge-ruby);
+}
+
+.badge-pill[data-badge='PHP'].selected {
+  background: var(--badge-php);
+  border-color: var(--badge-php);
+}
+
+.badge-pill[data-badge='Kotlin'].selected {
+  background: var(--badge-kotlin);
+  border-color: var(--badge-kotlin);
+}
+
+.badge-pill[data-badge='Swift'].selected {
+  background: var(--badge-swift);
+  border-color: var(--badge-swift);
+}
+
+.badge-pill[data-badge='Dart'].selected {
+  background: var(--badge-dart);
+  border-color: var(--badge-dart);
+}
+
+.badge-pill[data-badge='Agent'].selected {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.badge-pill[data-badge='Other'].selected {
+  background: var(--badge-other);
+  border-color: var(--badge-other);
 }
