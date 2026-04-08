@@ -6,6 +6,13 @@
  * token-usage data from individual log lines.
  */
 
+import { createLogger } from './logger'
+
+const log = createLogger('log-adapters')
+
+/** Track which schema warnings have already been emitted (avoid flooding). */
+const warnedSchemas = new Set<string>()
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -149,7 +156,16 @@ export function createClaudeAdapter(): LogAdapter {
       if (stopReason === null || stopReason === undefined) return null
 
       const usage = msg['usage']
-      if (typeof usage !== 'object' || usage === null) return null
+      if (typeof usage !== 'object' || usage === null) {
+        const warnKey = 'claude:missing-usage'
+        if (!warnedSchemas.has(warnKey)) {
+          warnedSchemas.add(warnKey)
+          log.warn('Claude JSONL schema unexpected: missing message.usage field', {
+            line: line.slice(0, 100),
+          })
+        }
+        return null
+      }
 
       const u = usage as Record<string, unknown>
       const inputTokens = typeof u['input_tokens'] === 'number' ? u['input_tokens'] : 0
@@ -250,7 +266,19 @@ export function createCodexAdapter(): LogAdapter {
 
       const infoObj = info as Record<string, unknown>
       const usage = infoObj['total_token_usage']
-      if (typeof usage !== 'object' || usage === null) return null
+      if (typeof usage !== 'object' || usage === null) {
+        const warnKey = 'codex:missing-total_token_usage'
+        if (!warnedSchemas.has(warnKey)) {
+          warnedSchemas.add(warnKey)
+          log.warn(
+            'Codex JSONL schema unexpected: missing info.total_token_usage in token_count event',
+            {
+              line: line.slice(0, 100),
+            },
+          )
+        }
+        return null
+      }
 
       const u = usage as Record<string, number>
       const rawInputTokens = u['input_tokens'] ?? 0

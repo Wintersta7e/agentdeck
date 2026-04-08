@@ -59,9 +59,9 @@ function parseActivityLine(line: string): { type: string; title: string; detail:
   if (/\bTool\b/i.test(clean)) return { type: 'tool', title: 'Tool use', detail: clean }
 
   // Agent-specific patterns
-  if (/\b(?:Created?|Modified|Updated|Deleted|Removed)\b/i.test(clean))
+  if (/^(?:Created?|Modified|Updated|Deleted|Removed)\b/i.test(clean))
     return { type: 'write', title: 'File change', detail: clean }
-  if (/\b(?:Searching|Looking|Scanning|Analyzing|Reviewing|Grep|Glob|List)\b/i.test(clean))
+  if (/^(?:Searching|Looking|Scanning|Analyzing|Reviewing|Grep|Glob|List)\b/i.test(clean))
     return { type: 'read', title: 'Analyzing', detail: clean }
   if (/\b(?:Installing|Building|Compiling|Testing|Linting)\b/i.test(clean))
     return { type: 'command', title: 'Build/test', detail: clean }
@@ -82,6 +82,21 @@ function parseActivityLine(line: string): { type: string; title: string; detail:
   // Cost / token patterns (e.g. "Total cost: $0.12" or "tokens used")
   if (/\b(?:cost|tokens?\s+used|context\s+window)\b/i.test(clean))
     return { type: 'tool', title: 'Usage', detail: clean }
+
+  // FRAG-7: Graceful fallback — emit a generic event for substantial lines that
+  // don't match any specific keyword.  Skip short lines, mostly-whitespace lines,
+  // shell prompts, and lines dominated by box-drawing / decoration characters.
+  if (clean.length >= 40) {
+    const nonWs = clean.replace(/\s/g, '')
+    const boxChars = nonWs.replace(/[─━═│┃┌┐└┘├┤┬┴┼╭╮╰╯╔╗╚╝║╠╣╦╩╬─┄┈╌╎╏┆┇┊┋]/g, '')
+    // Skip if mostly box-drawing (>50% of non-whitespace chars are decoration)
+    if (boxChars.length > nonWs.length * 0.5) {
+      // Skip shell prompt patterns (e.g. "user@host:~/dir$", "PS1>")
+      if (!/^[\w@.~\/-]*[$#>❯➜%]\s*$/.test(clean)) {
+        return { type: 'tool', title: 'Agent active', detail: '' }
+      }
+    }
+  }
 
   return null
 }

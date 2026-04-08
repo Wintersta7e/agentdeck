@@ -95,7 +95,7 @@
 
 .panel-body::-webkit-scrollbar-thumb {
   background: var(--bg4);
-  border-radius: 2px;
+  border-radius: var(--r);
 }
 
 .panel-section-header {
@@ -152,7 +152,7 @@
   margin-left: auto;
   font-size: var(--fs-xs);
   padding: 1px var(--sp-1);
-  border-radius: 2px;
+  border-radius: var(--r);
   background: var(--accent-glow);
   color: var(--accent);
 }
