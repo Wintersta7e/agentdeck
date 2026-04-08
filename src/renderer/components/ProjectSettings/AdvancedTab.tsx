@@ -66,6 +66,7 @@ export function AdvancedTab({
                 onChange={(e) => onChange({ scrollbackLines: Number(e.target.value) })}
                 min={100}
                 max={100000}
+                aria-label="Scrollback buffer"
               />
             </div>
           </div>
@@ -83,6 +84,7 @@ export function AdvancedTab({
                 onChange={(e) => onChange({ fontSize: Number(e.target.value) })}
                 min={8}
                 max={24}
+                aria-label="Font size"
               />
             </div>
           </div>
@@ -99,6 +101,7 @@ export function AdvancedTab({
                 value={draft.shell ?? '/bin/bash'}
                 onChange={(e) => onChange({ shell: e.target.value })}
                 placeholder="/bin/bash"
+                aria-label="Shell path"
               />
             </div>
           </div>
@@ -150,6 +153,7 @@ export function AdvancedTab({
                 value={removeInput}
                 onChange={(e) => setRemoveInput(e.target.value)}
                 placeholder={`Type "${draft.name}" to confirm`}
+                aria-label="Type project name to confirm removal"
               />
               <button
                 type="button"

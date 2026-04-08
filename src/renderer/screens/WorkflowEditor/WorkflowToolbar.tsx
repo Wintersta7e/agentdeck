@@ -101,6 +101,7 @@ export default function WorkflowToolbar({
         <input
           ref={nameInputRef}
           className="wf-name-input"
+          aria-label="Workflow name"
           value={editName}
           onChange={(e) => setEditName(e.target.value)}
           onBlur={commitName}

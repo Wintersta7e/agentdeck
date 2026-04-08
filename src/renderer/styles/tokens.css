@@ -13,8 +13,8 @@
   /* Text hierarchy */
   --text0: #f0ede8;
   --text1: #b8b4ae;
-  --text2: #6e6b66;
-  --text3: #3d3b38;
+  --text2: #9b9790; /* was #6e6b66 — now ~5.1:1 on #0d0e0f */
+  --text3: #6e6b66; /* was #3d3b38 — now ~3.2:1 on #0d0e0f */
 
   /* Accent colours (theme-overridable) */
   --accent: #f5a623;
@@ -59,6 +59,36 @@
   --badge-python: #ffd43b;
   --badge-python-bg: rgba(255, 212, 59, 0.2);
 
+  /* Badge colour tokens */
+  --badge-java: #e55934;
+  --badge-java-bg: rgba(229, 89, 52, 0.2);
+  --badge-js: #4caf7d;
+  --badge-js-bg: rgba(76, 175, 125, 0.2);
+  --badge-ts: #3178c6;
+  --badge-ts-bg: rgba(49, 120, 198, 0.2);
+  --badge-rust: #ce6432;
+  --badge-rust-bg: rgba(206, 100, 50, 0.2);
+  --badge-go: #00add8;
+  --badge-go-bg: rgba(0, 173, 216, 0.2);
+  --badge-dotnet: #512bd4;
+  --badge-dotnet-bg: rgba(91, 45, 168, 0.2);
+  --badge-agent: #9b72cf;
+  --badge-agent-bg: rgba(155, 114, 207, 0.2);
+  --badge-other: #6e6b66;
+  --badge-other-bg: rgba(110, 107, 102, 0.2);
+  --badge-cc: #00599c;
+  --badge-cc-bg: rgba(0, 89, 156, 0.2);
+  --badge-ruby: #cc342d;
+  --badge-ruby-bg: rgba(204, 52, 45, 0.2);
+  --badge-php: #777bb4;
+  --badge-php-bg: rgba(119, 123, 180, 0.2);
+  --badge-kotlin: #7f52ff;
+  --badge-kotlin-bg: rgba(127, 82, 255, 0.2);
+  --badge-swift: #f05138;
+  --badge-swift-bg: rgba(240, 81, 56, 0.2);
+  --badge-dart: #01a7dc;
+  --badge-dart-bg: rgba(1, 167, 220, 0.2);
+
   /* RGB triplets for rgba() usage */
   --accent-rgb: 245, 166, 35;
   --bg1-rgb: 17, 18, 19;
@@ -66,32 +96,73 @@
   --green-rgb: 76, 175, 125;
   --red-rgb: 224, 92, 92;
   --blue-rgb: 91, 155, 213;
-  --text3-rgb: 61, 59, 56;
+  --text3-rgb: 110, 107, 102; /* was 61, 59, 56 — matches new #6e6b66 */
 
-  /* === Fusion Design System === */
-  --corner-accent-size: 20px;
-  --corner-accent-opacity: 0.55;
-  --corner-accent-secondary: 0.2;
-  --edge-glow-width: 3px;
-  --energy-vein-opacity: 0.5;
-  --hex-grid-opacity: 0.05;
-  --content-glow-radius: 14px;
-  --content-glow-opacity: 0.12;
-  --ambient-glow-opacity: 0.15;
+  /* ── Spacing scale (4px base) ── */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-7: 32px;
+  --sp-8: 40px;
+  --sp-9: 48px;
 
-  /* Fusion panel surfaces */
-  --glass-bg: rgba(255, 255, 255, 0.015);
-  --glass-border: rgba(255, 255, 255, 0.05);
-  --terminal-bg: rgba(0, 0, 0, 0.45);
-  --terminal-border: rgba(var(--accent-rgb), 0.06);
-  --titlebar-bg: rgba(0, 0, 0, 0.2);
-  --statusbar-bg: rgba(0, 0, 0, 0.15);
-  --chrome-border: rgba(255, 255, 255, 0.04);
+  /* ── Type scale ── */
+  --fs-xs: 10px;
+  --fs-sm: 12px;
+  --fs-base: 14px;
+  --fs-md: 16px;
+  --fs-lg: 20px;
+  --fs-xl: 24px;
+  --fs-2xl: 28px;
+  --lh-tight: 1.3;
+  --lh-base: 1.5;
+  --lh-relaxed: 1.6;
+
+  /* ── Z-index scale ── */
+  --z-base: 0;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-context-menu: 300;
+  --z-overlay: 500;
+  --z-modal: 1000;
+  --z-toast: 1500;
+  --z-tooltip: 2000;
+
+  /* ── Shadows ── */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.5);
+
+  /* ── Duration / easing ── */
+  --duration-fast: 80ms;
+  --duration-base: 150ms;
+  --duration-slow: 250ms;
+  --ease-default: ease;
+  --ease-out: ease-out;
+
+  /* ── Surface tokens (theme-adaptive: white tints on dark, black tints on light) ── */
+  --edge-highlight: rgba(255, 255, 255, 0.08);
+  --surface-tint: rgba(255, 255, 255, 0.012);
+  --surface-tint-2: rgba(255, 255, 255, 0.025);
+  --surface-border: rgba(255, 255, 255, 0.035);
+  --surface-border-hover: rgba(255, 255, 255, 0.07);
+  --surface-hover: rgba(255, 255, 255, 0.04);
+  --surface-hover-2: rgba(255, 255, 255, 0.06);
+  --surface-sep: rgba(255, 255, 255, 0.025);
+  --surface-kbd: rgba(255, 255, 255, 0.03);
+  --overlay-scrim: rgba(0, 0, 0, 0.5);
+  --dialog-shadow: 0 24px 64px rgba(0, 0, 0, 0.6), 0 8px 24px rgba(0, 0, 0, 0.3);
+  --context-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 
   /* Shape */
   --r: 4px;
 
   /* Typography */
+  --font-ui: -apple-system, 'Segoe UI', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
   --font-display: 'Syne Variable', 'Syne', sans-serif;
 
@@ -111,8 +182,8 @@
   --border-bright: #253150;
   --text0: #e8eef8;
   --text1: #a8b5cc;
-  --text2: #5c6e8a;
-  --text3: #2e3d55;
+  --text2: #8a9ab5; /* was #5c6e8a */
+  --text3: #5c6e8a; /* was #2e3d55 */
   --accent: #00d4ff;
   --accent-dim: #0099bb;
   --accent-glow: rgba(0, 212, 255, 0.1);
@@ -142,8 +213,8 @@
   --border-bright: #2e2e50;
   --text0: #ece9f8;
   --text1: #b0aacc;
-  --text2: #5f5880;
-  --text3: #312d50;
+  --text2: #8e86b0; /* was #5f5880 */
+  --text3: #5f5880; /* was #312d50 */
   --accent: #a78bfa;
   --accent-dim: #7c5dd4;
   --accent-glow: rgba(167, 139, 250, 0.1);
@@ -173,8 +244,8 @@
   --border-bright: #2e3342;
   --text0: #e4e8f2;
   --text1: #a8afc4;
-  --text2: #555e78;
-  --text3: #2c3248;
+  --text2: #8690a8; /* was #555e78 */
+  --text3: #555e78; /* was #2c3248 */
   --accent: #60a5fa;
   --accent-dim: #3b82f6;
   --accent-glow: rgba(96, 165, 250, 0.1);
@@ -205,7 +276,7 @@
   --text0: #2a1f0e;
   --text1: #4a3822;
   --text2: #7a6548;
-  --text3: #7e694c;
+  --text3: #8a7558;
   --accent: #c87800;
   --accent-dim: #a06000;
   --accent-glow: rgba(200, 120, 0, 0.1);
@@ -227,17 +298,18 @@
   --purple: #6b4c9a;
   --badge-python: #b08800;
   --badge-python-bg: rgba(176, 136, 0, 0.15);
-  /* Fusion overrides — light */
-  --glass-bg: rgba(255, 255, 255, 0.55);
-  --glass-border: rgba(0, 0, 0, 0.08);
-  --terminal-bg: rgba(0, 0, 0, 0.85);
-  --terminal-border: rgba(var(--accent-rgb), 0.15);
-  --titlebar-bg: rgba(255, 255, 255, 0.6);
-  --statusbar-bg: rgba(255, 255, 255, 0.5);
-  --chrome-border: rgba(0, 0, 0, 0.08);
-  --energy-vein-opacity: 0.25;
-  --hex-grid-opacity: 0.04;
-  --ambient-glow-opacity: 0.1;
+  --edge-highlight: rgba(0, 0, 0, 0.08);
+  --surface-tint: rgba(0, 0, 0, 0.02);
+  --surface-tint-2: rgba(0, 0, 0, 0.04);
+  --surface-border: rgba(0, 0, 0, 0.08);
+  --surface-border-hover: rgba(0, 0, 0, 0.12);
+  --surface-hover: rgba(0, 0, 0, 0.04);
+  --surface-hover-2: rgba(0, 0, 0, 0.06);
+  --surface-sep: rgba(0, 0, 0, 0.06);
+  --surface-kbd: rgba(0, 0, 0, 0.05);
+  --overlay-scrim: rgba(0, 0, 0, 0.3);
+  --dialog-shadow: 0 16px 48px rgba(0, 0, 0, 0.15), 0 6px 16px rgba(0, 0, 0, 0.08);
+  --context-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
 /* ─── Theme: Fog (light) ─── */
@@ -252,7 +324,7 @@
   --text0: #0f1f33;
   --text1: #253a55;
   --text2: #4a6280;
-  --text3: #57708e;
+  --text3: #637c9a;
   --accent: #2563eb;
   --accent-dim: #1d4ed8;
   --accent-glow: rgba(37, 99, 235, 0.1);
@@ -274,17 +346,18 @@
   --purple: #7c3aed;
   --badge-python: #b08800;
   --badge-python-bg: rgba(176, 136, 0, 0.15);
-  /* Fusion overrides — light */
-  --glass-bg: rgba(255, 255, 255, 0.55);
-  --glass-border: rgba(0, 0, 0, 0.08);
-  --terminal-bg: rgba(0, 0, 0, 0.85);
-  --terminal-border: rgba(var(--accent-rgb), 0.15);
-  --titlebar-bg: rgba(255, 255, 255, 0.6);
-  --statusbar-bg: rgba(255, 255, 255, 0.5);
-  --chrome-border: rgba(0, 0, 0, 0.08);
-  --energy-vein-opacity: 0.25;
-  --hex-grid-opacity: 0.04;
-  --ambient-glow-opacity: 0.1;
+  --edge-highlight: rgba(0, 0, 0, 0.08);
+  --surface-tint: rgba(0, 0, 0, 0.02);
+  --surface-tint-2: rgba(0, 0, 0, 0.04);
+  --surface-border: rgba(0, 0, 0, 0.08);
+  --surface-border-hover: rgba(0, 0, 0, 0.12);
+  --surface-hover: rgba(0, 0, 0, 0.04);
+  --surface-hover-2: rgba(0, 0, 0, 0.06);
+  --surface-sep: rgba(0, 0, 0, 0.06);
+  --surface-kbd: rgba(0, 0, 0, 0.05);
+  --overlay-scrim: rgba(0, 0, 0, 0.3);
+  --dialog-shadow: 0 16px 48px rgba(0, 0, 0, 0.15), 0 6px 16px rgba(0, 0, 0, 0.08);
+  --context-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
 /* ─── Theme: Lavender (light) ─── */
@@ -321,17 +394,18 @@
   --purple: #7c3aed;
   --badge-python: #b08800;
   --badge-python-bg: rgba(176, 136, 0, 0.15);
-  /* Fusion overrides — light */
-  --glass-bg: rgba(255, 255, 255, 0.55);
-  --glass-border: rgba(0, 0, 0, 0.08);
-  --terminal-bg: rgba(0, 0, 0, 0.85);
-  --terminal-border: rgba(var(--accent-rgb), 0.15);
-  --titlebar-bg: rgba(255, 255, 255, 0.6);
-  --statusbar-bg: rgba(255, 255, 255, 0.5);
-  --chrome-border: rgba(0, 0, 0, 0.08);
-  --energy-vein-opacity: 0.25;
-  --hex-grid-opacity: 0.04;
-  --ambient-glow-opacity: 0.1;
+  --edge-highlight: rgba(0, 0, 0, 0.08);
+  --surface-tint: rgba(0, 0, 0, 0.02);
+  --surface-tint-2: rgba(0, 0, 0, 0.04);
+  --surface-border: rgba(0, 0, 0, 0.08);
+  --surface-border-hover: rgba(0, 0, 0, 0.12);
+  --surface-hover: rgba(0, 0, 0, 0.04);
+  --surface-hover-2: rgba(0, 0, 0, 0.06);
+  --surface-sep: rgba(0, 0, 0, 0.06);
+  --surface-kbd: rgba(0, 0, 0, 0.05);
+  --overlay-scrim: rgba(0, 0, 0, 0.3);
+  --dialog-shadow: 0 16px 48px rgba(0, 0, 0, 0.15), 0 6px 16px rgba(0, 0, 0, 0.08);
+  --context-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
 /* ─── Theme: Stone (light) ─── */
@@ -368,17 +442,18 @@
   --purple: #7c3aed;
   --badge-python: #b08800;
   --badge-python-bg: rgba(176, 136, 0, 0.15);
-  /* Fusion overrides — light */
-  --glass-bg: rgba(255, 255, 255, 0.55);
-  --glass-border: rgba(0, 0, 0, 0.08);
-  --terminal-bg: rgba(0, 0, 0, 0.85);
-  --terminal-border: rgba(var(--accent-rgb), 0.15);
-  --titlebar-bg: rgba(255, 255, 255, 0.6);
-  --statusbar-bg: rgba(255, 255, 255, 0.5);
-  --chrome-border: rgba(0, 0, 0, 0.08);
-  --energy-vein-opacity: 0.25;
-  --hex-grid-opacity: 0.04;
-  --ambient-glow-opacity: 0.1;
+  --edge-highlight: rgba(0, 0, 0, 0.08);
+  --surface-tint: rgba(0, 0, 0, 0.02);
+  --surface-tint-2: rgba(0, 0, 0, 0.04);
+  --surface-border: rgba(0, 0, 0, 0.08);
+  --surface-border-hover: rgba(0, 0, 0, 0.12);
+  --surface-hover: rgba(0, 0, 0, 0.04);
+  --surface-hover-2: rgba(0, 0, 0, 0.06);
+  --surface-sep: rgba(0, 0, 0, 0.06);
+  --surface-kbd: rgba(0, 0, 0, 0.05);
+  --overlay-scrim: rgba(0, 0, 0, 0.3);
+  --dialog-shadow: 0 16px 48px rgba(0, 0, 0, 0.15), 0 6px 16px rgba(0, 0, 0, 0.08);
+  --context-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
 /* ─── Theme transition — scoped to UI containers ─── */

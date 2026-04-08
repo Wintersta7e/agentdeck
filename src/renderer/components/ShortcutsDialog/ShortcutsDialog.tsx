@@ -1,6 +1,5 @@
 import { useCallback, useEffect } from 'react'
 import { X } from 'lucide-react'
-import { PanelBox } from '../shared/PanelBox'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 import './ShortcutsDialog.css'
 
@@ -105,7 +104,7 @@ export function ShortcutsDialog({ onClose }: ShortcutsDialogProps): React.JSX.El
       aria-modal="true"
       aria-label="Keyboard shortcuts"
     >
-      <PanelBox corners="all" glow="none" className="shortcuts-dialog">
+      <div className="shortcuts-dialog">
         <button className="shortcuts-close" onClick={onClose} aria-label="Close shortcuts dialog">
           <X size={16} />
         </button>
@@ -123,7 +122,7 @@ export function ShortcutsDialog({ onClose }: ShortcutsDialogProps): React.JSX.El
             </div>
           ))}
         </div>
-      </PanelBox>
+      </div>
     </div>
   )
 }

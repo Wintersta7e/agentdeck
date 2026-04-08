@@ -16,7 +16,7 @@
 }
 
 .te-list-header {
-  padding: 12px 14px;
+  padding: var(--sp-3) var(--sp-4);
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
@@ -25,7 +25,7 @@
 
 .te-list-title {
   font-family: var(--font-display);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 700;
   color: var(--text1);
 }
@@ -37,12 +37,12 @@
   background: none;
   border: 1px solid var(--border);
   color: var(--text2);
-  font-size: 15px;
+  font-size: var(--fs-md);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.12s;
+  transition: all var(--duration-base);
   font-family: var(--font-mono);
 }
 
@@ -54,7 +54,7 @@
 .te-list-body {
   flex: 1;
   overflow-y: auto;
-  padding: 8px;
+  padding: var(--sp-2);
   scrollbar-width: thin;
   scrollbar-color: var(--bg4) transparent;
 }
@@ -69,29 +69,29 @@
 
 /* ─── Category groups ─── */
 .te-group-label {
-  font-size: 9px;
+  font-size: var(--fs-xs);
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--text2);
   font-weight: 600;
-  padding: 10px 12px 4px;
+  padding: var(--sp-3) var(--sp-3) var(--sp-1);
 }
 
 .te-group + .te-group {
   border-top: 1px solid var(--border);
-  margin-top: 4px;
-  padding-top: 4px;
+  margin-top: var(--sp-1);
+  padding-top: var(--sp-1);
 }
 
 /* ─── Template row ─── */
 .te-row {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  padding: 9px 10px;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
   border-radius: var(--r);
   cursor: pointer;
-  transition: all 0.12s;
+  transition: all var(--duration-base);
   border: 1px solid transparent;
   margin-bottom: 2px;
 }
@@ -101,13 +101,13 @@
 }
 
 .te-row.active {
-  background: rgba(245, 166, 35, 0.18);
+  background: rgba(var(--accent-rgb), 0.18);
   border-color: var(--amber-border);
   box-shadow: inset 2px 0 0 var(--amber);
 }
 
 .te-row-icon {
-  font-size: 13px;
+  font-size: var(--fs-base);
   flex-shrink: 0;
   margin-top: 1px;
 }
@@ -118,7 +118,7 @@
 }
 
 .te-row-name {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text1);
   font-weight: 500;
   white-space: nowrap;
@@ -131,7 +131,7 @@
 }
 
 .te-row-desc {
-  font-size: 9px;
+  font-size: var(--fs-xs);
   color: var(--text2);
   margin-top: 2px;
   white-space: nowrap;
@@ -140,7 +140,7 @@
 }
 
 .te-row-usage {
-  font-size: 9px;
+  font-size: var(--fs-xs);
   color: var(--text3);
   margin-top: 2px;
 }
@@ -160,8 +160,8 @@
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  padding: 0 20px;
-  gap: 12px;
+  padding: 0 var(--sp-5);
+  gap: var(--sp-3);
   flex-shrink: 0;
 }
 
@@ -171,7 +171,7 @@
   border: none;
   outline: none;
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: var(--fs-md);
   font-weight: 700;
   color: var(--text0);
   caret-color: var(--amber);
@@ -189,7 +189,7 @@
 }
 
 .te-char-count {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text3);
   flex-shrink: 0;
 }
@@ -200,12 +200,12 @@
   border-radius: var(--r);
   color: var(--text1);
   font-family: var(--font-mono);
-  font-size: 10px;
-  padding: 3px 8px;
+  font-size: var(--fs-xs);
+  padding: 3px var(--sp-2);
   outline: none;
   cursor: pointer;
   flex-shrink: 0;
-  transition: border-color 0.12s;
+  transition: border-color var(--duration-base);
 }
 
 .te-category-select:hover,
@@ -240,10 +240,10 @@
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  padding: 0 14px;
-  gap: 7px;
+  padding: 0 var(--sp-4);
+  gap: var(--sp-2);
   flex-shrink: 0;
-  font-size: 9px;
+  font-size: var(--fs-xs);
   color: var(--text2);
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -265,21 +265,21 @@
   width: 36px;
   background: var(--bg1);
   border-right: 1px solid var(--border);
-  padding: 16px 0;
+  padding: var(--sp-4) 0;
   overflow: hidden;
   pointer-events: none;
   z-index: 1;
 }
 
 .te-ln {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text3);
   line-height: 1.8;
   height: auto;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding-right: 8px;
+  padding-right: var(--sp-2);
 }
 
 /* ─── Textarea ─── */
@@ -289,10 +289,10 @@
   border: none;
   outline: none;
   resize: none;
-  padding: 16px 16px 16px 52px;
+  padding: var(--sp-4) var(--sp-4) var(--sp-4) 52px;
   color: var(--text1);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   line-height: 1.8;
   caret-color: var(--amber);
   scrollbar-width: thin;
@@ -322,7 +322,7 @@
 .te-preview-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: 14px 16px;
+  padding: var(--sp-4) var(--sp-4);
   scrollbar-width: thin;
   scrollbar-color: var(--bg4) transparent;
 }
@@ -337,27 +337,27 @@
 
 /* ─── Preview blocks ─── */
 .te-preview-block {
-  margin-bottom: 20px;
+  margin-bottom: var(--sp-5);
 }
 
 .te-preview-block-label {
-  font-size: 9px;
+  font-size: var(--fs-xs);
   color: var(--text3);
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  margin-bottom: 8px;
+  margin-bottom: var(--sp-2);
 }
 
 /* ─── Chip preview ─── */
 .te-chip-preview {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-2);
   background: var(--amber-glow);
   border: 1px solid var(--amber-border);
   border-radius: 20px;
-  padding: 5px 12px;
-  font-size: 11px;
+  padding: var(--sp-1) var(--sp-3);
+  font-size: var(--fs-sm);
   color: var(--amber);
 }
 
@@ -372,11 +372,11 @@
 .te-bubble-head {
   background: var(--bg3);
   border-bottom: 1px solid var(--border);
-  padding: 7px 10px;
+  padding: var(--sp-2) var(--sp-3);
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 9px;
+  gap: var(--sp-2);
+  font-size: var(--fs-xs);
   color: var(--text2);
 }
 
@@ -388,8 +388,8 @@
 }
 
 .te-bubble-text {
-  padding: 12px;
-  font-size: 11px;
+  padding: var(--sp-3);
+  font-size: var(--fs-sm);
   color: var(--text1);
   line-height: 1.7;
   max-height: 180px;
@@ -408,20 +408,20 @@
 
 .te-prompt-sym {
   color: var(--amber);
-  margin-right: 4px;
+  margin-right: var(--sp-1);
 }
 
 /* ─── Usage rows ─── */
 .te-usage-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 10px;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
   border: 1px solid var(--border);
   background: var(--bg2);
   border-radius: var(--r);
-  margin-bottom: 5px;
-  font-size: 10px;
+  margin-bottom: var(--sp-1);
+  font-size: var(--fs-xs);
 }
 
 .te-usage-dot {
@@ -437,8 +437,8 @@
 }
 
 .te-usage-badge {
-  font-size: 9px;
-  padding: 1px 5px;
+  font-size: var(--fs-xs);
+  padding: 1px var(--sp-1);
   border-radius: 2px;
 }
 
@@ -463,7 +463,7 @@
 }
 
 .te-usage-empty {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text3);
 }
 
@@ -474,19 +474,19 @@
   background: var(--bg1);
   display: flex;
   align-items: center;
-  padding: 0 20px;
-  gap: 10px;
+  padding: 0 var(--sp-5);
+  gap: var(--sp-3);
   flex-shrink: 0;
 }
 
 .te-unsaved {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 10px;
+  gap: var(--sp-1);
+  font-size: var(--fs-xs);
   color: var(--amber);
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: opacity var(--duration-slow);
 }
 
 .te-unsaved.show {
@@ -509,12 +509,12 @@
   background: none;
   border: 1px solid var(--border);
   color: var(--text1);
-  padding: 6px 14px;
+  padding: var(--sp-2) var(--sp-4);
   border-radius: var(--r);
   cursor: pointer;
   font-family: var(--font-mono);
-  font-size: 11px;
-  transition: all 0.12s;
+  font-size: var(--fs-sm);
+  transition: all var(--duration-base);
 }
 
 .te-btn:hover {
@@ -551,12 +551,12 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--sp-2);
   color: var(--text3);
-  font-size: 12px;
+  font-size: var(--fs-sm);
 }
 
 .te-empty-icon {
-  font-size: 24px;
+  font-size: var(--fs-xl);
   opacity: 0.4;
 }

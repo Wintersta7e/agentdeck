@@ -15,6 +15,7 @@ export function EnvVarRow({ envVar, onChange }: EnvVarRowProps): React.JSX.Eleme
         className="env-key-input"
         value={envVar.key}
         placeholder="KEY"
+        aria-label="Environment variable name"
         onChange={(e) => onChange({ ...envVar, key: e.target.value })}
       />
       <span className="env-eq">=</span>
@@ -23,6 +24,7 @@ export function EnvVarRow({ envVar, onChange }: EnvVarRowProps): React.JSX.Eleme
         className="env-val-input"
         value={envVar.value}
         placeholder="value"
+        aria-label="Environment variable value"
         onChange={(e) => onChange({ ...envVar, value: e.target.value })}
       />
       <button

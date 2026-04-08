@@ -21,21 +21,58 @@ body,
 body {
   background: var(--bg0);
   color: var(--text0);
-  font-family: var(--font-mono);
-  font-size: 12px;
+  font-family: var(--font-ui);
+  font-size: var(--fs-base);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Focus-visible indicators for keyboard navigation (UX-6) */
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-  border-radius: var(--r);
+/* Screen-reader only — visually hidden but accessible */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
-:focus:not(:focus-visible) {
-  outline: none;
+/* Unified section header style */
+.section-header {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text1);
+  margin-bottom: var(--sp-2);
+}
+
+/* Interactive element cursor rules */
+[role='button'],
+[role='menuitem'],
+[role='tab'],
+[role='option'],
+button:not([disabled]) {
+  cursor: pointer;
+}
+
+[disabled],
+[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Global loading state
+   WARNING: pointer-events: none propagates to all children.
+   Only apply aria-busy to leaf elements, not containers. */
+[aria-busy='true'],
+.is-loading {
+  opacity: 0.7;
+  pointer-events: none;
+  cursor: wait;
 }
 
 /* Scrollbar defaults */
@@ -52,64 +89,64 @@ body {
 
 /* ─── Stack badge colours (shared across Sidebar, HomeScreen, etc.) ─── */
 .badge-java {
-  background: rgba(229, 89, 52, 0.2);
-  color: #e55934;
+  background: var(--badge-java-bg);
+  color: var(--badge-java);
 }
 .badge-js {
-  background: rgba(76, 175, 125, 0.2);
-  color: var(--green);
+  background: var(--badge-js-bg);
+  color: var(--badge-js);
 }
 .badge-ts {
-  background: rgba(49, 120, 198, 0.2);
-  color: #3178c6;
+  background: var(--badge-ts-bg);
+  color: var(--badge-ts);
 }
 .badge-python {
   background: var(--badge-python-bg);
   color: var(--badge-python);
 }
 .badge-rust {
-  background: rgba(206, 100, 50, 0.2);
-  color: #ce6432;
+  background: var(--badge-rust-bg);
+  color: var(--badge-rust);
 }
 .badge-go {
-  background: rgba(0, 173, 216, 0.2);
-  color: #00add8;
+  background: var(--badge-go-bg);
+  color: var(--badge-go);
 }
 .badge-net {
-  background: rgba(91, 45, 168, 0.2);
-  color: #512bd4;
+  background: var(--badge-dotnet-bg);
+  color: var(--badge-dotnet);
 }
 .badge-agent {
-  background: rgba(155, 114, 207, 0.2);
-  color: var(--purple);
+  background: var(--badge-agent-bg);
+  color: var(--badge-agent);
 }
 .badge-other {
-  background: rgba(110, 107, 102, 0.2);
-  color: var(--text2);
+  background: var(--badge-other-bg);
+  color: var(--badge-other);
 }
 .badge-cc {
-  background: rgba(0, 89, 156, 0.2);
-  color: #00599c;
+  background: var(--badge-cc-bg);
+  color: var(--badge-cc);
 }
 .badge-ruby {
-  background: rgba(204, 52, 45, 0.2);
-  color: #cc342d;
+  background: var(--badge-ruby-bg);
+  color: var(--badge-ruby);
 }
 .badge-php {
-  background: rgba(119, 123, 180, 0.2);
-  color: #777bb4;
+  background: var(--badge-php-bg);
+  color: var(--badge-php);
 }
 .badge-kotlin {
-  background: rgba(127, 82, 255, 0.2);
-  color: #7f52ff;
+  background: var(--badge-kotlin-bg);
+  color: var(--badge-kotlin);
 }
 .badge-swift {
-  background: rgba(240, 81, 56, 0.2);
-  color: #f05138;
+  background: var(--badge-swift-bg);
+  color: var(--badge-swift);
 }
 .badge-dart {
-  background: rgba(1, 167, 220, 0.2);
-  color: #01a7dc;
+  background: var(--badge-dart-bg);
+  color: var(--badge-dart);
 }
 
 /* ─── Spotlight cursor effect ─── */
@@ -126,7 +163,7 @@ body {
   pointer-events: none;
   z-index: 0;
   transform: translate(-50%, -50%);
-  transition: opacity 0.3s;
+  transition: opacity var(--duration-slow);
 }
 
 /* ─── Circular theme reveal (View Transition API — typed) ─── */
@@ -153,7 +190,7 @@ button:active,
 .new-project-btn:active,
 .sidebar-new-wf:active {
   transform: scale(0.95);
-  transition: transform 0.06s ease;
+  transition: transform var(--duration-fast) var(--ease-default);
 }
 
 /* ─── View mount fade-in ─── */
@@ -176,63 +213,10 @@ button:active,
   }
 }
 
-/* === Fusion Animations === */
-@keyframes hex-pulse {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 0.8;
-  }
-  50% {
-    transform: scale(1.15);
-    opacity: 1;
-  }
-}
-
-@keyframes logo-breathe {
-  0%,
-  100% {
-    opacity: 0.12;
-  }
-  50% {
-    opacity: 0.25;
-  }
-}
-
-@keyframes vein-drift {
-  0% {
-    stroke-dashoffset: 0;
-  }
-  100% {
-    stroke-dashoffset: 600;
-  }
-}
-
-@keyframes edge-glow-pulse {
-  0% {
-    opacity: var(--corner-accent-opacity);
-  }
-  50% {
-    opacity: calc(var(--corner-accent-opacity) * 2);
-  }
-  100% {
-    opacity: var(--corner-accent-opacity);
-  }
-}
-
-@keyframes energy-underline-in {
-  0% {
-    transform: scaleX(0);
-  }
-  100% {
-    transform: scaleX(1);
-  }
-}
-
 /* ─── Focus Indicators ─── */
 :focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline-offset: 3px;
   border-radius: var(--r);
 }
 
@@ -241,8 +225,8 @@ button:active,
 }
 
 /* ─── Reduced Motion ───
-   Disable UI transition animations but preserve ambient decorative effects
-   (HexGrid, EnergyVein, AmbientGlow). Windows "Animation effects" OFF
+   Disable UI transition animations but preserve semantic status indicators
+   (running dots, progress pulses). Windows "Animation effects" OFF
    triggers this preference — a blanket * rule would kill ALL effects. */
 @media (prefers-reduced-motion: reduce) {
   .home-main,
@@ -260,9 +244,12 @@ button:active,
   .sidebar-new-wf,
   .result-item,
   .toast,
-  .cmd-overlay,
   .cmd-palette {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .dot-running {
+    animation: none !important;
   }
 }

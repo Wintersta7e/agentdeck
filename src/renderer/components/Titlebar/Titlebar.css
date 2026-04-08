@@ -1,122 +1,112 @@
 .titlebar {
-  height: 36px;
-  background: var(--titlebar-bg);
+  height: 42px;
+  background: var(--bg1);
   display: flex;
   align-items: center;
-  padding: 0 12px;
-  gap: 10px;
+  padding: 0 var(--sp-4);
+  gap: var(--sp-3);
   flex-shrink: 0;
   -webkit-app-region: drag;
   position: relative;
-  z-index: 10;
-  border-bottom: 1px solid var(--chrome-border);
+  z-index: var(--z-sticky);
+  border-bottom: 1px solid var(--surface-border);
 }
 
 .titlebar-logo {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-left: 8px;
+  gap: var(--sp-2);
   cursor: pointer;
   -webkit-app-region: no-drag;
-  padding: 2px 6px;
+  padding: var(--sp-1) var(--sp-2);
   border-radius: var(--r);
-  transition: background 0.15s;
+  transition: background var(--duration-base);
+  flex-shrink: 0;
 }
 
 .titlebar-logo:hover {
-  background: var(--accent-glow);
+  background: var(--surface-hover);
 }
 
 .logo-mark {
-  width: 18px;
-  height: 18px;
-  background: var(--accent);
+  width: 16px;
+  height: 16px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dim, #d4890a));
   clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
   flex-shrink: 0;
-  filter: drop-shadow(0 0 5px rgba(var(--accent-rgb), 0.4));
+  filter: drop-shadow(0 0 5px rgba(var(--accent-rgb), 0.25));
   transition:
-    transform 0.2s ease,
-    filter 0.2s ease;
-  animation: logo-breathe 4s ease-in-out infinite;
-}
-
-.logo-mark--active {
-  animation-play-state: paused;
+    transform var(--duration-slow) var(--ease-default),
+    filter var(--duration-slow) var(--ease-default);
 }
 
 .titlebar-logo:hover .logo-mark {
-  transform: scale(1.15);
-  filter: drop-shadow(0 0 4px var(--accent));
+  transform: scale(1.12);
+  filter: drop-shadow(0 0 6px rgba(var(--accent-rgb), 0.45));
 }
 
 .logo-text {
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 13px;
+  font-size: var(--fs-base);
   color: var(--text0);
-  letter-spacing: 0.05em;
-  transition: color 0.15s;
-}
-.logo-text span {
-  color: var(--accent);
-  transition: color 0.15s;
+  letter-spacing: 0.04em;
+  transition: color var(--duration-base);
 }
 
-.titlebar-logo:hover .logo-text {
+.logo-text span {
   color: var(--accent);
-}
-.titlebar-logo:hover .logo-text span {
-  filter: brightness(1.2);
 }
 
 .titlebar-center {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text2);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
+  pointer-events: none;
 }
 
-/* Tab bar — inline in titlebar, scrollable overflow */
+/* Tab bar */
 .tab-bar {
   display: flex;
   align-items: center;
-  margin-left: 16px;
+  margin-left: var(--sp-3);
   flex: 1;
   min-width: 0;
   overflow-x: auto;
   flex-wrap: nowrap;
-  scrollbar-width: none; /* Firefox */
+  scrollbar-width: none;
 }
+
 .tab-bar::-webkit-scrollbar {
-  display: none; /* Chrome / Electron */
+  display: none;
 }
 
 .tab {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 0 14px;
-  height: 36px;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-4);
+  height: 42px;
   cursor: pointer;
-  border-right: 1px solid var(--border);
-  border-bottom: 2px solid transparent;
-  font-size: 11px;
+  border-right: 1px solid var(--surface-border);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.04em;
   color: var(--text2);
   transition:
-    all 0.12s,
-    max-width 0.25s ease,
-    opacity 0.2s ease,
-    padding 0.25s ease;
+    color var(--duration-base),
+    background-color var(--duration-base),
+    max-width var(--duration-slow) var(--ease-default),
+    opacity var(--duration-slow) var(--ease-default),
+    padding var(--duration-slow) var(--ease-default);
   white-space: nowrap;
   flex-shrink: 1;
-  min-width: 100px;
+  min-width: 80px;
+  max-width: 180px;
   position: relative;
   -webkit-app-region: no-drag;
-  max-width: 300px;
-  clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
 }
 
 .tab.closing {
@@ -129,157 +119,217 @@
 
 .tab:hover {
   color: var(--text1);
-  background: var(--bg1);
+  background: var(--surface-hover);
 }
+
 .tab.active {
   color: var(--text0);
-  background: var(--bg0);
-  border-bottom-color: transparent;
+  background: linear-gradient(180deg, rgba(var(--accent-rgb), 0.05) 0%, transparent 70%);
 }
 
 .tab.active::after {
   content: '';
   position: absolute;
-  bottom: -1px;
-  left: 10%;
-  right: 10%;
+  bottom: 0;
+  left: var(--sp-4);
+  right: var(--sp-4);
   height: 2px;
-  background: linear-gradient(90deg, transparent, var(--accent), transparent);
-  box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.5);
-  animation: energy-underline-in 200ms ease;
-  transform-origin: center;
+  background: var(--accent);
+  border-radius: 1px;
+  box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.35);
 }
 
+.tab-workflow.active {
+  background: linear-gradient(180deg, rgba(var(--purple-rgb), 0.05) 0%, transparent 70%);
+}
+
+.tab-workflow.active::after {
+  background: var(--purple);
+  box-shadow: 0 0 8px rgba(var(--purple-rgb), 0.35);
+}
+
+/* Status dots */
 .tab-dot {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   flex-shrink: 0;
+  background: var(--text3);
+  transition:
+    background var(--duration-base),
+    box-shadow var(--duration-base);
 }
 
+.tab-dot--running {
+  background: var(--green);
+  box-shadow: 0 0 6px rgba(var(--green-rgb), 0.5);
+  animation: tab-dot-pulse 2s ease-in-out infinite;
+}
+
+.tab-dot--error {
+  background: var(--red);
+  box-shadow: 0 0 5px rgba(var(--red-rgb), 0.4);
+}
+
+.tab-dot--idle {
+  background: var(--text3);
+  opacity: 0.5;
+}
+
+.tab-dot--workflow {
+  background: var(--purple);
+  box-shadow: 0 0 4px rgba(var(--purple-rgb), 0.3);
+}
+
+@keyframes tab-dot-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* Tab close button */
 .tab-close {
-  width: 14px;
-  height: 14px;
-  border-radius: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--r);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
   color: var(--text3);
-  transition: all 0.12s;
-  margin-left: 2px;
+  transition:
+    opacity var(--duration-base),
+    background-color var(--duration-base),
+    color var(--duration-base);
+  margin-left: auto;
   opacity: 0;
   background: none;
   border: none;
   cursor: pointer;
   font-family: inherit;
+  flex-shrink: 0;
 }
+
 .tab:hover .tab-close {
   opacity: 1;
 }
+
 .tab-close:hover {
-  background: var(--bg4);
+  background: var(--surface-hover-2);
   color: var(--red);
 }
 
+/* Add tab button */
 .tab-add {
-  padding: 0 12px;
-  height: 36px;
+  padding: 0 var(--sp-3);
+  height: 42px;
   display: flex;
   align-items: center;
   color: var(--text3);
   cursor: pointer;
-  font-size: 16px;
-  transition: color 0.12s;
+  transition: color var(--duration-base);
   flex-shrink: 0;
   -webkit-app-region: no-drag;
 }
+
 .tab-add:hover {
-  color: var(--amber);
+  color: var(--accent);
 }
 
+/* Right-side action buttons */
 .titlebar-right {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
   flex-shrink: 0;
   -webkit-app-region: no-drag;
 }
 
-/* Windows-style window controls — always rightmost */
+.titlebar-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  background: none;
+  border: 1px solid var(--surface-border-hover);
+  color: var(--text2);
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--r);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--fs-xs);
+  letter-spacing: 0.04em;
+  transition:
+    border-color var(--duration-base),
+    color var(--duration-base),
+    background-color var(--duration-base);
+}
+
+.titlebar-btn:hover {
+  border-color: rgba(var(--accent-rgb), 0.4);
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.05);
+}
+
+.titlebar-btn.primary {
+  border-color: rgba(var(--accent-rgb), 0.4);
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.08);
+}
+
+/* Window controls */
 .window-controls {
   display: flex;
   align-items: stretch;
-  height: 36px;
-  margin-left: 8px;
+  height: 42px;
+  margin-left: var(--sp-2);
   -webkit-app-region: no-drag;
   flex-shrink: 0;
 }
+
 .window-btn {
-  width: 46px;
-  height: 36px;
+  width: 36px;
+  height: 42px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: none;
   border: none;
-  color: var(--text2);
-  font-size: 13px;
+  color: var(--text3);
+  font-size: var(--fs-xs);
   cursor: pointer;
   transition:
-    background 0.1s,
-    color 0.1s;
+    background var(--duration-base),
+    color var(--duration-base);
   font-family: inherit;
 }
+
 .window-btn:hover {
-  background: var(--bg3);
-  color: var(--text0);
+  background: var(--surface-hover-2);
+  color: var(--text1);
 }
+
 .window-btn-close:hover {
   background: var(--red);
-  color: var(--text0);
+  color: var(--bg0);
 }
 
-.titlebar-btn {
-  background: none;
-  border: 1px solid var(--border);
-  color: var(--text2);
-  padding: 3px 8px;
-  border-radius: var(--r);
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 10px;
-  letter-spacing: 0.05em;
-  transition: all 0.15s;
-}
-.titlebar-btn:hover {
-  border-color: var(--amber);
-  color: var(--amber);
-}
-.titlebar-btn.primary {
-  border-color: var(--amber);
-  color: var(--amber);
-  background: var(--amber-glow);
-}
+@media (prefers-reduced-motion: reduce) {
+  .logo-mark,
+  .tab,
+  .tab-close,
+  .tab-add,
+  .titlebar-logo,
+  .titlebar-btn,
+  .window-btn,
+  .tab-dot {
+    transition: none;
+  }
 
-.tab-workflow.active {
-  border-bottom-color: var(--purple);
-}
-.tab-wf-icon {
-  color: var(--purple);
-  font-size: 9px;
-  flex-shrink: 0;
-}
-
-/* Titlebar bottom energy vein */
-.titlebar::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 5%;
-  right: 5%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(var(--accent-rgb), 0.3), transparent);
-  pointer-events: none;
+  .tab-dot--running {
+    animation: none;
+  }
 }

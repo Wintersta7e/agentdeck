@@ -199,6 +199,7 @@ export function TerminalSearchBar({ searchAddon, visible, onClose }: TerminalSea
         className={`term-search-input${noResults ? ' no-results' : ''}`}
         type="text"
         placeholder="Find..."
+        aria-label="Search terminal output"
         value={query}
         onChange={(e) => handleChange(e.target.value)}
         onKeyDown={handleKeyDown}

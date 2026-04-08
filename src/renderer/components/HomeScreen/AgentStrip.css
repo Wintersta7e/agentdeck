@@ -1,0 +1,128 @@
+.agent-strip {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px; /* mockup-specific */
+}
+
+.agent-chip-v2 {
+  padding: var(--sp-2);
+  background: var(--surface-tint);
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  cursor: default;
+  font-family: inherit;
+}
+
+.agent-chip-v2::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--edge-highlight), transparent);
+}
+
+.agent-chip-v2.installed {
+  border-color: rgba(var(--green-rgb), 0.08);
+}
+
+.agent-chip-v2.updating {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.agent-chip-progress {
+  width: 100%;
+  height: 2px;
+  margin-top: 3px;
+  border-radius: 1px;
+  background: rgba(var(--accent-rgb), 0.15);
+  overflow: hidden;
+  position: relative;
+}
+
+.agent-chip-progress::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40%;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 1px;
+  animation: agent-progress 1.2s ease-in-out infinite;
+}
+
+@keyframes agent-progress {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-chip-progress::after {
+    animation: none;
+    width: 100%;
+    opacity: 0.5;
+  }
+}
+
+.agent-chip-v2:not(:disabled):hover {
+  border-color: rgba(var(--accent-rgb), 0.15);
+  cursor: pointer;
+}
+
+.agent-chip-emoji {
+  font-size: 16px; /* mockup-specific */
+  color: var(--text1);
+}
+
+.agent-chip-emoji.dimmed {
+  opacity: 0.5;
+  color: var(--text3);
+}
+
+.agent-chip-name {
+  font-size: 9px; /* mockup-specific */
+  font-weight: 600;
+  color: var(--text0);
+  margin-top: 2px;
+}
+
+.agent-chip-ver {
+  font-size: 8px; /* mockup-specific */
+  font-family: var(--font-mono);
+  color: var(--text3);
+}
+
+.agent-chip-badge {
+  font-size: 7px; /* mockup-specific */
+  padding: 1px var(--sp-1);
+  border-radius: 2px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin-top: 3px;
+  display: inline-block;
+}
+
+.agent-chip-badge.ok {
+  background: rgba(var(--green-rgb), 0.08);
+  color: var(--green);
+}
+
+.agent-chip-badge.upd {
+  background: rgba(var(--accent-rgb), 0.08);
+  color: var(--accent);
+}
+
+.agent-chip-badge.off {
+  background: rgba(var(--text3-rgb), 0.08);
+  color: var(--text3);
+}

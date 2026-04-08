@@ -1,24 +1,48 @@
 .about-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--overlay-scrim);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: var(--z-modal);
+  animation: aboutFadeIn 0.15s ease;
+}
+
+@keyframes aboutFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .about-dialog {
   background: var(--bg1);
-  border: 1px solid var(--border-bright);
-  border-radius: var(--r);
+  border: 1px solid var(--border);
+  border-radius: 10px;
   width: 360px;
-  padding: 28px 32px 24px;
+  padding: var(--sp-7) var(--sp-7) var(--sp-6);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: var(--sp-4);
   position: relative;
+  box-shadow: var(--dialog-shadow);
+}
+
+.about-dialog::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--edge-highlight), transparent);
+  z-index: 1;
 }
 
 .about-close {
@@ -28,51 +52,41 @@
   background: none;
   border: none;
   color: var(--text3);
-  font-size: 16px;
+  font-size: var(--fs-md);
   cursor: pointer;
-  padding: 4px 8px;
+  padding: var(--sp-1) var(--sp-2);
   border-radius: var(--r);
-  transition: all 0.12s;
+  transition: all var(--duration-base);
 }
 
 .about-close:hover {
   color: var(--text0);
-  background: var(--bg3);
+  background: var(--surface-hover);
 }
 
 .about-name {
   font-family: var(--font-display);
-  font-size: 22px;
+  font-size: var(--fs-xl);
   font-weight: 700;
-  color: var(--amber);
+  color: var(--accent);
   letter-spacing: 0.5px;
-  position: relative;
-}
-
-.about-name::after {
-  content: '';
-  display: block;
-  margin-top: 6px;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, var(--accent), transparent);
-  box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.4);
 }
 
 .about-version {
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: var(--fs-base);
   color: var(--text1);
 }
 
 .about-versions {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--sp-1);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text2);
   width: 100%;
-  padding: 12px 16px;
+  padding: var(--sp-3) var(--sp-4);
   background: var(--bg0);
   border-radius: var(--r);
   border: 1px solid var(--border);
@@ -88,6 +102,12 @@
 }
 
 .about-copyright {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .about-overlay {
+    animation: none !important;
+  }
 }

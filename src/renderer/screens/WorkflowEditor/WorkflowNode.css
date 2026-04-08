@@ -8,21 +8,21 @@
   cursor: grab;
   user-select: none;
   transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    border-color var(--duration-base),
+    box-shadow var(--duration-base);
+  box-shadow: var(--context-shadow);
 }
 
 .wf-node-inner:hover {
   border-color: var(--border-bright);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--dialog-shadow);
 }
 
 .wf-node-inner.selected {
   border-color: var(--accent-border);
   box-shadow:
     0 0 0 1px rgba(var(--accent-rgb), 0.2),
-    0 6px 24px rgba(0, 0, 0, 0.5);
+    var(--dialog-shadow);
 }
 
 .wf-node-inner.running {
@@ -49,12 +49,39 @@
 
 .wf-node-inner.done {
   border-color: var(--green-border);
-  animation: wf-node-flash-done 0.4s ease;
+  position: relative;
+}
+
+/* GPU-composited flash: animate opacity on ::after instead of box-shadow directly */
+.wf-node-inner.done::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  box-shadow:
+    0 0 0 1px rgba(var(--green-rgb), 0.3),
+    0 0 20px 4px rgba(var(--green-rgb), 0.3);
+  opacity: 0;
+  animation: wf-node-flash 0.4s ease forwards;
+  pointer-events: none;
 }
 
 .wf-node-inner.error {
   border-color: rgba(var(--red-rgb), 0.5);
-  animation: wf-node-flash-error 0.4s ease;
+  position: relative;
+}
+
+.wf-node-inner.error::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  box-shadow:
+    0 0 0 1px rgba(var(--red-rgb), 0.3),
+    0 0 20px 4px rgba(var(--red-rgb), 0.3);
+  opacity: 0;
+  animation: wf-node-flash 0.4s ease forwards;
+  pointer-events: none;
 }
 
 .wf-node-inner.skipped {
@@ -62,27 +89,15 @@
   opacity: 0.55;
 }
 
-@keyframes wf-node-flash-done {
+@keyframes wf-node-flash {
   0% {
-    box-shadow: 0 0 0 0 rgba(var(--green-rgb), 0.5);
+    opacity: 0;
   }
-  50% {
-    box-shadow: 0 0 20px 4px rgba(var(--green-rgb), 0.3);
+  30% {
+    opacity: 1;
   }
   100% {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  }
-}
-
-@keyframes wf-node-flash-error {
-  0% {
-    box-shadow: 0 0 0 0 rgba(var(--red-rgb), 0.5);
-  }
-  50% {
-    box-shadow: 0 0 20px 4px rgba(var(--red-rgb), 0.3);
-  }
-  100% {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    opacity: 0;
   }
 }
 
@@ -99,18 +114,18 @@
 /* ── Header ── */
 
 .wf-node-header {
-  padding: 10px 12px 8px;
+  padding: var(--sp-3) var(--sp-3) var(--sp-2);
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
 }
 
 .wf-node-type-icon {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   flex-shrink: 0;
   color: var(--text3);
-  transition: color 0.3s;
+  transition: color var(--duration-slow);
 }
 
 .wf-node-inner.running .wf-node-type-icon {
@@ -142,7 +157,7 @@
 
 .wf-node-name {
   font-family: var(--font-display);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 700;
   color: var(--text0);
   flex: 1;
@@ -155,10 +170,10 @@
   background: none;
   border: none;
   color: var(--text3);
-  font-size: 14px;
+  font-size: var(--fs-base);
   cursor: pointer;
   padding: 0 2px;
-  transition: color 0.12s;
+  transition: color var(--duration-base);
   font-family: inherit;
 }
 
@@ -170,7 +185,7 @@
 
 .wf-node-type-badge {
   font-size: 8px;
-  padding: 1px 5px;
+  padding: 1px var(--sp-1);
   border-radius: 10px;
   font-weight: 600;
   text-transform: uppercase;
@@ -205,11 +220,11 @@
 /* ── Body: labeled fields ── */
 
 .wf-node-body {
-  padding: 8px 10px;
+  padding: var(--sp-2) var(--sp-3);
 }
 
 .wf-node-field {
-  margin-bottom: 5px;
+  margin-bottom: var(--sp-1);
 }
 
 .wf-node-field:last-child {
@@ -217,7 +232,7 @@
 }
 
 .wf-node-field-label {
-  font-size: 9px;
+  font-size: var(--fs-xs);
   color: var(--text2);
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -225,7 +240,7 @@
 }
 
 .wf-node-field-value {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text1);
   line-height: 1.4;
 }
@@ -244,10 +259,10 @@
 .wf-node-role-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 7px;
+  gap: var(--sp-1);
+  padding: 2px var(--sp-2);
   border-radius: 10px;
-  font-size: 9px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   background: var(--cyan-dim2);
   color: var(--cyan);
@@ -255,7 +270,7 @@
 }
 
 .wf-node-role-badge-icon {
-  font-size: 10px;
+  font-size: var(--fs-xs);
 }
 
 /* ── React Flow Handles (ports) ── */
@@ -266,7 +281,11 @@
   border-radius: 50% !important;
   background: var(--bg3) !important;
   border: 2px solid var(--border-bright) !important;
-  transition: all 0.12s !important;
+  transition:
+    background var(--duration-base),
+    border-color var(--duration-base),
+    box-shadow var(--duration-base),
+    transform var(--duration-base) !important;
 }
 
 .wf-handle:hover {
@@ -289,11 +308,11 @@
 /* ── Inline edit form ── */
 
 .wf-node-edit-form {
-  padding: 8px 12px 10px;
+  padding: var(--sp-2) var(--sp-3) var(--sp-3);
   border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--sp-2);
 }
 
 .wf-node-edit-input {
@@ -303,10 +322,10 @@
   border-radius: var(--r);
   color: var(--text0);
   font-family: var(--font-mono);
-  font-size: 10px;
-  padding: 4px 6px;
+  font-size: var(--fs-xs);
+  padding: var(--sp-1) var(--sp-2);
   outline: none;
-  transition: border-color 0.12s;
+  transition: border-color var(--duration-base);
 }
 
 .wf-node-edit-input:focus {
@@ -323,11 +342,11 @@
   border-radius: var(--r);
   color: var(--text0);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   line-height: 1.5;
-  padding: 4px 6px;
+  padding: var(--sp-1) var(--sp-2);
   outline: none;
-  transition: border-color 0.12s;
+  transition: border-color var(--duration-base);
 }
 
 .wf-node-edit-textarea:focus {
@@ -341,11 +360,11 @@
   border-radius: var(--r);
   color: var(--text0);
   font-family: var(--font-mono);
-  font-size: 10px;
-  padding: 4px 6px;
+  font-size: var(--fs-xs);
+  padding: var(--sp-1) var(--sp-2);
   outline: none;
   cursor: pointer;
-  transition: border-color 0.12s;
+  transition: border-color var(--duration-base);
 }
 
 .wf-node-edit-select:focus {
@@ -354,20 +373,20 @@
 
 .wf-node-edit-actions {
   display: flex;
-  gap: 6px;
+  gap: var(--sp-2);
   justify-content: flex-end;
 }
 
 .wf-node-edit-btn {
-  padding: 3px 10px;
+  padding: 3px var(--sp-3);
   border-radius: var(--r);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   cursor: pointer;
   border: 1px solid var(--border-bright);
   background: none;
   color: var(--text1);
-  transition: all 0.12s;
+  transition: all var(--duration-base);
 }
 
 .wf-node-edit-btn.save {
@@ -392,11 +411,11 @@
   position: absolute;
   top: 100%;
   right: 0;
-  margin-top: 4px;
+  margin-top: var(--sp-1);
   background: var(--bg3);
   border: 1px solid var(--border-bright);
   border-radius: var(--r);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--context-shadow);
   z-index: 50;
   min-width: 120px;
   overflow: hidden;
@@ -405,17 +424,17 @@
 .wf-node-dropdown-item {
   display: block;
   width: 100%;
-  padding: 6px 10px;
+  padding: var(--sp-2) var(--sp-3);
   background: none;
   border: none;
   color: var(--text1);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   text-align: left;
   cursor: pointer;
   transition:
-    background 0.12s,
-    color 0.12s;
+    background var(--duration-base),
+    color var(--duration-base);
 }
 
 .wf-node-dropdown-item:hover {
@@ -429,4 +448,19 @@
 
 .wf-node-dropdown-item.danger:hover {
   background: var(--red-dim);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wf-node-inner.running::after {
+    animation: none !important;
+  }
+  .wf-node-inner.done::after {
+    animation: none !important;
+  }
+  .wf-node-inner.error::after {
+    animation: none !important;
+  }
+  .wf-node-inner.running .wf-node-type-icon {
+    animation: none !important;
+  }
 }

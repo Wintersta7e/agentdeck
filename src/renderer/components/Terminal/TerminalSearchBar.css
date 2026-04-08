@@ -6,11 +6,11 @@
   background: var(--bg2);
   border: 1px solid var(--border-bright);
   border-radius: 6px;
-  padding: 6px 8px;
+  padding: var(--sp-2) var(--sp-2);
   display: flex;
   align-items: center;
-  gap: 6px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  gap: var(--sp-2);
+  box-shadow: var(--context-shadow);
   z-index: 10;
   animation: term-search-slide-in 0.15s ease;
 }
@@ -30,14 +30,14 @@
   background: var(--bg3);
   border: 1px solid var(--border);
   border-radius: var(--r);
-  padding: 5px 10px;
+  padding: var(--sp-1) var(--sp-3);
   color: var(--text0);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   outline: none;
   width: 220px;
   caret-color: var(--accent);
-  transition: border-color 0.15s;
+  transition: border-color var(--duration-base);
 }
 
 .term-search-input:focus {
@@ -53,7 +53,7 @@
 }
 
 .term-search-count {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text2);
   white-space: nowrap;
   min-width: 52px;
@@ -84,9 +84,9 @@
   border: 1px solid transparent;
   border-radius: var(--r);
   color: var(--text2);
-  font-size: 11px;
+  font-size: var(--fs-sm);
   cursor: pointer;
-  transition: all 0.12s;
+  transition: all var(--duration-base);
   background: none;
   font-family: inherit;
   font-weight: 600;
@@ -113,10 +113,10 @@
   border: 1px solid var(--border);
   border-radius: var(--r);
   color: var(--text2);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   cursor: pointer;
   background: none;
-  transition: all 0.12s;
+  transition: all var(--duration-base);
   flex-shrink: 0;
 }
 
@@ -141,10 +141,10 @@
   border: none;
   border-radius: var(--r);
   color: var(--text2);
-  font-size: 14px;
+  font-size: var(--fs-base);
   cursor: pointer;
   background: none;
-  transition: all 0.12s;
+  transition: all var(--duration-base);
   flex-shrink: 0;
 }
 
