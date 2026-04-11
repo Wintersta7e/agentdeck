@@ -12,7 +12,18 @@ import type {
 } from '../shared/types'
 
 declare global {
+  interface AgentDeckOfficeApi {
+    subscribe(handlers: {
+      onSnapshot(snap: import('../shared/office-types').OfficeSnapshot): void
+      onTheme(themeName: string): void
+      onDisplayMetricsChanged(): void
+    }): void
+    unsubscribe(): void
+    focusSession(sessionId: string): Promise<void>
+  }
+
   interface Window {
+    agentDeckOffice?: AgentDeckOfficeApi | undefined
     agentDeck: {
       app: {
         version: () => Promise<string>

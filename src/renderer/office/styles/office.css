@@ -1,0 +1,124 @@
+/* Office window root styles */
+#office-root {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg0);
+  color: var(--text0);
+  font-family: var(--font-mono);
+}
+
+.office-sidebar {
+  width: 260px;
+  min-width: 200px;
+  max-width: 360px;
+  border-right: 1px solid var(--bg3);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg1);
+  overflow-y: auto;
+}
+
+.office-canvas-area {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.office-canvas-area canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.office-sidebar-header {
+  padding: var(--sp-3) var(--sp-4);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text2);
+  border-bottom: 1px solid var(--bg3);
+}
+
+.office-worker-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  cursor: pointer;
+  border-bottom: 1px solid var(--bg2);
+  min-height: 40px;
+  transition: background var(--duration-fast) var(--ease-default);
+}
+
+.office-worker-row:hover {
+  background: var(--bg2);
+}
+
+.office-worker-row:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: -2px;
+}
+
+.office-worker-row[aria-selected='true'] {
+  background: var(--bg3);
+}
+
+.office-worker-agent-icon {
+  font-size: var(--fs-md);
+  width: 24px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.office-worker-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.office-worker-label {
+  font-size: var(--fs-sm);
+  color: var(--text0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.office-worker-activity {
+  font-size: var(--fs-xs);
+  color: var(--text2);
+}
+
+.office-worker-cost {
+  font-size: var(--fs-xs);
+  color: var(--text2);
+  flex-shrink: 0;
+}
+
+.office-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text3);
+  font-size: var(--fs-sm);
+}
+
+/* Live region for screen readers */
+.office-live-region {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .office-worker-row {
+    transition: none;
+  }
+}

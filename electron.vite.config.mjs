@@ -8,19 +8,20 @@ export default defineConfig({
       externalizeDeps: { exclude: ['electron-store'] },
       rollupOptions: {
         input: {
-          index: resolve(__dirname, 'src/main/index.ts')
-        }
-      }
-    }
+          index: resolve(__dirname, 'src/main/index.ts'),
+        },
+      },
+    },
   },
   preload: {
     build: {
       rollupOptions: {
         input: {
-          index: resolve(__dirname, 'src/preload/index.ts')
-        }
-      }
-    }
+          index: resolve(__dirname, 'src/preload/index.ts'),
+          office: resolve(__dirname, 'src/preload/office.ts'),
+        },
+      },
+    },
   },
   renderer: {
     root: resolve(__dirname, 'src/renderer'),
@@ -29,7 +30,8 @@ export default defineConfig({
       target: 'chrome134',
       rollupOptions: {
         input: {
-          index: resolve(__dirname, 'src/renderer/index.html')
+          index: resolve(__dirname, 'src/renderer/index.html'),
+          office: resolve(__dirname, 'src/renderer/office.html'),
         },
         output: {
           manualChunks: {
@@ -40,5 +42,5 @@ export default defineConfig({
         },
       },
     },
-  }
+  },
 })

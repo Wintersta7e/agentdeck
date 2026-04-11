@@ -47,6 +47,12 @@ async function initAndRender(): Promise<void> {
     </StrictMode>,
   )
 
+  // Subscribe to focus-session pushes from the office window
+  const unsubOfficeFocus = window.agentDeck.office.onFocusSession((sessionId) => {
+    useAppStore.getState().focusExistingSession(sessionId)
+  })
+  window.addEventListener('unload', () => unsubOfficeFocus())
+
   // Listen for version info updates (register before any checkUpdates call)
   const unsubVersionInfo = window.agentDeck.agents.onVersionInfo((info) => {
     const { setAgentVersion, addNotification } = useAppStore.getState()
