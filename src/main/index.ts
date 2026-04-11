@@ -72,6 +72,7 @@ let costTracker: CostTracker | null = null
 let officeRegistry: OfficeSessionRegistry | null = null
 let officeAggregator: OfficeAggregator | null = null
 let officeWindowManager: OfficeWindowManager | null = null
+let officeDisplayMetricsHandler: (() => void) | null = null
 
 // --- Crash cleanup handlers (REL-4) ---
 process.on('uncaughtException', (err) => {
@@ -316,10 +317,11 @@ app
         getMainWindow: () => mainWindow,
       })
 
-      // Forward display metrics changes to office window
-      screen.on('display-metrics-changed', () => {
+      // LEAK-02: Named listener so it can be removed in before-quit
+      officeDisplayMetricsHandler = (): void => {
         officeWindowManager?.pushDisplayMetricsChanged()
-      })
+      }
+      screen.on('display-metrics-changed', officeDisplayMetricsHandler)
 
       log.info('Office modules initialized')
     }
@@ -359,6 +361,10 @@ app
 
 app.on('before-quit', () => {
   log.info('App quitting')
+  // LEAK-02: Remove named screen listener
+  if (officeDisplayMetricsHandler) {
+    screen.removeListener('display-metrics-changed', officeDisplayMetricsHandler)
+  }
   officeAggregator?.dispose()
   officeRegistry?.dispose()
   officeWindowManager?.dispose()

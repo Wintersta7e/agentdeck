@@ -1,8 +1,7 @@
 import type { Clock, OfficeSnapshot, OfficeWorker } from '../../shared/office-types'
 import type { OfficeSessionRegistry } from './office-session-registry'
+import { IDLE_COFFEE_MS, IDLE_WINDOW_MS } from '../../shared/office-constants'
 
-const IDLE_COFFEE_MS = 120_000
-const IDLE_WINDOW_MS = 300_000
 const SPAWNING_TICK_COUNT = 2
 const TICK_INTERVAL_MS = 500
 
@@ -28,14 +27,8 @@ export function createOfficeAggregator(deps: AggregatorDeps): OfficeAggregator {
   let paused = true
   let timerHandle: ReturnType<typeof setInterval> | null = null
 
-  // Workers in the registry at the moment resume() is called.
-  // These skip the forced spawning animation.
   const resumeBaseline = new Set<string>()
-
-  // Track how many spawning ticks each newly-seen worker has left.
   const spawningTicksLeft = new Map<string, number>()
-
-  // All worker IDs seen by at least one tick since last resume.
   const seenWorkerIds = new Set<string>()
 
   function isEnabled(): boolean {
@@ -56,22 +49,18 @@ export function createOfficeAggregator(deps: AggregatorDeps): OfficeAggregator {
 
     const rawWorkers = registry.getWorkers()
 
-    // Detect newly-appeared workers and assign spawning ticks
     for (const w of rawWorkers) {
       if (!seenWorkerIds.has(w.id)) {
         seenWorkerIds.add(w.id)
         if (!resumeBaseline.has(w.id)) {
-          // New worker since resume — force spawning animation
           spawningTicksLeft.set(w.id, SPAWNING_TICK_COUNT)
         }
       }
     }
 
-    // Build snapshot with derived activities
     const liveIds = new Set(rawWorkers.map((w) => w.id))
     const workers = rawWorkers.map((w) => {
       const activity = deriveActivity(w)
-      // Decrement spawning counter
       const left = spawningTicksLeft.get(w.id)
       if (left !== undefined && left > 0) {
         spawningTicksLeft.set(w.id, left - 1)
@@ -79,7 +68,6 @@ export function createOfficeAggregator(deps: AggregatorDeps): OfficeAggregator {
       return { ...w, activity }
     })
 
-    // Prune stale entries
     for (const id of spawningTicksLeft.keys()) {
       if (!liveIds.has(id)) {
         spawningTicksLeft.delete(id)
@@ -87,17 +75,13 @@ export function createOfficeAggregator(deps: AggregatorDeps): OfficeAggregator {
       }
     }
 
-    const snap: OfficeSnapshot = {
-      monotonicAt: clock.now(),
-      workers,
-    }
+    const snap: OfficeSnapshot = { monotonicAt: clock.now(), workers }
     onSnapshot(snap)
   }
 
   function resume(): void {
     if (!paused) return
     paused = false
-    // Capture initial worker set — these skip spawning animation
     resumeBaseline.clear()
     for (const w of registry.getWorkers()) {
       resumeBaseline.add(w.id)
@@ -115,6 +99,8 @@ export function createOfficeAggregator(deps: AggregatorDeps): OfficeAggregator {
   }
 
   function dispose(): void {
+    // ARCH-07: Set paused first so a queued tick is a no-op
+    paused = true
     if (timerHandle !== null) {
       clearInterval(timerHandle)
       timerHandle = null

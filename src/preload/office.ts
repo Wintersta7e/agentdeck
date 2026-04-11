@@ -40,8 +40,11 @@ function unsubscribe(): void {
   activeListeners = null
 }
 
+// SEC-05: Validate before IPC round-trip (defense-in-depth, main handler also validates)
+const SAFE_ID_RE = /^[a-zA-Z0-9_-]+$/
+
 async function focusSession(sessionId: string): Promise<void> {
-  if (typeof sessionId !== 'string' || sessionId.length === 0) return
+  if (typeof sessionId !== 'string' || !SAFE_ID_RE.test(sessionId)) return
   await ipcRenderer.invoke('office:focus-session', sessionId)
 }
 

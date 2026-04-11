@@ -1,20 +1,17 @@
 import { app, BrowserWindow, session } from 'electron'
 import { join } from 'path'
-import type { EventEmitter } from 'events'
 import { createLogger } from '../logger'
 import type { OfficeAggregator } from './office-aggregator'
 import type { OfficeSnapshot } from '../../shared/office-types'
 import { loadOfficeWindowState, saveOfficeWindowState } from './office-window-state'
+import type { AppStore } from '../project-store'
 
 const log = createLogger('office-window-manager')
 
 interface WindowManagerDeps {
-  mainWindow: EventEmitter
+  mainWindow: BrowserWindow
   aggregator: OfficeAggregator
-  appStore: {
-    get(key: string): unknown
-    set(key: string, value: unknown): void
-  }
+  appStore: Pick<AppStore, 'get' | 'set'>
   registry: { hasActiveWorker(sessionId: string): boolean }
 }
 
@@ -36,9 +33,10 @@ export function createOfficeWindowManager(deps: WindowManagerDeps): OfficeWindow
   const { mainWindow, aggregator, appStore } = deps
   let officeWindow: BrowserWindow | null = null
   let cspRegistered = false
+  let openInFlight = false // BUG-01: guard against concurrent open() calls
 
   function isEnabled(): boolean {
-    const prefs = appStore.get('appPrefs') as { officeEnabled?: boolean } | undefined
+    const prefs = appStore.get('appPrefs')
     return prefs?.officeEnabled !== false
   }
 
@@ -65,83 +63,103 @@ export function createOfficeWindowManager(deps: WindowManagerDeps): OfficeWindow
       return
     }
 
-    registerSessionHardening()
+    // BUG-01: Prevent concurrent open() from creating two windows
+    if (openInFlight) return
+    openInFlight = true
 
-    const savedState = loadOfficeWindowState(appStore as never)
-    const constructorOpts: Electron.BrowserWindowConstructorOptions = {
-      width: savedState?.bounds?.width ?? 900,
-      height: savedState?.bounds?.height ?? 650,
-      minWidth: 600,
-      minHeight: 400,
-      title: 'AgentDeck Office',
-      show: false,
-      webPreferences: {
-        preload: join(__dirname, '../preload/office.js'),
-        contextIsolation: true,
-        nodeIntegration: false,
-        sandbox: true,
-        webSecurity: true,
-        session: session.fromPartition('office'),
-      },
-    }
-    if (savedState?.bounds) {
-      constructorOpts.x = savedState.bounds.x
-      constructorOpts.y = savedState.bounds.y
-    }
+    try {
+      registerSessionHardening()
 
-    officeWindow = new BrowserWindow(constructorOpts)
-
-    if (savedState?.maximized) {
-      officeWindow.maximize()
-    }
-
-    // Navigation / popup hardening
-    officeWindow.webContents.on('will-navigate', (event) => event.preventDefault())
-    officeWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' as const }))
-
-    // Load the office HTML
-    if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
-      await officeWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/office.html`)
-    } else {
-      await officeWindow.loadFile(join(__dirname, '../renderer/office.html'))
-    }
-
-    // did-finish-load → theme push → aggregator.resume()
-    officeWindow.webContents.once('did-finish-load', () => {
-      const prefs = appStore.get('appPrefs') as { theme?: string } | undefined
-      const theme = prefs?.theme ?? 'amber'
-      officeWindow?.webContents.send('office:theme', theme)
-      aggregator.resume()
-      officeWindow?.show()
-      log.info('Office window ready, aggregator resumed', { theme })
-    })
-
-    // Pause/resume on hide/show
-    officeWindow.on('hide', () => aggregator.pause())
-    officeWindow.on('minimize', () => aggregator.pause())
-    officeWindow.on('show', () => aggregator.resume())
-    officeWindow.on('restore', () => aggregator.resume())
-
-    // Save state before close
-    officeWindow.on('close', () => {
-      if (officeWindow && !officeWindow.isDestroyed()) {
-        saveOfficeWindowState(appStore as never, officeWindow)
+      const savedState = loadOfficeWindowState(appStore)
+      const constructorOpts: Electron.BrowserWindowConstructorOptions = {
+        width: savedState?.bounds?.width ?? 900,
+        height: savedState?.bounds?.height ?? 650,
+        minWidth: 600,
+        minHeight: 400,
+        title: 'AgentDeck Office',
+        show: false,
+        webPreferences: {
+          preload: join(__dirname, '../preload/office.js'),
+          contextIsolation: true,
+          nodeIntegration: false,
+          sandbox: true,
+          webSecurity: true,
+          session: session.fromPartition('office'),
+        },
       }
-    })
+      if (savedState?.bounds) {
+        constructorOpts.x = savedState.bounds.x
+        constructorOpts.y = savedState.bounds.y
+      }
 
-    officeWindow.on('closed', () => {
-      aggregator.pause()
-      officeWindow = null
-      log.info('Office window closed')
-    })
+      officeWindow = new BrowserWindow(constructorOpts)
+
+      if (savedState?.maximized) {
+        officeWindow.maximize()
+      }
+
+      // Navigation / popup hardening
+      officeWindow.webContents.on('will-navigate', (event) => event.preventDefault())
+      officeWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' as const }))
+
+      // Load the office HTML — ARCH-02: catch load failures
+      try {
+        if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
+          await officeWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/office.html`)
+        } else {
+          await officeWindow.loadFile(join(__dirname, '../renderer/office.html'))
+        }
+      } catch (loadErr) {
+        log.error('Failed to load office renderer', { err: String(loadErr) })
+        if (officeWindow && !officeWindow.isDestroyed()) {
+          officeWindow.destroy()
+        }
+        officeWindow = null
+        return
+      }
+
+      // did-finish-load → theme push → aggregator.resume()
+      officeWindow.webContents.once('did-finish-load', () => {
+        // BUG-02: Guard against window already closed before this fires
+        if (!officeWindow || officeWindow.isDestroyed()) return
+        const prefs = appStore.get('appPrefs')
+        const theme = prefs?.theme ?? 'amber'
+        officeWindow.webContents.send('office:theme', theme)
+        aggregator.resume()
+        officeWindow.show()
+        log.info('Office window ready, aggregator resumed', { theme })
+      })
+
+      // Pause/resume on hide/show
+      officeWindow.on('hide', () => aggregator.pause())
+      officeWindow.on('minimize', () => aggregator.pause())
+      officeWindow.on('show', () => aggregator.resume())
+      officeWindow.on('restore', () => aggregator.resume())
+
+      // Save state before close
+      officeWindow.on('close', () => {
+        if (officeWindow && !officeWindow.isDestroyed()) {
+          saveOfficeWindowState(appStore, officeWindow)
+        }
+      })
+
+      officeWindow.on('closed', () => {
+        aggregator.pause()
+        officeWindow = null
+        log.info('Office window closed')
+      })
+    } finally {
+      openInFlight = false
+    }
   }
 
-  // Cascade close on main window close
-  mainWindow.on('closed', () => {
+  // LEAK-01: Store the listener so dispose() can remove it
+  const mainClosedListener = (): void => {
     if (officeWindow && !officeWindow.isDestroyed()) {
       officeWindow.close()
     }
-  })
+  }
+  mainWindow.on('closed', mainClosedListener)
 
   function pushSnapshot(snap: OfficeSnapshot): void {
     if (!officeWindow || officeWindow.isDestroyed()) return
@@ -159,6 +177,8 @@ export function createOfficeWindowManager(deps: WindowManagerDeps): OfficeWindow
   }
 
   function dispose(): void {
+    // LEAK-01: Remove the listener from mainWindow
+    mainWindow.removeListener('closed', mainClosedListener)
     if (officeWindow && !officeWindow.isDestroyed()) {
       officeWindow.close()
     }

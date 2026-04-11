@@ -7,18 +7,20 @@ import type {
   OfficeWorker,
   PtySpawnSuccessEvent,
   PtySpawnFailedEvent,
-  WorkerActivity,
 } from '../../shared/office-types'
-import { AGENTS, AGENT_BINARY_MAP } from '../../shared/agents'
+import type { AgentId } from '../../shared/agents'
+import { AGENTS } from '../../shared/agents'
+import { MAX_PROJECT_NAME_LEN, MAX_SESSION_LABEL_LEN } from '../../shared/office-constants'
 
 const log = createLogger('office-registry')
 
 const MAX_DESKS = 20
 
-/** Idle thresholds in milliseconds. */
-const IDLE_COFFEE_MS = 2 * 60 * 1000 // 2 min → idle-coffee
-const IDLE_WINDOW_MS = 5 * 60 * 1000 // 5 min → idle-window
-const SPAWNING_TIMEOUT_MS = 30 * 1000 // 30 s → auto-transition from spawning
+// ARCH-04: Proper type guard for AgentId
+const KNOWN_AGENT_IDS = new Set<string>(AGENTS.map((a) => a.id))
+function isAgentId(s: string): s is AgentId {
+  return KNOWN_AGENT_IDS.has(s)
+}
 
 export interface RegistryDeps {
   ptyBus: EventEmitter
@@ -36,7 +38,15 @@ export interface OfficeSessionRegistry {
   dispose(): void
 }
 
-interface InternalWorker extends OfficeWorker {
+interface InternalWorker {
+  id: string
+  agentId: AgentId
+  projectId: string
+  projectName: string
+  sessionLabel: string
+  startedAtEpoch: number
+  startedAtMono: number
+  deskIndex: number
   lastPtyDataAtMono: number
 }
 
@@ -46,7 +56,6 @@ export function createOfficeSessionRegistry(deps: RegistryDeps): OfficeSessionRe
   const freeDesks = new Set<number>()
   for (let i = 0; i < MAX_DESKS; i++) freeDesks.add(i)
 
-  // Per-session listeners tracked so we can clean up on exit
   const sessionListeners = new Map<string, { dataFn: () => void; exitFn: () => void }>()
 
   function allocateDesk(): number | null {
@@ -67,7 +76,6 @@ export function createOfficeSessionRegistry(deps: RegistryDeps): OfficeSessionRe
     releaseDesk(worker.deskIndex)
     workers.delete(sessionId)
 
-    // Clean up per-session listeners
     const listeners = sessionListeners.get(sessionId)
     if (listeners) {
       ptyBus.off(`data:${sessionId}`, listeners.dataFn)
@@ -76,32 +84,13 @@ export function createOfficeSessionRegistry(deps: RegistryDeps): OfficeSessionRe
     }
   }
 
-  function deriveActivity(worker: InternalWorker): WorkerActivity {
-    const idleMs = clock.now() - worker.lastPtyDataAtMono
-
-    // spawning → working transition after first data event
-    if (worker.activity === 'spawning') {
-      if (idleMs === 0 || clock.now() - worker.startedAtMono > SPAWNING_TIMEOUT_MS) {
-        // First data came, or spawning timed out
-      } else {
-        return 'spawning'
-      }
-    }
-
-    if (idleMs >= IDLE_WINDOW_MS) return 'idle-window'
-    if (idleMs >= IDLE_COFFEE_MS) return 'idle-coffee'
-    return 'working'
-  }
-
   function handleSpawnSuccess(event: PtySpawnSuccessEvent): void {
-    // Projectless → drop
     const normalized = normalizeProjectPath(event.projectPath ?? '')
     if (normalized === '') {
       log.debug('Dropping projectless spawn event', { sessionId: event.sessionId })
       return
     }
 
-    // Project not found → drop
     const project = projectStore.getProjectByPath(normalized)
     if (!project) {
       log.warn('Dropping spawn event for unknown project', {
@@ -111,8 +100,8 @@ export function createOfficeSessionRegistry(deps: RegistryDeps): OfficeSessionRe
       return
     }
 
-    // Agent not recognized → drop
-    if (!(event.agent in AGENT_BINARY_MAP)) {
+    // ARCH-04: Proper type guard instead of unsound cast
+    if (!isAgentId(event.agent)) {
       log.warn('Dropping spawn event for unknown agent', {
         sessionId: event.sessionId,
         agent: event.agent,
@@ -120,10 +109,8 @@ export function createOfficeSessionRegistry(deps: RegistryDeps): OfficeSessionRe
       return
     }
 
-    // Duplicate → skip
     if (workers.has(event.sessionId)) return
 
-    // Allocate desk
     const deskIndex = allocateDesk()
     if (deskIndex === null) {
       log.warn('Registry full — no desk available', { sessionId: event.sessionId })
@@ -131,25 +118,23 @@ export function createOfficeSessionRegistry(deps: RegistryDeps): OfficeSessionRe
     }
 
     const agentDisplay = AGENTS.find((a) => a.id === event.agent)?.name ?? event.agent
-    const sessionLabel = `${project.name} · ${agentDisplay}`
+    // SEC-04: Cap string lengths in snapshot payloads
+    const cappedProjectName = project.name.slice(0, MAX_PROJECT_NAME_LEN)
+    const sessionLabel = `${cappedProjectName} · ${agentDisplay}`.slice(0, MAX_SESSION_LABEL_LEN)
 
     const worker: InternalWorker = {
       id: event.sessionId,
-      agentId: event.agent as OfficeWorker['agentId'],
+      agentId: event.agent,
       projectId: project.id,
-      projectName: project.name,
+      projectName: cappedProjectName,
       sessionLabel,
       startedAtEpoch: event.startedAtEpoch,
       startedAtMono: event.startedAtMono,
       deskIndex,
-      activity: 'spawning',
-      idleMs: 0,
-      costUsd: 0,
       lastPtyDataAtMono: clock.now(),
     }
     workers.set(event.sessionId, worker)
 
-    // Subscribe to per-session data/exit events
     const dataFn = (): void => {
       const w = workers.get(event.sessionId)
       if (w) w.lastPtyDataAtMono = clock.now()
@@ -165,7 +150,7 @@ export function createOfficeSessionRegistry(deps: RegistryDeps): OfficeSessionRe
     log.info('Office worker created', {
       sessionId: worker.id,
       deskIndex,
-      projectName: project.name,
+      projectName: cappedProjectName,
     })
   }
 
@@ -178,19 +163,20 @@ export function createOfficeSessionRegistry(deps: RegistryDeps): OfficeSessionRe
     }
   }
 
-  // Subscribe to broadcast channels
   const successListener = (event: PtySpawnSuccessEvent): void => handleSpawnSuccess(event)
   const failedListener = (event: PtySpawnFailedEvent): void => handleSpawnFailed(event)
   ptyBus.on('spawn:success', successListener)
   ptyBus.on('spawn:failed', failedListener)
 
   return {
+    // BUG-03: Removed dead deriveActivity — aggregator is the single source of truth for activity.
+    // Registry returns raw idleMs and costUsd; aggregator applies activity thresholds.
     getWorkers(): OfficeWorker[] {
       const now = clock.now()
       return [...workers.values()]
         .map((w) => {
-          const idleMs = now - w.lastPtyDataAtMono
-          const activity = deriveActivity(w)
+          // BUG-04: Clamp idleMs to >= 0
+          const idleMs = Math.max(0, now - w.lastPtyDataAtMono)
           const usage = costTracker.getUsageForSession(w.id)
           return {
             id: w.id,
@@ -201,7 +187,7 @@ export function createOfficeSessionRegistry(deps: RegistryDeps): OfficeSessionRe
             startedAtEpoch: w.startedAtEpoch,
             startedAtMono: w.startedAtMono,
             deskIndex: w.deskIndex,
-            activity,
+            activity: 'working' as const, // neutral default — aggregator overrides
             idleMs,
             costUsd: usage?.totalCostUsd ?? 0,
           }

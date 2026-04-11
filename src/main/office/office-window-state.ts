@@ -1,9 +1,9 @@
 import { screen } from 'electron'
 import type { BrowserWindow } from 'electron'
-import type { OfficeWindowStateSchema } from '../project-store'
+import type { OfficeWindowStateSchema, StoreSchema } from '../project-store'
 
 interface AppStoreLike {
-  get(key: 'officeWindowState'): OfficeWindowStateSchema | undefined
+  get(key: 'officeWindowState'): StoreSchema['officeWindowState']
   set(key: 'officeWindowState', value: OfficeWindowStateSchema): void
 }
 
