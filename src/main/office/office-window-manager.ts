@@ -118,17 +118,15 @@ export function createOfficeWindowManager(deps: WindowManagerDeps): OfficeWindow
         return
       }
 
-      // did-finish-load → theme push → aggregator.resume()
-      officeWindow.webContents.once('did-finish-load', () => {
-        // BUG-02: Guard against window already closed before this fires
-        if (!officeWindow || officeWindow.isDestroyed()) return
-        const prefs = appStore.get('appPrefs')
-        const theme = prefs?.theme ?? 'amber'
-        officeWindow.webContents.send('office:theme', theme)
-        officeWindow.show()
-        aggregator.resume()
-        log.info('Office window ready, aggregator resumed', { theme })
-      })
+      // loadFile/loadURL await resolves after page load completes,
+      // so did-finish-load has already fired — do theme/show/resume inline.
+      if (!officeWindow || officeWindow.isDestroyed()) return
+      const prefs = appStore.get('appPrefs')
+      const theme = prefs?.theme ?? 'amber'
+      officeWindow.webContents.send('office:theme', theme)
+      officeWindow.show()
+      aggregator.resume()
+      log.info('Office window ready, aggregator resumed', { theme })
 
       // Pause/resume on hide/show
       officeWindow.on('hide', () => aggregator.pause())
