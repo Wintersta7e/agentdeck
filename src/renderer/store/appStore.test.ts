@@ -91,6 +91,33 @@ describe('Session lifecycle', () => {
     expect(newSession?.agentFlagsOverride).toBe('--fast')
     expect(newSession?.status).toBe('starting')
   })
+
+  it('focusExistingSession returns false when session does not exist', () => {
+    const result = useAppStore.getState().focusExistingSession('nope')
+    expect(result).toBe(false)
+    expect(useAppStore.getState().activeSessionId).toBeNull()
+  })
+
+  it('focusExistingSession returns false when session is exited', () => {
+    useAppStore.getState().addSession('s1', 'proj-1')
+    useAppStore.getState().setSessionStatus('s1', 'exited')
+    // Navigate away first so we can verify it doesn't change view
+    useAppStore.setState({ currentView: 'home', activeSessionId: null })
+    const result = useAppStore.getState().focusExistingSession('s1')
+    expect(result).toBe(false)
+    expect(useAppStore.getState().activeSessionId).toBeNull()
+  })
+
+  it('focusExistingSession returns true and focuses when session is running', () => {
+    useAppStore.getState().addSession('s1', 'proj-1')
+    useAppStore.getState().setSessionStatus('s1', 'running')
+    // Navigate away
+    useAppStore.setState({ currentView: 'home', activeSessionId: null })
+    const result = useAppStore.getState().focusExistingSession('s1')
+    expect(result).toBe(true)
+    expect(useAppStore.getState().activeSessionId).toBe('s1')
+    expect(useAppStore.getState().currentView).toBe('session')
+  })
 })
 
 describe('View navigation', () => {

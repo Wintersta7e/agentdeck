@@ -51,6 +51,13 @@ export interface SessionsSlice {
     result: { path: string; isolated: boolean; branch?: string | undefined },
   ) => void
   clearWorktreePath: (sessionId: string) => void
+
+  /**
+   * Guarded focus action. Returns true and sets activeSessionId only if
+   * the target session is both present AND not in a terminal status.
+   * Used by the office window → main renderer focus routing path.
+   */
+  focusExistingSession: (sessionId: string) => boolean
 }
 
 export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> = (set, get) => ({
@@ -248,4 +255,13 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
       const { [sessionId]: _, ...rest } = s.worktreePaths
       return { worktreePaths: rest }
     }),
+
+  focusExistingSession: (sessionId) => {
+    const state = get()
+    const session = state.sessions[sessionId]
+    if (!session) return false
+    if (session.status === 'exited') return false
+    state.setActiveSession(sessionId)
+    return true
+  },
 })
