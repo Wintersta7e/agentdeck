@@ -248,81 +248,76 @@ function drawWorker(
           ? P.spawning
           : P.idle
 
-  // Bobbing animation
+  // Worker sits IN the chair behind the desk.
+  // cy is the desk's iso center. Chair is at cy+5..cy+12.
+  // Worker's body starts at chair level, head peeks above the monitor.
+  const chairY = cy + 4 // top of chair back
   let bob = 0
   if (worker.activity === 'working') {
-    bob = Math.round(Math.sin(time / 350 + worker.deskIndex * 1.2) * 2)
-  } else if (worker.activity === 'idle-coffee') {
-    bob = Math.round(Math.sin(time / 700 + worker.deskIndex) * 1.5)
+    bob = Math.round(Math.sin(time / 350 + worker.deskIndex * 1.2) * 1)
   }
 
-  const wy = cy - 28 + bob
-
-  // Shadow
-  ctx.fillStyle = P.shadow
-  ctx.beginPath()
-  ctx.ellipse(cx, cy + 2, 7, 3, 0, 0, Math.PI * 2)
-  ctx.fill()
-
-  // Body
-  rect(ctx, cx - 4, wy + 8, 8, 10, bodyColor)
-  // Arms (slight animation when working)
-  if (worker.activity === 'working') {
-    const armBob = Math.round(Math.sin(time / 200 + worker.deskIndex) * 1)
-    rect(ctx, cx - 6, wy + 9 + armBob, 2, 6, bodyColor)
-    rect(ctx, cx + 4, wy + 9 - armBob, 2, 6, bodyColor)
-  } else {
-    rect(ctx, cx - 6, wy + 9, 2, 6, bodyColor)
-    rect(ctx, cx + 4, wy + 9, 2, 6, bodyColor)
-  }
-
-  // Head
-  rect(ctx, cx - 5, wy, 10, 8, P.skin)
+  // Head peeking above the monitor (monitor top is at cy-16)
+  const headY = cy - 20 + bob
+  rect(ctx, cx - 5, headY, 10, 8, P.skin)
   // Hair
-  rect(ctx, cx - 5, wy - 2, 10, 4, P.hair)
+  rect(ctx, cx - 5, headY - 2, 10, 4, P.hair)
   // Eyes
-  rect(ctx, cx - 3, wy + 3, 2, 2, '#222')
-  rect(ctx, cx + 1, wy + 3, 2, 2, '#222')
+  rect(ctx, cx - 3, headY + 3, 2, 2, '#222')
+  rect(ctx, cx + 1, headY + 3, 2, 2, '#222')
   // Mouth (smile when working)
   if (worker.activity === 'working') {
-    rect(ctx, cx - 1, wy + 6, 2, 1, '#c08880')
+    rect(ctx, cx - 1, headY + 6, 2, 1, '#c08880')
   }
 
-  // Agent icon below character
+  // Shoulders visible just above desk surface (cy-4 is desk top)
+  rect(ctx, cx - 6, cy - 6 + bob, 12, 3, bodyColor)
+
+  // Arms resting on desk (on top of the desk surface)
+  if (worker.activity === 'working') {
+    const armBob = Math.round(Math.sin(time / 200 + worker.deskIndex) * 1)
+    rect(ctx, cx - 10, cy - 3 + armBob, 4, 2, P.skin)
+    rect(ctx, cx + 6, cy - 3 - armBob, 4, 2, P.skin)
+  } else {
+    rect(ctx, cx - 10, cy - 3, 4, 2, P.skin)
+    rect(ctx, cx + 6, cy - 3, 4, 2, P.skin)
+  }
+
+  // Body visible below desk (between desk bottom and chair)
+  rect(ctx, cx - 4, cy + 4 + bob, 8, 4, bodyColor)
+
+  // Agent icon + project name rendered at DISPLAY resolution (not internal)
+  // so they're readable. We store positions and draw them in a second pass.
+  // For now, use larger font that survives the upscale.
   const agentDef = AGENTS.find((a) => a.id === worker.agentId)
-  ctx.font = '8px sans-serif'
+  ctx.font = 'bold 10px sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'top'
-  ctx.fillStyle = P.textMuted
-  ctx.fillText(agentDef?.icon ?? '?', cx, cy + 6)
-
-  // Project name
-  ctx.font = '7px sans-serif'
   ctx.fillStyle = P.textLight
-  ctx.fillText(worker.projectName.slice(0, 12), cx, cy + 16)
+  ctx.fillText(`${agentDef?.icon ?? '?'} ${worker.projectName.slice(0, 10)}`, cx, chairY + 12)
 
   // Speech bubble when working with activity
   if (worker.lastActivityTitle && worker.activity === 'working') {
-    const label = worker.lastActivityTitle.slice(0, 16)
-    ctx.font = '7px sans-serif'
+    const label = worker.lastActivityTitle.slice(0, 14)
+    ctx.font = 'bold 9px sans-serif'
     const tw = ctx.measureText(label).width
-    const bw = tw + 8
-    const bx = cx + 10
-    const by = wy - 4
+    const bw = tw + 10
+    const bx = cx + 12
+    const by = headY + 2
 
     // Bubble body
     ctx.fillStyle = P.bubbleBg
     ctx.strokeStyle = P.bubbleBorder
     ctx.lineWidth = 1
     ctx.beginPath()
-    ctx.roundRect(bx, by - 6, bw, 12, 3)
+    ctx.roundRect(bx, by - 7, bw, 14, 4)
     ctx.fill()
     ctx.stroke()
-    // Tail triangle
+    // Tail
     ctx.fillStyle = P.bubbleBg
     ctx.beginPath()
     ctx.moveTo(bx, by)
-    ctx.lineTo(bx - 4, by + 2)
+    ctx.lineTo(bx - 5, by + 2)
     ctx.lineTo(bx, by + 4)
     ctx.closePath()
     ctx.fill()
@@ -330,7 +325,7 @@ function drawWorker(
     ctx.fillStyle = P.textLight
     ctx.textAlign = 'left'
     ctx.textBaseline = 'middle'
-    ctx.fillText(label, bx + 4, by)
+    ctx.fillText(label, bx + 5, by)
   }
 }
 
