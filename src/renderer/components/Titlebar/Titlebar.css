@@ -284,6 +284,7 @@
 
 .titlebar-office-btn {
   margin-right: var(--sp-2);
+  -webkit-app-region: no-drag;
 }
 
 /* Window controls */
