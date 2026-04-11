@@ -223,6 +223,37 @@ describe('OfficeSessionRegistry', () => {
     registry.dispose()
   })
 
+  // ─── Desk exhaustion (COV-03) ───────────────────────────────────
+
+  it('drops spawn events when all 20 desks are occupied', () => {
+    const registry = createOfficeSessionRegistry(makeDeps())
+    for (let i = 0; i < 20; i++) {
+      fakeBus.emit('spawn:success', makeEvent(`s-${i}`, { startedAtMono: 1000 + i }))
+    }
+    expect(registry.getWorkers()).toHaveLength(20)
+
+    // 21st should be silently dropped
+    fakeBus.emit('spawn:success', makeEvent('s-overflow', { startedAtMono: 2000 }))
+    expect(registry.getWorkers()).toHaveLength(20)
+
+    registry.dispose()
+  })
+
+  // ─── idleMs clamping (BUG-04) ─────────────────────────────────
+
+  it('clamps idleMs to >= 0', () => {
+    const registry = createOfficeSessionRegistry(makeDeps())
+    currentTime = 1000
+    fakeBus.emit('spawn:success', makeEvent('sess-1'))
+
+    // Simulate clock regression (shouldn't happen, but defensive)
+    currentTime = 500
+    const workers = registry.getWorkers()
+    expect(workers[0]!.idleMs).toBe(0)
+
+    registry.dispose()
+  })
+
   // ─── Dispose ───────────────────────────────────────────────────
 
   it('dispose cleans up all listeners', () => {
