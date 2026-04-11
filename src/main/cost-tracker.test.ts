@@ -118,6 +118,55 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
+// ─── getUsageForSession ────────────────────────────────────────────
+
+describe('getUsageForSession', () => {
+  it('returns null for an unbound session', async () => {
+    makeRoutingMock()
+    const win = makeMockWindow()
+    const tracker = createCostTracker(win, [makeTestAdapter()])
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(tracker.getUsageForSession('unknown')).toBeNull()
+
+    tracker.destroy()
+  })
+
+  it('returns ZERO_USAGE immediately after bind (before any log parsing)', async () => {
+    makeRoutingMock()
+    const win = makeMockWindow()
+    const tracker = createCostTracker(win, [makeTestAdapter()])
+    await vi.advanceTimersByTimeAsync(0)
+
+    tracker.bindSession('s1', BIND_OPTS)
+    const usage = tracker.getUsageForSession('s1')
+    expect(usage).toEqual({
+      inputTokens: 0,
+      outputTokens: 0,
+      cacheReadTokens: 0,
+      cacheWriteTokens: 0,
+      totalCostUsd: 0,
+    })
+
+    tracker.destroy()
+  })
+
+  it('returns a shallow copy (not the internal reference)', async () => {
+    makeRoutingMock()
+    const win = makeMockWindow()
+    const tracker = createCostTracker(win, [makeTestAdapter()])
+    await vi.advanceTimersByTimeAsync(0)
+
+    tracker.bindSession('s1', BIND_OPTS)
+    const a = tracker.getUsageForSession('s1')
+    const b = tracker.getUsageForSession('s1')
+    expect(a).not.toBe(b)
+    expect(a).toEqual(b)
+
+    tracker.destroy()
+  })
+})
+
 // ─── bindSession ────────────────────────────────────────────────────
 
 describe('bindSession', () => {

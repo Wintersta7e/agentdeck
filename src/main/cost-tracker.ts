@@ -57,6 +57,8 @@ export interface CostTracker {
   ): void
   unbindSession(sessionId: string): void
   destroy(): void
+  /** Synchronous read of the cached cumulative usage. Returns null if unbound. */
+  getUsageForSession(sessionId: string): TokenUsage | null
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────
@@ -452,5 +454,11 @@ export function createCostTracker(mainWindow: BrowserWindow, adapters: LogAdapte
     log.info('CostTracker destroyed')
   }
 
-  return { bindSession, unbindSession, destroy }
+  function getUsageForSession(sessionId: string): TokenUsage | null {
+    const session = sessions.get(sessionId)
+    if (!session) return null
+    return { ...session.usage }
+  }
+
+  return { bindSession, unbindSession, destroy, getUsageForSession }
 }
