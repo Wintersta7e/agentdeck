@@ -5,6 +5,7 @@ import { createLogger } from './logger'
 import { ptyBus } from './pty-bus'
 import { toWslPath } from './wsl-utils'
 import { AGENT_BINARY_MAP, SAFE_FLAGS_RE } from '../shared/agents'
+import type { PtySpawnSuccessEvent, PtySpawnFailedEvent } from '../shared/office-types'
 import { shellQuote } from './node-runners'
 
 const log = createLogger('pty-manager')
@@ -148,6 +149,12 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
       })
     } catch (err) {
       log.error(`Failed to spawn PTY for session ${sessionId}`, { err: String(err) })
+      const failedEvent: PtySpawnFailedEvent = {
+        sessionId,
+        reason: String(err),
+      }
+      ptyBus.emit(`spawn:failed:${sessionId}`, failedEvent)
+      ptyBus.emit('spawn:failed', failedEvent)
       if (!mainWindow.isDestroyed()) {
         mainWindow.webContents.send(`pty:exit:${sessionId}`, -1)
       }
@@ -156,6 +163,17 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
 
     sessions.set(sessionId, proc)
     log.info(`Spawned session ${sessionId}`, { cols, rows, agent, projectPath })
+
+    // Notify office registry (and any other listener) of successful spawn
+    const successEvent: PtySpawnSuccessEvent = {
+      sessionId,
+      agent: agent ?? 'claude-code',
+      projectPath,
+      startedAtEpoch: Date.now(),
+      startedAtMono: performance.now(),
+    }
+    ptyBus.emit(`spawn:success:${sessionId}`, successEvent)
+    ptyBus.emit('spawn:success', successEvent)
 
     // Build the full command sequence: cd to project dir, startup commands, then launch agent
     const commands: string[] = []
