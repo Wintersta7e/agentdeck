@@ -158,4 +158,24 @@ describe('OfficeWindowManager', () => {
     ;(deps.mainWindow as unknown as import('events').EventEmitter).emit('closed')
     expect(officeWin.close).toHaveBeenCalled()
   })
+
+  // R2-01: concurrent open() guard test
+  it('concurrent open() calls only create one window', async () => {
+    mgr = createOfficeWindowManager(await makeDeps())
+    await Promise.all([mgr.open(), mgr.open()])
+    expect(instances).toHaveLength(1)
+  })
+
+  // R2-03: dispose() removes mainWindow closed listener
+  it('dispose removes mainWindow closed listener', async () => {
+    const deps = await makeDeps()
+    mgr = createOfficeWindowManager(deps)
+    await mgr.open()
+    const officeWin = instances[0]!
+    mgr.dispose()
+    officeWin.close.mockClear()
+    ;(deps.mainWindow as unknown as import('events').EventEmitter).emit('closed')
+    // close should NOT be called again — listener was removed
+    expect(officeWin.close).not.toHaveBeenCalled()
+  })
 })

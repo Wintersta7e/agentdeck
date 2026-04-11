@@ -125,8 +125,8 @@ export function createOfficeWindowManager(deps: WindowManagerDeps): OfficeWindow
         const prefs = appStore.get('appPrefs')
         const theme = prefs?.theme ?? 'amber'
         officeWindow.webContents.send('office:theme', theme)
-        aggregator.resume()
         officeWindow.show()
+        aggregator.resume()
         log.info('Office window ready, aggregator resumed', { theme })
       })
 
