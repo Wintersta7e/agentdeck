@@ -1,576 +1,423 @@
-import React, { useRef, useEffect, useCallback } from 'react'
-import type { OfficeSnapshot, OfficeWorker, WorkerActivity } from '../../shared/office-types'
+import React, { useRef, useEffect } from 'react'
+import type { OfficeSnapshot, OfficeWorker } from '../../shared/office-types'
 import { AGENTS } from '../../shared/agents'
-import { toIso, TILE_W, TILE_H } from './scene/isoMath'
-import { getDeskPositions, GRID_COLS, GRID_ROWS } from './scene/OfficeLayout'
 
 interface OfficeCanvasProps {
   snapshot: OfficeSnapshot | null
 }
 
-// Read colors from CSS custom properties at render time
-function resolveToken(token: string): string {
-  return getComputedStyle(document.documentElement).getPropertyValue(token).trim() || '#888'
+// ── Pixel art palette (Stardew Valley-inspired warm tones) ────────
+const PALETTE = {
+  bg: '#2a1f1e',
+  floorA: '#8b7355',
+  floorB: '#7a6548',
+  wallTop: '#5c4a3a',
+  wallFront: '#4a3c2e',
+  wallDark: '#3d3028',
+  deskTop: '#a08060',
+  deskFront: '#806040',
+  deskSide: '#6a5035',
+  screenOff: '#1a2030',
+  screenOn: '#40c060',
+  screenIdle: '#304050',
+  screenText: '#80ff80',
+  chairBack: '#604030',
+  chairSeat: '#705038',
+  plantGreen: '#3a8040',
+  plantDark: '#2a6030',
+  potBrown: '#8a6040',
+  windowFrame: '#6a5545',
+  windowGlass: '#6090b0',
+  windowGlassLight: '#80b0d0',
+  shadow: 'rgba(0,0,0,0.25)',
+  textLight: '#e0d0b8',
+  textDim: '#a09080',
+  bubbleBg: '#3d3028',
+  bubbleBorder: '#60a060',
+  // Worker colors per activity
+  bodyWorking: '#4a90d0',
+  bodyIdle: '#7a8888',
+  bodyCoffee: '#c08040',
+  bodySpawning: '#9070c0',
+  skinTone: '#f0c0a0',
+  hair: '#604030',
 }
 
-interface ThemeColors {
-  activity: Record<WorkerActivity, string>
-  floor1: string
-  floor2: string
-  wall: string
-  wallSide: string
-  desk: string
-  deskTop: string
-  deskLeg: string
-  monitor: string
-  monitorScreen: string
-  chairSeat: string
-  plant: string
-  plantPot: string
-  coffee: string
-  windowFrame: string
-  windowGlass: string
-  avatarOutline: string
-  labelText: string
-  emptyText: string
-  accentGlow: string
-}
+// ── Internal resolution: render at this size, then upscale ────────
+const INTERNAL_W = 320
+const INTERNAL_H = 200
 
-function getThemeColors(): ThemeColors {
-  const bg0 = resolveToken('--bg0')
-  const bg1 = resolveToken('--bg1')
-  const bg2 = resolveToken('--bg2')
-  const bg3 = resolveToken('--bg3')
-  const bg4 = resolveToken('--bg4')
-  const text2 = resolveToken('--text2')
-  const text3 = resolveToken('--text3')
-  const accent = resolveToken('--accent-primary')
-  const green = resolveToken('--green')
-  const purple = resolveToken('--purple')
-  const blue = resolveToken('--blue')
+// ── Isometric grid (coarser for pixel art) ────────────────────────
+const TILE_W = 16
+const TILE_H = 8
+const GRID_COLS = 12
+const GRID_ROWS = 10
+const DESK_COLS = 5
+const DESK_ROWS = 4
 
+function toIso(col: number, row: number): { x: number; y: number } {
   return {
-    activity: {
-      spawning: purple,
-      working: green,
-      'idle-coffee': accent,
-      'idle-window': text3,
-    },
-    floor1: bg1,
-    floor2: bg2,
-    wall: bg3,
-    wallSide: bg0,
-    desk: bg3,
-    deskTop: bg4,
-    deskLeg: bg2,
-    monitor: bg0,
-    monitorScreen: blue,
-    chairSeat: bg3,
-    plant: green,
-    plantPot: bg3,
-    coffee: accent,
-    windowFrame: bg3,
-    windowGlass: blue,
-    avatarOutline: bg0,
-    labelText: text2,
-    emptyText: text3,
-    accentGlow: accent,
+    x: (col - row) * (TILE_W / 2),
+    y: (col + row) * (TILE_H / 2),
   }
 }
 
-// ── Drawing primitives ───────────────────────────────────────────
+function getDeskPos(index: number): { col: number; row: number } {
+  const c = index % DESK_COLS
+  const r = Math.floor(index / DESK_COLS)
+  return { col: 2 + c * 2, row: 2 + r * 2 }
+}
 
-function drawIsoTile(
+// ── Pixel drawing helpers ─────────────────────────────────────────
+
+function px(
   ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
   color: string,
-  w = TILE_W,
-  h = TILE_H,
 ): void {
-  const hw = w / 2
-  const hh = h / 2
+  ctx.fillStyle = color
+  ctx.fillRect(Math.round(x), Math.round(y), w, h)
+}
+
+function isoTile(ctx: CanvasRenderingContext2D, cx: number, cy: number, color: string): void {
+  const hw = TILE_W / 2
+  const hh = TILE_H / 2
+  ctx.fillStyle = color
   ctx.beginPath()
   ctx.moveTo(cx, cy - hh)
   ctx.lineTo(cx + hw, cy)
   ctx.lineTo(cx, cy + hh)
   ctx.lineTo(cx - hw, cy)
   ctx.closePath()
-  ctx.fillStyle = color
   ctx.fill()
 }
 
-function drawIsoCube(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  w: number,
-  h: number,
-  depth: number,
-  topColor: string,
-  leftColor: string,
-  rightColor: string,
-): void {
-  const hw = w / 2
-  const hh = h / 2
-  // Top face
-  ctx.beginPath()
-  ctx.moveTo(cx, cy - hh - depth)
-  ctx.lineTo(cx + hw, cy - depth)
-  ctx.lineTo(cx, cy + hh - depth)
-  ctx.lineTo(cx - hw, cy - depth)
-  ctx.closePath()
-  ctx.fillStyle = topColor
-  ctx.fill()
-  // Left face
-  ctx.beginPath()
-  ctx.moveTo(cx - hw, cy - depth)
-  ctx.lineTo(cx, cy + hh - depth)
-  ctx.lineTo(cx, cy + hh)
-  ctx.lineTo(cx - hw, cy)
-  ctx.closePath()
-  ctx.fillStyle = leftColor
-  ctx.fill()
-  // Right face
-  ctx.beginPath()
-  ctx.moveTo(cx + hw, cy - depth)
-  ctx.lineTo(cx, cy + hh - depth)
-  ctx.lineTo(cx, cy + hh)
-  ctx.lineTo(cx + hw, cy)
-  ctx.closePath()
-  ctx.fillStyle = rightColor
-  ctx.fill()
+// ── Scene elements ────────────────────────────────────────────────
+
+function drawWalls(ctx: CanvasRenderingContext2D, ox: number, oy: number): void {
+  // Back wall (top edge)
+  for (let c = 0; c < GRID_COLS; c++) {
+    const { x, y } = toIso(c, 0)
+    const sx = ox + x
+    const sy = oy + y
+    px(ctx, sx - TILE_W / 2, sy - 24, TILE_W, 24, PALETTE.wallTop)
+  }
+  // Side wall (left edge)
+  for (let r = 0; r < GRID_ROWS; r++) {
+    const { x, y } = toIso(0, r)
+    const sx = ox + x
+    const sy = oy + y
+    px(ctx, sx - TILE_W / 2 - 4, sy - 24, 5, 28, PALETTE.wallFront)
+  }
+  // Windows on back wall
+  for (let c = 2; c < GRID_COLS; c += 3) {
+    const { x, y } = toIso(c, 0)
+    const sx = ox + x
+    const sy = oy + y - 16
+    px(ctx, sx - 5, sy, 10, 10, PALETTE.windowFrame)
+    px(ctx, sx - 4, sy + 1, 3, 3, PALETTE.windowGlass)
+    px(ctx, sx + 1, sy + 1, 3, 3, PALETTE.windowGlassLight)
+    px(ctx, sx - 4, sy + 5, 3, 3, PALETTE.windowGlassLight)
+    px(ctx, sx + 1, sy + 5, 3, 3, PALETTE.windowGlass)
+  }
 }
 
-function darken(hex: string, amount: number): string {
-  const r = parseInt(hex.slice(1, 3), 16)
-  const g = parseInt(hex.slice(3, 5), 16)
-  const b = parseInt(hex.slice(5, 7), 16)
-  if (isNaN(r) || isNaN(g) || isNaN(b)) return hex
-  const nr = Math.max(0, Math.round(r * (1 - amount)))
-  const ng = Math.max(0, Math.round(g * (1 - amount)))
-  const nb = Math.max(0, Math.round(b * (1 - amount)))
-  return `#${nr.toString(16).padStart(2, '0')}${ng.toString(16).padStart(2, '0')}${nb.toString(16).padStart(2, '0')}`
+function drawFloor(ctx: CanvasRenderingContext2D, ox: number, oy: number): void {
+  for (let r = 0; r < GRID_ROWS; r++) {
+    for (let c = 0; c < GRID_COLS; c++) {
+      const { x, y } = toIso(c, r)
+      isoTile(ctx, ox + x, oy + y, (c + r) % 2 === 0 ? PALETTE.floorA : PALETTE.floorB)
+    }
+  }
 }
-
-// ── Furniture drawing ────────────────────────────────────────────
 
 function drawDesk(
   ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  colors: ThemeColors,
-  worker?: OfficeWorker,
-  time = 0,
-): void {
-  // Desk surface (flat isometric cube)
-  drawIsoCube(
-    ctx,
-    cx,
-    cy + 4,
-    TILE_W * 0.7,
-    TILE_H * 0.7,
-    3,
-    colors.deskTop,
-    colors.desk,
-    darken(colors.desk, 0.15),
-  )
-
-  // Monitor
-  const monW = 14
-  const monH = 12
-  ctx.fillStyle = colors.monitor
-  ctx.fillRect(cx - monW / 2, cy - monH - 6, monW, monH)
-  // Screen — glow depends on worker activity
-  if (worker && worker.activity === 'working') {
-    const pulse = 0.5 + Math.sin(time / 500 + worker.deskIndex * 0.7) * 0.2
-    ctx.fillStyle = colors.activity[worker.activity]
-    ctx.globalAlpha = pulse
-    ctx.fillRect(cx - monW / 2 + 1, cy - monH - 5, monW - 2, monH - 2)
-    ctx.globalAlpha = 1.0
-  } else if (worker) {
-    ctx.fillStyle = colors.monitorScreen
-    ctx.globalAlpha = 0.15
-    ctx.fillRect(cx - monW / 2 + 1, cy - monH - 5, monW - 2, monH - 2)
-    ctx.globalAlpha = 1.0
-  } else {
-    ctx.fillStyle = colors.wallSide
-    ctx.globalAlpha = 0.3
-    ctx.fillRect(cx - monW / 2 + 1, cy - monH - 5, monW - 2, monH - 2)
-    ctx.globalAlpha = 1.0
-  }
-  // Monitor stand
-  ctx.fillStyle = colors.monitor
-  ctx.fillRect(cx - 1, cy - 6, 2, 3)
-}
-
-function drawChair(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  colors: ThemeColors,
-): void {
-  // Seat (small isometric diamond below and in front of desk)
-  drawIsoTile(ctx, cx, cy + 14, colors.chairSeat, TILE_W * 0.3, TILE_H * 0.3)
-  // Back rest
-  ctx.fillStyle = darken(colors.chairSeat, 0.2)
-  ctx.fillRect(cx - 4, cy + 8, 8, 3)
-}
-
-function drawPlant(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  colors: ThemeColors,
-): void {
-  // Pot
-  ctx.fillStyle = colors.plantPot
-  ctx.beginPath()
-  ctx.moveTo(cx - 5, cy - 4)
-  ctx.lineTo(cx + 5, cy - 4)
-  ctx.lineTo(cx + 4, cy + 2)
-  ctx.lineTo(cx - 4, cy + 2)
-  ctx.closePath()
-  ctx.fill()
-  // Leaves (three circles)
-  ctx.fillStyle = colors.plant
-  ctx.beginPath()
-  ctx.arc(cx, cy - 10, 5, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.beginPath()
-  ctx.arc(cx - 4, cy - 7, 4, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.beginPath()
-  ctx.arc(cx + 4, cy - 7, 4, 0, Math.PI * 2)
-  ctx.fill()
-}
-
-function drawCoffeeMachine(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  colors: ThemeColors,
-): void {
-  // Body
-  drawIsoCube(
-    ctx,
-    cx,
-    cy,
-    18,
-    10,
-    14,
-    darken(colors.desk, 0.1),
-    darken(colors.desk, 0.25),
-    darken(colors.desk, 0.35),
-  )
-  // Cup indicator
-  ctx.fillStyle = colors.coffee
-  ctx.beginPath()
-  ctx.arc(cx, cy - 10, 2, 0, Math.PI * 2)
-  ctx.fill()
-}
-
-function drawWindow(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  colors: ThemeColors,
-): void {
-  // Window frame
-  ctx.fillStyle = colors.windowFrame
-  ctx.fillRect(cx - 12, cy - 20, 24, 20)
-  // Glass panes
-  ctx.fillStyle = colors.windowGlass
-  ctx.globalAlpha = 0.25
-  ctx.fillRect(cx - 10, cy - 18, 9, 7)
-  ctx.fillRect(cx + 1, cy - 18, 9, 7)
-  ctx.fillRect(cx - 10, cy - 9, 9, 7)
-  ctx.fillRect(cx + 1, cy - 9, 9, 7)
-  ctx.globalAlpha = 1.0
-}
-
-// ── Avatar drawing ───────────────────────────────────────────────
-
-function drawAvatar(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  worker: OfficeWorker,
-  colors: ThemeColors,
+  sx: number,
+  sy: number,
+  worker: OfficeWorker | undefined,
   time: number,
 ): void {
-  const color = colors.activity[worker.activity]
-  const agentDef = AGENTS.find((a) => a.id === worker.agentId)
+  // Desk body
+  px(ctx, sx - 6, sy - 2, 12, 3, PALETTE.deskTop)
+  px(ctx, sx - 6, sy + 1, 12, 2, PALETTE.deskFront)
+  // Legs
+  px(ctx, sx - 5, sy + 3, 1, 3, PALETTE.deskSide)
+  px(ctx, sx + 4, sy + 3, 1, 3, PALETTE.deskSide)
 
-  // Idle animations
-  let bobY = 0
+  // Monitor
+  px(ctx, sx - 3, sy - 8, 6, 5, '#1a1a2a')
+  // Screen content
+  if (worker?.activity === 'working') {
+    // Active: green scrolling text effect
+    const textLine = Math.floor(time / 200) % 4
+    px(ctx, sx - 2, sy - 7 + textLine, 4, 1, PALETTE.screenText)
+    px(ctx, sx - 2, sy - 7, 4, 4, PALETTE.screenOn)
+    // Scrolling text lines
+    for (let i = 0; i < 3; i++) {
+      const lineW = 2 + ((time / 100 + i * 37) % 3)
+      px(ctx, sx - 1, sy - 6 + i, Math.min(lineW, 3), 1, PALETTE.screenText)
+    }
+  } else if (worker) {
+    px(ctx, sx - 2, sy - 7, 4, 4, PALETTE.screenIdle)
+  } else {
+    px(ctx, sx - 2, sy - 7, 4, 4, PALETTE.screenOff)
+  }
+  // Monitor stand
+  px(ctx, sx, sy - 3, 1, 1, '#333')
+
+  // Chair (in front of desk)
+  px(ctx, sx - 2, sy + 5, 4, 2, PALETTE.chairSeat)
+  px(ctx, sx - 2, sy + 3, 4, 2, PALETTE.chairBack)
+}
+
+function drawPlant(ctx: CanvasRenderingContext2D, sx: number, sy: number): void {
+  // Pot
+  px(ctx, sx - 2, sy, 4, 3, PALETTE.potBrown)
+  // Leaves (pixel clusters)
+  px(ctx, sx - 2, sy - 3, 4, 3, PALETTE.plantGreen)
+  px(ctx, sx - 1, sy - 5, 2, 2, PALETTE.plantGreen)
+  px(ctx, sx - 3, sy - 2, 1, 2, PALETTE.plantDark)
+  px(ctx, sx + 2, sy - 2, 1, 2, PALETTE.plantDark)
+}
+
+function drawCoffeeMachine(ctx: CanvasRenderingContext2D, sx: number, sy: number): void {
+  px(ctx, sx - 3, sy - 6, 6, 6, PALETTE.deskSide)
+  px(ctx, sx - 2, sy - 5, 4, 4, PALETTE.wallDark)
+  // Cup
+  px(ctx, sx - 1, sy - 1, 2, 2, '#e0e0e0')
+  // Indicator light
+  px(ctx, sx, sy - 5, 1, 1, '#ff4040')
+}
+
+function drawWorker(
+  ctx: CanvasRenderingContext2D,
+  sx: number,
+  sy: number,
+  worker: OfficeWorker,
+  time: number,
+): void {
+  const bodyColor =
+    worker.activity === 'working'
+      ? PALETTE.bodyWorking
+      : worker.activity === 'idle-coffee'
+        ? PALETTE.bodyCoffee
+        : worker.activity === 'spawning'
+          ? PALETTE.bodySpawning
+          : PALETTE.bodyIdle
+
+  // Bobbing
+  let bob = 0
   if (worker.activity === 'working') {
-    bobY = Math.sin(time / 400 + worker.deskIndex) * 1.5
+    bob = Math.floor(Math.sin(time / 300 + worker.deskIndex) * 1.5)
   } else if (worker.activity === 'idle-coffee') {
-    bobY = Math.sin(time / 800 + worker.deskIndex) * 2
+    bob = Math.floor(Math.sin(time / 600 + worker.deskIndex) * 1)
   }
 
-  const ay = cy - 20 + bobY
+  const wy = sy - 12 + bob
 
   // Shadow
-  ctx.fillStyle = colors.avatarOutline
-  ctx.globalAlpha = 0.3
-  ctx.beginPath()
-  ctx.ellipse(cx, cy + 2, 6, 3, 0, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.globalAlpha = 1.0
+  ctx.fillStyle = PALETTE.shadow
+  ctx.fillRect(sx - 2, sy + 1, 5, 1)
 
-  // Body (rounded rectangle)
-  ctx.fillStyle = color
-  const bodyW = 10
-  const bodyH = 12
-  ctx.beginPath()
-  ctx.roundRect(cx - bodyW / 2, ay, bodyW, bodyH, 3)
-  ctx.fill()
+  // Body
+  px(ctx, sx - 2, wy + 4, 4, 5, bodyColor)
+  // Head
+  px(ctx, sx - 2, wy, 4, 4, PALETTE.skinTone)
+  // Hair
+  px(ctx, sx - 2, wy - 1, 4, 2, PALETTE.hair)
+  // Eyes
+  px(ctx, sx - 1, wy + 1, 1, 1, '#222')
+  px(ctx, sx + 1, wy + 1, 1, 1, '#222')
 
-  // Head (circle)
-  ctx.beginPath()
-  ctx.arc(cx, ay - 4, 6, 0, Math.PI * 2)
-  ctx.fillStyle = color
-  ctx.fill()
-  // Head outline
-  ctx.strokeStyle = darken(color, 0.3)
-  ctx.lineWidth = 1
-  ctx.stroke()
-
-  // Agent icon on body
-  ctx.font = '8px sans-serif'
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillStyle = colors.avatarOutline
-  ctx.fillText(agentDef?.icon ?? '?', cx, ay + 5)
-
-  // Activity indicator dot
-  if (worker.activity === 'working') {
-    ctx.fillStyle = color
-    ctx.globalAlpha = 0.5 + Math.sin(time / 300) * 0.3
-    ctx.beginPath()
-    ctx.arc(cx + 7, ay - 4, 2.5, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.globalAlpha = 1.0
+  // Agent icon badge (colored dot)
+  const agentDef = AGENTS.find((a) => a.id === worker.agentId)
+  if (agentDef) {
+    ctx.font = '5px sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillStyle = '#fff'
+    ctx.fillText(agentDef.icon, sx, wy + 7)
   }
 
-  // Name tag below
-  ctx.font = '9px sans-serif'
-  ctx.fillStyle = colors.labelText
-  ctx.textBaseline = 'top'
-  ctx.textAlign = 'center'
-  ctx.fillText(worker.projectName.slice(0, 10), cx, cy + 6)
-
-  // Activity speech bubble when working
+  // Activity speech bubble (when working)
   if (worker.lastActivityTitle && worker.activity === 'working') {
-    const label = worker.lastActivityTitle.slice(0, 18)
-    ctx.font = '8px sans-serif'
+    const label = worker.lastActivityTitle.slice(0, 14)
+    ctx.font = '4px sans-serif'
     const metrics = ctx.measureText(label)
-    const bubbleW = metrics.width + 8
-    const bubbleH = 14
-    const bx = cx + 14
-    const by = ay - 12
+    const bw = Math.ceil(metrics.width) + 4
+    const bx = sx + 5
+    const by = wy - 2
 
-    // Bubble background
-    ctx.fillStyle = colors.floor2
-    ctx.globalAlpha = 0.9
-    ctx.beginPath()
-    ctx.roundRect(bx - 2, by - bubbleH / 2, bubbleW, bubbleH, 4)
-    ctx.fill()
-    ctx.globalAlpha = 1.0
-
-    // Bubble border
-    ctx.strokeStyle = color
-    ctx.lineWidth = 0.5
-    ctx.stroke()
-
-    // Bubble text
-    ctx.fillStyle = colors.labelText
+    // Bubble
+    px(ctx, bx, by - 3, bw, 7, PALETTE.bubbleBg)
+    px(ctx, bx, by - 4, bw, 1, PALETTE.bubbleBorder)
+    px(ctx, bx, by + 4, bw, 1, PALETTE.bubbleBorder)
+    px(ctx, bx - 1, by - 3, 1, 7, PALETTE.bubbleBorder)
+    px(ctx, bx + bw, by - 3, 1, 7, PALETTE.bubbleBorder)
+    // Tail
+    px(ctx, bx - 1, by, 1, 1, PALETTE.bubbleBg)
+    // Text
+    ctx.fillStyle = PALETTE.textLight
     ctx.textAlign = 'left'
     ctx.textBaseline = 'middle'
-    ctx.fillText(label, bx + 2, by)
+    ctx.fillText(label, bx + 2, by + 1)
   }
+
+  // Name below
+  ctx.font = '4px sans-serif'
+  ctx.fillStyle = PALETTE.textDim
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'top'
+  ctx.fillText(worker.projectName.slice(0, 10), sx, sy + 3)
 }
 
-// ── Back wall ────────────────────────────────────────────────────
-
-function drawBackWall(
-  ctx: CanvasRenderingContext2D,
-  colors: ThemeColors,
-  wallHeight: number,
-): void {
-  // Left wall segment (row=0 edge)
-  for (let c = 0; c < GRID_COLS; c++) {
-    const { x, y } = toIso(c, 0)
-    const { x: x2 } = toIso(c + 1, 0)
-    ctx.fillStyle = colors.wall
-    ctx.beginPath()
-    ctx.moveTo(x, y)
-    ctx.lineTo(x2, y - TILE_H / 2)
-    ctx.lineTo(x2, y - TILE_H / 2 - wallHeight)
-    ctx.lineTo(x, y - wallHeight)
-    ctx.closePath()
-    ctx.fill()
-  }
-  // Top wall segment (col=0 edge)
-  for (let r = 0; r < GRID_ROWS; r++) {
-    const { x, y } = toIso(0, r)
-    const { x: x2, y: y2 } = toIso(0, r + 1)
-    ctx.fillStyle = colors.wallSide
-    ctx.beginPath()
-    ctx.moveTo(x, y)
-    ctx.lineTo(x2, y2)
-    ctx.lineTo(x2, y2 - wallHeight)
-    ctx.lineTo(x, y - wallHeight)
-    ctx.closePath()
-    ctx.fill()
-  }
-}
-
-// ── Main component ───────────────────────────────────────────────
+// ── Main canvas component ─────────────────────────────────────────
 
 export function OfficeCanvas({ snapshot }: OfficeCanvasProps): React.JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const dprRef = useRef(window.devicePixelRatio || 1)
-  const renderRef = useRef<(() => void) | undefined>(undefined)
+  const offscreenRef = useRef<HTMLCanvasElement | null>(null)
   const frameRef = useRef(0)
-  const timeRef = useRef(0)
+  const snapshotRef = useRef(snapshot)
 
-  const render = useCallback(() => {
+  // Keep snapshot ref current for the animation loop
+  useEffect(() => {
+    snapshotRef.current = snapshot
+  }, [snapshot])
+
+  useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const rect = canvas.getBoundingClientRect()
-    const dpr = dprRef.current
-    const newW = Math.round(rect.width * dpr)
-    const newH = Math.round(rect.height * dpr)
-    if (canvas.width !== newW || canvas.height !== newH) {
-      canvas.width = newW
-      canvas.height = newH
+    // Create offscreen canvas at internal resolution
+    if (!offscreenRef.current) {
+      offscreenRef.current = document.createElement('canvas')
+      offscreenRef.current.width = INTERNAL_W
+      offscreenRef.current.height = INTERNAL_H
     }
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    const offscreen = offscreenRef.current
+    const octx = offscreen.getContext('2d')
+    if (!octx) return
 
-    const { width, height } = rect
-    const colors = getThemeColors()
-    const time = timeRef.current
-
-    // Clear
-    ctx.fillStyle = colors.wallSide
-    ctx.fillRect(0, 0, width, height)
-
-    // Center the grid
-    const centerIso = toIso(GRID_COLS / 2, GRID_ROWS / 2)
-    const offsetX = width / 2 - centerIso.x
-    const offsetY = height / 2.5 - centerIso.y + 30
-
-    ctx.save()
-    ctx.translate(offsetX, offsetY)
-
-    // Back walls
-    drawBackWall(ctx, colors, 40)
-
-    // Windows on back wall
-    for (let c = 2; c < GRID_COLS; c += 3) {
-      const { x, y } = toIso(c, 0)
-      drawWindow(ctx, x + TILE_W / 4, y - 25, colors)
-    }
-
-    // Floor tiles (checkerboard)
-    for (let r = 0; r < GRID_ROWS; r++) {
-      for (let c = 0; c < GRID_COLS; c++) {
-        const { x, y } = toIso(c, r)
-        const floorColor = (c + r) % 2 === 0 ? colors.floor1 : colors.floor2
-        drawIsoTile(ctx, x, y, floorColor)
-      }
-    }
-
-    // Decorative elements — plants in corners, coffee machine
-    const plantPositions = [
-      { col: 1, row: 1 },
-      { col: GRID_COLS - 2, row: 1 },
-      { col: 1, row: GRID_ROWS - 2 },
-    ]
-    for (const pos of plantPositions) {
-      const { x, y } = toIso(pos.col, pos.row)
-      drawPlant(ctx, x, y - 6, colors)
-    }
-
-    // Coffee machine
-    const coffeePos = toIso(GRID_COLS - 2, GRID_ROWS - 2)
-    drawCoffeeMachine(ctx, coffeePos.x, coffeePos.y - 4, colors)
-
-    // Build a map of desk index → worker for rendering
-    const workerByDesk = new Map<number, OfficeWorker>()
-    if (snapshot) {
-      for (const w of snapshot.workers) workerByDesk.set(w.deskIndex, w)
-    }
-
-    // Desks + chairs + workers (draw together per desk for correct layering)
-    const desks = getDeskPositions()
-    for (const desk of desks) {
-      const { x, y } = toIso(desk.col, desk.row)
-      const deskWorker = workerByDesk.get(desk.index)
-      drawDesk(ctx, x, y, colors, deskWorker, time)
-      drawChair(ctx, x, y, colors)
-    }
-
-    // Workers at their desks (drawn on top of furniture)
-    if (snapshot) {
-      for (const worker of snapshot.workers) {
-        const desk = desks.find((d) => d.index === worker.deskIndex)
-        if (!desk) continue
-        const { x, y } = toIso(desk.col, desk.row)
-        drawAvatar(ctx, x, y, worker, colors, time)
-      }
-    }
-
-    ctx.restore()
-
-    // Empty state overlay
-    if (!snapshot || snapshot.workers.length === 0) {
-      ctx.fillStyle = colors.emptyText
-      ctx.font = '13px sans-serif'
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'middle'
-      ctx.fillText('No active workers — start an agent session', width / 2, height - 40)
-    }
-  }, [snapshot])
-
-  useEffect(() => {
-    renderRef.current = render
-  }, [render])
-
-  // Animation loop for idle bobbing
-  useEffect(() => {
     let running = true
-    function loop(): void {
-      if (!running) return
-      timeRef.current = performance.now()
-      renderRef.current?.()
-      frameRef.current = requestAnimationFrame(loop)
+
+    function render(): void {
+      if (!running || !canvas || !ctx || !octx) return
+
+      const rect = canvas.getBoundingClientRect()
+      const dpr = window.devicePixelRatio || 1
+      const newW = Math.round(rect.width * dpr)
+      const newH = Math.round(rect.height * dpr)
+      if (canvas.width !== newW || canvas.height !== newH) {
+        canvas.width = newW
+        canvas.height = newH
+      }
+
+      const time = performance.now()
+      const snap = snapshotRef.current
+
+      // ── Draw to offscreen at internal resolution ──
+      octx.fillStyle = PALETTE.bg
+      octx.fillRect(0, 0, INTERNAL_W, INTERNAL_H)
+
+      // Grid center
+      const center = toIso(GRID_COLS / 2, GRID_ROWS / 2)
+      const ox = INTERNAL_W / 2 - center.x
+      const oy = 50 - center.y + 20
+
+      // Walls + windows
+      drawWalls(octx, ox, oy)
+
+      // Floor
+      drawFloor(octx, ox, oy)
+
+      // Decorations
+      const plantPositions = [
+        { col: 1, row: 1 },
+        { col: GRID_COLS - 2, row: 1 },
+        { col: 1, row: GRID_ROWS - 2 },
+      ]
+      for (const pos of plantPositions) {
+        const { x, y } = toIso(pos.col, pos.row)
+        drawPlant(octx, ox + x, oy + y - 4)
+      }
+
+      const coffeeP = toIso(GRID_COLS - 2, GRID_ROWS - 2)
+      drawCoffeeMachine(octx, ox + coffeeP.x, oy + coffeeP.y - 2)
+
+      // Build worker lookup
+      const workerByDesk = new Map<number, OfficeWorker>()
+      if (snap) {
+        for (const w of snap.workers) workerByDesk.set(w.deskIndex, w)
+      }
+
+      // Desks + workers (back to front for layering)
+      for (let r = 0; r < DESK_ROWS; r++) {
+        for (let c = 0; c < DESK_COLS; c++) {
+          const idx = r * DESK_COLS + c
+          const dPos = getDeskPos(idx)
+          const { x, y } = toIso(dPos.col, dPos.row)
+          const dx = ox + x
+          const dy = oy + y
+          const w = workerByDesk.get(idx)
+          drawDesk(octx, dx, dy, w, time)
+          if (w) {
+            drawWorker(octx, dx, dy, w, time)
+          }
+        }
+      }
+
+      // Empty state message
+      if (!snap || snap.workers.length === 0) {
+        octx.font = '6px sans-serif'
+        octx.fillStyle = PALETTE.textDim
+        octx.textAlign = 'center'
+        octx.textBaseline = 'middle'
+        octx.fillText('No active workers', INTERNAL_W / 2, INTERNAL_H - 12)
+        octx.fillText('Start an agent session to see them here', INTERNAL_W / 2, INTERNAL_H - 5)
+      }
+
+      // ── Upscale to display canvas with nearest-neighbor ──
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      ctx.imageSmoothingEnabled = false
+      const displayW = rect.width
+      const displayH = rect.height
+
+      // Scale to fit, maintaining aspect ratio
+      const scaleX = displayW / INTERNAL_W
+      const scaleY = displayH / INTERNAL_H
+      const scale = Math.max(scaleX, scaleY)
+      const drawW = INTERNAL_W * scale
+      const drawH = INTERNAL_H * scale
+      const drawX = (displayW - drawW) / 2
+      const drawY = (displayH - drawH) / 2
+
+      ctx.fillStyle = PALETTE.bg
+      ctx.fillRect(0, 0, displayW, displayH)
+      ctx.drawImage(offscreen, drawX, drawY, drawW, drawH)
+
+      frameRef.current = requestAnimationFrame(render)
     }
-    // Only animate when there are workers
-    if (snapshot && snapshot.workers.length > 0) {
-      loop()
-    } else {
-      render()
-    }
+
+    render()
+
     return () => {
       running = false
       if (frameRef.current) cancelAnimationFrame(frameRef.current)
     }
-  }, [snapshot, render])
+  }, [])
 
-  // Resize observer (stable, registered once)
+  // Resize handling
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const observer = new ResizeObserver(() => {
-      dprRef.current = window.devicePixelRatio || 1
-      renderRef.current?.()
+      // The animation loop auto-handles resize on next frame
     })
     observer.observe(canvas)
     return () => observer.disconnect()
