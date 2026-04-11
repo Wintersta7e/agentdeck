@@ -54,10 +54,16 @@ function decryptEnvVars(envVars: EnvVar[] | undefined): EnvVar[] | undefined {
   })
 }
 
+export interface OfficeWindowStateSchema {
+  bounds?: { x: number; y: number; width: number; height: number } | undefined
+  maximized?: boolean | undefined
+}
+
 export interface StoreSchema {
   projects: Project[]
   templates: Template[]
   roles: Role[]
+  officeWindowState?: OfficeWindowStateSchema | undefined
   appPrefs: {
     zoomFactor: number
     zoomAutoDetected?: boolean | number

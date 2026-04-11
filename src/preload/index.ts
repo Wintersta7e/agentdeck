@@ -316,4 +316,12 @@ contextBridge.exposeInMainWorld('agentDeck', {
       return () => ipcRenderer.removeListener(ch, handler)
     },
   },
+  office: {
+    open: (): Promise<void> => ipcRenderer.invoke('office:open') as Promise<void>,
+    onFocusSession: (cb: (sessionId: string) => void): (() => void) => {
+      const handler = (_: unknown, sessionId: string): void => cb(sessionId)
+      ipcRenderer.on('window:focus-session', handler)
+      return () => ipcRenderer.removeListener('window:focus-session', handler)
+    },
+  },
 })

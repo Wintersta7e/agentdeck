@@ -163,6 +163,10 @@ declare global {
         readFilePaths: () => Promise<string[]>
       }
       onFileDrop: (cb: (wslPaths: string[]) => void) => () => void
+      office: {
+        open(): Promise<void>
+        onFocusSession(cb: (sessionId: string) => void): () => void
+      }
       workflows: {
         list(): Promise<import('../shared/types').WorkflowMeta[]>
         load(id: string): Promise<import('../shared/types').Workflow | null>
