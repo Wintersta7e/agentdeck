@@ -13,6 +13,15 @@ const ACTIVITY_LABELS: Record<string, string> = {
   'idle-window': 'Staring out the window',
 }
 
+const ACTIVITY_TYPE_ICONS: Record<string, string> = {
+  think: '💭',
+  write: '✏️',
+  read: '📖',
+  command: '⚡',
+  tool: '🔧',
+  error: '❌',
+}
+
 function formatCost(usd: number): string {
   if (usd === 0) return ''
   return `$${usd.toFixed(2)}`
@@ -49,7 +58,9 @@ export function OfficeSidebar({ workers }: OfficeSidebarProps): React.JSX.Elemen
             <div className="office-worker-info">
               <div className="office-worker-label">{w.sessionLabel}</div>
               <div className="office-worker-activity">
-                {ACTIVITY_LABELS[w.activity] ?? w.activity}
+                {w.lastActivityTitle
+                  ? `${ACTIVITY_TYPE_ICONS[w.lastActivityType] ?? '🔧'} ${w.lastActivityTitle}`
+                  : (ACTIVITY_LABELS[w.activity] ?? w.activity)}
               </div>
             </div>
             {w.costUsd > 0 && <span className="office-worker-cost">{formatCost(w.costUsd)}</span>}

@@ -160,6 +160,8 @@ function drawDesk(
   cx: number,
   cy: number,
   colors: ThemeColors,
+  worker?: OfficeWorker,
+  time = 0,
 ): void {
   // Desk surface (flat isometric cube)
   drawIsoCube(
@@ -179,11 +181,24 @@ function drawDesk(
   const monH = 12
   ctx.fillStyle = colors.monitor
   ctx.fillRect(cx - monW / 2, cy - monH - 6, monW, monH)
-  // Screen glow
-  ctx.fillStyle = colors.monitorScreen
-  ctx.globalAlpha = 0.4
-  ctx.fillRect(cx - monW / 2 + 1, cy - monH - 5, monW - 2, monH - 2)
-  ctx.globalAlpha = 1.0
+  // Screen — glow depends on worker activity
+  if (worker && worker.activity === 'working') {
+    const pulse = 0.5 + Math.sin(time / 500 + worker.deskIndex * 0.7) * 0.2
+    ctx.fillStyle = colors.activity[worker.activity]
+    ctx.globalAlpha = pulse
+    ctx.fillRect(cx - monW / 2 + 1, cy - monH - 5, monW - 2, monH - 2)
+    ctx.globalAlpha = 1.0
+  } else if (worker) {
+    ctx.fillStyle = colors.monitorScreen
+    ctx.globalAlpha = 0.15
+    ctx.fillRect(cx - monW / 2 + 1, cy - monH - 5, monW - 2, monH - 2)
+    ctx.globalAlpha = 1.0
+  } else {
+    ctx.fillStyle = colors.wallSide
+    ctx.globalAlpha = 0.3
+    ctx.fillRect(cx - monW / 2 + 1, cy - monH - 5, monW - 2, monH - 2)
+    ctx.globalAlpha = 1.0
+  }
   // Monitor stand
   ctx.fillStyle = colors.monitor
   ctx.fillRect(cx - 1, cy - 6, 2, 3)
@@ -346,6 +361,36 @@ function drawAvatar(
   ctx.textBaseline = 'top'
   ctx.textAlign = 'center'
   ctx.fillText(worker.projectName.slice(0, 10), cx, cy + 6)
+
+  // Activity speech bubble when working
+  if (worker.lastActivityTitle && worker.activity === 'working') {
+    const label = worker.lastActivityTitle.slice(0, 18)
+    ctx.font = '8px sans-serif'
+    const metrics = ctx.measureText(label)
+    const bubbleW = metrics.width + 8
+    const bubbleH = 14
+    const bx = cx + 14
+    const by = ay - 12
+
+    // Bubble background
+    ctx.fillStyle = colors.floor2
+    ctx.globalAlpha = 0.9
+    ctx.beginPath()
+    ctx.roundRect(bx - 2, by - bubbleH / 2, bubbleW, bubbleH, 4)
+    ctx.fill()
+    ctx.globalAlpha = 1.0
+
+    // Bubble border
+    ctx.strokeStyle = color
+    ctx.lineWidth = 0.5
+    ctx.stroke()
+
+    // Bubble text
+    ctx.fillStyle = colors.labelText
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(label, bx + 2, by)
+  }
 }
 
 // ── Back wall ────────────────────────────────────────────────────
@@ -457,15 +502,22 @@ export function OfficeCanvas({ snapshot }: OfficeCanvasProps): React.JSX.Element
     const coffeePos = toIso(GRID_COLS - 2, GRID_ROWS - 2)
     drawCoffeeMachine(ctx, coffeePos.x, coffeePos.y - 4, colors)
 
-    // Desks + chairs (draw before workers for layering)
+    // Build a map of desk index → worker for rendering
+    const workerByDesk = new Map<number, OfficeWorker>()
+    if (snapshot) {
+      for (const w of snapshot.workers) workerByDesk.set(w.deskIndex, w)
+    }
+
+    // Desks + chairs + workers (draw together per desk for correct layering)
     const desks = getDeskPositions()
     for (const desk of desks) {
       const { x, y } = toIso(desk.col, desk.row)
-      drawDesk(ctx, x, y, colors)
+      const deskWorker = workerByDesk.get(desk.index)
+      drawDesk(ctx, x, y, colors, deskWorker, time)
       drawChair(ctx, x, y, colors)
     }
 
-    // Workers at their desks
+    // Workers at their desks (drawn on top of furniture)
     if (snapshot) {
       for (const worker of snapshot.workers) {
         const desk = desks.find((d) => d.index === worker.deskIndex)

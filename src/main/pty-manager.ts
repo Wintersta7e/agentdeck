@@ -288,15 +288,20 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
           for (let i = 0; i < parts.length - 1; i++) {
             const line = parts[i] ?? ''
             const parsed = parseActivityLine(line)
-            if (parsed && !mainWindow.isDestroyed()) {
-              mainWindow.webContents.send(`pty:activity:${sessionId}`, {
+            if (parsed) {
+              const activityEvent = {
                 id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
                 type: parsed.type,
                 title: parsed.title,
                 detail: parsed.detail,
                 status: 'done',
                 timestamp: Date.now(),
-              })
+              }
+              if (!mainWindow.isDestroyed()) {
+                mainWindow.webContents.send(`pty:activity:${sessionId}`, activityEvent)
+              }
+              // Emit on ptyBus so the office registry can track activity
+              ptyBus.emit(`activity:${sessionId}`, activityEvent)
             }
           }
         })

@@ -40,6 +40,9 @@ export interface OfficeWorker {
   /** Monotonic ms since last raw PTY data event. 0 when currently working. */
   idleMs: number
   costUsd: number
+  /** Latest parsed activity description (e.g. "Writing file", "Thinking"). Empty when idle. */
+  lastActivityTitle: string
+  lastActivityType: string
 }
 
 export interface OfficeSnapshot {

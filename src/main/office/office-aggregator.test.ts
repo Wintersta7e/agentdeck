@@ -16,6 +16,8 @@ function makeWorker(overrides: Partial<OfficeWorker> = {}): OfficeWorker {
     activity: 'working',
     idleMs: 0,
     costUsd: 0,
+    lastActivityTitle: '',
+    lastActivityType: '',
     ...overrides,
   }
 }

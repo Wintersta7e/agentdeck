@@ -48,6 +48,8 @@ interface InternalWorker {
   startedAtMono: number
   deskIndex: number
   lastPtyDataAtMono: number
+  lastActivityTitle: string
+  lastActivityType: string
 }
 
 export function createOfficeSessionRegistry(deps: RegistryDeps): OfficeSessionRegistry {
@@ -56,7 +58,14 @@ export function createOfficeSessionRegistry(deps: RegistryDeps): OfficeSessionRe
   const freeDesks = new Set<number>()
   for (let i = 0; i < MAX_DESKS; i++) freeDesks.add(i)
 
-  const sessionListeners = new Map<string, { dataFn: () => void; exitFn: () => void }>()
+  const sessionListeners = new Map<
+    string,
+    {
+      dataFn: () => void
+      exitFn: () => void
+      activityFn: (event: { type: string; title: string }) => void
+    }
+  >()
 
   function allocateDesk(): number | null {
     const sorted = [...freeDesks].sort((a, b) => a - b)
@@ -80,6 +89,7 @@ export function createOfficeSessionRegistry(deps: RegistryDeps): OfficeSessionRe
     if (listeners) {
       ptyBus.off(`data:${sessionId}`, listeners.dataFn)
       ptyBus.off(`exit:${sessionId}`, listeners.exitFn)
+      ptyBus.off(`activity:${sessionId}`, listeners.activityFn)
       sessionListeners.delete(sessionId)
     }
   }
@@ -132,6 +142,8 @@ export function createOfficeSessionRegistry(deps: RegistryDeps): OfficeSessionRe
       startedAtMono: event.startedAtMono,
       deskIndex,
       lastPtyDataAtMono: clock.now(),
+      lastActivityTitle: '',
+      lastActivityType: '',
     }
     workers.set(event.sessionId, worker)
 
@@ -143,9 +155,17 @@ export function createOfficeSessionRegistry(deps: RegistryDeps): OfficeSessionRe
       removeWorker(event.sessionId)
       log.info('Office worker removed on exit', { sessionId: event.sessionId })
     }
+    const activityFn = (actEvent: { type: string; title: string }): void => {
+      const w = workers.get(event.sessionId)
+      if (w) {
+        w.lastActivityTitle = actEvent.title
+        w.lastActivityType = actEvent.type
+      }
+    }
     ptyBus.on(`data:${event.sessionId}`, dataFn)
     ptyBus.on(`exit:${event.sessionId}`, exitFn)
-    sessionListeners.set(event.sessionId, { dataFn, exitFn })
+    ptyBus.on(`activity:${event.sessionId}`, activityFn)
+    sessionListeners.set(event.sessionId, { dataFn, exitFn, activityFn })
 
     log.info('Office worker created', {
       sessionId: worker.id,
@@ -190,6 +210,8 @@ export function createOfficeSessionRegistry(deps: RegistryDeps): OfficeSessionRe
             activity: 'working' as const, // neutral default — aggregator overrides
             idleMs,
             costUsd: usage?.totalCostUsd ?? 0,
+            lastActivityTitle: w.lastActivityTitle,
+            lastActivityType: w.lastActivityType,
           }
         })
         .sort((a, b) => {
@@ -208,6 +230,7 @@ export function createOfficeSessionRegistry(deps: RegistryDeps): OfficeSessionRe
       for (const [sid, listeners] of sessionListeners) {
         ptyBus.off(`data:${sid}`, listeners.dataFn)
         ptyBus.off(`exit:${sid}`, listeners.exitFn)
+        ptyBus.off(`activity:${sid}`, listeners.activityFn)
       }
       sessionListeners.clear()
       workers.clear()
