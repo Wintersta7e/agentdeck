@@ -282,6 +282,10 @@
   background: rgba(var(--accent-rgb), 0.08);
 }
 
+.titlebar-office-btn {
+  margin-right: var(--sp-2);
+}
+
 /* Window controls */
 .window-controls {
   display: flex;

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
-import { X, Minus, Square, ArrowLeft, Plus } from 'lucide-react'
+import { X, Minus, Square, ArrowLeft, Plus, Building2 } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import type { Session } from '../../../shared/types'
 import './Titlebar.css'
@@ -264,6 +264,15 @@ export function Titlebar({
           </button>
         )}
       </div>
+
+      <button
+        className="titlebar-btn titlebar-office-btn"
+        onClick={() => window.agentDeck.office.open()}
+        title="Open Office View"
+        aria-label="Open Office View"
+      >
+        <Building2 size={14} />
+      </button>
 
       <div className="window-controls">
         <button

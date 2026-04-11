@@ -37,6 +37,15 @@ function getStartupBg(): string {
   }
 }
 import { createClaudeAdapter, createCodexAdapter } from './log-adapters'
+import { ptyBus } from './pty-bus'
+import { getProjectByPath } from './project-store'
+import {
+  createOfficeSessionRegistry,
+  type OfficeSessionRegistry,
+} from './office/office-session-registry'
+import { createOfficeAggregator, type OfficeAggregator } from './office/office-aggregator'
+import { createOfficeWindowManager, type OfficeWindowManager } from './office/office-window-manager'
+import { registerOfficeHandlers } from './ipc/ipc-office'
 import {
   registerPtyHandlers,
   registerWindowHandlers,
@@ -60,6 +69,9 @@ let workflowEngine: WorkflowEngine | null = null
 let appStore: AppStore | null = null
 let worktreeManager: WorktreeManager | null = null
 let costTracker: CostTracker | null = null
+let officeRegistry: OfficeSessionRegistry | null = null
+let officeAggregator: OfficeAggregator | null = null
+let officeWindowManager: OfficeWindowManager | null = null
 
 // --- Crash cleanup handlers (REL-4) ---
 process.on('uncaughtException', (err) => {
@@ -268,6 +280,50 @@ app
 
     registerCostHandlers(() => costTracker)
 
+    // --- Office view modules ---
+    if (mainWindow && costTracker && appStore) {
+      const store = appStore
+      const clock = { now: () => performance.now() }
+      officeRegistry = createOfficeSessionRegistry({
+        ptyBus,
+        costTracker,
+        projectStore: { getProjectByPath: (path: string) => getProjectByPath(store, path) },
+        appStore: store,
+        clock,
+      })
+
+      let windowManagerRef: OfficeWindowManager | null = null
+      officeAggregator = createOfficeAggregator({
+        registry: officeRegistry,
+        clock,
+        appStore: store,
+        onSnapshot: (snap) => windowManagerRef?.pushSnapshot(snap),
+      })
+
+      officeWindowManager = createOfficeWindowManager({
+        mainWindow,
+        aggregator: officeAggregator,
+        appStore: store,
+        registry: officeRegistry,
+      })
+      windowManagerRef = officeWindowManager
+
+      officeAggregator.startTimer()
+
+      registerOfficeHandlers({
+        windowManager: officeWindowManager,
+        registry: officeRegistry,
+        getMainWindow: () => mainWindow,
+      })
+
+      // Forward display metrics changes to office window
+      screen.on('display-metrics-changed', () => {
+        officeWindowManager?.pushDisplayMetricsChanged()
+      })
+
+      log.info('Office modules initialized')
+    }
+
     // Warn renderer if encryption is unavailable (secrets stored as plaintext)
     if (!safeStorage.isEncryptionAvailable() && mainWindow) {
       log.warn('safeStorage encryption unavailable — secrets stored as plaintext')
@@ -303,6 +359,9 @@ app
 
 app.on('before-quit', () => {
   log.info('App quitting')
+  officeAggregator?.dispose()
+  officeRegistry?.dispose()
+  officeWindowManager?.dispose()
   costHistory.flush()
   costTracker?.destroy()
   workflowEngine?.stopAll()
