@@ -6,71 +6,76 @@ interface OfficeCanvasProps {
   snapshot: OfficeSnapshot | null
 }
 
-// ── Pixel art palette (Stardew Valley-inspired warm tones) ────────
-const PALETTE = {
+// ── Stardew Valley-inspired warm palette ──────────────────────────
+const P = {
   bg: '#2a1f1e',
-  floorA: '#8b7355',
-  floorB: '#7a6548',
-  wallTop: '#5c4a3a',
-  wallFront: '#4a3c2e',
-  wallDark: '#3d3028',
-  deskTop: '#a08060',
-  deskFront: '#806040',
-  deskSide: '#6a5035',
+  floorA: '#c4a882',
+  floorB: '#b89b74',
+  wallBack: '#7a6650',
+  wallSide: '#6a5842',
+  wallDark: '#5a4a36',
+  trim: '#8a7660',
+  deskTop: '#c0a070',
+  deskFront: '#9a7a50',
+  deskLeg: '#7a6040',
   screenOff: '#1a2030',
-  screenOn: '#40c060',
-  screenIdle: '#304050',
-  screenText: '#80ff80',
-  chairBack: '#604030',
-  chairSeat: '#705038',
-  plantGreen: '#3a8040',
-  plantDark: '#2a6030',
-  potBrown: '#8a6040',
-  windowFrame: '#6a5545',
-  windowGlass: '#6090b0',
-  windowGlassLight: '#80b0d0',
-  shadow: 'rgba(0,0,0,0.25)',
-  textLight: '#e0d0b8',
-  textDim: '#a09080',
-  bubbleBg: '#3d3028',
-  bubbleBorder: '#60a060',
-  // Worker colors per activity
-  bodyWorking: '#4a90d0',
-  bodyIdle: '#7a8888',
-  bodyCoffee: '#c08040',
-  bodySpawning: '#9070c0',
-  skinTone: '#f0c0a0',
-  hair: '#604030',
+  screenOn: '#30b050',
+  screenGlow: '#40ff80',
+  screenIdle: '#304858',
+  chairSeat: '#8a6848',
+  chairBack: '#7a5838',
+  plantLeaf: '#5aaa50',
+  plantDark: '#3a7a30',
+  pot: '#b07848',
+  windowFrame: '#8a7660',
+  glass: '#88bbdd',
+  glassBright: '#aaddee',
+  shadow: 'rgba(0,0,0,0.2)',
+  textLight: '#f0e0c8',
+  textMuted: '#b0a090',
+  bubbleBg: '#4a3e30',
+  bubbleBorder: '#70b070',
+  // Body colors per activity
+  working: '#5090d0',
+  idle: '#889898',
+  coffee: '#d09050',
+  spawning: '#a080d0',
+  skin: '#f5c8a0',
+  hair: '#6a4530',
+  rugA: '#a05040',
+  rugB: '#8a4038',
 }
 
-// ── Internal resolution: render at this size, then upscale ────────
-const INTERNAL_W = 320
-const INTERNAL_H = 200
+// ── Internal resolution ───────────────────────────────────────────
+const IW = 480
+const IH = 320
 
-// ── Isometric grid (coarser for pixel art) ────────────────────────
-const TILE_W = 16
-const TILE_H = 8
-const GRID_COLS = 12
-const GRID_ROWS = 10
-const DESK_COLS = 5
-const DESK_ROWS = 4
+// ── Isometric constants ───────────────────────────────────────────
+const TW = 32 // tile width
+const TH = 16 // tile height
+const COLS = 10
+const ROWS = 8
+
+// Only 6 desks — 3 columns x 2 rows, well spaced
+const DESK_POSITIONS = [
+  { col: 2, row: 2, idx: 0 },
+  { col: 5, row: 2, idx: 1 },
+  { col: 8, row: 2, idx: 2 },
+  { col: 2, row: 5, idx: 3 },
+  { col: 5, row: 5, idx: 4 },
+  { col: 8, row: 5, idx: 5 },
+]
 
 function toIso(col: number, row: number): { x: number; y: number } {
   return {
-    x: (col - row) * (TILE_W / 2),
-    y: (col + row) * (TILE_H / 2),
+    x: (col - row) * (TW / 2),
+    y: (col + row) * (TH / 2),
   }
 }
 
-function getDeskPos(index: number): { col: number; row: number } {
-  const c = index % DESK_COLS
-  const r = Math.floor(index / DESK_COLS)
-  return { col: 2 + c * 2, row: 2 + r * 2 }
-}
+// ── Drawing helpers ───────────────────────────────────────────────
 
-// ── Pixel drawing helpers ─────────────────────────────────────────
-
-function px(
+function rect(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
@@ -82,9 +87,16 @@ function px(
   ctx.fillRect(Math.round(x), Math.round(y), w, h)
 }
 
-function isoTile(ctx: CanvasRenderingContext2D, cx: number, cy: number, color: string): void {
-  const hw = TILE_W / 2
-  const hh = TILE_H / 2
+function isoTile(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  color: string,
+  w = TW,
+  h = TH,
+): void {
+  const hw = w / 2
+  const hh = h / 2
   ctx.fillStyle = color
   ctx.beginPath()
   ctx.moveTo(cx, cy - hh)
@@ -95,187 +107,234 @@ function isoTile(ctx: CanvasRenderingContext2D, cx: number, cy: number, color: s
   ctx.fill()
 }
 
-// ── Scene elements ────────────────────────────────────────────────
+// ── Scene drawing ─────────────────────────────────────────────────
 
 function drawWalls(ctx: CanvasRenderingContext2D, ox: number, oy: number): void {
-  // Back wall (top edge)
-  for (let c = 0; c < GRID_COLS; c++) {
-    const { x, y } = toIso(c, 0)
-    const sx = ox + x
-    const sy = oy + y
-    px(ctx, sx - TILE_W / 2, sy - 24, TILE_W, 24, PALETTE.wallTop)
-  }
-  // Side wall (left edge)
-  for (let r = 0; r < GRID_ROWS; r++) {
-    const { x, y } = toIso(0, r)
-    const sx = ox + x
-    const sy = oy + y
-    px(ctx, sx - TILE_W / 2 - 4, sy - 24, 5, 28, PALETTE.wallFront)
-  }
+  const wallH = 50
+
+  // Back wall: solid polygon from top-left to top-right of floor
+  const tl = toIso(0, 0)
+  const tr = toIso(COLS, 0)
+  ctx.fillStyle = P.wallBack
+  ctx.beginPath()
+  ctx.moveTo(ox + tl.x, oy + tl.y)
+  ctx.lineTo(ox + tr.x, oy + tr.y)
+  ctx.lineTo(ox + tr.x, oy + tr.y - wallH)
+  ctx.lineTo(ox + tl.x, oy + tl.y - wallH)
+  ctx.closePath()
+  ctx.fill()
+
+  // Left wall: solid polygon from top-left to bottom-left of floor
+  const bl = toIso(0, ROWS)
+  ctx.fillStyle = P.wallSide
+  ctx.beginPath()
+  ctx.moveTo(ox + tl.x, oy + tl.y)
+  ctx.lineTo(ox + bl.x, oy + bl.y)
+  ctx.lineTo(ox + bl.x, oy + bl.y - wallH)
+  ctx.lineTo(ox + tl.x, oy + tl.y - wallH)
+  ctx.closePath()
+  ctx.fill()
+
+  // Trim line at wall-floor junction (back)
+  ctx.strokeStyle = P.trim
+  ctx.lineWidth = 1
+  ctx.beginPath()
+  ctx.moveTo(ox + tl.x, oy + tl.y)
+  ctx.lineTo(ox + tr.x, oy + tr.y)
+  ctx.stroke()
+
   // Windows on back wall
-  for (let c = 2; c < GRID_COLS; c += 3) {
-    const { x, y } = toIso(c, 0)
-    const sx = ox + x
-    const sy = oy + y - 16
-    px(ctx, sx - 5, sy, 10, 10, PALETTE.windowFrame)
-    px(ctx, sx - 4, sy + 1, 3, 3, PALETTE.windowGlass)
-    px(ctx, sx + 1, sy + 1, 3, 3, PALETTE.windowGlassLight)
-    px(ctx, sx - 4, sy + 5, 3, 3, PALETTE.windowGlassLight)
-    px(ctx, sx + 1, sy + 5, 3, 3, PALETTE.windowGlass)
+  const windowSpacing = (tr.x - tl.x) / 4
+  for (let i = 1; i <= 3; i++) {
+    const wx = ox + tl.x + windowSpacing * i
+    const baseY = oy + tl.y + (tr.y - tl.y) * (i / 4)
+    const wy = baseY - wallH + 10
+    // Frame
+    rect(ctx, wx - 10, wy, 20, 18, P.windowFrame)
+    // Glass panes (2x2 grid)
+    rect(ctx, wx - 8, wy + 2, 7, 6, P.glass)
+    rect(ctx, wx + 1, wy + 2, 7, 6, P.glassBright)
+    rect(ctx, wx - 8, wy + 10, 7, 6, P.glassBright)
+    rect(ctx, wx + 1, wy + 10, 7, 6, P.glass)
   }
 }
 
 function drawFloor(ctx: CanvasRenderingContext2D, ox: number, oy: number): void {
-  for (let r = 0; r < GRID_ROWS; r++) {
-    for (let c = 0; c < GRID_COLS; c++) {
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
       const { x, y } = toIso(c, r)
-      isoTile(ctx, ox + x, oy + y, (c + r) % 2 === 0 ? PALETTE.floorA : PALETTE.floorB)
+      isoTile(ctx, ox + x, oy + y, (c + r) % 2 === 0 ? P.floorA : P.floorB)
+    }
+  }
+  // Area rug in the center
+  for (let r = 3; r < 5; r++) {
+    for (let c = 4; c < 7; c++) {
+      const { x, y } = toIso(c, r)
+      isoTile(ctx, ox + x, oy + y, (c + r) % 2 === 0 ? P.rugA : P.rugB, TW - 2, TH - 1)
     }
   }
 }
 
 function drawDesk(
   ctx: CanvasRenderingContext2D,
-  sx: number,
-  sy: number,
+  cx: number,
+  cy: number,
   worker: OfficeWorker | undefined,
   time: number,
 ): void {
-  // Desk body
-  px(ctx, sx - 6, sy - 2, 12, 3, PALETTE.deskTop)
-  px(ctx, sx - 6, sy + 1, 12, 2, PALETTE.deskFront)
+  // Desktop surface
+  rect(ctx, cx - 12, cy - 4, 24, 5, P.deskTop)
+  rect(ctx, cx - 12, cy + 1, 24, 3, P.deskFront)
   // Legs
-  px(ctx, sx - 5, sy + 3, 1, 3, PALETTE.deskSide)
-  px(ctx, sx + 4, sy + 3, 1, 3, PALETTE.deskSide)
+  rect(ctx, cx - 10, cy + 4, 2, 6, P.deskLeg)
+  rect(ctx, cx + 8, cy + 4, 2, 6, P.deskLeg)
 
   // Monitor
-  px(ctx, sx - 3, sy - 8, 6, 5, '#1a1a2a')
+  rect(ctx, cx - 6, cy - 16, 12, 10, '#1a1a2a')
+  rect(ctx, cx - 1, cy - 6, 2, 2, '#333')
+
   // Screen content
   if (worker?.activity === 'working') {
-    // Active: green scrolling text effect
-    const textLine = Math.floor(time / 200) % 4
-    px(ctx, sx - 2, sy - 7 + textLine, 4, 1, PALETTE.screenText)
-    px(ctx, sx - 2, sy - 7, 4, 4, PALETTE.screenOn)
+    rect(ctx, cx - 5, cy - 15, 10, 8, P.screenOn)
     // Scrolling text lines
-    for (let i = 0; i < 3; i++) {
-      const lineW = 2 + ((time / 100 + i * 37) % 3)
-      px(ctx, sx - 1, sy - 6 + i, Math.min(lineW, 3), 1, PALETTE.screenText)
+    const offset = Math.floor(time / 150) % 6
+    for (let i = 0; i < 4; i++) {
+      const lineLen = 3 + ((offset + i * 17) % 6)
+      rect(ctx, cx - 4, cy - 14 + i * 2, Math.min(lineLen, 8), 1, P.screenGlow)
     }
   } else if (worker) {
-    px(ctx, sx - 2, sy - 7, 4, 4, PALETTE.screenIdle)
+    rect(ctx, cx - 5, cy - 15, 10, 8, P.screenIdle)
+    rect(ctx, cx - 2, cy - 12, 4, 1, '#506878')
   } else {
-    px(ctx, sx - 2, sy - 7, 4, 4, PALETTE.screenOff)
+    rect(ctx, cx - 5, cy - 15, 10, 8, P.screenOff)
   }
-  // Monitor stand
-  px(ctx, sx, sy - 3, 1, 1, '#333')
 
-  // Chair (in front of desk)
-  px(ctx, sx - 2, sy + 5, 4, 2, PALETTE.chairSeat)
-  px(ctx, sx - 2, sy + 3, 4, 2, PALETTE.chairBack)
+  // Chair
+  rect(ctx, cx - 4, cy + 8, 8, 4, P.chairSeat)
+  rect(ctx, cx - 4, cy + 5, 8, 3, P.chairBack)
 }
 
-function drawPlant(ctx: CanvasRenderingContext2D, sx: number, sy: number): void {
-  // Pot
-  px(ctx, sx - 2, sy, 4, 3, PALETTE.potBrown)
-  // Leaves (pixel clusters)
-  px(ctx, sx - 2, sy - 3, 4, 3, PALETTE.plantGreen)
-  px(ctx, sx - 1, sy - 5, 2, 2, PALETTE.plantGreen)
-  px(ctx, sx - 3, sy - 2, 1, 2, PALETTE.plantDark)
-  px(ctx, sx + 2, sy - 2, 1, 2, PALETTE.plantDark)
-}
-
-function drawCoffeeMachine(ctx: CanvasRenderingContext2D, sx: number, sy: number): void {
-  px(ctx, sx - 3, sy - 6, 6, 6, PALETTE.deskSide)
-  px(ctx, sx - 2, sy - 5, 4, 4, PALETTE.wallDark)
-  // Cup
-  px(ctx, sx - 1, sy - 1, 2, 2, '#e0e0e0')
-  // Indicator light
-  px(ctx, sx, sy - 5, 1, 1, '#ff4040')
+function drawPlant(ctx: CanvasRenderingContext2D, cx: number, cy: number): void {
+  rect(ctx, cx - 4, cy + 2, 8, 5, P.pot)
+  rect(ctx, cx - 3, cy + 1, 6, 2, P.pot)
+  // Leaves
+  ctx.fillStyle = P.plantLeaf
+  ctx.beginPath()
+  ctx.arc(cx, cy - 5, 6, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.fillStyle = P.plantDark
+  ctx.beginPath()
+  ctx.arc(cx - 3, cy - 3, 4, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.fillStyle = P.plantLeaf
+  ctx.beginPath()
+  ctx.arc(cx + 2, cy - 7, 5, 0, Math.PI * 2)
+  ctx.fill()
 }
 
 function drawWorker(
   ctx: CanvasRenderingContext2D,
-  sx: number,
-  sy: number,
+  cx: number,
+  cy: number,
   worker: OfficeWorker,
   time: number,
 ): void {
   const bodyColor =
     worker.activity === 'working'
-      ? PALETTE.bodyWorking
+      ? P.working
       : worker.activity === 'idle-coffee'
-        ? PALETTE.bodyCoffee
+        ? P.coffee
         : worker.activity === 'spawning'
-          ? PALETTE.bodySpawning
-          : PALETTE.bodyIdle
+          ? P.spawning
+          : P.idle
 
-  // Bobbing
+  // Bobbing animation
   let bob = 0
   if (worker.activity === 'working') {
-    bob = Math.floor(Math.sin(time / 300 + worker.deskIndex) * 1.5)
+    bob = Math.round(Math.sin(time / 350 + worker.deskIndex * 1.2) * 2)
   } else if (worker.activity === 'idle-coffee') {
-    bob = Math.floor(Math.sin(time / 600 + worker.deskIndex) * 1)
+    bob = Math.round(Math.sin(time / 700 + worker.deskIndex) * 1.5)
   }
 
-  const wy = sy - 12 + bob
+  const wy = cy - 28 + bob
 
   // Shadow
-  ctx.fillStyle = PALETTE.shadow
-  ctx.fillRect(sx - 2, sy + 1, 5, 1)
+  ctx.fillStyle = P.shadow
+  ctx.beginPath()
+  ctx.ellipse(cx, cy + 2, 7, 3, 0, 0, Math.PI * 2)
+  ctx.fill()
 
   // Body
-  px(ctx, sx - 2, wy + 4, 4, 5, bodyColor)
+  rect(ctx, cx - 4, wy + 8, 8, 10, bodyColor)
+  // Arms (slight animation when working)
+  if (worker.activity === 'working') {
+    const armBob = Math.round(Math.sin(time / 200 + worker.deskIndex) * 1)
+    rect(ctx, cx - 6, wy + 9 + armBob, 2, 6, bodyColor)
+    rect(ctx, cx + 4, wy + 9 - armBob, 2, 6, bodyColor)
+  } else {
+    rect(ctx, cx - 6, wy + 9, 2, 6, bodyColor)
+    rect(ctx, cx + 4, wy + 9, 2, 6, bodyColor)
+  }
+
   // Head
-  px(ctx, sx - 2, wy, 4, 4, PALETTE.skinTone)
+  rect(ctx, cx - 5, wy, 10, 8, P.skin)
   // Hair
-  px(ctx, sx - 2, wy - 1, 4, 2, PALETTE.hair)
+  rect(ctx, cx - 5, wy - 2, 10, 4, P.hair)
   // Eyes
-  px(ctx, sx - 1, wy + 1, 1, 1, '#222')
-  px(ctx, sx + 1, wy + 1, 1, 1, '#222')
+  rect(ctx, cx - 3, wy + 3, 2, 2, '#222')
+  rect(ctx, cx + 1, wy + 3, 2, 2, '#222')
+  // Mouth (smile when working)
+  if (worker.activity === 'working') {
+    rect(ctx, cx - 1, wy + 6, 2, 1, '#c08880')
+  }
 
-  // Agent icon badge (colored dot)
+  // Agent icon below character
   const agentDef = AGENTS.find((a) => a.id === worker.agentId)
-  if (agentDef) {
-    ctx.font = '5px sans-serif'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillStyle = '#fff'
-    ctx.fillText(agentDef.icon, sx, wy + 7)
-  }
-
-  // Activity speech bubble (when working)
-  if (worker.lastActivityTitle && worker.activity === 'working') {
-    const label = worker.lastActivityTitle.slice(0, 14)
-    ctx.font = '4px sans-serif'
-    const metrics = ctx.measureText(label)
-    const bw = Math.ceil(metrics.width) + 4
-    const bx = sx + 5
-    const by = wy - 2
-
-    // Bubble
-    px(ctx, bx, by - 3, bw, 7, PALETTE.bubbleBg)
-    px(ctx, bx, by - 4, bw, 1, PALETTE.bubbleBorder)
-    px(ctx, bx, by + 4, bw, 1, PALETTE.bubbleBorder)
-    px(ctx, bx - 1, by - 3, 1, 7, PALETTE.bubbleBorder)
-    px(ctx, bx + bw, by - 3, 1, 7, PALETTE.bubbleBorder)
-    // Tail
-    px(ctx, bx - 1, by, 1, 1, PALETTE.bubbleBg)
-    // Text
-    ctx.fillStyle = PALETTE.textLight
-    ctx.textAlign = 'left'
-    ctx.textBaseline = 'middle'
-    ctx.fillText(label, bx + 2, by + 1)
-  }
-
-  // Name below
-  ctx.font = '4px sans-serif'
-  ctx.fillStyle = PALETTE.textDim
+  ctx.font = '8px sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'top'
-  ctx.fillText(worker.projectName.slice(0, 10), sx, sy + 3)
+  ctx.fillStyle = P.textMuted
+  ctx.fillText(agentDef?.icon ?? '?', cx, cy + 6)
+
+  // Project name
+  ctx.font = '7px sans-serif'
+  ctx.fillStyle = P.textLight
+  ctx.fillText(worker.projectName.slice(0, 12), cx, cy + 16)
+
+  // Speech bubble when working with activity
+  if (worker.lastActivityTitle && worker.activity === 'working') {
+    const label = worker.lastActivityTitle.slice(0, 16)
+    ctx.font = '7px sans-serif'
+    const tw = ctx.measureText(label).width
+    const bw = tw + 8
+    const bx = cx + 10
+    const by = wy - 4
+
+    // Bubble body
+    ctx.fillStyle = P.bubbleBg
+    ctx.strokeStyle = P.bubbleBorder
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.roundRect(bx, by - 6, bw, 12, 3)
+    ctx.fill()
+    ctx.stroke()
+    // Tail triangle
+    ctx.fillStyle = P.bubbleBg
+    ctx.beginPath()
+    ctx.moveTo(bx, by)
+    ctx.lineTo(bx - 4, by + 2)
+    ctx.lineTo(bx, by + 4)
+    ctx.closePath()
+    ctx.fill()
+    // Text
+    ctx.fillStyle = P.textLight
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(label, bx + 4, by)
+  }
 }
 
-// ── Main canvas component ─────────────────────────────────────────
+// ── Main component ────────────────────────────────────────────────
 
 export function OfficeCanvas({ snapshot }: OfficeCanvasProps): React.JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -283,7 +342,6 @@ export function OfficeCanvas({ snapshot }: OfficeCanvasProps): React.JSX.Element
   const frameRef = useRef(0)
   const snapshotRef = useRef(snapshot)
 
-  // Keep snapshot ref current for the animation loop
   useEffect(() => {
     snapshotRef.current = snapshot
   }, [snapshot])
@@ -291,28 +349,27 @@ export function OfficeCanvas({ snapshot }: OfficeCanvasProps): React.JSX.Element
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
+    const mainCtx = canvas.getContext('2d')
+    if (!mainCtx) return
 
-    // Create offscreen canvas at internal resolution
     if (!offscreenRef.current) {
       offscreenRef.current = document.createElement('canvas')
-      offscreenRef.current.width = INTERNAL_W
-      offscreenRef.current.height = INTERNAL_H
+      offscreenRef.current.width = IW
+      offscreenRef.current.height = IH
     }
     const offscreen = offscreenRef.current
-    const octx = offscreen.getContext('2d')
-    if (!octx) return
+    const ctx = offscreen.getContext('2d')
+    if (!ctx) return
 
     let running = true
 
     function render(): void {
-      if (!running || !canvas || !ctx || !octx) return
+      if (!running || !canvas || !mainCtx || !ctx) return
 
-      const rect = canvas.getBoundingClientRect()
+      const viewRect = canvas.getBoundingClientRect()
       const dpr = window.devicePixelRatio || 1
-      const newW = Math.round(rect.width * dpr)
-      const newH = Math.round(rect.height * dpr)
+      const newW = Math.round(viewRect.width * dpr)
+      const newH = Math.round(viewRect.height * dpr)
       if (canvas.width !== newW || canvas.height !== newH) {
         canvas.width = newW
         canvas.height = newH
@@ -321,103 +378,79 @@ export function OfficeCanvas({ snapshot }: OfficeCanvasProps): React.JSX.Element
       const time = performance.now()
       const snap = snapshotRef.current
 
-      // ── Draw to offscreen at internal resolution ──
-      octx.fillStyle = PALETTE.bg
-      octx.fillRect(0, 0, INTERNAL_W, INTERNAL_H)
+      // ── Draw to offscreen ──
+      ctx.fillStyle = P.bg
+      ctx.fillRect(0, 0, IW, IH)
 
-      // Grid center
-      const center = toIso(GRID_COLS / 2, GRID_ROWS / 2)
-      const ox = INTERNAL_W / 2 - center.x
-      const oy = 50 - center.y + 20
+      // Center the isometric grid
+      const center = toIso(COLS / 2, ROWS / 2)
+      const ox = IW / 2 - center.x
+      const oy = IH / 2 - center.y - 10
 
-      // Walls + windows
-      drawWalls(octx, ox, oy)
+      drawWalls(ctx, ox, oy)
+      drawFloor(ctx, ox, oy)
 
-      // Floor
-      drawFloor(octx, ox, oy)
-
-      // Decorations
-      const plantPositions = [
-        { col: 1, row: 1 },
-        { col: GRID_COLS - 2, row: 1 },
-        { col: 1, row: GRID_ROWS - 2 },
-      ]
-      for (const pos of plantPositions) {
-        const { x, y } = toIso(pos.col, pos.row)
-        drawPlant(octx, ox + x, oy + y - 4)
+      // Plants
+      const plantSpots = [toIso(0.5, 1), toIso(COLS - 1, 0.5), toIso(0.5, ROWS - 1)]
+      for (const ps of plantSpots) {
+        drawPlant(ctx, ox + ps.x, oy + ps.y - 8)
       }
 
-      const coffeeP = toIso(GRID_COLS - 2, GRID_ROWS - 2)
-      drawCoffeeMachine(octx, ox + coffeeP.x, oy + coffeeP.y - 2)
-
-      // Build worker lookup
+      // Worker lookup
       const workerByDesk = new Map<number, OfficeWorker>()
       if (snap) {
-        for (const w of snap.workers) workerByDesk.set(w.deskIndex, w)
-      }
-
-      // Desks + workers (back to front for layering)
-      for (let r = 0; r < DESK_ROWS; r++) {
-        for (let c = 0; c < DESK_COLS; c++) {
-          const idx = r * DESK_COLS + c
-          const dPos = getDeskPos(idx)
-          const { x, y } = toIso(dPos.col, dPos.row)
-          const dx = ox + x
-          const dy = oy + y
-          const w = workerByDesk.get(idx)
-          drawDesk(octx, dx, dy, w, time)
-          if (w) {
-            drawWorker(octx, dx, dy, w, time)
+        for (const w of snap.workers) {
+          if (w.deskIndex < DESK_POSITIONS.length) {
+            workerByDesk.set(w.deskIndex, w)
           }
         }
       }
 
-      // Empty state message
-      if (!snap || snap.workers.length === 0) {
-        octx.font = '6px sans-serif'
-        octx.fillStyle = PALETTE.textDim
-        octx.textAlign = 'center'
-        octx.textBaseline = 'middle'
-        octx.fillText('No active workers', INTERNAL_W / 2, INTERNAL_H - 12)
-        octx.fillText('Start an agent session to see them here', INTERNAL_W / 2, INTERNAL_H - 5)
+      // Desks + workers (back-to-front by row for depth)
+      for (const desk of DESK_POSITIONS) {
+        const { x, y } = toIso(desk.col, desk.row)
+        const dx = ox + x
+        const dy = oy + y
+        const w = workerByDesk.get(desk.idx)
+        drawDesk(ctx, dx, dy, w, time)
+        if (w) drawWorker(ctx, dx, dy, w, time)
       }
 
-      // ── Upscale to display canvas with nearest-neighbor ──
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      ctx.imageSmoothingEnabled = false
-      const displayW = rect.width
-      const displayH = rect.height
+      // Empty state
+      if (!snap || snap.workers.length === 0) {
+        ctx.font = '10px sans-serif'
+        ctx.fillStyle = P.textMuted
+        ctx.textAlign = 'center'
+        ctx.fillText('No active workers — start an agent session', IW / 2, IH - 20)
+      }
 
-      // Scale to fit, maintaining aspect ratio
-      const scaleX = displayW / INTERNAL_W
-      const scaleY = displayH / INTERNAL_H
-      const scale = Math.max(scaleX, scaleY)
-      const drawW = INTERNAL_W * scale
-      const drawH = INTERNAL_H * scale
-      const drawX = (displayW - drawW) / 2
-      const drawY = (displayH - drawH) / 2
-
-      ctx.fillStyle = PALETTE.bg
-      ctx.fillRect(0, 0, displayW, displayH)
-      ctx.drawImage(offscreen, drawX, drawY, drawW, drawH)
+      // ── Upscale to display canvas ──
+      mainCtx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      mainCtx.imageSmoothingEnabled = false
+      const dw = viewRect.width
+      const dh = viewRect.height
+      const scale = Math.min(dw / IW, dh / IH)
+      const drawW = IW * scale
+      const drawH = IH * scale
+      mainCtx.fillStyle = P.bg
+      mainCtx.fillRect(0, 0, dw, dh)
+      mainCtx.drawImage(offscreen, (dw - drawW) / 2, (dh - drawH) / 2, drawW, drawH)
 
       frameRef.current = requestAnimationFrame(render)
     }
 
     render()
-
     return () => {
       running = false
       if (frameRef.current) cancelAnimationFrame(frameRef.current)
     }
   }, [])
 
-  // Resize handling
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const observer = new ResizeObserver(() => {
-      // The animation loop auto-handles resize on next frame
+      /* animation loop handles it */
     })
     observer.observe(canvas)
     return () => observer.disconnect()
