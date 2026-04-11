@@ -2,6 +2,7 @@ import Store from 'electron-store'
 import { app, ipcMain, safeStorage } from 'electron'
 import * as fs from 'fs'
 import * as path from 'path'
+import { posix as posixPath } from 'path'
 import { randomUUID } from 'crypto'
 import type { EnvVar, Project, Role, Template } from '../shared/types'
 import { migrateProjectAgents } from '../shared/agent-helpers'
@@ -77,6 +78,32 @@ export interface StoreSchema {
 
 export type AppStore = Store<StoreSchema>
 
+/**
+ * Canonicalize a project path for storage and comparison.
+ * POSIX-only normalization — consistent with AgentDeck's WSL-paths-only invariant.
+ */
+export function normalizeProjectPath(rawPath: string): string {
+  const trimmed = rawPath.trim()
+  if (trimmed === '') return ''
+  const normalized = posixPath.normalize(trimmed)
+  if (normalized === '/') return '/'
+  return normalized.replace(/\/+$/, '') || '/'
+}
+
+/**
+ * Find a project by its path (after normalization).
+ * Returns the first matching project or null.
+ */
+export function getProjectByPath(store: Store<StoreSchema>, rawPath: string): Project | null {
+  const normalized = normalizeProjectPath(rawPath)
+  if (normalized === '') return null
+  const projects = store.get('projects') ?? []
+  for (const p of projects) {
+    if (normalizeProjectPath(p.path) === normalized) return p
+  }
+  return null
+}
+
 export function createProjectStore(): Store<StoreSchema> {
   const defaults: StoreSchema = {
     projects: [],
@@ -115,6 +142,21 @@ export function createProjectStore(): Store<StoreSchema> {
   if (migrated) {
     store.set('projects', migrationProjects)
     log.info('Ran project name migration')
+  }
+
+  // One-time migration: normalize all stored project paths
+  const pathMigrationProjects = store.get('projects')
+  let pathMigrated = false
+  for (const p of pathMigrationProjects) {
+    const normalized = normalizeProjectPath(p.path)
+    if (normalized !== p.path) {
+      p.path = normalized
+      pathMigrated = true
+    }
+  }
+  if (pathMigrated) {
+    store.set('projects', pathMigrationProjects)
+    log.info('Normalized project paths on startup')
   }
 
   ipcMain.handle('store:getProjects', () => {

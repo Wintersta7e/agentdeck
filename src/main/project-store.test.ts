@@ -47,7 +47,7 @@ vi.mock('electron-store', () => {
   return { default: MockStore }
 })
 
-import { createProjectStore } from './project-store'
+import { createProjectStore, normalizeProjectPath, getProjectByPath } from './project-store'
 import { seedTemplates, seedRoles } from './store-seeds'
 import { ipcMain, safeStorage } from 'electron'
 
@@ -196,6 +196,68 @@ describe('createProjectStore', () => {
     expect(project?.agents).toHaveLength(2)
     expect(project?.agents?.[0]?.agent).toBe('claude-code')
     expect(project?.agents?.[1]?.agent).toBe('aider')
+  })
+})
+
+describe('normalizeProjectPath', () => {
+  it('preserves a well-formed POSIX path', () => {
+    expect(normalizeProjectPath('/home/rooty/project')).toBe('/home/rooty/project')
+  })
+
+  it('trims a single trailing slash', () => {
+    expect(normalizeProjectPath('/home/rooty/project/')).toBe('/home/rooty/project')
+  })
+
+  it('collapses duplicate slashes', () => {
+    expect(normalizeProjectPath('/home//rooty///project')).toBe('/home/rooty/project')
+  })
+
+  it('resolves .. and . segments', () => {
+    expect(normalizeProjectPath('/home/rooty/./project/../project')).toBe('/home/rooty/project')
+  })
+
+  it('preserves the root path verbatim', () => {
+    expect(normalizeProjectPath('/')).toBe('/')
+  })
+
+  it('collapses /// to /', () => {
+    expect(normalizeProjectPath('///')).toBe('/')
+  })
+
+  it('returns empty string for empty input', () => {
+    expect(normalizeProjectPath('')).toBe('')
+  })
+
+  it('returns empty string for whitespace-only input', () => {
+    expect(normalizeProjectPath('   ')).toBe('')
+  })
+
+  it('preserves case (POSIX is case-sensitive)', () => {
+    expect(normalizeProjectPath('/home/Rooty/Thing')).toBe('/home/Rooty/Thing')
+  })
+})
+
+describe('getProjectByPath', () => {
+  it('returns a matching project after normalization', async () => {
+    const store = createProjectStore()
+    await callHandler('store:saveProject', { name: 'Test', path: '/home/rooty/project' })
+
+    const result = getProjectByPath(store, '/home/rooty/project/')
+    expect(result).not.toBeNull()
+    expect(result?.name).toBe('Test')
+  })
+
+  it('returns null when no project matches', async () => {
+    const store = createProjectStore()
+    await callHandler('store:saveProject', { name: 'Test', path: '/home/rooty/project' })
+
+    const result = getProjectByPath(store, '/home/other/path')
+    expect(result).toBeNull()
+  })
+
+  it('returns null for empty path', () => {
+    const store = createProjectStore()
+    expect(getProjectByPath(store, '')).toBeNull()
   })
 })
 
