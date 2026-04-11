@@ -73,10 +73,17 @@ export interface StoreSchema {
     rolesSeedVersion?: number | undefined
     workflowSeedVersion?: number | undefined
     workflowLastRolesVersion?: number | undefined
+    officeEnabled?: boolean | undefined
   }
 }
 
 export type AppStore = Store<StoreSchema>
+
+/** Returns true unless officeEnabled is explicitly false. Default: true. */
+export function isOfficeEnabled(store: AppStore): boolean {
+  const prefs = store.get('appPrefs')
+  return prefs?.officeEnabled !== false
+}
 
 /**
  * Canonicalize a project path for storage and comparison.
