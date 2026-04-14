@@ -6,6 +6,7 @@ import { randomUUID } from 'crypto'
 import type { EnvVar, Project, Role, Template } from '../shared/types'
 import { migrateProjectAgents } from '../shared/agent-helpers'
 import { createLogger } from './logger'
+import { SAFE_ID_RE } from './validation'
 
 const log = createLogger('project-store')
 
@@ -182,7 +183,7 @@ export function createProjectStore(): Store<StoreSchema> {
   })
 
   ipcMain.handle('store:deleteProject', (_, id: string) => {
-    if (typeof id !== 'string' || !id) throw new Error('Invalid id')
+    if (typeof id !== 'string' || !SAFE_ID_RE.test(id)) throw new Error('Invalid id')
     return serialized(() => {
       const projects = store.get('projects').filter((p) => p.id !== id)
       store.set('projects', projects)
@@ -223,7 +224,7 @@ export function createProjectStore(): Store<StoreSchema> {
   })
 
   ipcMain.handle('store:deleteTemplate', (_, id: string) => {
-    if (typeof id !== 'string' || !id) throw new Error('Invalid id')
+    if (typeof id !== 'string' || !SAFE_ID_RE.test(id)) throw new Error('Invalid id')
     return serialized(() => {
       const templates = store.get('templates').filter((t) => t.id !== id)
       store.set('templates', templates)
@@ -263,7 +264,7 @@ export function createProjectStore(): Store<StoreSchema> {
   })
 
   ipcMain.handle('store:deleteRole', (_, id: string) => {
-    if (typeof id !== 'string' || !id) throw new Error('Invalid id')
+    if (typeof id !== 'string' || !SAFE_ID_RE.test(id)) throw new Error('Invalid id')
     return serialized(() => {
       const roles = store.get('roles').filter((r) => r.id !== id)
       store.set('roles', roles)

@@ -405,7 +405,9 @@ export function App(): React.JSX.Element {
       if (e.ctrlKey && e.key === 'Tab') {
         e.preventDefault()
         const state = useAppStore.getState()
-        const ids = Object.keys(state.sessions)
+        const ids = Object.entries(state.sessions)
+          .filter(([, s]) => s.status !== 'exited')
+          .map(([id]) => id)
         if (ids.length === 0) return
         const currentIdx = state.activeSessionId ? ids.indexOf(state.activeSessionId) : -1
         const next = e.shiftKey

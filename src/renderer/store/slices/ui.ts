@@ -233,7 +233,9 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   theme: (typeof document !== 'undefined' ? document.documentElement.dataset.theme : '') ?? '',
   setTheme: (name) => {
     document.documentElement.dataset.theme = name
-    window.agentDeck.theme.set(name)
+    window.agentDeck.theme.set(name).catch((err: unknown) => {
+      window.agentDeck.log.send('warn', 'ui', 'Theme persist failed', { err: String(err) })
+    })
     set({ theme: name })
   },
 })

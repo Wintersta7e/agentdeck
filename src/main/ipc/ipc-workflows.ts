@@ -51,7 +51,7 @@ export function registerWorkflowHandlers(
   /* ── Export / Import / Duplicate ─────────────────────────────── */
 
   ipcMain.handle('workflows:export', async (_, id: string): Promise<WorkflowExport> => {
-    if (typeof id !== 'string' || !id) throw new Error('Invalid workflow ID')
+    if (typeof id !== 'string' || !SAFE_ID_RE.test(id)) throw new Error('Invalid workflow ID')
     const workflow = await loadWorkflow(id)
     if (!workflow) throw new Error('Workflow not found')
 
@@ -166,7 +166,7 @@ export function registerWorkflowHandlers(
   )
 
   ipcMain.handle('workflows:duplicate', async (_, id: string): Promise<Workflow> => {
-    if (typeof id !== 'string' || !id) throw new Error('Invalid workflow ID')
+    if (typeof id !== 'string' || !SAFE_ID_RE.test(id)) throw new Error('Invalid workflow ID')
     const workflow = await loadWorkflow(id)
     if (!workflow) throw new Error('Workflow not found')
 
