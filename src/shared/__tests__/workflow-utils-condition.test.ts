@@ -108,9 +108,23 @@ describe('validateWorkflow — outputMatch condition', () => {
       ],
     })
     const result = validateWorkflow(wf)
-    // No errors about the conditionPattern itself
-    expect(
-      result.errors.filter((e) => /conditionPattern|nested quantifiers|too long/.test(e)),
-    ).toHaveLength(0)
+    expect(result.errors.filter((e) => /conditionPattern|ReDoS|too long/.test(e))).toHaveLength(0)
+  })
+
+  it('accepts alternation with `?` (BUG5-01) — zero-or-one is not catastrophic', () => {
+    const wf = makeWorkflow({
+      nodes: [
+        { id: 'src', type: 'agent', name: 'Src', agent: 'claude-code' },
+        {
+          id: 'cond',
+          type: 'condition',
+          name: 'C',
+          conditionMode: 'outputMatch',
+          conditionPattern: '^(passed|succeeded)?:',
+        },
+      ],
+    })
+    const result = validateWorkflow(wf)
+    expect(result.errors.filter((e) => /ReDoS/.test(e))).toHaveLength(0)
   })
 })

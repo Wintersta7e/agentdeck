@@ -181,11 +181,13 @@ export function validateWorkflow(w: unknown): ValidationResult {
           // on the workflow-engine event loop. The 500-char cap and 64KB input
           // bound the worst case but these patterns still take seconds.
           const p = n.conditionPattern
+          // `?` is a safe quantifier (zero-or-one); only `+`, `*`, and `{n,}`
+          // cause catastrophic backtracking when stacked.
           if (
-            /\([^)]*[+*][^)]*\)[+*?]/.test(p) || // (a+)+, (a*)+ nested quantifier
-            /\([^)]*\|[^)]*\)[+*?{]/.test(p) || // (a|b)+ alternation with outer quantifier
-            /\(\([^)]*[+*][^)]*\)[^)]*\)[+*?]/.test(p) || // ((a+))+ doubled outer
-            /\([^)]*\([^)]*\|[^)]*\)[^)]*\)[+*?]/.test(p) // (a|(b)c)+ inner-group alternation
+            /\([^)]*[+*][^)]*\)[+*{]/.test(p) || // (a+)+, (a*)+ nested quantifier
+            /\([^)]*\|[^)]*\)[+*{]/.test(p) || // (a|b)+ alternation with outer quantifier
+            /\(\([^)]*[+*][^)]*\)[^)]*\)[+*{]/.test(p) || // ((a+))+ doubled outer
+            /\([^)]*\([^)]*\|[^)]*\)[^)]*\)[+*{]/.test(p) // (a|(b)c)+ inner-group alternation
           ) {
             errors.push(
               `conditionPattern for "${String(n.id)}" matches a known ReDoS pattern shape`,
