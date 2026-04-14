@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
 import { SAFE_ID_RE } from '../validation'
+import { KNOWN_AGENT_IDS } from '../../shared/agents'
 import type { CostTracker } from '../cost-tracker'
 
 /**
@@ -19,8 +20,8 @@ export function registerCostHandlers(getCostTracker: () => CostTracker | null): 
       if (!opts || typeof opts !== 'object') {
         throw new Error('cost:bind requires an opts object')
       }
-      if (typeof opts.agent !== 'string' || !opts.agent) {
-        throw new Error('cost:bind requires a non-empty agent')
+      if (typeof opts.agent !== 'string' || !KNOWN_AGENT_IDS.has(opts.agent)) {
+        throw new Error('cost:bind requires a known agent')
       }
       if (typeof opts.cwd !== 'string' || !opts.cwd) {
         throw new Error('cost:bind requires a non-empty cwd')

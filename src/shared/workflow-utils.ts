@@ -1,5 +1,5 @@
 import type { WorkflowNode, WorkflowNodeType, WorkflowEdge, ValidationResult } from './types'
-import { KNOWN_AGENT_IDS } from './agents'
+import { KNOWN_AGENT_IDS, SAFE_FLAGS_RE } from './agents'
 
 const VALID_NODE_TYPES = new Set<WorkflowNodeType>(['agent', 'shell', 'checkpoint', 'condition'])
 
@@ -80,6 +80,11 @@ export function validateWorkflow(w: unknown): ValidationResult {
       errors.push(`Node prompt exceeds ${MAX_PROMPT} chars`)
     if (n.agent !== undefined && typeof n.agent === 'string' && !KNOWN_AGENT_IDS.has(n.agent))
       errors.push(`Unknown agent: ${n.agent}`)
+    if (n.agentFlags !== undefined) {
+      if (typeof n.agentFlags !== 'string') errors.push('Node agentFlags must be a string')
+      else if (!SAFE_FLAGS_RE.test(n.agentFlags))
+        errors.push(`Node "${String(n.id)}": agentFlags contains unsafe characters`)
+    }
     if (n.roleId !== undefined && n.roleId !== null && typeof n.roleId !== 'string')
       errors.push('Node roleId must be a string')
     if (typeof n.roleId === 'string' && n.roleId.length > MAX_NAME)
@@ -284,7 +289,7 @@ export function validateWorkflow(w: unknown): ValidationResult {
 export function validateRole(role: unknown): string | null {
   if (!role || typeof role !== 'object') return 'Role must be an object'
   const r = role as Record<string, unknown>
-  if (typeof r.id !== 'string' || !r.id) return 'Role missing id'
+  if (typeof r.id !== 'string' || !SAFE_ID_RE.test(r.id)) return 'Role missing or invalid id'
   if (typeof r.name !== 'string' || !r.name || r.name.length > MAX_NAME)
     return 'Role missing or invalid name'
   if (typeof r.persona !== 'string') return 'Role missing persona'
