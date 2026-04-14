@@ -178,13 +178,17 @@ export function validateWorkflow(w: unknown): ValidationResult {
           }
           // Heuristic ReDoS guard — reject patterns known to cause catastrophic
           // backtracking. JavaScript regex cannot be timed out; the engine runs
-          // on the workflow-engine event loop.
+          // on the workflow-engine event loop. The 500-char cap and 64KB input
+          // bound the worst case but these patterns still take seconds.
+          const p = n.conditionPattern
           if (
-            /\([^)]*[+*][^)]*\)[+*?]/.test(n.conditionPattern) ||
-            /\([^)]*\|[^)]*\)[+*?{]/.test(n.conditionPattern)
+            /\([^)]*[+*][^)]*\)[+*?]/.test(p) || // (a+)+, (a*)+ nested quantifier
+            /\([^)]*\|[^)]*\)[+*?{]/.test(p) || // (a|b)+ alternation with outer quantifier
+            /\(\([^)]*[+*][^)]*\)[^)]*\)[+*?]/.test(p) || // ((a+))+ doubled outer
+            /\([^)]*\([^)]*\|[^)]*\)[^)]*\)[+*?]/.test(p) // (a|(b)c)+ inner-group alternation
           ) {
             errors.push(
-              `conditionPattern for "${String(n.id)}" contains nested quantifiers or alternation with outer quantifier (ReDoS risk)`,
+              `conditionPattern for "${String(n.id)}" matches a known ReDoS pattern shape`,
             )
           }
           try {

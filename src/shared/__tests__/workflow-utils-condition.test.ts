@@ -57,7 +57,41 @@ describe('validateWorkflow — outputMatch condition', () => {
       ],
     })
     const result = validateWorkflow(wf)
-    expect(result.errors.some((e) => /nested quantifiers/.test(e))).toBe(true)
+    expect(result.errors.some((e) => /ReDoS/.test(e))).toBe(true)
+  })
+
+  it('rejects alternation with outer quantifier (SEC3-01)', () => {
+    const wf = makeWorkflow({
+      nodes: [
+        { id: 'src', type: 'agent', name: 'Src', agent: 'claude-code' },
+        {
+          id: 'cond',
+          type: 'condition',
+          name: 'C',
+          conditionMode: 'outputMatch',
+          conditionPattern: '(error|warn|info)+$',
+        },
+      ],
+    })
+    const result = validateWorkflow(wf)
+    expect(result.errors.some((e) => /ReDoS/.test(e))).toBe(true)
+  })
+
+  it('rejects nested-group ReDoS shapes like ((a+))+ (SEC4-01)', () => {
+    const wf = makeWorkflow({
+      nodes: [
+        { id: 'src', type: 'agent', name: 'Src', agent: 'claude-code' },
+        {
+          id: 'cond',
+          type: 'condition',
+          name: 'C',
+          conditionMode: 'outputMatch',
+          conditionPattern: '((a+))+',
+        },
+      ],
+    })
+    const result = validateWorkflow(wf)
+    expect(result.errors.some((e) => /ReDoS/.test(e))).toBe(true)
   })
 
   it('accepts simple, well-formed patterns', () => {

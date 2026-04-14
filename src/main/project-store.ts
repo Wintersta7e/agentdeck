@@ -206,6 +206,10 @@ export function createProjectStore(): Store<StoreSchema> {
       throw new Error('store:saveTemplate — name must be a string')
     if (typeof rawT.name === 'string' && rawT.name.length > 200)
       throw new Error('store:saveTemplate — name too long')
+    if (typeof rawT.description === 'string' && rawT.description.length > 2000)
+      throw new Error('store:saveTemplate — description too long')
+    if (typeof rawT.content === 'string' && rawT.content.length > 65536)
+      throw new Error('store:saveTemplate — content too long (max 64KB)')
     return serialized(() => {
       const t = template as Partial<Template>
       const templates = store.get('templates')
@@ -246,6 +250,10 @@ export function createProjectStore(): Store<StoreSchema> {
       throw new Error('store:saveRole — name must be a string')
     if (typeof rawR.name === 'string' && rawR.name.length > 200)
       throw new Error('store:saveRole — name too long')
+    if (typeof rawR.persona === 'string' && rawR.persona.length > 65536)
+      throw new Error('store:saveRole — persona too long (max 64KB)')
+    if (typeof rawR.outputFormat === 'string' && rawR.outputFormat.length > 65536)
+      throw new Error('store:saveRole — outputFormat too long (max 64KB)')
     return serialized(() => {
       const r = role as Partial<Role>
       const roles = store.get('roles')
