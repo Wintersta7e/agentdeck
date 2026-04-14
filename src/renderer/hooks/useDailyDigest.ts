@@ -61,7 +61,16 @@ export function computeDailyDigest(
 }
 
 export function useDailyDigest(): DailyDigestData {
-  const sessions = useAppStore((s) => s.sessions)
+  // Primitive signature — fields the digest reads only.
+  const sessionSignature = useAppStore((s) => {
+    const parts: string[] = []
+    for (const [id, session] of Object.entries(s.sessions)) {
+      parts.push(
+        `${id}|${session.projectId}|${session.status}|${session.startedAt}|${session.agentOverride ?? ''}`,
+      )
+    }
+    return parts.join(';')
+  })
   const projects = useAppStore((s) => s.projects)
   const sessionUsage = useAppStore((s) => s.sessionUsage)
 
@@ -72,16 +81,22 @@ export function useDailyDigest(): DailyDigestData {
       string,
       { id: string; status: string; startedAt: number; agentOverride?: string | undefined }
     > = {}
-    for (const [id, s] of Object.entries(sessions)) {
-      const project = s.projectId ? projectMap.get(s.projectId) : undefined
-      const defaultAgent = project ? getDefaultAgent(project) : undefined
-      result[id] = {
-        ...s,
-        agentOverride: s.agentOverride ?? defaultAgent?.agent,
+    if (sessionSignature) {
+      for (const entry of sessionSignature.split(';')) {
+        const [id, projectId, status, startedAt, agentOverride] = entry.split('|')
+        if (!id || !startedAt) continue
+        const project = projectId ? projectMap.get(projectId) : undefined
+        const defaultAgent = project ? getDefaultAgent(project) : undefined
+        result[id] = {
+          id,
+          status: status ?? '',
+          startedAt: Number(startedAt),
+          agentOverride: agentOverride || defaultAgent?.agent,
+        }
       }
     }
     return result
-  }, [sessions, projects])
+  }, [sessionSignature, projects])
   // Write counter is maintained by the store. Iterates N sessions (not events)
   // and only changes when a 'write' event fires — cheaper than scanning feeds.
   const writeCount = useAppStore((s) => {

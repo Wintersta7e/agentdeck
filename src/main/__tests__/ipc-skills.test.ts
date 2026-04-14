@@ -83,4 +83,15 @@ describe('ipc-skills', () => {
     await handler(null, { projectPath: '' })
     expect(listSkills).toHaveBeenCalledWith(expect.objectContaining({ projectPath: undefined }))
   })
+
+  it('rejects projectPath with double-slash (collapses under normalization)', async () => {
+    await expect(handler(null, { projectPath: '/home//user' })).rejects.toThrow(
+      'invalid projectPath',
+    )
+  })
+
+  it('accepts projectPath with a trailing slash (preserved by normalization)', async () => {
+    const result = await handler(null, { projectPath: '/home/user/project/' })
+    expect(result).toBeDefined()
+  })
 })

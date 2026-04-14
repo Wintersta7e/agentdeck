@@ -637,4 +637,35 @@ describe('cost history persistence', () => {
 
     tracker.destroy()
   })
+
+  it('does not record when the per-poll delta is below COST_DELTA_EPSILON_USD (float noise)', async () => {
+    const win = makeMockWindow()
+    const recordCost = vi.fn()
+    const costHistory = { recordCost }
+
+    // Adapter emits a sub-epsilon cost delta (5e-10 USD)
+    const adapter = makeTestAdapter({
+      parseUsage: (_line: string, acc: TokenUsage): TokenUsage | null => ({
+        inputTokens: acc.inputTokens + 1,
+        outputTokens: acc.outputTokens,
+        cacheReadTokens: acc.cacheReadTokens,
+        cacheWriteTokens: acc.cacheWriteTokens,
+        totalCostUsd: acc.totalCostUsd + 5e-10,
+      }),
+    })
+
+    makeRoutingMock({
+      tailResults: ['40\n{"line":"one"}\n', '40\n'],
+    })
+
+    const tracker = createCostTracker(win, [adapter], costHistory)
+    await vi.advanceTimersByTimeAsync(0)
+    tracker.bindSession('s1', BIND_OPTS)
+    await vi.advanceTimersByTimeAsync(2000)
+    await vi.advanceTimersByTimeAsync(3000)
+
+    expect(recordCost).not.toHaveBeenCalled()
+
+    tracker.destroy()
+  })
 })
