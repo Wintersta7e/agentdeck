@@ -13,7 +13,7 @@ import { NotificationToast } from './components/NotificationToast/NotificationTo
 import { ConfirmDialog } from './components/shared/ConfirmDialog'
 import { useAppStore } from './store/appStore'
 import { useProjects } from './hooks/useProjects'
-import type { ActivityEvent, AgentConfig, Project } from '../shared/types'
+import type { ActivityEvent, AgentConfig, Project, WorkflowEvent } from '../shared/types'
 import './App.css'
 
 const WorkflowEditor = lazy(() => import('./screens/WorkflowEditor/WorkflowEditor'))
@@ -67,6 +67,13 @@ export function App(): React.JSX.Element {
     return ids.join(',')
   })
   const sessionIdList = useMemo(() => (sessionIds ? sessionIds.split(',') : []), [sessionIds])
+
+  // Stable list of currently-open workflow tabs (joined string for shallow eq)
+  const openWorkflowIdsStr = useAppStore((s) => s.openWorkflowIds.join(','))
+  const openWorkflowIdList = useMemo(
+    () => (openWorkflowIdsStr ? openWorkflowIdsStr.split(',') : []),
+    [openWorkflowIdsStr],
+  )
 
   const [aboutOpen, setAboutOpen] = useState(false)
   const openAbout = useCallback(() => setAboutOpen(true), [])
@@ -465,6 +472,67 @@ export function App(): React.JSX.Element {
       subscriptions.clear()
     }
   }, [sessionIdList])
+
+  // Subscribe to workflow execution events for all open workflow tabs.
+  // Lifted out of WorkflowEditor so leaving + returning to the tab doesn't
+  // tear down the IPC listener and lose events that fire during the gap
+  // (which would freeze the per-node animations on return).
+  const workflowSubscribedRef = useRef<Map<string, () => void>>(new Map())
+
+  useEffect(() => {
+    const subscriptions = workflowSubscribedRef.current
+    for (const wfId of openWorkflowIdList) {
+      if (!subscriptions.has(wfId)) {
+        const unsub = window.agentDeck.workflows.onEvent(wfId, (event: WorkflowEvent) => {
+          const s = useAppStore.getState()
+          s.addWorkflowLog(wfId, event)
+          const nid = event.nodeId
+          switch (event.type) {
+            case 'workflow:started':
+              s.setWorkflowStatus(wfId, 'running')
+              break
+            case 'workflow:done':
+              s.setWorkflowStatus(wfId, 'done')
+              break
+            case 'workflow:error':
+              s.setWorkflowStatus(wfId, 'error')
+              break
+            case 'workflow:stopped':
+              s.setWorkflowStatus(wfId, 'stopped')
+              break
+            case 'node:started':
+            case 'node:resumed':
+              if (nid) s.setWorkflowNodeStatus(wfId, nid, 'running')
+              break
+            case 'node:done':
+              if (nid) s.setWorkflowNodeStatus(wfId, nid, 'done')
+              break
+            case 'node:error':
+              if (nid) s.setWorkflowNodeStatus(wfId, nid, 'error')
+              break
+            case 'node:paused':
+              if (nid) s.setWorkflowNodeStatus(wfId, nid, 'paused')
+              break
+            case 'node:skipped':
+              if (nid) s.setWorkflowNodeStatus(wfId, nid, 'skipped')
+              break
+            // node:retry / node:loopIteration are logged only
+          }
+        })
+        subscriptions.set(wfId, unsub)
+      }
+    }
+    for (const [wfId, unsub] of subscriptions) {
+      if (!openWorkflowIdList.includes(wfId)) {
+        unsub()
+        subscriptions.delete(wfId)
+      }
+    }
+    return () => {
+      for (const unsub of subscriptions.values()) unsub()
+      subscriptions.clear()
+    }
+  }, [openWorkflowIdList])
 
   return (
     <div className="app">

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { computeTimeline } from '../useSessionTimeline'
 import { makeSession, makeActivityEvent } from '../../../__test__/helpers'
 import { ACTIVITY_FEED_CAP } from '../../../shared/constants'
@@ -7,13 +7,27 @@ import type { Session, ActivityEvent } from '../../../shared/types'
 const HOUR = 60 * 60 * 1000
 const MIN = 60 * 1000
 
+// Pin "now" to mid-afternoon on a fixed local day so tests don't flake when
+// the run crosses real wall-clock midnight (sessions ".N hours ago" need to
+// stay within the same local day to clear the dayStart guard).
+const FIXED_NOON = new Date(2026, 3, 14, 14, 0, 0, 0).getTime()
+
 function dayStart(): number {
-  const d = new Date()
+  const d = new Date(FIXED_NOON)
   d.setHours(0, 0, 0, 0)
   return d.getTime()
 }
 
 describe('computeTimeline duration', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(FIXED_NOON)
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('uses session.startedAt as firstTs, not events[0], so heavy sessions show real runtime', () => {
     const now = Date.now()
     // Session started 2h ago (still within today)
