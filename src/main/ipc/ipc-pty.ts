@@ -53,7 +53,7 @@ interface PtyHandlerDeps {
  * Rename/copy lines carry the destination path after a second tab:
  * "R100\t<old>\t<new>" — we take the new path.
  */
-function parseNameStatus(output: string): ReviewFile[] {
+export function parseNameStatus(output: string): ReviewFile[] {
   const files: ReviewFile[] = []
   for (const line of output.trim().split('\n')) {
     if (!line) continue

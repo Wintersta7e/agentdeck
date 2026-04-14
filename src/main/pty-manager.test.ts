@@ -436,4 +436,18 @@ describe('createPtyManager', () => {
       expect(() => mgr.spawn('s2', 80, 24)).not.toThrow()
     })
   })
+
+  describe('concurrency limit', () => {
+    it('throws when attempting to exceed MAX_CONCURRENT_SESSIONS', () => {
+      const win = makeMockWindow()
+      const mgr = createPtyManager(win)
+      // Internal cap is 20 — spawn 20 distinct sessions, then assert the 21st throws
+      for (let i = 0; i < 20; i++) {
+        mgr.spawn(`sess-${i}`, 80, 24)
+      }
+      expect(() => mgr.spawn('sess-overflow', 80, 24)).toThrow(
+        /Maximum concurrent sessions reached/,
+      )
+    })
+  })
 })
