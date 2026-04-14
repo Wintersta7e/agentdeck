@@ -263,7 +263,11 @@ app
     log.info('Window created')
 
     if (mainWindow) {
-      costTracker = createCostTracker(mainWindow, [createClaudeAdapter(), createCodexAdapter()])
+      costTracker = createCostTracker(
+        mainWindow,
+        [createClaudeAdapter(), createCodexAdapter()],
+        costHistory,
+      )
     }
 
     registerCostHandlers(() => costTracker)

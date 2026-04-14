@@ -59,6 +59,11 @@ export interface CostTracker {
   destroy(): void
 }
 
+/** Minimal contract for persisting cost deltas to long-term storage. */
+export interface CostRecorder {
+  recordCost(agentId: string, costUsd: number, tokens: number): void
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────
 
 /** Single-quote a path for safe use inside bash -lc commands. */
@@ -82,7 +87,11 @@ function wslExec(cmd: string): Promise<string> {
 
 // ── Factory ─────────────────────────────────────────────────────────
 
-export function createCostTracker(mainWindow: BrowserWindow, adapters: LogAdapter[]): CostTracker {
+export function createCostTracker(
+  mainWindow: BrowserWindow,
+  adapters: LogAdapter[],
+  costHistory?: CostRecorder,
+): CostTracker {
   const sessions = new Map<string, BoundSession>()
   /** File paths already bound to a session — prevents cross-session matching. */
   const boundFiles = new Set<string>()
@@ -332,6 +341,8 @@ export function createCostTracker(mainWindow: BrowserWindow, adapters: LogAdapte
           const lines = text.split('\n')
           session.partialLine = lines.pop() ?? ''
 
+          // Snapshot pre-poll usage so we can emit a delta to the persistent store
+          const preUsage = session.usage
           let usageChanged = false
           for (const line of lines) {
             const trimmed = line.trim()
@@ -344,11 +355,25 @@ export function createCostTracker(mainWindow: BrowserWindow, adapters: LogAdapte
             }
           }
 
-          if (usageChanged && !mainWindow.isDestroyed()) {
-            mainWindow.webContents.send('cost:update', {
-              sessionId: session.sessionId,
-              usage: { ...session.usage },
-            })
+          if (usageChanged) {
+            if (!mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('cost:update', {
+                sessionId: session.sessionId,
+                usage: { ...session.usage },
+              })
+            }
+            // Record per-poll delta so the daily aggregate persists to disk
+            if (costHistory) {
+              const deltaCost = session.usage.totalCostUsd - preUsage.totalCostUsd
+              const deltaTokens =
+                session.usage.inputTokens +
+                session.usage.outputTokens -
+                preUsage.inputTokens -
+                preUsage.outputTokens
+              if (deltaCost > 0) {
+                costHistory.recordCost(session.adapter.agent, deltaCost, deltaTokens)
+              }
+            }
           }
 
           session.pollTimer = setTimeout(tailPoll, TAIL_INTERVAL_MS)

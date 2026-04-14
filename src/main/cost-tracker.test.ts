@@ -532,3 +532,109 @@ describe('file tailing', () => {
     tracker.destroy()
   })
 })
+
+// ─── Cost history persistence ───────────────────────────────────────
+
+describe('cost history persistence', () => {
+  it('records per-poll cost delta to CostHistory when usage changes', async () => {
+    const win = makeMockWindow()
+    const recordCost = vi.fn()
+    const costHistory = { recordCost }
+
+    const adapter = makeTestAdapter({
+      // Each line adds $0.01 and 150 tokens (100 input + 50 output)
+      parseUsage: (_line: string, acc: TokenUsage): TokenUsage | null => ({
+        inputTokens: acc.inputTokens + 100,
+        outputTokens: acc.outputTokens + 50,
+        cacheReadTokens: acc.cacheReadTokens,
+        cacheWriteTokens: acc.cacheWriteTokens,
+        totalCostUsd: acc.totalCostUsd + 0.01,
+      }),
+    })
+
+    makeRoutingMock({
+      tailResults: [
+        // Poll 1: two lines → +$0.02, +300 tokens
+        '80\n{"line":"one"}\n{"line":"two"}\n',
+        // Poll 2: one line → +$0.01, +150 tokens
+        '120\n{"line":"three"}\n',
+        // Poll 3: no new data
+        '120\n',
+      ],
+    })
+
+    const tracker = createCostTracker(win, [adapter], costHistory)
+    await vi.advanceTimersByTimeAsync(0)
+
+    tracker.bindSession('s1', BIND_OPTS)
+    // Discovery (find + head)
+    await vi.advanceTimersByTimeAsync(2000)
+    // Tail poll 1
+    await vi.advanceTimersByTimeAsync(3000)
+    // Tail poll 2
+    await vi.advanceTimersByTimeAsync(3000)
+
+    expect(recordCost).toHaveBeenCalledTimes(2)
+    // Poll 1 delta: $0.02, 300 tokens
+    const call1 = recordCost.mock.calls[0]
+    expect(call1?.[0]).toBe('claude-code')
+    expect(call1?.[1]).toBeCloseTo(0.02, 8)
+    expect(call1?.[2]).toBe(300)
+    // Poll 2 delta: $0.01, 150 tokens (NOT cumulative — just what changed this poll)
+    const call2 = recordCost.mock.calls[1]
+    expect(call2?.[0]).toBe('claude-code')
+    expect(call2?.[1]).toBeCloseTo(0.01, 8)
+    expect(call2?.[2]).toBe(150)
+
+    tracker.destroy()
+  })
+
+  it('skips recordCost call when tail poll produces no usage change', async () => {
+    const win = makeMockWindow()
+    const recordCost = vi.fn()
+    const costHistory = { recordCost }
+
+    // Adapter that never produces usage
+    const adapter = makeTestAdapter({
+      parseUsage: () => null,
+    })
+
+    makeRoutingMock({
+      tailResults: ['40\n{"noise":"data"}\n', '40\n'],
+    })
+
+    const tracker = createCostTracker(win, [adapter], costHistory)
+    await vi.advanceTimersByTimeAsync(0)
+
+    tracker.bindSession('s1', BIND_OPTS)
+    await vi.advanceTimersByTimeAsync(2000)
+    await vi.advanceTimersByTimeAsync(3000)
+
+    expect(recordCost).not.toHaveBeenCalled()
+
+    tracker.destroy()
+  })
+
+  it('is optional — tracker works without costHistory argument', async () => {
+    const win = makeMockWindow()
+    const adapter = makeTestAdapter()
+
+    makeRoutingMock()
+
+    // No third argument — existing call sites keep working
+    const tracker = createCostTracker(win, [adapter])
+    await vi.advanceTimersByTimeAsync(0)
+
+    tracker.bindSession('s1', BIND_OPTS)
+    await vi.advanceTimersByTimeAsync(2000)
+    await vi.advanceTimersByTimeAsync(3000)
+
+    // IPC still fires — back-compat guaranteed
+    expect(win.webContents.send).toHaveBeenCalledWith(
+      'cost:update',
+      expect.objectContaining({ sessionId: 's1' }),
+    )
+
+    tracker.destroy()
+  })
+})
