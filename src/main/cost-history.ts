@@ -1,6 +1,10 @@
+import { writeFile } from 'node:fs/promises'
 import { writeFileSync, readFileSync, existsSync } from 'node:fs'
 import type { DailyCostEntry } from '../shared/types'
 import { todayIsoKey } from '../shared/date-keys'
+import { createLogger } from './logger'
+
+const log = createLogger('cost-history')
 
 export interface CostHistory {
   recordCost: (agentId: string, costUsd: number, tokens: number) => void
@@ -43,20 +47,33 @@ export function createCostHistory(storePath?: string): CostHistory {
     if (flushTimer !== null) return
     flushTimer = setTimeout(() => {
       flushTimer = null
-      writeToDisk()
+      void writeToDiskAsync()
     }, 5_000)
   }
 
-  function writeToDisk(): void {
+  function serialize(): string {
+    const data: PersistedData = {
+      entries: Array.from(entries.values()),
+      budget: dailyBudget,
+    }
+    return JSON.stringify(data, null, 2)
+  }
+
+  async function writeToDiskAsync(): Promise<void> {
     if (!storePath) return
     try {
-      const data: PersistedData = {
-        entries: Array.from(entries.values()),
-        budget: dailyBudget,
-      }
-      writeFileSync(storePath, JSON.stringify(data, null, 2), 'utf-8')
-    } catch {
-      // best-effort — ignore disk errors
+      await writeFile(storePath, serialize(), 'utf-8')
+    } catch (err) {
+      log.warn('async flush failed', { err: String(err) })
+    }
+  }
+
+  function writeToDiskSync(): void {
+    if (!storePath) return
+    try {
+      writeFileSync(storePath, serialize(), 'utf-8')
+    } catch (err) {
+      log.warn('sync flush failed', { err: String(err) })
     }
   }
 
@@ -105,7 +122,8 @@ export function createCostHistory(storePath?: string): CostHistory {
         clearTimeout(flushTimer)
         flushTimer = null
       }
-      writeToDisk()
+      // Synchronous at shutdown — `before-quit` handlers can't await a promise
+      writeToDiskSync()
     },
   }
 }

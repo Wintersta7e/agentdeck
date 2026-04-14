@@ -48,17 +48,19 @@ interface PtyHandlerDeps {
 }
 
 /**
- * Parse `git diff --name-stat` output into ReviewFile entries.
- * Lines are in format: "<status>\t<file>" where status is A/M/D/R/C.
+ * Parse `git diff --name-status` output into ReviewFile entries.
+ * Normal lines: "<status>\t<file>" where status is A/M/D.
+ * Rename/copy lines carry the destination path after a second tab:
+ * "R100\t<old>\t<new>" — we take the new path.
  */
-function parseNameStat(output: string): ReviewFile[] {
+function parseNameStatus(output: string): ReviewFile[] {
   const files: ReviewFile[] = []
   for (const line of output.trim().split('\n')) {
     if (!line) continue
-    const tab = line.indexOf('\t')
-    if (tab === -1) continue
-    const code = line.slice(0, tab).trim()
-    const filePath = line.slice(tab + 1).trim()
+    const parts = line.split('\t')
+    const code = parts[0]?.trim()
+    if (!code) continue
+    const filePath = (parts.length > 2 ? parts[parts.length - 1] : parts[1])?.trim()
     if (!filePath) continue
     let status: ReviewFile['status'] = 'modified'
     if (code.startsWith('A')) status = 'added'
@@ -146,10 +148,10 @@ export function registerPtyHandlers(
                 invalidateGitCache(meta.projectPath)
                 const { stdout } = await execFileAsync(
                   'wsl.exe',
-                  ['--', 'git', '-C', meta.projectPath, 'diff', '--name-stat', 'HEAD'],
+                  ['--', 'git', '-C', meta.projectPath, 'diff', '--name-status', 'HEAD'],
                   { timeout: 10000 },
                 )
-                const files = parseNameStat(stdout)
+                const files = parseNameStatus(stdout)
                 if (files.length === 0) return
 
                 tracker.addReview({

@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
+import { writeFile } from 'node:fs/promises'
 import type { GitStatus } from '../shared/types'
 import { toWslPath } from './wsl-utils'
 
@@ -82,16 +83,14 @@ function scheduleDiskFlush(): void {
   flushTimer = setTimeout(() => {
     flushTimer = null
     if (!diskCachePath) return
-    try {
-      const entries = Array.from(cache.entries()).map(([key, val]) => ({
-        key,
-        status: val.status,
-        fetchedAt: val.fetchedAt,
-      }))
-      writeFileSync(diskCachePath, JSON.stringify(entries), 'utf8')
-    } catch {
+    const entries = Array.from(cache.entries()).map(([key, val]) => ({
+      key,
+      status: val.status,
+      fetchedAt: val.fetchedAt,
+    }))
+    writeFile(diskCachePath, JSON.stringify(entries), 'utf8').catch(() => {
       // Best-effort persistence
-    }
+    })
   }, 5000)
 }
 
