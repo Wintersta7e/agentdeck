@@ -11,13 +11,36 @@ function formatElapsed(startedAt: number): string {
   return `${hours}h ${String(remMins).padStart(2, '0')}m`
 }
 
+// Shared 1-second ticker so every mounted useElapsedTime updates in lockstep
+// and we only run one setInterval for the whole UI instead of one per card.
+const tickSubscribers = new Set<() => void>()
+let tickTimer: ReturnType<typeof setInterval> | null = null
+
+function startTickerIfNeeded(): void {
+  if (tickTimer !== null) return
+  tickTimer = setInterval(() => {
+    for (const fn of tickSubscribers) fn()
+  }, 1000)
+}
+
+function subscribeToTick(cb: () => void): () => void {
+  tickSubscribers.add(cb)
+  startTickerIfNeeded()
+  return () => {
+    tickSubscribers.delete(cb)
+    if (tickSubscribers.size === 0 && tickTimer !== null) {
+      clearInterval(tickTimer)
+      tickTimer = null
+    }
+  }
+}
+
 /** Returns a ticking "Xm Ys" or "Xh Ym" string from a start timestamp. */
 export function useElapsedTime(startedAt: number | undefined): string {
   return useSyncExternalStore(
     (onStoreChange) => {
       if (!startedAt) return (): void => {}
-      const id = setInterval(onStoreChange, 1000)
-      return (): void => clearInterval(id)
+      return subscribeToTick(onStoreChange)
     },
     () => (startedAt ? formatElapsed(startedAt) : '0s'),
   )

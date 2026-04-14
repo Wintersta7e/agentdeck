@@ -102,7 +102,32 @@ export function computeTimeline(
 }
 
 export function useSessionTimeline(): TimelineRow[] {
-  const sessions = useAppStore((s) => s.sessions)
+  // Primitive session signature — only changes when fields the timeline reads
+  // (id, projectId, status, startedAt) change. Activity-only mutations don't
+  // retrigger the memo.
+  const sessionSignature = useAppStore((s) => {
+    const parts: string[] = []
+    for (const [id, session] of Object.entries(s.sessions)) {
+      parts.push(`${id}|${session.projectId}|${session.status}|${session.startedAt}`)
+    }
+    return parts.join(';')
+  })
+  const sessions = useMemo<Record<string, Session>>(() => {
+    const result: Record<string, Session> = {}
+    if (!sessionSignature) return result
+    for (const entry of sessionSignature.split(';')) {
+      const [id, projectId, status, startedAt] = entry.split('|')
+      if (!id || !startedAt) continue
+      result[id] = {
+        id,
+        projectId: projectId ?? '',
+        status: (status ?? 'exited') as Session['status'],
+        startedAt: Number(startedAt),
+      }
+    }
+    return result
+  }, [sessionSignature])
+
   const projects = useAppStore((s) => s.projects)
   // NOTE: This hook legitimately needs the full feed data for timeline computation.
   // The re-render cost is acceptable — the timeline is in a collapsible Tier 3

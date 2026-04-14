@@ -46,7 +46,8 @@ function CostDashboardContent(): React.JSX.Element {
       {topAgents.map(([agentId, cost]) => {
         const meta = AGENT_META.get(agentId)
         const agentHistory = history.map((h) => h.perAgent[agentId] ?? 0)
-        const maxVal = Math.max(...agentHistory, 0.01)
+        // Stack-safe max: spread of a large array can exceed JS arg limits
+        const maxVal = agentHistory.reduce((m, v) => (v > m ? v : m), 0.01)
 
         return (
           <div key={agentId} className="cost-card">

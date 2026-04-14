@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useStoreWithEqualityFn } from 'zustand/traditional'
 import { useAppStore } from '../../store/appStore'
 import { getDefaultAgent } from '../../../shared/agent-helpers'
 import { MAX_PANE_COUNT } from '../../../shared/constants'
@@ -18,44 +17,43 @@ export function SplitView(): React.JSX.Element {
   const paneLayout = useAppStore((s) => s.paneLayout)
   const focusedPane = useAppStore((s) => s.focusedPane)
   const paneSessions = useAppStore((s) => s.paneSessions)
-  // Narrow selector: only re-render when session IDs, projectIds, status, or agent overrides change
-  const sessions = useStoreWithEqualityFn(
-    useAppStore,
-    (s) => {
-      const result: Record<
-        string,
-        {
-          id: string
-          projectId: string
-          status: string
-          agentOverride?: string | undefined
-          agentFlagsOverride?: string | undefined
-        }
-      > = {}
-      for (const [id, session] of Object.entries(s.sessions)) {
-        result[id] = {
-          id: session.id,
-          projectId: session.projectId,
-          status: session.status,
-          agentOverride: session.agentOverride,
-          agentFlagsOverride: session.agentFlagsOverride,
-        }
+  // Primitive selector: collapse pane-relevant session fields into a single string.
+  // Zustand re-renders only when the string changes, avoiding per-mutation allocations
+  // and the custom-equality callback. We parse it back into a Record inside useMemo.
+  const sessionSignature = useAppStore((s) => {
+    const parts: string[] = []
+    for (const [id, session] of Object.entries(s.sessions)) {
+      parts.push(
+        `${id}|${session.projectId}|${session.status}|${session.agentOverride ?? ''}|${session.agentFlagsOverride ?? ''}`,
+      )
+    }
+    return parts.join(';')
+  })
+  const sessions = useMemo(() => {
+    const result: Record<
+      string,
+      {
+        id: string
+        projectId: string
+        status: string
+        agentOverride?: string | undefined
+        agentFlagsOverride?: string | undefined
       }
-      return result
-    },
-    (a, b) => {
-      const aKeys = Object.keys(a)
-      const bKeys = Object.keys(b)
-      if (aKeys.length !== bKeys.length) return false
-      for (const key of aKeys) {
-        if (a[key]?.projectId !== b[key]?.projectId) return false
-        if (a[key]?.status !== b[key]?.status) return false
-        if (a[key]?.agentOverride !== b[key]?.agentOverride) return false
-        if (a[key]?.agentFlagsOverride !== b[key]?.agentFlagsOverride) return false
+    > = {}
+    if (!sessionSignature) return result
+    for (const entry of sessionSignature.split(';')) {
+      const [id, projectId, status, agentOverride, agentFlagsOverride] = entry.split('|')
+      if (!id) continue
+      result[id] = {
+        id,
+        projectId: projectId ?? '',
+        status: status ?? '',
+        agentOverride: agentOverride || undefined,
+        agentFlagsOverride: agentFlagsOverride || undefined,
       }
-      return true
-    },
-  )
+    }
+    return result
+  }, [sessionSignature])
   const projects = useAppStore((s) => s.projects)
   const projectMap = useMemo(() => {
     const m = new Map<string, (typeof projects)[number]>()

@@ -395,7 +395,10 @@ export function createCostTracker(
         })
     }
 
-    session.pollTimer = setTimeout(tailPoll, TAIL_INTERVAL_MS)
+    // Stagger initial poll with jitter so multiple concurrently-bound sessions
+    // don't fire their wsl.exe subprocesses in lockstep every interval.
+    const jitter = Math.floor(Math.random() * TAIL_INTERVAL_MS)
+    session.pollTimer = setTimeout(tailPoll, jitter)
   }
 
   // ── Public API ──────────────────────────────────────────────────

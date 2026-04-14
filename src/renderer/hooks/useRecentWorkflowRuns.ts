@@ -29,10 +29,13 @@ export function useRecentWorkflowRuns(limit = 3): WorkflowRun[] {
       })
     }
 
-    fetchRuns()
+    // Debounce status-driven refetches so a burst of node:started/node:done
+    // events during a running workflow doesn't fan out N IPC calls per tick.
+    const timer = setTimeout(fetchRuns, 300)
 
     return () => {
       cancelled = true
+      clearTimeout(timer)
     }
   }, [workflowIds, workflowStatuses, limit])
 

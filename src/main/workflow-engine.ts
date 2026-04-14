@@ -141,11 +141,20 @@ export function createWorkflowEngine(
       })
     }
 
+    // Incoming non-loop edge lookup — replaces O(E) scans in evaluateCondition
+    // and processNode. Built once per run because workflow edges are immutable
+    // across the run.
+    const incomingEdgesByNode = new Map<string, WorkflowEdge[]>()
+    for (const e of workflow.edges) {
+      if (e.edgeType === 'loop') continue
+      const list = incomingEdgesByNode.get(e.toNodeId) ?? []
+      list.push(e)
+      incomingEdgesByNode.set(e.toNodeId, list)
+    }
+
     // ── Condition evaluation ──────────────────────────────────────
     function evaluateCondition(node: WorkflowNode): 'true' | 'false' {
-      const incomingEdge = workflow.edges.find(
-        (e) => e.toNodeId === node.id && e.edgeType !== 'loop',
-      )
+      const incomingEdge = incomingEdgesByNode.get(node.id)?.[0]
       if (!incomingEdge) return 'false'
       const upstreamId = incomingEdge.fromNodeId
 
@@ -403,9 +412,7 @@ export function createWorkflowEngine(
       }
 
       // Build context summary from upstream node outputs
-      const upstreamEdges = workflow.edges.filter(
-        (e) => e.toNodeId === node.id && e.edgeType !== 'loop',
-      )
+      const upstreamEdges = incomingEdgesByNode.get(node.id) ?? []
       const contextSummary = upstreamEdges
         .map((e) => {
           const out = nodeOutputs.get(e.fromNodeId)
