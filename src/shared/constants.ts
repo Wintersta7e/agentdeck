@@ -27,3 +27,6 @@ export const TERMINAL_FONT_FAMILY = "'JetBrains Mono', monospace"
 
 /** Milliseconds per minute — for timeout conversions */
 export const MS_PER_MINUTE = 60_000
+
+/** Cap on how many exited sessions we retain for home-screen history. */
+export const MAX_EXITED_SESSIONS = 20

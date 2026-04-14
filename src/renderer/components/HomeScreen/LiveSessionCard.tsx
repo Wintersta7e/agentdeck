@@ -44,12 +44,9 @@ export function LiveSessionCard({ sessionId }: LiveSessionCardProps): React.JSX.
     if (!feed || feed.length === 0) return null
     return feed[feed.length - 1] ?? null
   })
-  // Narrow selector: primitive count — only re-renders when write count changes.
-  const filesChanged = useAppStore((s) => {
-    const feed = s.activityFeeds[sessionId]
-    if (!feed) return 0
-    return feed.filter((e) => e.type === 'write').length
-  })
+  // Write counter is maintained by the store; O(1) lookup, unaffected by the
+  // 500-event feed cap and doesn't iterate events on every mutation.
+  const filesChanged = useAppStore((s) => s.writeCountBySession[sessionId] ?? 0)
   const usage = useAppStore((s) => s.sessionUsage[sessionId])
   const projects = useAppStore((s) => s.projects)
 

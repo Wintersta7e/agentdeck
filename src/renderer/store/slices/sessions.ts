@@ -7,7 +7,7 @@ import type {
   ActivityEvent,
   TokenUsage,
 } from '../../../shared/types'
-import { ACTIVITY_FEED_CAP, MAX_PANE_COUNT } from '../../../shared/constants'
+import { ACTIVITY_FEED_CAP, MAX_EXITED_SESSIONS, MAX_PANE_COUNT } from '../../../shared/constants'
 
 export interface SessionsSlice {
   sessions: Record<string, Session>
@@ -27,6 +27,10 @@ export interface SessionsSlice {
   activityFeeds: Record<string, ActivityEvent[]>
   addActivityEvent: (sessionId: string, event: ActivityEvent) => void
   clearActivityFeed: (sessionId: string) => void
+
+  // Total writes observed per session, tracked outside the capped feed so
+  // "Files Changed" counters stay accurate for long heavy sessions.
+  writeCountBySession: Record<string, number>
 
   // Usage tracking (per-session)
   sessionUsage: Record<string, TokenUsage>
@@ -108,9 +112,40 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
       // Keep the session in the sessions map (for cost/timeline/digest after close)
       // but mark it as exited. Only remove from pane slots and tab navigation.
       const session = state.sessions[sessionId]
-      const sessions = session
+      let sessions = session
         ? { ...state.sessions, [sessionId]: { ...session, status: 'exited' as SessionStatus } }
         : state.sessions
+      let activityFeeds = state.activityFeeds
+      let sessionUsage = state.sessionUsage
+      let writeCountBySession = state.writeCountBySession
+      // Evict the oldest exited sessions so per-session maps don't grow forever
+      const exitedByAge = Object.entries(sessions)
+        .filter(([, s]) => s.status === 'exited')
+        .sort(([, a], [, b]) => a.startedAt - b.startedAt)
+      if (exitedByAge.length > MAX_EXITED_SESSIONS) {
+        const evictCount = exitedByAge.length - MAX_EXITED_SESSIONS
+        const evictIds = new Set(exitedByAge.slice(0, evictCount).map(([id]) => id))
+        const nextSessions: typeof sessions = {}
+        for (const [id, s] of Object.entries(sessions)) {
+          if (!evictIds.has(id)) nextSessions[id] = s
+        }
+        sessions = nextSessions
+        const nextFeeds: typeof activityFeeds = {}
+        for (const [id, feed] of Object.entries(activityFeeds)) {
+          if (!evictIds.has(id)) nextFeeds[id] = feed
+        }
+        activityFeeds = nextFeeds
+        const nextUsage: typeof sessionUsage = {}
+        for (const [id, u] of Object.entries(sessionUsage)) {
+          if (!evictIds.has(id)) nextUsage[id] = u
+        }
+        sessionUsage = nextUsage
+        const nextWrites: typeof writeCountBySession = {}
+        for (const [id, count] of Object.entries(writeCountBySession)) {
+          if (!evictIds.has(id)) nextWrites[id] = count
+        }
+        writeCountBySession = nextWrites
+      }
       // Count sessions still visible in the UI (not closed/exited) for view logic
       const openIds = Object.entries(sessions)
         .filter(([, s]) => s.status !== 'exited')
@@ -128,6 +163,9 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
       }
       return {
         sessions,
+        activityFeeds,
+        sessionUsage,
+        writeCountBySession,
         activeSessionId: state.activeSessionId === sessionId ? newActive : state.activeSessionId,
         currentView:
           openIds.length === 0
@@ -159,6 +197,7 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
       const { [oldSessionId]: _feed, ...remainingFeeds } = s.activityFeeds
       // LEAK-13: Clean up sessionUsage for the old session
       const { [oldSessionId]: _usage, ...remainingUsage } = s.sessionUsage
+      const { [oldSessionId]: _writes, ...remainingWrites } = s.writeCountBySession
 
       // Find which pane slot the old session occupies (read from live state)
       const paneIndex = s.paneSessions.indexOf(oldSessionId)
@@ -183,6 +222,7 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
         },
         activityFeeds: remainingFeeds,
         sessionUsage: remainingUsage,
+        writeCountBySession: remainingWrites,
         activeSessionId: freshId,
         paneSessions,
       }
@@ -203,20 +243,23 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
 
   // Activity Feed
   activityFeeds: {},
+  writeCountBySession: {},
 
   addActivityEvent: (sessionId, event) =>
     set((state) => {
       const existing = state.activityFeeds[sessionId]
-      if (!existing) {
-        return { activityFeeds: { ...state.activityFeeds, [sessionId]: [event] } }
-      }
-      const updated =
-        existing.length >= ACTIVITY_FEED_CAP
+      const updated = !existing
+        ? [event]
+        : existing.length >= ACTIVITY_FEED_CAP
           ? [...existing.slice(-(ACTIVITY_FEED_CAP - 1)), event]
           : [...existing, event]
-      return {
-        activityFeeds: { ...state.activityFeeds, [sessionId]: updated },
+      const activityFeeds = { ...state.activityFeeds, [sessionId]: updated }
+      if (event.type !== 'write') return { activityFeeds }
+      const writeCountBySession = {
+        ...state.writeCountBySession,
+        [sessionId]: (state.writeCountBySession[sessionId] ?? 0) + 1,
       }
+      return { activityFeeds, writeCountBySession }
     }),
 
   clearActivityFeed: (sessionId) =>

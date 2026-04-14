@@ -82,16 +82,11 @@ export function useDailyDigest(): DailyDigestData {
     }
     return result
   }, [sessions, projects])
-  // Narrow selector: compute total write count inline and return a primitive.
-  // This avoids subscribing to the full activityFeeds map reference, which would
-  // trigger re-renders for every session's feed update across all sessions.
+  // Write counter is maintained by the store. Iterates N sessions (not events)
+  // and only changes when a 'write' event fires — cheaper than scanning feeds.
   const writeCount = useAppStore((s) => {
     let count = 0
-    for (const feed of Object.values(s.activityFeeds)) {
-      for (const e of feed) {
-        if (e.type === 'write') count++
-      }
-    }
+    for (const c of Object.values(s.writeCountBySession)) count += c
     return count
   })
 

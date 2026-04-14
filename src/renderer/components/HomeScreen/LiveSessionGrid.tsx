@@ -5,14 +5,16 @@ import { LiveSessionCard } from './LiveSessionCard'
 const MAX_VISIBLE = 4
 
 export function LiveSessionGrid(): React.JSX.Element | null {
-  const sessions = useAppStore((s) => s.sessions)
-
-  const runningIds = useMemo(() => {
-    return Object.entries(sessions)
-      .filter(([, s]) => s.status === 'running')
+  // Serialized primitive — only changes when running set or ordering changes,
+  // not on every activity event.
+  const runningIdsStr = useAppStore((s) =>
+    Object.entries(s.sessions)
+      .filter(([, sess]) => sess.status === 'running')
       .sort(([, a], [, b]) => b.startedAt - a.startedAt)
       .map(([id]) => id)
-  }, [sessions])
+      .join(','),
+  )
+  const runningIds = useMemo(() => (runningIdsStr ? runningIdsStr.split(',') : []), [runningIdsStr])
 
   if (runningIds.length === 0) {
     return (
