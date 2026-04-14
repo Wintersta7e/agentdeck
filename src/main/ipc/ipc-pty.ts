@@ -7,6 +7,7 @@ import { SAFE_ID_RE } from '../validation'
 import { KNOWN_AGENT_IDS, SAFE_FLAGS_RE } from '../../shared/agents'
 import { ptyBus } from '../pty-bus'
 import { invalidateGitCache } from '../git-status'
+import { toWslPath } from '../wsl-utils'
 import type { ReviewFile } from '../../shared/types'
 import type { ReviewTracker } from '../review-tracker'
 
@@ -162,9 +163,10 @@ export function registerPtyHandlers(
             void (async () => {
               try {
                 invalidateGitCache(meta.projectPath)
+                const wslProjectPath = toWslPath(meta.projectPath)
                 const { stdout } = await execFileAsync(
                   'wsl.exe',
-                  ['--', 'git', '-C', meta.projectPath, 'diff', '--name-status', 'HEAD'],
+                  ['--', 'git', '-C', wslProjectPath, 'diff', '--name-status', 'HEAD'],
                   { timeout: 10000 },
                 )
                 const files = parseNameStatus(stdout)
