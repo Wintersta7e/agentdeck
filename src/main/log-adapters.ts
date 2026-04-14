@@ -23,14 +23,8 @@ const warnedSchemas = new Set<string>()
 // Types
 // ---------------------------------------------------------------------------
 
-export interface TokenUsage {
-  /** Non-cached input tokens (excludes cache reads for both Claude and Codex). */
-  inputTokens: number
-  outputTokens: number
-  cacheReadTokens: number
-  cacheWriteTokens: number
-  totalCostUsd: number
-}
+export type { TokenUsage } from '../shared/types'
+import type { TokenUsage } from '../shared/types'
 
 export const ZERO_USAGE: Readonly<TokenUsage> = Object.freeze({
   inputTokens: 0,

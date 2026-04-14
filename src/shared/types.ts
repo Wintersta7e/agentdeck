@@ -332,6 +332,16 @@ export interface ReviewFile {
   status: 'added' | 'modified' | 'deleted'
 }
 
+/** Per-session token usage totals, reported by log adapters and cached in the store. */
+export interface TokenUsage {
+  /** Non-cached input tokens (excludes cache reads). */
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens: number
+  cacheWriteTokens: number
+  totalCostUsd: number
+}
+
 /** Aggregated cost data for a single day */
 export interface DailyCostEntry {
   date: string // YYYY-MM-DD

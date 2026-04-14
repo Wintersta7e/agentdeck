@@ -29,6 +29,9 @@ const TAIL_INTERVAL_MS = 3000
 /** Timeout for individual WSL exec calls (ms). */
 const WSL_TIMEOUT_MS = 5000
 
+/** Minimum cost delta (USD) we'll record. Below this is treated as float noise. */
+const COST_DELTA_EPSILON_USD = 1e-6
+
 // ── Types ───────────────────────────────────────────────────────────
 
 interface BoundSession {
@@ -341,7 +344,6 @@ export function createCostTracker(
           const lines = text.split('\n')
           session.partialLine = lines.pop() ?? ''
 
-          // Snapshot pre-poll usage so we can emit a delta to the persistent store
           const preUsage = session.usage
           let usageChanged = false
           for (const line of lines) {
@@ -362,16 +364,17 @@ export function createCostTracker(
                 usage: { ...session.usage },
               })
             }
-            // Record per-poll delta so the daily aggregate persists to disk
             if (costHistory) {
+              // cost-history sums deltas, not cumulative totals
               const deltaCost = session.usage.totalCostUsd - preUsage.totalCostUsd
               const deltaTokens =
                 session.usage.inputTokens +
                 session.usage.outputTokens -
                 preUsage.inputTokens -
                 preUsage.outputTokens
-              if (deltaCost > 0) {
-                costHistory.recordCost(session.adapter.agent, deltaCost, deltaTokens)
+              // Epsilon guard against float noise that would otherwise schedule a disk flush
+              if (deltaCost > COST_DELTA_EPSILON_USD) {
+                costHistory.recordCost(session.adapter.agent, deltaCost, Math.max(0, deltaTokens))
               }
             }
           }

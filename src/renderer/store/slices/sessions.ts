@@ -1,6 +1,12 @@
 import type { StateCreator } from 'zustand'
 import type { AppState } from '../appStore'
-import type { AgentType, Session, SessionStatus, ActivityEvent } from '../../../shared/types'
+import type {
+  AgentType,
+  Session,
+  SessionStatus,
+  ActivityEvent,
+  TokenUsage,
+} from '../../../shared/types'
 import { ACTIVITY_FEED_CAP, MAX_PANE_COUNT } from '../../../shared/constants'
 
 export interface SessionsSlice {
@@ -23,26 +29,8 @@ export interface SessionsSlice {
   clearActivityFeed: (sessionId: string) => void
 
   // Usage tracking (per-session)
-  sessionUsage: Record<
-    string,
-    {
-      inputTokens: number
-      outputTokens: number
-      cacheReadTokens: number
-      cacheWriteTokens: number
-      totalCostUsd: number
-    }
-  >
-  setSessionUsage: (
-    sessionId: string,
-    usage: {
-      inputTokens: number
-      outputTokens: number
-      cacheReadTokens: number
-      cacheWriteTokens: number
-      totalCostUsd: number
-    },
-  ) => void
+  sessionUsage: Record<string, TokenUsage>
+  setSessionUsage: (sessionId: string, usage: TokenUsage) => void
 
   // Worktree isolation paths (per-session)
   worktreePaths: Record<string, { path: string; isolated: boolean; branch?: string | undefined }>

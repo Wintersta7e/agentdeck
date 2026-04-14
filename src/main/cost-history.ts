@@ -1,5 +1,6 @@
 import { writeFileSync, readFileSync, existsSync } from 'node:fs'
 import type { DailyCostEntry } from '../shared/types'
+import { todayIsoKey } from '../shared/date-keys'
 
 export interface CostHistory {
   recordCost: (agentId: string, costUsd: number, tokens: number) => void
@@ -12,10 +13,6 @@ export interface CostHistory {
 interface PersistedData {
   entries: DailyCostEntry[]
   budget: number | null
-}
-
-function todayStr(): string {
-  return new Date().toISOString().slice(0, 10)
 }
 
 function loadFromDisk(storePath: string): {
@@ -65,7 +62,7 @@ export function createCostHistory(storePath?: string): CostHistory {
 
   return {
     recordCost(agentId, costUsd, tokens) {
-      const date = todayStr()
+      const date = todayIsoKey()
       const existing = entries.get(date)
       if (existing) {
         existing.totalCostUsd += costUsd

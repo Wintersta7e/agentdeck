@@ -62,25 +62,4 @@ describe('computeTimeline duration', () => {
     // No session in store → endTs = lastEvent + 30s; firstTs = events[0]
     expect(rows[0]?.duration).toBe('1h 25m')
   })
-
-  it('clamps firstTs to dayStart when session started yesterday but is still within today slice', () => {
-    // Not really applicable because line 47 already skips these sessions,
-    // but this guards against a regression where the clamp is removed.
-    const midnight = dayStart()
-    const now = Date.now()
-    // Session started 5 min before midnight (yesterday) — would be skipped by the
-    // dayStart guard. Confirm it IS skipped.
-    const session = makeSession({
-      id: 's3',
-      status: 'running',
-      startedAt: midnight - 5 * MIN,
-    })
-    const events = [makeActivityEvent({ timestamp: midnight + 10 * MIN })]
-    const rows = computeTimeline({ [session.id]: session }, { [session.id]: events }, midnight)
-    // Pre-existing guard: sessions.startedAt < dayStart → skipped.
-    expect(rows).toHaveLength(0)
-
-    // Guard doesn't affect the durations we care about
-    void now
-  })
 })

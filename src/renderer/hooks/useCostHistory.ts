@@ -1,9 +1,10 @@
 import { useEffect, useMemo } from 'react'
 import { useAppStore } from '../store/appStore'
 import { getDefaultAgent } from '../../shared/agent-helpers'
-import type { DailyCostEntry, Project, Session } from '../../shared/types'
+import type { DailyCostEntry, Project, Session, TokenUsage } from '../../shared/types'
 import { useMidnight } from './useMidnight'
 import { COST_REFRESH_INTERVAL_MS } from '../../shared/constants'
+import { todayIsoKey } from '../../shared/date-keys'
 
 export interface CostDashboardData {
   history: DailyCostEntry[]
@@ -12,32 +13,26 @@ export interface CostDashboardData {
   perAgentToday: Record<string, number>
 }
 
-interface SessionUsageTotals {
-  inputTokens: number
-  outputTokens: number
-  cacheReadTokens: number
-  cacheWriteTokens: number
-  totalCostUsd: number
-}
-
-/** Today's ISO date key, matching the format used by CostHistory on disk. */
-function todayIsoKey(): string {
-  return new Date().toISOString().slice(0, 10)
+export interface TodayTotalsInput {
+  sessionUsage: Record<string, TokenUsage>
+  sessions: Record<string, Session>
+  projects: Project[]
+  costHistory: DailyCostEntry[]
+  midnight: number
 }
 
 /**
- * Compute today's total cost and per-agent breakdown, merging live in-memory
- * session usage with the disk-persisted daily aggregate. The persisted entry
- * survives app restarts; live usage reflects current-session spending before
- * the next IPC refresh. Taking the max keeps both sources responsive.
+ * Merge live in-memory session usage with the disk-persisted daily aggregate.
+ * Taking the max per agent keeps live updates responsive while preserving the
+ * persisted total after an app restart (when `sessionUsage` is empty).
  */
-export function computeTodayTotals(
-  sessionUsage: Record<string, SessionUsageTotals>,
-  sessions: Record<string, Session>,
-  projects: Project[],
-  costHistory: DailyCostEntry[],
-  midnight: number,
-): { todayCost: number; perAgentToday: Record<string, number> } {
+export function computeTodayTotals({
+  sessionUsage,
+  sessions,
+  projects,
+  costHistory,
+  midnight,
+}: TodayTotalsInput): { todayCost: number; perAgentToday: Record<string, number> } {
   let liveTotal = 0
   const livePerAgent: Record<string, number> = {}
   const projectMap = new Map(projects.map((p) => [p.id, p]))
@@ -103,7 +98,7 @@ export function useCostHistory(): CostDashboardData {
   const midnight = useMidnight()
 
   const { todayCost, perAgentToday } = useMemo(
-    () => computeTodayTotals(sessionUsage, sessions, projects, costHistory, midnight),
+    () => computeTodayTotals({ sessionUsage, sessions, projects, costHistory, midnight }),
     [sessionUsage, sessions, projects, costHistory, midnight],
   )
 
