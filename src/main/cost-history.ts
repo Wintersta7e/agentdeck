@@ -1,7 +1,7 @@
 import { writeFile } from 'node:fs/promises'
 import { writeFileSync, readFileSync, existsSync } from 'node:fs'
 import type { DailyCostEntry } from '../shared/types'
-import { todayIsoKey } from '../shared/date-keys'
+import { todayIsoKey, isoKeyFromTs } from '../shared/date-keys'
 import { createLogger } from './logger'
 
 const log = createLogger('cost-history')
@@ -101,7 +101,8 @@ export function createCostHistory(storePath?: string): CostHistory {
     getHistory(days) {
       const cutoff = new Date()
       cutoff.setDate(cutoff.getDate() - days)
-      const cutoffStr = cutoff.toISOString().slice(0, 10)
+      // Use the shared local-time key so the cutoff matches entries written by recordCost
+      const cutoffStr = isoKeyFromTs(cutoff.getTime())
 
       return Array.from(entries.values())
         .filter((e) => e.date >= cutoffStr)

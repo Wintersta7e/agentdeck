@@ -20,11 +20,14 @@ export function SplitView(): React.JSX.Element {
   // Primitive selector: collapse pane-relevant session fields into a single string.
   // Zustand re-renders only when the string changes, avoiding per-mutation allocations
   // and the custom-equality callback. We parse it back into a Record inside useMemo.
+  // agentFlagsOverride can contain arbitrary user input, so URL-encode it
+  // before packing into the signature so `|` and `;` can't corrupt the split.
   const sessionSignature = useAppStore((s) => {
     const parts: string[] = []
     for (const [id, session] of Object.entries(s.sessions)) {
+      const flags = encodeURIComponent(session.agentFlagsOverride ?? '')
       parts.push(
-        `${id}|${session.projectId}|${session.status}|${session.agentOverride ?? ''}|${session.agentFlagsOverride ?? ''}`,
+        `${id}|${session.projectId}|${session.status}|${session.agentOverride ?? ''}|${flags}`,
       )
     }
     return parts.join(';')
@@ -42,8 +45,11 @@ export function SplitView(): React.JSX.Element {
     > = {}
     if (!sessionSignature) return result
     for (const entry of sessionSignature.split(';')) {
-      const [id, projectId, status, agentOverride, agentFlagsOverride] = entry.split('|')
+      const [id, projectId, status, agentOverride, agentFlagsEncoded] = entry.split('|')
       if (!id) continue
+      const agentFlagsOverride = agentFlagsEncoded
+        ? decodeURIComponent(agentFlagsEncoded)
+        : undefined
       result[id] = {
         id,
         projectId: projectId ?? '',

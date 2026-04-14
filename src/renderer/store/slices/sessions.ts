@@ -118,6 +118,7 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
       let activityFeeds = state.activityFeeds
       let sessionUsage = state.sessionUsage
       let writeCountBySession = state.writeCountBySession
+      let worktreePaths = state.worktreePaths
       // Evict the oldest exited sessions so per-session maps don't grow forever
       const exitedByAge = Object.entries(sessions)
         .filter(([, s]) => s.status === 'exited')
@@ -145,6 +146,11 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
           if (!evictIds.has(id)) nextWrites[id] = count
         }
         writeCountBySession = nextWrites
+        const nextWorktrees: typeof worktreePaths = {}
+        for (const [id, wt] of Object.entries(worktreePaths)) {
+          if (!evictIds.has(id)) nextWorktrees[id] = wt
+        }
+        worktreePaths = nextWorktrees
       }
       // Count sessions still visible in the UI (not closed/exited) for view logic
       const openIds = Object.entries(sessions)
@@ -166,6 +172,7 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
         activityFeeds,
         sessionUsage,
         writeCountBySession,
+        worktreePaths,
         activeSessionId: state.activeSessionId === sessionId ? newActive : state.activeSessionId,
         currentView:
           openIds.length === 0
@@ -247,6 +254,11 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
 
   addActivityEvent: (sessionId, event) =>
     set((state) => {
+      // Drop late-arriving events for sessions that have been evicted from the
+      // store. Without this guard a buffered pty:activity IPC firing after the
+      // session was pruned would resurrect orphan entries in activityFeeds +
+      // writeCountBySession that would never be cleaned up again.
+      if (!state.sessions[sessionId]) return state
       const existing = state.activityFeeds[sessionId]
       const updated = !existing
         ? [event]

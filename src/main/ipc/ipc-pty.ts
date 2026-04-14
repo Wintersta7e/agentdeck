@@ -4,7 +4,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import type { PtyManager } from '../pty-manager'
 import { SAFE_ID_RE } from '../validation'
-import { KNOWN_AGENT_IDS } from '../../shared/agents'
+import { KNOWN_AGENT_IDS, SAFE_FLAGS_RE } from '../../shared/agents'
 import { ptyBus } from '../pty-bus'
 import { invalidateGitCache } from '../git-status'
 import type { ReviewFile } from '../../shared/types'
@@ -53,15 +53,23 @@ interface PtyHandlerDeps {
  * Rename/copy lines carry the destination path after a second tab:
  * "R100\t<old>\t<new>" — we take the new path.
  */
+/** Cap on review entries per PTY exit so a pathological repo can't exhaust memory. */
+const MAX_REVIEW_FILES = 500
+/** Per-path length cap. Git paths above this are almost certainly garbage. */
+const MAX_REVIEW_PATH_LEN = 1024
+
 export function parseNameStatus(output: string): ReviewFile[] {
   const files: ReviewFile[] = []
   for (const line of output.trim().split('\n')) {
+    if (files.length >= MAX_REVIEW_FILES) break
     if (!line) continue
     const parts = line.split('\t')
     const code = parts[0]?.trim()
     if (!code) continue
-    const filePath = (parts.length > 2 ? parts[parts.length - 1] : parts[1])?.trim()
-    if (!filePath) continue
+    const raw = (parts.length > 2 ? parts[parts.length - 1] : parts[1])?.trim() ?? ''
+    // Strip null bytes defensively; reject paths that exceed the length cap.
+    const filePath = raw.replace(/\0/g, '')
+    if (!filePath || filePath.length > MAX_REVIEW_PATH_LEN) continue
     let status: ReviewFile['status'] = 'modified'
     if (code.startsWith('A')) status = 'added'
     else if (code.startsWith('D')) status = 'deleted'
@@ -121,9 +129,17 @@ export function registerPtyHandlers(
           }
         }
       }
-      // R2-21: Validate agentFlags type and length
-      if (agentFlags !== undefined && (typeof agentFlags !== 'string' || agentFlags.length > 512)) {
-        throw new Error('Invalid agentFlags')
+      // Validate agentFlags type, length, AND content at the IPC boundary so
+      // shell metacharacters never reach the main process (SAFE_FLAGS_RE is
+      // the only guard before wsl.exe bash -lc concatenation downstream).
+      if (agentFlags !== undefined) {
+        if (
+          typeof agentFlags !== 'string' ||
+          agentFlags.length > 512 ||
+          !SAFE_FLAGS_RE.test(agentFlags)
+        ) {
+          throw new Error('Invalid agentFlags')
+        }
       }
       const mgr = getPtyManager()
       if (!mgr) throw new Error('PTY manager not initialized')
