@@ -1,14 +1,11 @@
-import { ipcMain, app } from 'electron'
-import { join } from 'node:path'
+import { ipcMain } from 'electron'
 import { SAFE_ID_RE } from '../validation'
 import { getGitStatus } from '../git-status'
 import { createReviewTracker } from '../review-tracker'
-import { createCostHistory } from '../cost-history'
 
 const reviewTracker = createReviewTracker()
-const costHistory = createCostHistory(join(app.getPath('userData'), 'cost-history.json'))
 
-export { reviewTracker, costHistory }
+export { reviewTracker }
 
 export function registerHomeHandlers(getProjectPath: (projectId: string) => string | null): void {
   ipcMain.handle('projects:gitStatus', async (_, projectId: string) => {

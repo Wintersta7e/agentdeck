@@ -13,6 +13,9 @@ import type { WorkflowEngine } from './workflow-engine'
 import { createWorktreeManager, type WorktreeManager } from './worktree-manager'
 import { createWslGitPort } from './git-port'
 import { createCostTracker, type CostTracker } from './cost-tracker'
+import { createCostHistory } from './cost-history'
+
+const costHistory = createCostHistory(join(app.getPath('userData'), 'cost-history.json'))
 
 /** Read persisted theme at startup to match BrowserWindow background to the active theme */
 const THEME_BG0: Record<string, string> = {
@@ -48,7 +51,6 @@ import {
   registerWorktreeHandlers,
   registerHomeHandlers,
   registerCostHandlers,
-  costHistory,
   reviewTracker,
 } from './ipc'
 

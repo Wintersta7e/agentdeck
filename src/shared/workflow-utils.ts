@@ -176,6 +176,14 @@ export function validateWorkflow(w: unknown): ValidationResult {
               `Condition regex pattern too long (${String(n.conditionPattern.length)} chars, max 500)`,
             )
           }
+          // Heuristic ReDoS guard — reject nested quantifiers like (a+)+ or (a*)+ that
+          // cause catastrophic backtracking. JavaScript regex cannot be timed out; the
+          // engine runs on the workflow-engine event loop.
+          if (/\([^)]*[+*][^)]*\)[+*?]/.test(n.conditionPattern)) {
+            errors.push(
+              `conditionPattern for "${String(n.id)}" contains nested quantifiers (ReDoS risk)`,
+            )
+          }
           try {
             new RegExp(n.conditionPattern)
           } catch {
