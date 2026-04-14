@@ -20,9 +20,6 @@ const log = createLogger('cost-tracker')
 /** How often to poll for the log file during discovery (ms). */
 const DISCOVERY_INTERVAL_MS = 2000
 
-/** How long to keep looking for a log file before giving up (ms). */
-const DISCOVERY_TIMEOUT_MS = 30_000
-
 /** How often to poll the log file for new content once bound (ms). */
 const TAIL_INTERVAL_MS = 3000
 
@@ -44,7 +41,6 @@ interface BoundSession {
   projectPath: string
   cwd: string
   spawnAt: number
-  discoveryStartedAt: number
   filePath: string | null
   offset: number
   partialLine: string
@@ -184,19 +180,11 @@ export function createCostTracker(
 
   function runDiscoveryLoop(session: BoundSession, dirs: string[], pattern: string): void {
     function discoveryPoll(): void {
-      // Session may have been unbound while we were waiting
+      // Session may have been unbound while we were waiting. The loop has no
+      // wall-clock timeout — claude-code (and other agents) only create their
+      // log file on first user prompt, which can be arbitrarily delayed. The
+      // loop terminates when unbindSession deletes the session from the map.
       if (!sessions.has(session.sessionId)) return
-
-      // Timeout guard — uses the session-level start time so re-entries
-      // from tryMatchCandidates share the same deadline
-      if (Date.now() - session.discoveryStartedAt > DISCOVERY_TIMEOUT_MS) {
-        log.warn('Discovery timed out for session', {
-          sessionId: session.sessionId,
-          dirs,
-          pattern,
-        })
-        return
-      }
 
       // Build find commands with resolved paths (no $HOME needed)
       const findParts = dirs.map(
@@ -436,7 +424,6 @@ export function createCostTracker(
       projectPath: wslProjectPath,
       cwd: wslCwd,
       spawnAt: opts.spawnAt,
-      discoveryStartedAt: Date.now(),
       filePath: null,
       offset: 0,
       partialLine: '',

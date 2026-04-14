@@ -285,29 +285,84 @@ describe('file discovery', () => {
     tracker.destroy()
   })
 
-  it('stops discovery after 30s with no match', async () => {
+  it('keeps polling for the log file past the legacy 30s window — agents may take arbitrarily long to write their first entry', async () => {
     makeRoutingMock()
     const win = makeMockWindow()
     const adapter = makeTestAdapter({ matchSession: () => false })
     const tracker = createCostTracker(win, [adapter])
 
     await vi.advanceTimersByTimeAsync(0)
-
     tracker.bindSession('s1', BIND_OPTS)
 
-    // Advance 32s — well past the 30s discovery timeout
-    await vi.advanceTimersByTimeAsync(32_000)
+    // Run well past the old 30s cutoff
+    await vi.advanceTimersByTimeAsync(60_000)
 
-    // After discovery timeout, no more find/head calls should happen
+    // Confirm find calls keep being issued — discovery is still alive
     const callsBefore = mockExecFile.mock.calls.length
     await vi.advanceTimersByTimeAsync(10_000)
-    // Only the existing calls, no new find/head calls
-    const newCalls = mockExecFile.mock.calls.slice(callsBefore).filter((c: unknown[]) => {
+    const newFindCalls = mockExecFile.mock.calls.slice(callsBefore).filter((c: unknown[]) => {
       const args = c[1] as string[]
       const cmd = Array.isArray(args) ? args.join(' ') : ''
-      return cmd.includes('find ') || cmd.includes('head ')
+      return cmd.includes('find ')
     })
-    expect(newCalls.length).toBe(0)
+    expect(newFindCalls.length).toBeGreaterThan(0)
+
+    tracker.destroy()
+  })
+
+  it('discovers a log file that only appears after the legacy 30s window', async () => {
+    let matched = false
+    const adapter = makeTestAdapter({
+      // matchSession only returns true after we flip the flag below
+      matchSession: () => matched,
+    })
+    const win = makeMockWindow()
+
+    // Start with no candidates, then "create" a file at minute 1
+    const earlyTail = '0\n'
+    const lateTail = '20\n{"line":"one"}\n'
+    let phase: 'pre' | 'post' = 'pre'
+    mockExecFile.mockImplementation(
+      (_bin: string, args: string[], _opts: unknown, cb: ExecFileCb) => {
+        const cmd = Array.isArray(args) ? args.join(' ') : ''
+        if (cmd.includes('echo "$HOME"')) cb(null, '/home/rooty\n', '')
+        else if (cmd.includes('CLAUDE_CONFIG_DIR') || cmd.includes('CODEX_HOME')) cb(null, '\n', '')
+        else if (cmd.includes('find ')) {
+          cb(
+            null,
+            phase === 'pre' ? '' : '/home/rooty/.claude/projects/test/sessions/abc.jsonl\n',
+            '',
+          )
+        } else if (cmd.includes('head ')) {
+          cb(null, '{"cwd":"/home/rooty/project"}\n', '')
+        } else if (cmd.includes('stat ') || cmd.includes('tail ')) {
+          cb(null, phase === 'pre' ? earlyTail : lateTail, '')
+        } else {
+          cb(null, '', '')
+        }
+      },
+    )
+
+    const tracker = createCostTracker(win, [adapter])
+    await vi.advanceTimersByTimeAsync(0)
+    tracker.bindSession('s1', BIND_OPTS)
+
+    // 90 seconds with nothing — well past the old 30s cutoff
+    await vi.advanceTimersByTimeAsync(90_000)
+    expect(win.webContents.send).not.toHaveBeenCalled()
+
+    // Now the file appears and matchSession starts succeeding
+    matched = true
+    phase = 'post'
+    // Drain enough discovery + tail cycles for the bind→tail→cost:update chain.
+    // jitter on first tail poll is 0..TAIL_INTERVAL_MS; an extra TAIL_INTERVAL is
+    // budget for the tail itself plus microtasks.
+    await vi.advanceTimersByTimeAsync(10_000)
+
+    expect(win.webContents.send).toHaveBeenCalledWith(
+      'cost:update',
+      expect.objectContaining({ sessionId: 's1' }),
+    )
 
     tracker.destroy()
   })
