@@ -50,9 +50,12 @@ export function computeTimeline(
     const segments: TimelineSegment[] = []
     const events = feed
 
-    // Use session's active span (first event → now) for proportional widths,
-    // not the full day span — otherwise short sessions produce invisible segments
-    const firstTs = events[0]?.timestamp ?? now
+    // Use session's active span for proportional widths. Anchor to session.startedAt
+    // (clamped to today's dayStart) so duration reflects real wall-clock runtime —
+    // the activity feed is a 500-event ring buffer, so events[0] is not the session
+    // start for heavy sessions. Fall back to events[0] only when the session has
+    // been purged from the store.
+    const firstTs = session ? Math.max(session.startedAt, dayStart) : (events[0]?.timestamp ?? now)
     const lastTs = events[events.length - 1]?.timestamp ?? now
     // Minimum span so very short sessions still show proportional segments
     const sessionSpan = Math.max(
