@@ -108,5 +108,12 @@ export const AGENT_DISPLAY: Readonly<Record<string, string>> = Object.freeze(
   Object.fromEntries(AGENTS.map((a) => [a.id, a.name])),
 )
 
-/** Validation pattern for agent CLI flags — rejects shell metacharacters */
+/**
+ * Validation pattern for agent CLI flags — rejects shell metacharacters.
+ * This is the ONLY guard between renderer-controlled flag strings and a
+ * `wsl.exe bash -lc` shell command (flags are concatenated unquoted in
+ * `node-runners.ts`). Do NOT broaden this character class to include any of:
+ *   $, `, (, ), ;, |, &, \, ", ', \n, or the space before a shell operator.
+ * Adding even one would enable shell injection.
+ */
 export const SAFE_FLAGS_RE = /^[A-Za-z0-9 \-_=./:@,]*$/

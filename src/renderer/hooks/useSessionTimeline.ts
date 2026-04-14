@@ -22,9 +22,6 @@ function formatDuration(ms: number): string {
   return `${h}h ${String(m).padStart(2, '0')}m`
 }
 
-// Cache labels so closed sessions keep their agent + project name
-const labelCache = new Map<string, string>()
-
 export function computeTimeline(
   sessions: Record<string, Session>,
   activityFeeds: Record<string, ActivityEvent[]>,
@@ -81,17 +78,13 @@ export function computeTimeline(
       const isRunning = session?.status === 'running' || session?.status === 'starting'
       const endTs = isRunning ? now : lastTs + TIMELINE_EVENT_DURATION_MS
       const duration = formatDuration(endTs - firstTs)
-      // Build label from live session data, or use cached label for closed sessions
-      let label = labelCache.get(sessionId)
-      if (!label && session) {
-        const projectName = session.projectId ? projectMap?.get(session.projectId) : undefined
-        label = projectName ?? 'session'
-        labelCache.set(sessionId, label)
-      }
-
+      // Label derived fresh from session + projects. Evicted sessions are
+      // pruned from activityFeeds in removeSession so we never reach here
+      // without a live session.
+      const projectName = session?.projectId ? projectMap?.get(session.projectId) : undefined
       rows.push({
         sessionId,
-        label: label ?? 'session',
+        label: projectName ?? 'session',
         segments,
         duration,
       })
@@ -135,18 +128,6 @@ export function useSessionTimeline(): TimelineRow[] {
   const activityFeeds = useAppStore((s) => s.activityFeeds)
 
   const projectMap = useMemo(() => new Map(projects.map((p) => [p.id, p.name])), [projects])
-
-  // Eagerly cache labels while sessions are still alive — before removeSession deletes them
-  useEffect(() => {
-    for (const [sessionId, session] of Object.entries(sessions)) {
-      if (!labelCache.has(sessionId)) {
-        const projectName = session.projectId ? projectMap.get(session.projectId) : undefined
-        if (projectName) {
-          labelCache.set(sessionId, projectName)
-        }
-      }
-    }
-  }, [sessions, projectMap])
 
   // H14: Reactive midnight boundary — recomputes at day rollover
   const midnight = useMidnight()

@@ -131,9 +131,19 @@ export const createWorkflowsSlice: StateCreator<AppState, [], [], WorkflowsSlice
     })),
 
   setWorkflowStatus: (workflowId, status) =>
-    set((state) => ({
-      workflowStatuses: { ...state.workflowStatuses, [workflowId]: status },
-    })),
+    set((state) => {
+      // When a workflow finishes from the home screen (no editor tab open),
+      // drop its log buffer so repeated runs don't accumulate up to 5000
+      // events each forever. Status itself is tiny and stays.
+      const terminal = status === 'done' || status === 'error' || status === 'stopped'
+      const isOpen = state.openWorkflowIds.includes(workflowId)
+      const workflowStatuses = { ...state.workflowStatuses, [workflowId]: status }
+      if (terminal && !isOpen && state.workflowLogs[workflowId]) {
+        const { [workflowId]: _logs, ...remainingLogs } = state.workflowLogs
+        return { workflowStatuses, workflowLogs: remainingLogs }
+      }
+      return { workflowStatuses }
+    }),
 
   clearWorkflowLogs: (workflowId) =>
     set((state) => ({

@@ -41,9 +41,10 @@ export function registerProjectHandlers(
     if (typeof projectPath !== 'string' || !projectPath) {
       throw new Error('projects:readFile requires a non-empty projectPath')
     }
-    // SEC-34: Normalize to forward slashes before traversal check to cover Windows backslash sequences
-    const normalizedPath = projectPath.replace(/\\/g, '/')
-    if (/(?:^|\/)\.\.(?:\/|$)/.test(normalizedPath)) {
+    // Normalize slashes AND collapse `..` segments before the traversal check so
+    // mixed backslash + percent-encoded cases can't sneak past (SEC-34 + SEC-05).
+    const collapsed = path.posix.normalize(projectPath.replace(/\\/g, '/'))
+    if (collapsed.includes('/../') || collapsed.startsWith('../') || collapsed.endsWith('/..')) {
       throw new Error('projects:readFile rejects path traversal in projectPath')
     }
     // R6-01: Validate filename type before allowlist check

@@ -215,10 +215,12 @@ export function createCostTracker(
             .filter(Boolean)
 
           if (candidates.length === 0) {
-            // Nothing yet — schedule next discovery poll
-            // R2-02: Re-check session existence before scheduling to avoid TOCTOU timer leak
+            // Nothing yet — re-enter startDiscovery so adapters with time-
+            // dependent log dirs (e.g. Codex's today-date path) recompute
+            // them on each retry instead of caching yesterday's dir across
+            // midnight.
             if (!sessions.has(session.sessionId)) return
-            session.pollTimer = setTimeout(discoveryPoll, DISCOVERY_INTERVAL_MS)
+            session.pollTimer = setTimeout(() => startDiscovery(session), DISCOVERY_INTERVAL_MS)
             return
           }
 
@@ -231,9 +233,8 @@ export function createCostTracker(
             sessionId: session.sessionId,
             err: String(err),
           })
-          // R2-02: Re-check before scheduling
           if (!sessions.has(session.sessionId)) return
-          session.pollTimer = setTimeout(discoveryPoll, DISCOVERY_INTERVAL_MS)
+          session.pollTimer = setTimeout(() => startDiscovery(session), DISCOVERY_INTERVAL_MS)
         })
     }
 
