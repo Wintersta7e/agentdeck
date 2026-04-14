@@ -29,8 +29,12 @@ const TAIL_INTERVAL_MS = 3000
 /** Timeout for individual WSL exec calls (ms). */
 const WSL_TIMEOUT_MS = 5000
 
-/** Minimum cost delta (USD) we'll record. Below this is treated as float noise. */
-const COST_DELTA_EPSILON_USD = 1e-6
+/**
+ * Minimum cost delta (USD) we'll record. Chosen well below legitimate
+ * single-token pricing (cache reads on Haiku are ~$3e-8/token) but above
+ * IEEE-754 subtraction noise for typical session totals.
+ */
+const COST_DELTA_EPSILON_USD = 1e-9
 
 // ── Types ───────────────────────────────────────────────────────────
 

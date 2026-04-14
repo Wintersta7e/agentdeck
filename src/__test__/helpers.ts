@@ -11,6 +11,7 @@ import type {
   Session,
   ActivityEvent,
   TemplateCategory,
+  TokenUsage,
 } from '../shared/types'
 
 let counter = 0
@@ -93,6 +94,17 @@ export function makeSession(overrides: Partial<Session> = {}): Session {
     projectId: 'proj-1',
     status: 'running',
     startedAt: Date.now(),
+    ...overrides,
+  }
+}
+
+export function makeTokenUsage(overrides: Partial<TokenUsage> = {}): TokenUsage {
+  return {
+    inputTokens: 0,
+    outputTokens: 0,
+    cacheReadTokens: 0,
+    cacheWriteTokens: 0,
+    totalCostUsd: 0,
     ...overrides,
   }
 }

@@ -13,7 +13,7 @@ export interface CostDashboardData {
   perAgentToday: Record<string, number>
 }
 
-export interface TodayTotalsInput {
+interface TodayTotalsInput {
   sessionUsage: Record<string, TokenUsage>
   sessions: Record<string, Session>
   projects: Project[]
@@ -46,7 +46,8 @@ export function computeTodayTotals({
     livePerAgent[agent] = (livePerAgent[agent] ?? 0) + usage.totalCostUsd
   }
 
-  const todayEntry = costHistory.find((e) => e.date === todayIsoKey())
+  const today = todayIsoKey()
+  const todayEntry = costHistory.find((e) => e.date === today)
   const persistedTotal = todayEntry?.totalCostUsd ?? 0
   const persistedPerAgent = todayEntry?.perAgent ?? {}
 

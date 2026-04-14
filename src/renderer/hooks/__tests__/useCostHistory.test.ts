@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { computeTodayTotals } from '../useCostHistory'
-import { makeProject, makeSession } from '../../../__test__/helpers'
-import { todayIsoKey } from '../../../shared/date-keys'
-import type { DailyCostEntry, TokenUsage } from '../../../shared/types'
+import { makeProject, makeSession, makeTokenUsage } from '../../../__test__/helpers'
+import { todayIsoKey, isoKeyFromTs } from '../../../shared/date-keys'
+import type { DailyCostEntry } from '../../../shared/types'
 
 const MIDNIGHT = (() => {
   const d = new Date()
@@ -18,16 +18,6 @@ function makeEntry(overrides: Partial<DailyCostEntry> = {}): DailyCostEntry {
     sessionCount: 0,
     tokenCount: 0,
     ...overrides,
-  }
-}
-
-function makeUsage(totalCostUsd: number): TokenUsage {
-  return {
-    inputTokens: 0,
-    outputTokens: 0,
-    cacheReadTokens: 0,
-    cacheWriteTokens: 0,
-    totalCostUsd,
   }
 }
 
@@ -47,7 +37,7 @@ describe('computeTodayTotals', () => {
   it('uses live sessionUsage sum when it exceeds persisted history (in-flight usage)', () => {
     const session = makeSession({ id: 's1', agentOverride: 'claude-code' })
     const totals = computeTodayTotals({
-      sessionUsage: { s1: makeUsage(3.0) },
+      sessionUsage: { s1: makeTokenUsage({ totalCostUsd: 3.0 }) },
       sessions: { s1: session },
       projects: [makeProject({ id: 'proj-1' })],
       costHistory: [makeEntry({ totalCostUsd: 2.0, perAgent: { 'claude-code': 2.0 } })],
@@ -60,7 +50,7 @@ describe('computeTodayTotals', () => {
   it('takes max per agent when live and persisted disagree', () => {
     const session = makeSession({ id: 's1', agentOverride: 'codex' })
     const totals = computeTodayTotals({
-      sessionUsage: { s1: makeUsage(0.5) },
+      sessionUsage: { s1: makeTokenUsage({ totalCostUsd: 0.5 }) },
       sessions: { s1: session },
       projects: [makeProject({ id: 'proj-1' })],
       costHistory: [makeEntry({ totalCostUsd: 1.5, perAgent: { 'claude-code': 1.0, codex: 0.5 } })],
@@ -71,7 +61,7 @@ describe('computeTodayTotals', () => {
   })
 
   it('ignores yesterday entries in costHistory', () => {
-    const yesterday = new Date(MIDNIGHT - 86_400_000).toISOString().slice(0, 10)
+    const yesterday = isoKeyFromTs(MIDNIGHT - 86_400_000)
     const totals = computeTodayTotals({
       sessionUsage: {},
       sessions: {},
@@ -92,7 +82,7 @@ describe('computeTodayTotals', () => {
       agentOverride: 'claude-code',
     })
     const totals = computeTodayTotals({
-      sessionUsage: { 's-old': makeUsage(5.0) },
+      sessionUsage: { 's-old': makeTokenUsage({ totalCostUsd: 5.0 }) },
       sessions: { 's-old': session },
       projects: [makeProject({ id: 'proj-1' })],
       costHistory: [],
