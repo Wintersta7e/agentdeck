@@ -270,7 +270,7 @@ app
       )
     }
 
-    registerCostHandlers(() => costTracker)
+    registerCostHandlers(() => costTracker, costHistory)
 
     // Warn renderer if encryption is unavailable (secrets stored as plaintext)
     if (!safeStorage.isEncryptionAvailable() && mainWindow) {

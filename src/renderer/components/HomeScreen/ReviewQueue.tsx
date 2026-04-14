@@ -42,8 +42,12 @@ export function ReviewQueue(): React.JSX.Element {
       try {
         await window.agentDeck.home.dismissReview(id)
         dismissReview(id)
-      } catch {
-        // Ignore
+      } catch (err) {
+        window.agentDeck.log.send('warn', 'review-queue', 'Dismiss failed', {
+          reviewId: id,
+          err: String(err),
+        })
+        useAppStore.getState().addNotification('warning', 'Failed to dismiss review')
       }
     },
     [dismissReview],

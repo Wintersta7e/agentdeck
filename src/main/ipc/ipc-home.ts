@@ -33,22 +33,4 @@ export function registerHomeHandlers(getProjectPath: (projectId: string) => stri
     }
     reviewTracker.dismissReview(reviewId)
   })
-
-  ipcMain.handle('cost:getHistory', (_, days: number) => {
-    if (typeof days !== 'number' || days < 1 || days > 365) {
-      throw new Error('Invalid days parameter')
-    }
-    return costHistory.getHistory(days)
-  })
-
-  ipcMain.handle('cost:getBudget', () => {
-    return costHistory.getBudget()
-  })
-
-  ipcMain.handle('cost:setBudget', (_, amount: number | null) => {
-    if (amount !== null && (typeof amount !== 'number' || amount < 0)) {
-      throw new Error('Invalid budget amount')
-    }
-    costHistory.setBudget(amount)
-  })
 }
