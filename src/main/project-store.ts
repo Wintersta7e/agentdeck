@@ -142,8 +142,8 @@ export function createProjectStore(): Store<StoreSchema> {
     }
     // Validate required fields from renderer input before trusting the shape
     const raw = project as Record<string, unknown>
-    if (raw.id !== undefined && typeof raw.id !== 'string')
-      throw new Error('store:saveProject — id must be a string')
+    if (raw.id !== undefined && (typeof raw.id !== 'string' || !SAFE_ID_RE.test(raw.id)))
+      throw new Error('store:saveProject — id must be a valid identifier')
     if (raw.name !== undefined && typeof raw.name !== 'string')
       throw new Error('store:saveProject — name must be a string')
     if (raw.path !== undefined && typeof raw.path !== 'string')
@@ -200,8 +200,8 @@ export function createProjectStore(): Store<StoreSchema> {
       throw new Error('store:saveTemplate requires a non-null object')
     }
     const rawT = template as Record<string, unknown>
-    if (rawT.id !== undefined && typeof rawT.id !== 'string')
-      throw new Error('store:saveTemplate — id must be a string')
+    if (rawT.id !== undefined && (typeof rawT.id !== 'string' || !SAFE_ID_RE.test(rawT.id)))
+      throw new Error('store:saveTemplate — id must be a valid identifier')
     if (rawT.name !== undefined && typeof rawT.name !== 'string')
       throw new Error('store:saveTemplate — name must be a string')
     if (typeof rawT.name === 'string' && rawT.name.length > 200)
@@ -240,8 +240,8 @@ export function createProjectStore(): Store<StoreSchema> {
       throw new Error('store:saveRole requires a non-null object')
     }
     const rawR = role as Record<string, unknown>
-    if (rawR.id !== undefined && typeof rawR.id !== 'string')
-      throw new Error('store:saveRole — id must be a string')
+    if (rawR.id !== undefined && (typeof rawR.id !== 'string' || !SAFE_ID_RE.test(rawR.id)))
+      throw new Error('store:saveRole — id must be a valid identifier')
     if (rawR.name !== undefined && typeof rawR.name !== 'string')
       throw new Error('store:saveRole — name must be a string')
     if (typeof rawR.name === 'string' && rawR.name.length > 200)

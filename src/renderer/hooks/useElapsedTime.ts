@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react'
+import { useCallback, useSyncExternalStore } from 'react'
 
 function formatElapsed(startedAt: number): string {
   const secs = Math.max(0, Math.floor((Date.now() - startedAt) / 1000))
@@ -37,11 +37,15 @@ function subscribeToTick(cb: () => void): () => void {
 
 /** Returns a ticking "Xm Ys" or "Xh Ym" string from a start timestamp. */
 export function useElapsedTime(startedAt: number | undefined): string {
-  return useSyncExternalStore(
-    (onStoreChange) => {
+  // Stabilize the subscribe reference so parent re-renders don't cause
+  // useSyncExternalStore to tear down and restart the tick subscription.
+  const subscribe = useCallback(
+    (onStoreChange: () => void) => {
       if (!startedAt) return (): void => {}
       return subscribeToTick(onStoreChange)
     },
-    () => (startedAt ? formatElapsed(startedAt) : '0s'),
+    [startedAt],
   )
+  const getSnapshot = useCallback(() => (startedAt ? formatElapsed(startedAt) : '0s'), [startedAt])
+  return useSyncExternalStore(subscribe, getSnapshot)
 }

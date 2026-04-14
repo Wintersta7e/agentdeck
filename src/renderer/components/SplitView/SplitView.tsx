@@ -47,9 +47,17 @@ export function SplitView(): React.JSX.Element {
     for (const entry of sessionSignature.split(';')) {
       const [id, projectId, status, agentOverride, agentFlagsEncoded] = entry.split('|')
       if (!id) continue
-      const agentFlagsOverride = agentFlagsEncoded
-        ? decodeURIComponent(agentFlagsEncoded)
-        : undefined
+      let agentFlagsOverride: string | undefined
+      if (agentFlagsEncoded) {
+        try {
+          agentFlagsOverride = decodeURIComponent(agentFlagsEncoded)
+        } catch {
+          // Malformed percent-encoded fragment (e.g. projectId containing '|'
+          // corrupted the split). Fall back to the raw encoded string so the
+          // render doesn't crash the whole SplitView.
+          agentFlagsOverride = agentFlagsEncoded
+        }
+      }
       result[id] = {
         id,
         projectId: projectId ?? '',
