@@ -11,29 +11,32 @@ export function ReviewQueue(): React.JSX.Element {
   const setReviewItems = useAppStore((s) => s.setReviewItems)
   const dismissReview = useAppStore((s) => s.dismissReview)
 
-  useEffect(() => {
-    let cancelled = false
+  const refetchReviews = useCallback(() => {
     const ids = projectIds ? projectIds.split(',') : []
-    if (ids.length === 0) return
-
+    if (ids.length === 0) {
+      setReviewItems([])
+      return
+    }
     void Promise.all(
       ids.map((id) => window.agentDeck.home.pendingReviews(id).catch(() => [])),
     ).then((results) => {
-      if (cancelled) return
       setReviewItems(results.flat())
     })
-
-    return () => {
-      cancelled = true
-    }
   }, [projectIds, setReviewItems])
 
   useEffect(() => {
-    const unsub = window.agentDeck.home.onReviewsUpdated((items) => {
-      setReviewItems(items)
+    refetchReviews()
+  }, [refetchReviews])
+
+  useEffect(() => {
+    // The signal payload carries an empty array — it's just a poke telling
+    // us to refresh from source. Blindly setting items to [] would wipe the
+    // queue every time ANY PTY session exits.
+    const unsub = window.agentDeck.home.onReviewsUpdated(() => {
+      refetchReviews()
     })
     return unsub
-  }, [setReviewItems])
+  }, [refetchReviews])
 
   const pending = useMemo(() => reviewItems.filter((r) => r.status === 'pending'), [reviewItems])
 
