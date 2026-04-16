@@ -95,7 +95,7 @@ function RunCard({
 
   return (
     <div className="wf-history-run">
-      <div className="wf-history-run-header" onClick={onToggle}>
+      <button type="button" className="wf-history-run-header" onClick={onToggle}>
         <div className={`wf-history-status-dot ${statusClass(run.status)}`} />
         <span className="wf-history-run-time">{formatTime(run.startedAt)}</span>
         <span className="wf-history-run-duration">{formatDuration(run.durationMs)}</span>
@@ -116,7 +116,7 @@ function RunCard({
         >
           <Trash2 />
         </button>
-      </div>
+      </button>
 
       {expanded && run.nodes.length > 0 && (
         <div className="wf-history-nodes">
@@ -165,8 +165,7 @@ export default function WorkflowHistoryPanel({
       })
   }, [workflowId])
 
-  // Initial load + reload when workflowId changes.
-  // setState calls happen only inside async IPC callbacks (not synchronously in the effect body).
+  // Initial load + reload when workflowId changes
   useEffect(() => {
     let cancelled = false
     window.agentDeck.workflows

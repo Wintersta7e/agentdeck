@@ -242,6 +242,7 @@ function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Ele
             ref={nameInputRef}
             className="wf-node-edit-input nodrag"
             type="text"
+            aria-label="Node name"
             value={editName}
             placeholder="Node name"
             onChange={(e) => setEditName(e.target.value)}

@@ -6,6 +6,7 @@ import { randomUUID } from 'crypto'
 import type { EnvVar, Project, Role, Template } from '../shared/types'
 import { migrateProjectAgents } from '../shared/agent-helpers'
 import { createLogger } from './logger'
+import { SAFE_ID_RE } from './validation'
 
 const log = createLogger('project-store')
 
@@ -141,8 +142,8 @@ export function createProjectStore(): Store<StoreSchema> {
     }
     // Validate required fields from renderer input before trusting the shape
     const raw = project as Record<string, unknown>
-    if (raw.id !== undefined && typeof raw.id !== 'string')
-      throw new Error('store:saveProject — id must be a string')
+    if (raw.id !== undefined && (typeof raw.id !== 'string' || !SAFE_ID_RE.test(raw.id)))
+      throw new Error('store:saveProject — id must be a valid identifier')
     if (raw.name !== undefined && typeof raw.name !== 'string')
       throw new Error('store:saveProject — name must be a string')
     if (raw.path !== undefined && typeof raw.path !== 'string')
@@ -182,7 +183,7 @@ export function createProjectStore(): Store<StoreSchema> {
   })
 
   ipcMain.handle('store:deleteProject', (_, id: string) => {
-    if (typeof id !== 'string' || !id) throw new Error('Invalid id')
+    if (typeof id !== 'string' || !SAFE_ID_RE.test(id)) throw new Error('Invalid id')
     return serialized(() => {
       const projects = store.get('projects').filter((p) => p.id !== id)
       store.set('projects', projects)
@@ -199,12 +200,16 @@ export function createProjectStore(): Store<StoreSchema> {
       throw new Error('store:saveTemplate requires a non-null object')
     }
     const rawT = template as Record<string, unknown>
-    if (rawT.id !== undefined && typeof rawT.id !== 'string')
-      throw new Error('store:saveTemplate — id must be a string')
+    if (rawT.id !== undefined && (typeof rawT.id !== 'string' || !SAFE_ID_RE.test(rawT.id)))
+      throw new Error('store:saveTemplate — id must be a valid identifier')
     if (rawT.name !== undefined && typeof rawT.name !== 'string')
       throw new Error('store:saveTemplate — name must be a string')
     if (typeof rawT.name === 'string' && rawT.name.length > 200)
       throw new Error('store:saveTemplate — name too long')
+    if (typeof rawT.description === 'string' && rawT.description.length > 2000)
+      throw new Error('store:saveTemplate — description too long')
+    if (typeof rawT.content === 'string' && rawT.content.length > 65536)
+      throw new Error('store:saveTemplate — content too long (max 64KB)')
     return serialized(() => {
       const t = template as Partial<Template>
       const templates = store.get('templates')
@@ -223,7 +228,7 @@ export function createProjectStore(): Store<StoreSchema> {
   })
 
   ipcMain.handle('store:deleteTemplate', (_, id: string) => {
-    if (typeof id !== 'string' || !id) throw new Error('Invalid id')
+    if (typeof id !== 'string' || !SAFE_ID_RE.test(id)) throw new Error('Invalid id')
     return serialized(() => {
       const templates = store.get('templates').filter((t) => t.id !== id)
       store.set('templates', templates)
@@ -239,12 +244,16 @@ export function createProjectStore(): Store<StoreSchema> {
       throw new Error('store:saveRole requires a non-null object')
     }
     const rawR = role as Record<string, unknown>
-    if (rawR.id !== undefined && typeof rawR.id !== 'string')
-      throw new Error('store:saveRole — id must be a string')
+    if (rawR.id !== undefined && (typeof rawR.id !== 'string' || !SAFE_ID_RE.test(rawR.id)))
+      throw new Error('store:saveRole — id must be a valid identifier')
     if (rawR.name !== undefined && typeof rawR.name !== 'string')
       throw new Error('store:saveRole — name must be a string')
     if (typeof rawR.name === 'string' && rawR.name.length > 200)
       throw new Error('store:saveRole — name too long')
+    if (typeof rawR.persona === 'string' && rawR.persona.length > 65536)
+      throw new Error('store:saveRole — persona too long (max 64KB)')
+    if (typeof rawR.outputFormat === 'string' && rawR.outputFormat.length > 65536)
+      throw new Error('store:saveRole — outputFormat too long (max 64KB)')
     return serialized(() => {
       const r = role as Partial<Role>
       const roles = store.get('roles')
@@ -263,7 +272,7 @@ export function createProjectStore(): Store<StoreSchema> {
   })
 
   ipcMain.handle('store:deleteRole', (_, id: string) => {
-    if (typeof id !== 'string' || !id) throw new Error('Invalid id')
+    if (typeof id !== 'string' || !SAFE_ID_RE.test(id)) throw new Error('Invalid id')
     return serialized(() => {
       const roles = store.get('roles').filter((r) => r.id !== id)
       store.set('roles', roles)

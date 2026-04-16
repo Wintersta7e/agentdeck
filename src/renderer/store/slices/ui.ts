@@ -1,6 +1,7 @@
 import type { StateCreator } from 'zustand'
 import type { AppState } from '../appStore'
 import type { ViewType, PaneLayout, RightPanelTab } from '../../../shared/types'
+import { MAX_PANE_COUNT } from '../../../shared/constants'
 
 export interface UiSlice {
   currentView: ViewType
@@ -26,7 +27,8 @@ export interface UiSlice {
   // Command Palette
   commandPaletteOpen: boolean
   commandPaletteInitialSubMenu: 'theme' | 'agents' | null
-  openCommandPalette: (subMenu?: 'theme' | 'agents') => void
+  commandPaletteMode: 'all' | 'workflow' | 'template'
+  openCommandPalette: (subMenu?: 'theme' | 'agents', mode?: 'all' | 'workflow' | 'template') => void
   closeCommandPalette: () => void
 
   // Right Panel
@@ -63,14 +65,6 @@ export interface UiSlice {
   // Theme
   theme: string
   setTheme: (name: string) => void
-
-  // Worktree isolation paths (per-session)
-  worktreePaths: Record<string, { path: string; isolated: boolean; branch?: string | undefined }>
-  setWorktreePath: (
-    sessionId: string,
-    result: { path: string; isolated: boolean; branch?: string | undefined },
-  ) => void
-  clearWorktreePath: (sessionId: string) => void
 }
 
 export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get) => ({
@@ -117,7 +111,7 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
 
   cyclePaneLayout: () =>
     set((state) => {
-      const next = (state.paneLayout === 3 ? 1 : state.paneLayout + 1) as PaneLayout
+      const next = (state.paneLayout === MAX_PANE_COUNT ? 1 : state.paneLayout + 1) as PaneLayout
       return {
         paneLayout: next,
         focusedPane: state.focusedPane >= next ? 0 : state.focusedPane,
@@ -142,9 +136,19 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   // Command Palette
   commandPaletteOpen: false,
   commandPaletteInitialSubMenu: null,
-  openCommandPalette: (subMenu) =>
-    set({ commandPaletteOpen: true, commandPaletteInitialSubMenu: subMenu ?? null }),
-  closeCommandPalette: () => set({ commandPaletteOpen: false, commandPaletteInitialSubMenu: null }),
+  commandPaletteMode: 'all',
+  openCommandPalette: (subMenu, mode) =>
+    set({
+      commandPaletteOpen: true,
+      commandPaletteInitialSubMenu: subMenu ?? null,
+      commandPaletteMode: mode ?? 'all',
+    }),
+  closeCommandPalette: () =>
+    set({
+      commandPaletteOpen: false,
+      commandPaletteInitialSubMenu: null,
+      commandPaletteMode: 'all',
+    }),
 
   // Right Panel
   rightPanelOpen: false,
@@ -173,7 +177,7 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   sidebarOpen: true,
   sidebarWidth: 220,
   sidebarSections: { pinned: true, templates: true, workflows: true },
-  rightPanelWidth: 260,
+  rightPanelWidth: 240,
   wfLogPanelWidth: 320,
 
   toggleSidebar: () => {
@@ -229,17 +233,9 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   theme: (typeof document !== 'undefined' ? document.documentElement.dataset.theme : '') ?? '',
   setTheme: (name) => {
     document.documentElement.dataset.theme = name
-    window.agentDeck.theme.set(name)
+    window.agentDeck.theme.set(name).catch((err: unknown) => {
+      window.agentDeck.log.send('warn', 'ui', 'Theme persist failed', { err: String(err) })
+    })
     set({ theme: name })
   },
-
-  // Worktree isolation paths
-  worktreePaths: {},
-  setWorktreePath: (sessionId, result) =>
-    set((s) => ({ worktreePaths: { ...s.worktreePaths, [sessionId]: result } })),
-  clearWorktreePath: (sessionId) =>
-    set((s) => {
-      const { [sessionId]: _, ...rest } = s.worktreePaths
-      return { worktreePaths: rest }
-    }),
 })

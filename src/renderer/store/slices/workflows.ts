@@ -80,14 +80,16 @@ export const createWorkflowsSlice: StateCreator<AppState, [], [], WorkflowsSlice
         }
       }
 
-      // No workflows left — fall to session or home
-      const sessionIds = Object.keys(state.sessions)
-      if (sessionIds.length > 0) {
+      // No workflows left — fall to session or home (only consider live sessions)
+      const liveSessionIds = Object.entries(state.sessions)
+        .filter(([, s]) => s.status !== 'exited')
+        .map(([id]) => id)
+      if (liveSessionIds.length > 0) {
         return {
           openWorkflowIds: [],
           activeWorkflowId: null,
           currentView: 'session' as const,
-          activeSessionId: state.activeSessionId ?? sessionIds[0] ?? null,
+          activeSessionId: state.activeSessionId ?? liveSessionIds[0] ?? null,
           ...pruned,
         }
       }
@@ -129,9 +131,19 @@ export const createWorkflowsSlice: StateCreator<AppState, [], [], WorkflowsSlice
     })),
 
   setWorkflowStatus: (workflowId, status) =>
-    set((state) => ({
-      workflowStatuses: { ...state.workflowStatuses, [workflowId]: status },
-    })),
+    set((state) => {
+      // When a workflow finishes from the home screen (no editor tab open),
+      // drop its log buffer so repeated runs don't accumulate up to 5000
+      // events each forever. Status itself is tiny and stays.
+      const terminal = status === 'done' || status === 'error' || status === 'stopped'
+      const isOpen = state.openWorkflowIds.includes(workflowId)
+      const workflowStatuses = { ...state.workflowStatuses, [workflowId]: status }
+      if (terminal && !isOpen && state.workflowLogs[workflowId]) {
+        const { [workflowId]: _logs, ...remainingLogs } = state.workflowLogs
+        return { workflowStatuses, workflowLogs: remainingLogs }
+      }
+      return { workflowStatuses }
+    }),
 
   clearWorkflowLogs: (workflowId) =>
     set((state) => ({

@@ -60,30 +60,32 @@ export async function detectAgents(log: Logger): Promise<Record<string, boolean>
           // 2) Fallback: search common install locations.
           // Uses -e (exists) not -x (executable) to also catch symlinks.
           // Logs each path checked for diagnostics.
+          // NOTE: wsl.exe strips unescaped $ for runtime variables — must escape
+          // as \\$found / \\$f. Environment vars like $HOME work unescaped.
           const searchScript = [
             'found=""',
             // Standalone installer (official: curl https://claude.ai/install.sh | bash)
             // Symlink at ~/.local/bin, actual binary at ~/.local/share/<name>/versions/<ver>
-            `[ -z "$found" ] && [ -e "$HOME/.local/bin/${bin}" ] && found="$HOME/.local/bin/${bin}"`,
-            `[ -z "$found" ] && for f in "$HOME/.local/share/${bin}/versions/"*; do [ -f "$f" ] && found="$f" && break; done`,
-            `[ -z "$found" ] && [ -e "$HOME/.claude/bin/${bin}" ] && found="$HOME/.claude/bin/${bin}"`,
+            `[ -z "\\$found" ] && [ -e "$HOME/.local/bin/${bin}" ] && found="$HOME/.local/bin/${bin}"`,
+            `[ -z "\\$found" ] && for f in "$HOME/.local/share/${bin}/versions/"*; do [ -f "\\$f" ] && found="\\$f" && break; done`,
+            `[ -z "\\$found" ] && [ -e "$HOME/.claude/bin/${bin}" ] && found="$HOME/.claude/bin/${bin}"`,
             // nvm (any node version, not just active)
-            `[ -z "$found" ] && for f in "$HOME/.nvm/versions/node"/*/bin/${bin}; do [ -e "$f" ] && found="$f" && break; done`,
+            `[ -z "\\$found" ] && for f in "$HOME/.nvm/versions/node"/*/bin/${bin}; do [ -e "\\$f" ] && found="\\$f" && break; done`,
             // System npm / custom npm prefix
-            `[ -z "$found" ] && [ -e "/usr/local/bin/${bin}" ] && found="/usr/local/bin/${bin}"`,
-            `[ -z "$found" ] && [ -e "$HOME/.npm-global/bin/${bin}" ] && found="$HOME/.npm-global/bin/${bin}"`,
+            `[ -z "\\$found" ] && [ -e "/usr/local/bin/${bin}" ] && found="/usr/local/bin/${bin}"`,
+            `[ -z "\\$found" ] && [ -e "$HOME/.npm-global/bin/${bin}" ] && found="$HOME/.npm-global/bin/${bin}"`,
             // volta / fnm / homebrew
-            `[ -z "$found" ] && [ -e "$HOME/.volta/bin/${bin}" ] && found="$HOME/.volta/bin/${bin}"`,
-            `[ -z "$found" ] && for f in "$HOME/.fnm/node-versions"/*/installation/bin/${bin}; do [ -e "$f" ] && found="$f" && break; done`,
-            `[ -z "$found" ] && [ -e "/home/linuxbrew/.linuxbrew/bin/${bin}" ] && found="/home/linuxbrew/.linuxbrew/bin/${bin}"`,
+            `[ -z "\\$found" ] && [ -e "$HOME/.volta/bin/${bin}" ] && found="$HOME/.volta/bin/${bin}"`,
+            `[ -z "\\$found" ] && for f in "$HOME/.fnm/node-versions"/*/installation/bin/${bin}; do [ -e "\\$f" ] && found="\\$f" && break; done`,
+            `[ -z "\\$found" ] && [ -e "/home/linuxbrew/.linuxbrew/bin/${bin}" ] && found="/home/linuxbrew/.linuxbrew/bin/${bin}"`,
             // Windows-side npm global (accessible from WSL via /mnt/c)
-            `[ -z "$found" ] && for f in /mnt/c/Users/*/AppData/Roaming/npm/${bin}; do [ -e "$f" ] && found="$f" && break; done`,
-            `[ -z "$found" ] && for f in /mnt/c/Users/*/AppData/Roaming/npm/${bin}.cmd; do [ -e "$f" ] && found="$f" && break; done`,
+            `[ -z "\\$found" ] && for f in /mnt/c/Users/*/AppData/Roaming/npm/${bin}; do [ -e "\\$f" ] && found="\\$f" && break; done`,
+            `[ -z "\\$found" ] && for f in /mnt/c/Users/*/AppData/Roaming/npm/${bin}.cmd; do [ -e "\\$f" ] && found="\\$f" && break; done`,
             // Windows standalone installer
-            `[ -z "$found" ] && for f in /mnt/c/Users/*/AppData/Local/Programs/${bin}/${bin}.exe; do [ -e "$f" ] && found="$f" && break; done`,
-            `[ -z "$found" ] && for f in /mnt/c/Users/*/.claude/local/${bin}.exe; do [ -e "$f" ] && found="$f" && break; done`,
+            `[ -z "\\$found" ] && for f in /mnt/c/Users/*/AppData/Local/Programs/${bin}/${bin}.exe; do [ -e "\\$f" ] && found="\\$f" && break; done`,
+            `[ -z "\\$found" ] && for f in /mnt/c/Users/*/.claude/local/${bin}.exe; do [ -e "\\$f" ] && found="\\$f" && break; done`,
             // Result
-            `[ -n "$found" ] && echo "$found" && exit 0`,
+            `[ -n "\\$found" ] && echo "\\$found" && exit 0`,
             `exit 1`,
           ].join('; ')
           execFile(

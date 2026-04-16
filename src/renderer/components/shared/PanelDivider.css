@@ -1,11 +1,18 @@
 .panel-divider {
-  width: 4px;
+  width: 5px;
   background: var(--border);
   cursor: col-resize;
   flex-shrink: 0;
   z-index: 5;
-  transition: background 0.15s;
+  transition: background var(--duration-base);
   position: relative;
+}
+
+.panel-divider::before {
+  content: '';
+  position: absolute;
+  inset: 0 -3px;
+  cursor: col-resize;
 }
 
 .panel-divider:hover {
@@ -18,7 +25,7 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%) rotate(90deg);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text3);
   pointer-events: none;
 }

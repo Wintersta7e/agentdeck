@@ -1,8 +1,9 @@
 .toggle-wrapper {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
   cursor: pointer;
+  min-height: 32px;
 }
 
 .toggle {
@@ -13,11 +14,12 @@
   border: 1px solid var(--border);
   background: var(--bg4);
   cursor: pointer;
-  padding: 0;
+  padding: 7px 0;
+  box-sizing: content-box;
   flex-shrink: 0;
   transition:
-    background 0.2s,
-    border-color 0.2s;
+    background var(--duration-slow),
+    border-color var(--duration-slow);
 }
 
 .toggle-on {
@@ -27,13 +29,13 @@
 
 .toggle-thumb {
   position: absolute;
-  top: 1px;
+  top: 8px;
   left: 1px;
   width: 14px;
   height: 14px;
   border-radius: 50%;
   background: var(--bg0);
-  transition: transform 0.2s;
+  transition: transform var(--duration-slow);
   pointer-events: none;
 }
 
@@ -42,7 +44,7 @@
 }
 
 .toggle-label {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text1);
   user-select: none;
 }

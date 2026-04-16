@@ -258,6 +258,7 @@ export function NewProjectWizard({ onCreateProject }: NewProjectWizardProps): Re
                 value={wizardData.name ?? ''}
                 onChange={(e) => updateField('name', e.target.value)}
                 placeholder="My Project"
+                aria-label="Display name"
               />
             </div>
 
@@ -274,6 +275,7 @@ export function NewProjectWizard({ onCreateProject }: NewProjectWizardProps): Re
                   updateField('wslDistro', e.target.value)
                 }}
                 placeholder="Ubuntu-24.04"
+                aria-label="WSL distribution"
               />
             </div>
           </div>
@@ -328,6 +330,7 @@ export function NewProjectWizard({ onCreateProject }: NewProjectWizardProps): Re
                 value={wizardData.notes ?? ''}
                 onChange={(e) => updateField('notes', e.target.value)}
                 placeholder="Short description (optional)"
+                aria-label="Project notes"
               />
             </div>
           </div>

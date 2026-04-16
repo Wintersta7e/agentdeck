@@ -1,7 +1,7 @@
 .env-var-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
   width: 100%;
 }
 
@@ -10,20 +10,20 @@
   background: var(--bg3);
   border: 1px solid var(--border);
   border-radius: var(--r);
-  padding: 4px 8px;
+  padding: var(--sp-1) var(--sp-2);
   color: var(--blue);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-sm);
   outline: none;
 }
 
 .env-key-input:focus {
-  border-color: rgba(245, 166, 35, 0.4);
+  border-color: var(--accent-border);
 }
 
 .env-eq {
   color: var(--text3);
-  padding: 0 4px;
+  padding: 0 var(--sp-1);
   flex-shrink: 0;
 }
 
@@ -32,26 +32,26 @@
   background: var(--bg3);
   border: 1px solid var(--border);
   border-radius: var(--r);
-  padding: 4px 8px;
+  padding: var(--sp-1) var(--sp-2);
   color: var(--text1);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-sm);
   outline: none;
 }
 
 .env-val-input:focus {
-  border-color: rgba(245, 166, 35, 0.4);
+  border-color: var(--accent-border);
 }
 
 .secret-toggle {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--fs-base);
   flex-shrink: 0;
   padding: 2px;
   opacity: 0.7;
-  transition: opacity 0.12s;
+  transition: opacity var(--duration-base);
 }
 
 .secret-toggle:hover {

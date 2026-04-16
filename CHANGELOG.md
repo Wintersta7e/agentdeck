@@ -5,6 +5,63 @@ All notable changes to AgentDeck will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.0] - 2026-04-08
+
+### Added
+- Home Screen Command Center — 13 new components (DailyDigest, QuickActions, LiveSessionCard, LiveSessionGrid, ProjectCardV2, SuggestionsPanel, ReviewQueue, RecentWorkflows, SessionTimeline, CostDashboard, AgentStrip, CollapsibleSection, GitStatusRow)
+- 8 hooks (useGitStatus, useSuggestions, useSessionTimeline, useDailyDigest, useCostHistory, useRecentWorkflowRuns, useElapsedTime, useMidnight)
+- 3 backend modules (git-status, review-tracker, cost-history) with 6 IPC channels
+- Home Zustand slice for git statuses, review queue, cost history, collapse state
+- 12 theme-adaptive surface tokens (--surface-tint, --surface-border, --surface-hover, --overlay-scrim, --dialog-shadow, --context-shadow, etc.)
+- `--edge-highlight` token for light/dark theme edge gradients
+- `src/shared/constants.ts` — 12 named constants (MAX_PANE_COUNT, ACTIVITY_FEED_CAP, etc.)
+- `useMidnight` hook — shared midnight rollover (was duplicated in 3 hooks)
+- BrowserWindow backgroundColor reads persisted theme at startup
+
+### Changed
+- **Editorial design system** replaces Fusion FX across all views — system sans-serif font, edge-lit surfaces, no decorative FX
+- Titlebar rewritten: 42px, flat tabs, gradient active state, pulsing status dots
+- Command Palette: PanelBox/HexGrid removed, Editorial surface styling
+- All dialogs (About, Shortcuts, Confirm) use `var(--bg1)` + `var(--border)` (theme-adaptive)
+- SplitView: PanelBox removed, clean border focus state, divider grip removed
+- Right Panel: PanelBox removed, system font tabs, `aria-labelledby` on tabpanel
+- StatusBar: HexDot replaced with CSS dot, system font for buttons
+- Workflow Editor: system font for UI buttons/tabs/selects
+- NotificationToast: system font
+- Sidebar: `var(--bg0)` background (was hardcoded #0a0b0e), system font for UI buttons
+- StackBadgeSelector: CSS data-badge approach replaces inline hex colors
+- `removeSession` preserves sessions as `exited` instead of deleting — cost/timeline/digest survive tab close
+- Activity parser broadened: Claude Code tool indicators (⏺●◆▶), file-path fallback, \r overwrite semantics
+- Session Timeline uses per-session time span (not full day) with min 0.5% segment width
+- Cost tracking refreshes every 30s, agent resolved from project config
+- Recent Workflows re-fetches when workflow execution statuses change
+- `getSessionForProject` filters out exited sessions
+- `closeWorkflow` fallback only considers live sessions
+- ~73 hardcoded rgba values replaced with surface tokens across 23 CSS files
+- God-class decomposition: Sidebar 703→183 lines (ProjectSection + WorkflowSection), CommandPalette 779→500 lines (paletteItems + themeUtils), TerminalPane context menu extracted
+
+### Removed
+- HexGrid, EnergyVein, AmbientGlow, HexDot, CornerAccent, PanelBox components + CSS + tests (16 files)
+- All Fusion Design System tokens from tokens.css (all 8 themes)
+- Dead keyframes from global.css (hex-pulse, logo-breathe, vein-drift, edge-glow-pulse, energy-underline-in)
+- `useAmbientState` hook (zero call sites after Fusion removal)
+- Dead `active-session` CSS class and `sessionStatuses` selector from SplitView
+
+### Fixed
+- Deep review Round 1: 17 issues (1 CRITICAL, 8 HIGH, 8 MEDIUM) — onActivity subscription, rAF cleanup, cancelled guards, starting status CSS, dialog backgrounds, WorkflowNode flash, sidebar labels, a11y
+- Deep review Round 2: 5 issues (2 HIGH, 3 MEDIUM) — ::after positioning, reduced-motion selectors, opacity flash, dead code
+- Codex review: 6 issues (2 HIGH, 4 MEDIUM) — dead session reuse, workflow routing, error state, hardcoded colors, non-semantic click targets, bare \r ghost activity
+- Home screen data no longer resets on session tab close
+- Session Timeline shows visible segments (was filtering out sub-0.1% widths)
+- Tab close properly removes tab while preserving session data
+- Cost tracking shows correct agent name (was "unknown")
+- Light themes render correctly (was white-on-white invisible borders/hover states)
+- Error pattern in activity parser is case-sensitive (was matching "No recent activity" as error)
+
+### Security
+- Dialog overlays use `var(--overlay-scrim)` token (lighter on light themes)
+- Context menu shadows use `var(--context-shadow)` token
+
 ## [4.8.2] - 2026-04-01
 
 ### Fixed

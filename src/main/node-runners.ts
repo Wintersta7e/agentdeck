@@ -9,6 +9,7 @@ import { spawn, execFile, type ChildProcess, type ExecException } from 'child_pr
 import { createLogger } from './logger'
 import type { WorkflowNode, WorkflowEvent, Role } from '../shared/types'
 import { AGENT_BINARY_MAP, SAFE_FLAGS_RE } from '../shared/agents'
+import { MS_PER_MINUTE } from '../shared/constants'
 import { NODE_INIT } from './wsl-utils'
 import { SAFE_SKILL_RE } from './skill-scanner'
 
@@ -40,16 +41,14 @@ const AGENT_ENGINE_FLAGS: Record<string, string[]> = {
   codex: ['--skip-git-repo-check'],
 }
 
-const MINUTES = 60_000
-
 /** How long an agent node can be idle (no stdout/stderr) before being killed */
-export const AGENT_IDLE_TIMEOUT = 5 * MINUTES
+export const AGENT_IDLE_TIMEOUT = 5 * MS_PER_MINUTE
 
 /** How often to check whether an agent node has gone idle */
-const IDLE_CHECK_INTERVAL = 0.5 * MINUTES
+const IDLE_CHECK_INTERVAL = 0.5 * MS_PER_MINUTE
 
 /** Default absolute timeout for agent nodes without an explicit timeout */
-const DEFAULT_AGENT_TIMEOUT = 30 * MINUTES
+const DEFAULT_AGENT_TIMEOUT = 30 * MS_PER_MINUTE
 
 /** Max number of nodes to run concurrently within a single tier */
 export const MAX_TIER_CONCURRENCY = 5

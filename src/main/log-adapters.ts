@@ -6,18 +6,25 @@
  * token-usage data from individual log lines.
  */
 
+import { createLogger } from './logger'
+
+const log = createLogger('log-adapters')
+
+// Future adapter env vars:
+// Goose: GOOSE_CONFIG_DIR (config), data at ~/.local/share/goose/
+// OpenCode: OPENCODE_DATA_DIR (data), OPENCODE_CONFIG_DIR (config)
+// Gemini CLI: no env var yet (requested: github.com/google-gemini/gemini-cli/issues/2815)
+// Amazon Q: no env var, free service (no cost tracking needed)
+
+/** Track which schema warnings have already been emitted (avoid flooding). */
+const warnedSchemas = new Set<string>()
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export interface TokenUsage {
-  /** Non-cached input tokens (excludes cache reads for both Claude and Codex). */
-  inputTokens: number
-  outputTokens: number
-  cacheReadTokens: number
-  cacheWriteTokens: number
-  totalCostUsd: number
-}
+export type { TokenUsage } from '../shared/types'
+import type { TokenUsage } from '../shared/types'
 
 export const ZERO_USAGE: Readonly<TokenUsage> = Object.freeze({
   inputTokens: 0,
@@ -27,10 +34,22 @@ export const ZERO_USAGE: Readonly<TokenUsage> = Object.freeze({
   totalCostUsd: 0,
 })
 
+/**
+ * Resolved WSL environment variables for agent config directories.
+ * These are read from the WSL environment (via wslExec), NOT from Node's process.env.
+ * Each field is the resolved absolute path, or undefined if the env var is unset.
+ */
+export interface AgentEnvContext {
+  /** $CLAUDE_CONFIG_DIR — overrides ~/.claude */
+  claudeConfigDir?: string | undefined
+  /** $CODEX_HOME — overrides ~/.codex */
+  codexHome?: string | undefined
+}
+
 export interface LogAdapter {
   agent: string
   /** Return candidate directories (tilde-prefixed) to search for log files. */
-  getLogDirs(projectPath: string): string[]
+  getLogDirs(projectPath: string, env?: AgentEnvContext): string[]
   /** Glob pattern for log files within the dir. */
   getFilePattern(): string
   /**
@@ -108,14 +127,15 @@ export function createClaudeAdapter(): LogAdapter {
   return {
     agent: 'claude-code',
 
-    getLogDirs(projectPath: string): string[] {
+    getLogDirs(projectPath: string, env?: AgentEnvContext): string[] {
       // Replace every `/` with `-` to match Claude's path-slug convention.
       const pathSlug = projectPath.replace(/\//g, '-')
       // JSONL files live directly in the project slug directory (no sessions/ subdir).
       // Only search the project-specific directory — the old fallback
       // `~/.claude/projects/` recursively scanned ALL projects, returning hundreds
       // of candidates and causing discovery timeouts with multiple concurrent sessions.
-      return [`~/.claude/projects/${pathSlug}/`]
+      const claudeHome = env?.claudeConfigDir ?? '~/.claude'
+      return [`${claudeHome}/projects/${pathSlug}/`]
     },
 
     getFilePattern(): string {
@@ -149,7 +169,16 @@ export function createClaudeAdapter(): LogAdapter {
       if (stopReason === null || stopReason === undefined) return null
 
       const usage = msg['usage']
-      if (typeof usage !== 'object' || usage === null) return null
+      if (typeof usage !== 'object' || usage === null) {
+        const warnKey = 'claude:missing-usage'
+        if (!warnedSchemas.has(warnKey)) {
+          warnedSchemas.add(warnKey)
+          log.warn('Claude JSONL schema unexpected: missing message.usage field', {
+            line: line.slice(0, 100),
+          })
+        }
+        return null
+      }
 
       const u = usage as Record<string, unknown>
       const inputTokens = typeof u['input_tokens'] === 'number' ? u['input_tokens'] : 0
@@ -207,8 +236,9 @@ export function createCodexAdapter(): LogAdapter {
   return {
     agent: 'codex',
 
-    getLogDirs(_projectPath: string): string[] {
-      return [`~/.codex/sessions/${todayDateDir()}`]
+    getLogDirs(_projectPath: string, env?: AgentEnvContext): string[] {
+      const codexHome = env?.codexHome ?? '~/.codex'
+      return [`${codexHome}/sessions/${todayDateDir()}`]
     },
 
     getFilePattern(): string {
@@ -250,7 +280,19 @@ export function createCodexAdapter(): LogAdapter {
 
       const infoObj = info as Record<string, unknown>
       const usage = infoObj['total_token_usage']
-      if (typeof usage !== 'object' || usage === null) return null
+      if (typeof usage !== 'object' || usage === null) {
+        const warnKey = 'codex:missing-total_token_usage'
+        if (!warnedSchemas.has(warnKey)) {
+          warnedSchemas.add(warnKey)
+          log.warn(
+            'Codex JSONL schema unexpected: missing info.total_token_usage in token_count event',
+            {
+              line: line.slice(0, 100),
+            },
+          )
+        }
+        return null
+      }
 
       const u = usage as Record<string, number>
       const rawInputTokens = u['input_tokens'] ?? 0

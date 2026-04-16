@@ -39,6 +39,7 @@ export function GeneralTab({ draft, onChange }: TabProps): React.JSX.Element {
                 value={draft.name}
                 onChange={(e) => onChange({ name: e.target.value })}
                 placeholder="My Project"
+                aria-label="Display name"
               />
             </div>
           </div>
@@ -69,6 +70,7 @@ export function GeneralTab({ draft, onChange }: TabProps): React.JSX.Element {
                 value={draft.wslDistro ?? ''}
                 onChange={(e) => onChange({ wslDistro: e.target.value })}
                 placeholder="Ubuntu-24.04"
+                aria-label="WSL distro"
               />
             </div>
           </div>
@@ -84,6 +86,7 @@ export function GeneralTab({ draft, onChange }: TabProps): React.JSX.Element {
                 value={draft.notes ?? ''}
                 onChange={(e) => onChange({ notes: e.target.value })}
                 placeholder="Short description"
+                aria-label="Notes"
               />
             </div>
           </div>
@@ -129,6 +132,7 @@ export function GeneralTab({ draft, onChange }: TabProps): React.JSX.Element {
                 className="select-input"
                 value={draft.badge ?? 'Other'}
                 onChange={(e) => onChange({ badge: e.target.value as StackBadge })}
+                aria-label="Stack badge"
               >
                 {STACK_BADGES.map((badge) => (
                   <option key={badge} value={badge}>

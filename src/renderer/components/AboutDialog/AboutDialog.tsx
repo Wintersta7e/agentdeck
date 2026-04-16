@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
 import { X } from 'lucide-react'
-import { PanelBox } from '../shared/PanelBox'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 import './AboutDialog.css'
 
@@ -20,18 +19,26 @@ export function AboutDialog({ onClose }: AboutDialogProps): React.JSX.Element {
   const [versions, setVersions] = useState<VersionInfo | null>(null)
 
   useEffect(() => {
+    let cancelled = false
     window.agentDeck.app
       .version()
-      .then(setAppVersion)
+      .then((v) => {
+        if (!cancelled) setAppVersion(v)
+      })
       .catch((err: unknown) => {
         window.agentDeck.log.send('debug', 'about', 'Version fetch failed', { err: String(err) })
       })
     window.agentDeck.app
       .versions()
-      .then(setVersions)
+      .then((v) => {
+        if (!cancelled) setVersions(v)
+      })
       .catch((err: unknown) => {
         window.agentDeck.log.send('debug', 'about', 'Version fetch failed', { err: String(err) })
       })
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   useEffect(() => {
@@ -62,7 +69,7 @@ export function AboutDialog({ onClose }: AboutDialogProps): React.JSX.Element {
       aria-modal="true"
       aria-label="About AgentDeck"
     >
-      <PanelBox corners="all" glow="none" className="about-dialog">
+      <div className="about-dialog">
         <button className="about-close" onClick={onClose} aria-label="Close about dialog">
           <X size={16} />
         </button>
@@ -85,7 +92,7 @@ export function AboutDialog({ onClose }: AboutDialogProps): React.JSX.Element {
           </div>
         )}
         <div className="about-copyright">{'\u00A9'} 2025 AgentDeck</div>
-      </PanelBox>
+      </div>
     </div>
   )
 }

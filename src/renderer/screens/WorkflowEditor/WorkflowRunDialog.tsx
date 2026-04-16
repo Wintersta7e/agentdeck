@@ -91,11 +91,13 @@ export default function WorkflowRunDialog({
       onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
-      aria-label="Configure workflow variables"
+      aria-labelledby="wf-run-dialog-heading"
     >
       <form className="wf-run-dialog" onSubmit={handleSubmit}>
         <div className="wf-run-dialog-header">
-          <h3 className="wf-run-dialog-title">Configure Variables</h3>
+          <h3 id="wf-run-dialog-heading" className="wf-run-dialog-title">
+            Configure Variables
+          </h3>
         </div>
 
         <div className="wf-run-dialog-body">

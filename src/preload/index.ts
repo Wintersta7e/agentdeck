@@ -7,6 +7,9 @@ import type {
   WorkflowMeta,
   WorkflowEvent,
   WorkflowRun,
+  GitStatus,
+  ReviewItem,
+  DailyCostEntry,
 } from '../shared/types'
 
 // File drag-and-drop: accept drops visually (dragover), but let the default
@@ -216,6 +219,25 @@ contextBridge.exposeInMainWorld('agentDeck', {
       ipcRenderer.invoke('worktree:keep', sessionId) as Promise<void>,
     releasePrimary: (projectId: string, sessionId: string): Promise<void> =>
       ipcRenderer.invoke('worktree:releasePrimary', projectId, sessionId) as Promise<void>,
+  },
+  home: {
+    gitStatus: (projectId: string): Promise<GitStatus | null> =>
+      ipcRenderer.invoke('projects:gitStatus', projectId) as Promise<GitStatus | null>,
+    pendingReviews: (projectId: string): Promise<ReviewItem[]> =>
+      ipcRenderer.invoke('projects:pendingReviews', projectId) as Promise<ReviewItem[]>,
+    dismissReview: (reviewId: string): Promise<void> =>
+      ipcRenderer.invoke('projects:dismissReview', reviewId) as Promise<void>,
+    costHistory: (days: number): Promise<DailyCostEntry[]> =>
+      ipcRenderer.invoke('cost:getHistory', days) as Promise<DailyCostEntry[]>,
+    getBudget: (): Promise<number | null> =>
+      ipcRenderer.invoke('cost:getBudget') as Promise<number | null>,
+    setBudget: (amount: number | null): Promise<void> =>
+      ipcRenderer.invoke('cost:setBudget', amount) as Promise<void>,
+    onReviewsUpdated: (cb: (items: ReviewItem[]) => void): (() => void) => {
+      const handler = (_: Electron.IpcRendererEvent, items: ReviewItem[]): void => cb(items)
+      ipcRenderer.on('home:reviewsUpdated', handler)
+      return () => ipcRenderer.removeListener('home:reviewsUpdated', handler)
+    },
   },
   cost: {
     bind: (

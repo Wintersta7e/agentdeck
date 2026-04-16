@@ -39,17 +39,65 @@ export interface PtyManager {
 }
 
 /* Fix 1 (PANEL-4): ANSI stripping + regex-based activity parsing */
-const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b\].*?(?:\x07|\x1b\\)/g
+import { stripAnsi } from './node-runners'
 
 function parseActivityLine(line: string): { type: string; title: string; detail: string } | null {
-  const clean = line.replace(ANSI_RE, '')
-  if (/\bRead\b/i.test(clean)) return { type: 'read', title: 'Reading file', detail: clean.trim() }
-  if (/\bWrit(?:e|ing)\b/i.test(clean))
-    return { type: 'write', title: 'Writing file', detail: clean.trim() }
-  if (/\b(?:Execute|Running|Bash)\b/i.test(clean))
-    return { type: 'command', title: 'Running command', detail: clean.trim() }
-  if (/\bTool\b/i.test(clean)) return { type: 'tool', title: 'Tool use', detail: clean.trim() }
+  const clean = stripAnsi(line).trim()
+  // Skip empty lines, prompts, and very short lines (noise)
+  if (clean.length < 3) return null
+  // Skip common shell prompt patterns and box-drawing decoration
+  if (/^[$#>❯➜%]\s*$/.test(clean)) return null
+  if (/^[─━═│┃┌┐└┘├┤┬┴┼╭╮╰╯╔╗╚╝\s]+$/.test(clean)) return null
+
+  // Specific agent patterns (highest priority)
   if (/\b[Tt]hinking\b/.test(clean)) return { type: 'think', title: 'Thinking', detail: '' }
+  if (/\bWrit(?:e|ing)\b/i.test(clean))
+    return { type: 'write', title: 'Writing file', detail: clean }
+  if (/\bRead(?:ing)?\b/i.test(clean)) return { type: 'read', title: 'Reading file', detail: clean }
+  if (/\b(?:Execute|Running|Bash|bash|Shell)\b/i.test(clean))
+    return { type: 'command', title: 'Running command', detail: clean }
+  if (/\bTool\b/i.test(clean)) return { type: 'tool', title: 'Tool use', detail: clean }
+
+  // Agent-specific patterns
+  if (/^(?:Created?|Modified|Updated|Deleted|Removed)\b/i.test(clean))
+    return { type: 'write', title: 'File change', detail: clean }
+  if (/^(?:Searching|Looking|Scanning|Analyzing|Reviewing|Grep|Glob|List)\b/i.test(clean))
+    return { type: 'read', title: 'Analyzing', detail: clean }
+  if (/\b(?:Installing|Building|Compiling|Testing|Linting)\b/i.test(clean))
+    return { type: 'command', title: 'Build/test', detail: clean }
+  if (/\b(?:Error|Failed|FAIL|panic|exception)\b/.test(clean))
+    return { type: 'error', title: 'Error', detail: clean }
+
+  // Claude Code / Codex tool-use indicator (⏺, ●, ◆, ▶)
+  if (/^[⏺●◆▶○◇▷]\s/.test(clean)) return { type: 'tool', title: 'Agent action', detail: clean }
+
+  // Agent output: lines containing file paths (src/..., /home/..., ./...)
+  if (clean.length >= 20 && /(?:^|\s)[.\/~][^\s]*\.[a-z]{1,6}\b/i.test(clean))
+    return { type: 'read', title: 'File reference', detail: clean }
+
+  // Completion / summary patterns
+  if (/\b(?:completed?|finished|done|success|passed)\b/i.test(clean))
+    return { type: 'command', title: 'Completed', detail: clean }
+
+  // Cost / token patterns (e.g. "Total cost: $0.12" or "tokens used")
+  if (/\b(?:cost|tokens?\s+used|context\s+window)\b/i.test(clean))
+    return { type: 'tool', title: 'Usage', detail: clean }
+
+  // FRAG-7: Graceful fallback — emit a generic event for substantial lines that
+  // don't match any specific keyword.  Skip short lines, mostly-whitespace lines,
+  // shell prompts, and lines dominated by box-drawing / decoration characters.
+  if (clean.length >= 40) {
+    const nonWs = clean.replace(/\s/g, '')
+    const boxChars = nonWs.replace(/[─━═│┃┌┐└┘├┤┬┴┼╭╮╰╯╔╗╚╝║╠╣╦╩╬─┄┈╌╎╏┆┇┊┋]/g, '')
+    // Skip if mostly box-drawing (>50% of non-whitespace chars are decoration)
+    if (boxChars.length > nonWs.length * 0.5) {
+      // Skip shell prompt patterns (e.g. "user@host:~/dir$", "PS1>")
+      if (!/^[\w@.~\/-]*[$#>❯➜%]\s*$/.test(clean)) {
+        return { type: 'tool', title: 'Agent active', detail: '' }
+      }
+    }
+  }
+
   return null
 }
 
@@ -213,6 +261,9 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
           if (lineBuffer.length > 8192) {
             lineBuffer = lineBuffer.slice(-8192)
           }
+          // Handle bare \r as line overwrite (progress bars, spinners) — only \n completes a line
+          // First, process \r within lines: keep only the text after the last \r (overwrite semantics)
+          lineBuffer = lineBuffer.replace(/[^\n]*\r(?!\n)/g, '')
           const parts = lineBuffer.split('\n')
           lineBuffers.set(sessionId, parts[parts.length - 1] ?? '')
 
@@ -275,12 +326,21 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
       lineBuffers.delete(sessionId)
       dataBuffers.delete(sessionId)
       flushScheduled.delete(sessionId)
+      let killed = false
       try {
         proc.kill()
+        killed = true
         log.info(`Killed session ${sessionId}`)
       } catch (err) {
         log.error(`Error killing PTY for session ${sessionId}`, { err: String(err) })
       }
+      // Emit a synthetic exit so any `ptyBus.once('exit:*')` listeners (e.g. the
+      // review-tracker registration in ipc-pty) don't linger. node-pty's onExit
+      // usually fires too, but the `once` semantics collapse duplicate emissions.
+      if (!killed) ptyBus.emit(`exit:${sessionId}`, -1)
+    } else {
+      // No live process; still emit so any stale `once` listener is consumed.
+      ptyBus.emit(`exit:${sessionId}`, -1)
     }
   }
 

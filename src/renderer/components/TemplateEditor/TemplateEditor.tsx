@@ -258,7 +258,12 @@ export function TemplateEditor(): React.JSX.Element {
       <div className="te-list-panel">
         <div className="te-list-header">
           <span className="te-list-title">Templates</span>
-          <button className="te-list-add" onClick={() => void handleNew()} title="New template">
+          <button
+            className="te-list-add"
+            onClick={() => void handleNew()}
+            title="New template"
+            aria-label="New template"
+          >
             <Plus size={14} />
           </button>
         </div>
@@ -298,6 +303,7 @@ export function TemplateEditor(): React.JSX.Element {
                 className="te-name-input"
                 type="text"
                 placeholder="Template name..."
+                aria-label="Template name"
                 value={editingName}
                 onChange={(e) => setEditingName(e.target.value)}
               />

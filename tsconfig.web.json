@@ -5,6 +5,7 @@
     "moduleResolution": "bundler",
     "target": "ESNext",
     "jsx": "react-jsx",
+    "noUncheckedSideEffectImports": false,
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "types": ["vitest/globals", "@testing-library/jest-dom/vitest"],
     "outDir": "out"

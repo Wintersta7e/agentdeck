@@ -87,6 +87,9 @@ function makeRoutingMock(overrides?: {
       const cmd = Array.isArray(args) ? args.join(' ') : ''
       if (cmd.includes('echo "$HOME"')) {
         cb(null, `${home}\n`, '')
+      } else if (cmd.includes('CLAUDE_CONFIG_DIR') || cmd.includes('CODEX_HOME')) {
+        // Agent env var resolution — return empty (use defaults)
+        cb(null, '\n', '')
       } else if (cmd.includes('find ')) {
         cb(null, findResult, '')
       } else if (cmd.includes('head ')) {
@@ -282,29 +285,84 @@ describe('file discovery', () => {
     tracker.destroy()
   })
 
-  it('stops discovery after 30s with no match', async () => {
+  it('keeps polling for the log file past the legacy 30s window — agents may take arbitrarily long to write their first entry', async () => {
     makeRoutingMock()
     const win = makeMockWindow()
     const adapter = makeTestAdapter({ matchSession: () => false })
     const tracker = createCostTracker(win, [adapter])
 
     await vi.advanceTimersByTimeAsync(0)
-
     tracker.bindSession('s1', BIND_OPTS)
 
-    // Advance 32s — well past the 30s discovery timeout
-    await vi.advanceTimersByTimeAsync(32_000)
+    // Run well past the old 30s cutoff
+    await vi.advanceTimersByTimeAsync(60_000)
 
-    // After discovery timeout, no more find/head calls should happen
+    // Confirm find calls keep being issued — discovery is still alive
     const callsBefore = mockExecFile.mock.calls.length
     await vi.advanceTimersByTimeAsync(10_000)
-    // Only the existing calls, no new find/head calls
-    const newCalls = mockExecFile.mock.calls.slice(callsBefore).filter((c: unknown[]) => {
+    const newFindCalls = mockExecFile.mock.calls.slice(callsBefore).filter((c: unknown[]) => {
       const args = c[1] as string[]
       const cmd = Array.isArray(args) ? args.join(' ') : ''
-      return cmd.includes('find ') || cmd.includes('head ')
+      return cmd.includes('find ')
     })
-    expect(newCalls.length).toBe(0)
+    expect(newFindCalls.length).toBeGreaterThan(0)
+
+    tracker.destroy()
+  })
+
+  it('discovers a log file that only appears after the legacy 30s window', async () => {
+    let matched = false
+    const adapter = makeTestAdapter({
+      // matchSession only returns true after we flip the flag below
+      matchSession: () => matched,
+    })
+    const win = makeMockWindow()
+
+    // Start with no candidates, then "create" a file at minute 1
+    const earlyTail = '0\n'
+    const lateTail = '20\n{"line":"one"}\n'
+    let phase: 'pre' | 'post' = 'pre'
+    mockExecFile.mockImplementation(
+      (_bin: string, args: string[], _opts: unknown, cb: ExecFileCb) => {
+        const cmd = Array.isArray(args) ? args.join(' ') : ''
+        if (cmd.includes('echo "$HOME"')) cb(null, '/home/user\n', '')
+        else if (cmd.includes('CLAUDE_CONFIG_DIR') || cmd.includes('CODEX_HOME')) cb(null, '\n', '')
+        else if (cmd.includes('find ')) {
+          cb(
+            null,
+            phase === 'pre' ? '' : '/home/user/.claude/projects/test/sessions/abc.jsonl\n',
+            '',
+          )
+        } else if (cmd.includes('head ')) {
+          cb(null, '{"cwd":"/home/user/project"}\n', '')
+        } else if (cmd.includes('stat ') || cmd.includes('tail ')) {
+          cb(null, phase === 'pre' ? earlyTail : lateTail, '')
+        } else {
+          cb(null, '', '')
+        }
+      },
+    )
+
+    const tracker = createCostTracker(win, [adapter])
+    await vi.advanceTimersByTimeAsync(0)
+    tracker.bindSession('s1', BIND_OPTS)
+
+    // 90 seconds with nothing — well past the old 30s cutoff
+    await vi.advanceTimersByTimeAsync(90_000)
+    expect(win.webContents.send).not.toHaveBeenCalled()
+
+    // Now the file appears and matchSession starts succeeding
+    matched = true
+    phase = 'post'
+    // Drain enough discovery + tail cycles for the bind→tail→cost:update chain.
+    // jitter on first tail poll is 0..TAIL_INTERVAL_MS; an extra TAIL_INTERVAL is
+    // budget for the tail itself plus microtasks.
+    await vi.advanceTimersByTimeAsync(10_000)
+
+    expect(win.webContents.send).toHaveBeenCalledWith(
+      'cost:update',
+      expect.objectContaining({ sessionId: 's1' }),
+    )
 
     tracker.destroy()
   })
@@ -525,6 +583,143 @@ describe('file tailing', () => {
     await vi.advanceTimersByTimeAsync(3000)
 
     expect(parseUsage).not.toHaveBeenCalled()
+
+    tracker.destroy()
+  })
+})
+
+// ─── Cost history persistence ───────────────────────────────────────
+
+describe('cost history persistence', () => {
+  it('records per-poll cost delta to CostHistory when usage changes', async () => {
+    const win = makeMockWindow()
+    const recordCost = vi.fn()
+    const costHistory = { recordCost }
+
+    const adapter = makeTestAdapter({
+      // Each line adds $0.01 and 150 tokens (100 input + 50 output)
+      parseUsage: (_line: string, acc: TokenUsage): TokenUsage | null => ({
+        inputTokens: acc.inputTokens + 100,
+        outputTokens: acc.outputTokens + 50,
+        cacheReadTokens: acc.cacheReadTokens,
+        cacheWriteTokens: acc.cacheWriteTokens,
+        totalCostUsd: acc.totalCostUsd + 0.01,
+      }),
+    })
+
+    makeRoutingMock({
+      tailResults: [
+        // Poll 1: two lines → +$0.02, +300 tokens
+        '80\n{"line":"one"}\n{"line":"two"}\n',
+        // Poll 2: one line → +$0.01, +150 tokens
+        '120\n{"line":"three"}\n',
+        // Poll 3: no new data
+        '120\n',
+      ],
+    })
+
+    const tracker = createCostTracker(win, [adapter], costHistory)
+    await vi.advanceTimersByTimeAsync(0)
+
+    tracker.bindSession('s1', BIND_OPTS)
+    // Discovery (find + head)
+    await vi.advanceTimersByTimeAsync(2000)
+    // Tail poll 1
+    await vi.advanceTimersByTimeAsync(3000)
+    // Tail poll 2
+    await vi.advanceTimersByTimeAsync(3000)
+
+    expect(recordCost).toHaveBeenCalledTimes(2)
+    // Poll 1 delta: $0.02, 300 tokens
+    const call1 = recordCost.mock.calls[0]
+    expect(call1?.[0]).toBe('claude-code')
+    expect(call1?.[1]).toBeCloseTo(0.02, 8)
+    expect(call1?.[2]).toBe(300)
+    // Poll 2 delta: $0.01, 150 tokens (NOT cumulative — just what changed this poll)
+    const call2 = recordCost.mock.calls[1]
+    expect(call2?.[0]).toBe('claude-code')
+    expect(call2?.[1]).toBeCloseTo(0.01, 8)
+    expect(call2?.[2]).toBe(150)
+
+    tracker.destroy()
+  })
+
+  it('skips recordCost call when tail poll produces no usage change', async () => {
+    const win = makeMockWindow()
+    const recordCost = vi.fn()
+    const costHistory = { recordCost }
+
+    // Adapter that never produces usage
+    const adapter = makeTestAdapter({
+      parseUsage: () => null,
+    })
+
+    makeRoutingMock({
+      tailResults: ['40\n{"noise":"data"}\n', '40\n'],
+    })
+
+    const tracker = createCostTracker(win, [adapter], costHistory)
+    await vi.advanceTimersByTimeAsync(0)
+
+    tracker.bindSession('s1', BIND_OPTS)
+    await vi.advanceTimersByTimeAsync(2000)
+    await vi.advanceTimersByTimeAsync(3000)
+
+    expect(recordCost).not.toHaveBeenCalled()
+
+    tracker.destroy()
+  })
+
+  it('is optional — tracker works without costHistory argument', async () => {
+    const win = makeMockWindow()
+    const adapter = makeTestAdapter()
+
+    makeRoutingMock()
+
+    // No third argument — existing call sites keep working
+    const tracker = createCostTracker(win, [adapter])
+    await vi.advanceTimersByTimeAsync(0)
+
+    tracker.bindSession('s1', BIND_OPTS)
+    await vi.advanceTimersByTimeAsync(2000)
+    await vi.advanceTimersByTimeAsync(3000)
+
+    // IPC still fires — back-compat guaranteed
+    expect(win.webContents.send).toHaveBeenCalledWith(
+      'cost:update',
+      expect.objectContaining({ sessionId: 's1' }),
+    )
+
+    tracker.destroy()
+  })
+
+  it('does not record when the per-poll delta is below COST_DELTA_EPSILON_USD (float noise)', async () => {
+    const win = makeMockWindow()
+    const recordCost = vi.fn()
+    const costHistory = { recordCost }
+
+    // Adapter emits a sub-epsilon cost delta (5e-10 USD)
+    const adapter = makeTestAdapter({
+      parseUsage: (_line: string, acc: TokenUsage): TokenUsage | null => ({
+        inputTokens: acc.inputTokens + 1,
+        outputTokens: acc.outputTokens,
+        cacheReadTokens: acc.cacheReadTokens,
+        cacheWriteTokens: acc.cacheWriteTokens,
+        totalCostUsd: acc.totalCostUsd + 5e-10,
+      }),
+    })
+
+    makeRoutingMock({
+      tailResults: ['40\n{"line":"one"}\n', '40\n'],
+    })
+
+    const tracker = createCostTracker(win, [adapter], costHistory)
+    await vi.advanceTimersByTimeAsync(0)
+    tracker.bindSession('s1', BIND_OPTS)
+    await vi.advanceTimersByTimeAsync(2000)
+    await vi.advanceTimersByTimeAsync(3000)
+
+    expect(recordCost).not.toHaveBeenCalled()
 
     tracker.destroy()
   })

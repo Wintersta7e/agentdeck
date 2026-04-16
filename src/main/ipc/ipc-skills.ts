@@ -1,4 +1,5 @@
 import { ipcMain } from 'electron'
+import path from 'node:path'
 import { listSkills } from '../skill-scanner'
 import { createLogger } from '../logger'
 
@@ -17,8 +18,12 @@ export function registerSkillHandlers(): void {
           : undefined
 
       if (projectPath) {
+        // Reject if the normalized path differs from the input — any `..`
+        // segment that normalize collapses is a traversal attempt.
+        const collapsed = path.posix.normalize(projectPath)
         if (
           !projectPath.startsWith('/') ||
+          collapsed !== projectPath ||
           projectPath.includes('..') ||
           projectPath.length > 500
         ) {

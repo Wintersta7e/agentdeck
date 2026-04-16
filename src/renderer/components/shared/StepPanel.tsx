@@ -23,7 +23,19 @@ export function StepPanel({ steps, currentStep, onGoTo }: StepPanelProps): React
           const connectorClass = isDone ? 'done' : ''
 
           return (
-            <div key={index} className="step-row" onClick={() => onGoTo(index)}>
+            <div
+              key={index}
+              className="step-row"
+              onClick={() => onGoTo(index)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  onGoTo(index)
+                }
+              }}
+            >
               <div className="step-left">
                 <div className={`step-dot ${dotClass}`}>{isDone ? '\u2713' : index + 1}</div>
                 {!isLast && <div className={`step-connector ${connectorClass}`} />}

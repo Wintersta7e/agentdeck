@@ -135,62 +135,10 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
     }
   }, [workflowId])
 
-  // ── Subscribe to execution events ──
-
-  useEffect(() => {
-    if (!workflowId) return
-
-    const unsub = window.agentDeck.workflows.onEvent(workflowId, (event: WorkflowEvent) => {
-      const s = useAppStore.getState()
-      s.addWorkflowLog(workflowId, event)
-
-      const nid = event.nodeId
-
-      switch (event.type) {
-        case 'workflow:started':
-          s.setWorkflowStatus(workflowId, 'running')
-          setRightTab('log')
-          break
-        case 'workflow:done':
-          s.setWorkflowStatus(workflowId, 'done')
-          break
-        case 'workflow:error':
-          s.setWorkflowStatus(workflowId, 'error')
-          break
-        case 'workflow:stopped':
-          s.setWorkflowStatus(workflowId, 'stopped')
-          break
-        case 'node:started':
-          if (nid) s.setWorkflowNodeStatus(workflowId, nid, 'running')
-          break
-        case 'node:done':
-          if (nid) s.setWorkflowNodeStatus(workflowId, nid, 'done')
-          break
-        case 'node:error':
-          if (nid) s.setWorkflowNodeStatus(workflowId, nid, 'error')
-          break
-        case 'node:paused':
-          if (nid) s.setWorkflowNodeStatus(workflowId, nid, 'paused')
-          break
-        case 'node:resumed':
-          if (nid) s.setWorkflowNodeStatus(workflowId, nid, 'running')
-          break
-        case 'node:skipped':
-          if (nid) s.setWorkflowNodeStatus(workflowId, nid, 'skipped')
-          break
-        case 'node:retry':
-          // Node is being retried — keep status as 'running'.
-          // The event is logged but status doesn't change.
-          break
-        case 'node:loopIteration':
-          // Log the loop iteration. Nodes in the loop will get new
-          // 'node:started' events when re-executed, so no status change needed.
-          break
-      }
-    })
-
-    return unsub
-  }, [workflowId])
+  // Workflow execution events are subscribed at App level for all open
+  // workflows so leaving and returning to the editor tab doesn't drop
+  // events fired during the gap. The store is the single source of truth
+  // for status / logs; this component only reads from it.
 
   // ── Node operations ──
 

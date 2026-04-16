@@ -10,7 +10,7 @@ import type { BrowserWindow } from 'electron'
 import { execFile } from 'child_process'
 import { toWslPath } from './wsl-utils'
 import { createLogger } from './logger'
-import type { LogAdapter, TokenUsage } from './log-adapters'
+import type { AgentEnvContext, LogAdapter, TokenUsage } from './log-adapters'
 import { ZERO_USAGE } from './log-adapters'
 
 const log = createLogger('cost-tracker')
@@ -20,14 +20,18 @@ const log = createLogger('cost-tracker')
 /** How often to poll for the log file during discovery (ms). */
 const DISCOVERY_INTERVAL_MS = 2000
 
-/** How long to keep looking for a log file before giving up (ms). */
-const DISCOVERY_TIMEOUT_MS = 30_000
-
 /** How often to poll the log file for new content once bound (ms). */
 const TAIL_INTERVAL_MS = 3000
 
 /** Timeout for individual WSL exec calls (ms). */
 const WSL_TIMEOUT_MS = 5000
+
+/**
+ * Minimum cost delta (USD) we'll record. Chosen well below legitimate
+ * single-token pricing (cache reads on Haiku are ~$3e-8/token) but above
+ * IEEE-754 subtraction noise for typical session totals.
+ */
+const COST_DELTA_EPSILON_USD = 1e-9
 
 // ── Types ───────────────────────────────────────────────────────────
 
@@ -37,7 +41,6 @@ interface BoundSession {
   projectPath: string
   cwd: string
   spawnAt: number
-  discoveryStartedAt: number
   filePath: string | null
   offset: number
   partialLine: string
@@ -57,6 +60,11 @@ export interface CostTracker {
   ): void
   unbindSession(sessionId: string): void
   destroy(): void
+}
+
+/** Minimal contract for persisting cost deltas to long-term storage. */
+export interface CostRecorder {
+  recordCost(agentId: string, costUsd: number, tokens: number): void
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────
@@ -82,7 +90,11 @@ function wslExec(cmd: string): Promise<string> {
 
 // ── Factory ─────────────────────────────────────────────────────────
 
-export function createCostTracker(mainWindow: BrowserWindow, adapters: LogAdapter[]): CostTracker {
+export function createCostTracker(
+  mainWindow: BrowserWindow,
+  adapters: LogAdapter[],
+  costHistory?: CostRecorder,
+): CostTracker {
   const sessions = new Map<string, BoundSession>()
   /** File paths already bound to a session — prevents cross-session matching. */
   const boundFiles = new Set<string>()
@@ -106,18 +118,50 @@ export function createCostTracker(mainWindow: BrowserWindow, adapters: LogAdapte
       return ''
     })
 
+  // Resolve agent config env vars from WSL (CLAUDE_CONFIG_DIR, CODEX_HOME).
+  // These override the default ~/.claude and ~/.codex base paths.
+  // Resolved in parallel with $HOME since they're independent.
+  let cachedEnv: AgentEnvContext | null = null
+  const envReady: Promise<AgentEnvContext> = Promise.all([
+    // eslint-disable-next-line no-template-curly-in-string -- bash variable expansion, not JS
+    wslExec('echo "${CLAUDE_CONFIG_DIR:-}"')
+      .then((o) => o.trim())
+      .catch(() => ''),
+    // eslint-disable-next-line no-template-curly-in-string -- bash variable expansion, not JS
+    wslExec('echo "${CODEX_HOME:-}"')
+      .then((o) => o.trim())
+      .catch(() => ''),
+  ])
+    .then(([rawClaude, rawCodex]) => {
+      const claudeConfigDir = rawClaude || undefined
+      const codexHome = rawCodex || undefined
+      const env: AgentEnvContext = { claudeConfigDir, codexHome }
+      cachedEnv = env
+      log.info('Resolved WSL agent env vars', { claudeConfigDir, codexHome })
+      return env
+    })
+    .catch((err) => {
+      log.warn('Failed to resolve WSL agent env vars — using defaults', {
+        err: String(err),
+      })
+      const env: AgentEnvContext = {}
+      cachedEnv = env
+      return env
+    })
+
   // ── Discovery ───────────────────────────────────────────────────
 
   function startDiscovery(session: BoundSession): void {
-    const rawDirs = session.adapter.getLogDirs(session.projectPath)
     const pattern = session.adapter.getFilePattern()
 
-    // Use cached $HOME if available; otherwise wait for the initial resolution.
+    // Use cached values if available; otherwise wait for initial resolution.
     const homePromise = cachedHome !== null ? Promise.resolve(cachedHome) : homeReady
+    const envPromise = cachedEnv !== null ? Promise.resolve(cachedEnv) : envReady
 
-    homePromise
-      .then((home) => {
+    Promise.all([homePromise, envPromise])
+      .then(([home, env]) => {
         if (!sessions.has(session.sessionId)) return
+        const rawDirs = session.adapter.getLogDirs(session.projectPath, env)
         const dirs = home
           ? rawDirs.map((d) => (d.startsWith('~') ? home + d.slice(1) : d))
           : rawDirs.filter((d) => !d.startsWith('~'))
@@ -130,25 +174,17 @@ export function createCostTracker(mainWindow: BrowserWindow, adapters: LogAdapte
         runDiscoveryLoop(session, dirs, pattern)
       })
       .catch(() => {
-        /* homeReady never rejects (has .catch), but guard defensively */
+        /* homeReady/envReady never reject (have .catch), but guard defensively */
       })
   }
 
   function runDiscoveryLoop(session: BoundSession, dirs: string[], pattern: string): void {
     function discoveryPoll(): void {
-      // Session may have been unbound while we were waiting
+      // Session may have been unbound while we were waiting. The loop has no
+      // wall-clock timeout — claude-code (and other agents) only create their
+      // log file on first user prompt, which can be arbitrarily delayed. The
+      // loop terminates when unbindSession deletes the session from the map.
       if (!sessions.has(session.sessionId)) return
-
-      // Timeout guard — uses the session-level start time so re-entries
-      // from tryMatchCandidates share the same deadline
-      if (Date.now() - session.discoveryStartedAt > DISCOVERY_TIMEOUT_MS) {
-        log.warn('Discovery timed out for session', {
-          sessionId: session.sessionId,
-          dirs,
-          pattern,
-        })
-        return
-      }
 
       // Build find commands with resolved paths (no $HOME needed)
       const findParts = dirs.map(
@@ -167,10 +203,12 @@ export function createCostTracker(mainWindow: BrowserWindow, adapters: LogAdapte
             .filter(Boolean)
 
           if (candidates.length === 0) {
-            // Nothing yet — schedule next discovery poll
-            // R2-02: Re-check session existence before scheduling to avoid TOCTOU timer leak
+            // Nothing yet — re-enter startDiscovery so adapters with time-
+            // dependent log dirs (e.g. Codex's today-date path) recompute
+            // them on each retry instead of caching yesterday's dir across
+            // midnight.
             if (!sessions.has(session.sessionId)) return
-            session.pollTimer = setTimeout(discoveryPoll, DISCOVERY_INTERVAL_MS)
+            session.pollTimer = setTimeout(() => startDiscovery(session), DISCOVERY_INTERVAL_MS)
             return
           }
 
@@ -183,9 +221,8 @@ export function createCostTracker(mainWindow: BrowserWindow, adapters: LogAdapte
             sessionId: session.sessionId,
             err: String(err),
           })
-          // R2-02: Re-check before scheduling
           if (!sessions.has(session.sessionId)) return
-          session.pollTimer = setTimeout(discoveryPoll, DISCOVERY_INTERVAL_MS)
+          session.pollTimer = setTimeout(() => startDiscovery(session), DISCOVERY_INTERVAL_MS)
         })
     }
 
@@ -300,6 +337,7 @@ export function createCostTracker(mainWindow: BrowserWindow, adapters: LogAdapte
           const lines = text.split('\n')
           session.partialLine = lines.pop() ?? ''
 
+          const preUsage = session.usage
           let usageChanged = false
           for (const line of lines) {
             const trimmed = line.trim()
@@ -312,11 +350,26 @@ export function createCostTracker(mainWindow: BrowserWindow, adapters: LogAdapte
             }
           }
 
-          if (usageChanged && !mainWindow.isDestroyed()) {
-            mainWindow.webContents.send('cost:update', {
-              sessionId: session.sessionId,
-              usage: { ...session.usage },
-            })
+          if (usageChanged) {
+            if (!mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('cost:update', {
+                sessionId: session.sessionId,
+                usage: { ...session.usage },
+              })
+            }
+            if (costHistory) {
+              // cost-history sums deltas, not cumulative totals
+              const deltaCost = session.usage.totalCostUsd - preUsage.totalCostUsd
+              const deltaTokens =
+                session.usage.inputTokens +
+                session.usage.outputTokens -
+                preUsage.inputTokens -
+                preUsage.outputTokens
+              // Epsilon guard against float noise that would otherwise schedule a disk flush
+              if (deltaCost > COST_DELTA_EPSILON_USD) {
+                costHistory.recordCost(session.adapter.agent, deltaCost, Math.max(0, deltaTokens))
+              }
+            }
           }
 
           session.pollTimer = setTimeout(tailPoll, TAIL_INTERVAL_MS)
@@ -331,7 +384,10 @@ export function createCostTracker(mainWindow: BrowserWindow, adapters: LogAdapte
         })
     }
 
-    session.pollTimer = setTimeout(tailPoll, TAIL_INTERVAL_MS)
+    // Stagger initial poll with jitter so multiple concurrently-bound sessions
+    // don't fire their wsl.exe subprocesses in lockstep every interval.
+    const jitter = Math.floor(Math.random() * TAIL_INTERVAL_MS)
+    session.pollTimer = setTimeout(tailPoll, jitter)
   }
 
   // ── Public API ──────────────────────────────────────────────────
@@ -368,7 +424,6 @@ export function createCostTracker(mainWindow: BrowserWindow, adapters: LogAdapte
       projectPath: wslProjectPath,
       cwd: wslCwd,
       spawnAt: opts.spawnAt,
-      discoveryStartedAt: Date.now(),
       filePath: null,
       offset: 0,
       partialLine: '',

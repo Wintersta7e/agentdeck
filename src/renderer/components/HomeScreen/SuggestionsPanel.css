@@ -1,0 +1,92 @@
+.suggestions-panel,
+.review-panel,
+.recent-workflows-panel {
+  padding: 14px var(--sp-4); /* mockup-specific 14px vertical */
+  background: var(--surface-tint);
+  border: 1px solid var(--surface-border);
+  border-radius: 10px;
+  margin-bottom: 10px; /* mockup-specific */
+  position: relative;
+  overflow: hidden;
+}
+
+.suggestions-panel::before,
+.review-panel::before,
+.recent-workflows-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--edge-highlight), transparent);
+}
+
+.panel-header {
+  font-size: 9px; /* mockup-specific */
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-weight: 600;
+  color: var(--text3);
+  margin-bottom: var(--sp-2);
+}
+
+.panel-empty {
+  font-size: 9px; /* mockup-specific */
+  color: var(--text3);
+  font-style: italic;
+  padding: var(--sp-1) 0;
+}
+
+.suggestion-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  padding: 6px 0; /* mockup-specific */
+  border-bottom: 1px solid var(--surface-sep);
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.suggestion-icon {
+  font-size: 11px; /* mockup-specific */
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.suggestion-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.suggestion-text {
+  font-size: 11px; /* mockup-specific */
+  color: var(--text2);
+  line-height: 1.4;
+}
+
+.suggestion-action {
+  font-size: 9px; /* mockup-specific */
+  color: var(--accent);
+  margin-top: 2px;
+  cursor: pointer;
+}
+
+.suggestion-dismiss {
+  background: none;
+  border: none;
+  color: var(--text3);
+  cursor: pointer;
+  padding: var(--sp-1);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  font-family: inherit;
+  transition: color var(--duration-base);
+}
+
+.suggestion-dismiss:hover {
+  color: var(--text1);
+}

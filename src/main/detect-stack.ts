@@ -1,5 +1,5 @@
 import { readdir } from 'fs/promises'
-import { wslPathToWindows } from './wsl-utils'
+import { wslPathToWindows, withUncFallback } from './wsl-utils'
 import type { AgentType, DetectedStack, StackBadge } from '../shared/types'
 import { createLogger } from './logger'
 
@@ -51,18 +51,9 @@ export async function detectStack(
 
   let entries: string[]
   try {
-    entries = await readdir(windowsPath)
+    entries = await withUncFallback(windowsPath, (p) => readdir(p))
   } catch (err: unknown) {
-    // If UNC path via wsl.localhost failed, try wsl$ fallback
-    if (windowsPath.startsWith('\\\\wsl.localhost\\')) {
-      const fallbackPath = windowsPath.replace('\\\\wsl.localhost\\', '\\\\wsl$\\')
-      try {
-        entries = await readdir(fallbackPath)
-      } catch {
-        log.error(`Failed to read directory ${windowsPath}`, { err: String(err) })
-        return null
-      }
-    } else {
+    {
       const code = (err as NodeJS.ErrnoException)?.code
       if (code === 'ENOENT') return null
       log.error(`Failed to read directory ${windowsPath}`, { err: String(err) })

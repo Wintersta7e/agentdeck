@@ -33,6 +33,12 @@ export function registerWorkflowHandlers(
   })
   ipcMain.handle('workflows:save', (_, workflow: Workflow) => {
     if (!workflow || typeof workflow !== 'object') throw new Error('Invalid workflow')
+    const raw = workflow as unknown as Record<string, unknown>
+    // Allow save for new workflows where id is absent (saveWorkflow mints one);
+    // when present, enforce SAFE_ID_RE at the IPC boundary consistent with peers.
+    if (raw.id !== undefined && (typeof raw.id !== 'string' || !SAFE_ID_RE.test(raw.id))) {
+      throw new Error('Invalid workflow ID')
+    }
     return saveWorkflow(workflow)
   })
   ipcMain.handle('workflows:rename', (_, id: string, name: string) => {
@@ -51,7 +57,7 @@ export function registerWorkflowHandlers(
   /* ── Export / Import / Duplicate ─────────────────────────────── */
 
   ipcMain.handle('workflows:export', async (_, id: string): Promise<WorkflowExport> => {
-    if (typeof id !== 'string' || !id) throw new Error('Invalid workflow ID')
+    if (typeof id !== 'string' || !SAFE_ID_RE.test(id)) throw new Error('Invalid workflow ID')
     const workflow = await loadWorkflow(id)
     if (!workflow) throw new Error('Workflow not found')
 
@@ -166,7 +172,7 @@ export function registerWorkflowHandlers(
   )
 
   ipcMain.handle('workflows:duplicate', async (_, id: string): Promise<Workflow> => {
-    if (typeof id !== 'string' || !id) throw new Error('Invalid workflow ID')
+    if (typeof id !== 'string' || !SAFE_ID_RE.test(id)) throw new Error('Invalid workflow ID')
     const workflow = await loadWorkflow(id)
     if (!workflow) throw new Error('Workflow not found')
 

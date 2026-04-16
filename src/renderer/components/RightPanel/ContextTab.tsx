@@ -83,7 +83,12 @@ export function ContextTab(): React.JSX.Element {
     <>
       <div className="panel-section-header">Project files</div>
       {contextFiles.map((file) => (
-        <div key={file.name} className="context-item" onClick={() => setRightPanelTab('memory')}>
+        <button
+          type="button"
+          key={file.name}
+          className="context-item"
+          onClick={() => setRightPanelTab('memory')}
+        >
           <div className="context-item-header">
             <span className="context-icon">
               <File size={14} />
@@ -92,7 +97,7 @@ export function ContextTab(): React.JSX.Element {
             {file.tag && <span className="context-tag">{file.tag}</span>}
           </div>
           <div className="context-path">{file.path}</div>
-        </div>
+        </button>
       ))}
 
       {/* Codex Skills */}

@@ -1,7 +1,6 @@
 import { memo, useCallback } from 'react'
 import { GitBranch, Zap } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
-import { HexDot } from '../shared/HexDot'
 import './PaneTopbar.css'
 
 function fmtTokens(n: number): string {
@@ -115,17 +114,21 @@ export const PaneTopbar = memo(function PaneTopbar({
         </>
       )}
       <div className="pane-status">
-        <HexDot
-          status={status === 'running' ? 'live' : status === 'error' ? 'error' : 'idle'}
-          size={6}
-        />
+        <span className={`pane-status-dot ${status}`} />
         <span className={`pane-status-text ${status}`}>{status}</span>
       </div>
       <div className="pane-actions">
-        <button className="pane-btn" onClick={handleRestart}>
+        <button
+          className="pane-btn"
+          onClick={handleRestart}
+          aria-label="Restart session"
+          title="Restart session"
+        >
           Restart
         </button>
-        <button className="pane-btn primary">{agentName}</button>
+        <button className="pane-btn primary" title={agentName}>
+          {agentName}
+        </button>
       </div>
     </div>
   )

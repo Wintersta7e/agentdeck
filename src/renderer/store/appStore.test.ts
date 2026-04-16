@@ -22,7 +22,8 @@ describe('Session lifecycle', () => {
     useAppStore.getState().addSession('s1', 'proj-1')
     useAppStore.getState().removeSession('s1')
     const state = useAppStore.getState()
-    expect(state.sessions['s1']).toBeUndefined()
+    // Session stays in map as exited (for cost/timeline), but view goes home
+    expect(state.sessions['s1']?.status).toBe('exited')
     expect(state.currentView).toBe('home')
   })
 
@@ -31,7 +32,7 @@ describe('Session lifecycle', () => {
     useAppStore.getState().addSession('s2', 'proj-2')
     useAppStore.getState().removeSession('s1')
     const state = useAppStore.getState()
-    expect(state.sessions['s1']).toBeUndefined()
+    expect(state.sessions['s1']?.status).toBe('exited')
     expect(state.sessions['s2']).toBeDefined()
   })
 
@@ -229,19 +230,29 @@ describe('Notifications', () => {
 
 describe('Activity feeds', () => {
   it('adds activity events to session feed', () => {
+    useAppStore.getState().addSession('s1', 'proj-1')
     const evt = makeActivityEvent({ type: 'read', title: 'Reading file' })
     useAppStore.getState().addActivityEvent('s1', evt)
     expect(useAppStore.getState().activityFeeds['s1']).toHaveLength(1)
   })
 
   it('caps feed at 500 events', () => {
+    useAppStore.getState().addSession('s1', 'proj-1')
     for (let i = 0; i < 510; i++) {
       useAppStore.getState().addActivityEvent('s1', makeActivityEvent({ id: `e-${i}` }))
     }
     expect(useAppStore.getState().activityFeeds['s1']).toHaveLength(500)
   })
 
+  it('drops activity events for sessions that have been evicted from the store', () => {
+    // No addSession first — simulates late IPC after session eviction
+    useAppStore.getState().addActivityEvent('ghost', makeActivityEvent())
+    expect(useAppStore.getState().activityFeeds['ghost']).toBeUndefined()
+    expect(useAppStore.getState().writeCountBySession['ghost']).toBeUndefined()
+  })
+
   it('clears activity feed', () => {
+    useAppStore.getState().addSession('s1', 'proj-1')
     useAppStore.getState().addActivityEvent('s1', makeActivityEvent())
     useAppStore.getState().clearActivityFeed('s1')
     expect(useAppStore.getState().activityFeeds['s1']).toHaveLength(0)

@@ -72,8 +72,9 @@
   }
 }
 
-/* Loop edge: always dashed */
-.wf-edge-loop {
+/* Loop edge: statically dashed (via strokeDasharray on the SVG),
+   animated only while the loop is actively executing */
+.wf-edge-loop.wf-edge-active {
   animation: wf-dash 1s linear infinite;
 }
 
@@ -86,7 +87,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--sp-2);
   pointer-events: none;
   z-index: 1;
 }
@@ -98,7 +99,7 @@
 }
 
 .wf-canvas-empty-text {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text2);
 }
 

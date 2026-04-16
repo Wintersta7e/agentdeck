@@ -39,6 +39,7 @@ export function PathInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
+        aria-label={placeholder ?? 'Path input'}
         spellCheck={false}
       />
       <button type="button" className="path-input-browse" onClick={handleBrowse}>

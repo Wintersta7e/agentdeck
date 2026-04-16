@@ -1,11 +1,15 @@
 import type {
   ActivityEvent,
+  DailyCostEntry,
   DetectedStack,
+  GitStatus,
   Project,
   ProjectMeta,
+  ReviewItem,
   Role,
   SkillInfo,
   Template,
+  TokenUsage,
 } from '../shared/types'
 
 declare global {
@@ -130,18 +134,16 @@ declare global {
           opts: { agent: string; projectPath: string; cwd: string; spawnAt: number },
         ): Promise<void>
         unbind(sessionId: string): Promise<void>
-        onUpdate(
-          cb: (data: {
-            sessionId: string
-            usage: {
-              inputTokens: number
-              outputTokens: number
-              cacheReadTokens: number
-              cacheWriteTokens: number
-              totalCostUsd: number
-            }
-          }) => void,
-        ): () => void
+        onUpdate(cb: (data: { sessionId: string; usage: TokenUsage }) => void): () => void
+      }
+      home: {
+        gitStatus: (projectId: string) => Promise<GitStatus | null>
+        pendingReviews: (projectId: string) => Promise<ReviewItem[]>
+        dismissReview: (reviewId: string) => Promise<void>
+        costHistory: (days: number) => Promise<DailyCostEntry[]>
+        getBudget: () => Promise<number | null>
+        setBudget: (amount: number | null) => Promise<void>
+        onReviewsUpdated: (cb: (items: ReviewItem[]) => void) => () => void
       }
       pickFolder: () => Promise<string | null>
       log: {

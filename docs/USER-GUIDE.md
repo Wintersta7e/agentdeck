@@ -1,6 +1,6 @@
 # AgentDeck User Guide
 
-> **Version**: 4.8.0
+> **Version**: 5.0.0
 
 AgentDeck is a desktop command center for managing AI coding agents through WSL2 terminals. This guide covers every feature from first launch to advanced workflow automation.
 
@@ -58,12 +58,26 @@ If WSL is still booting (cold start can take 15+ seconds), the app retries autom
 
 ## Home Screen
 
-The home screen appears when no session or workflow tab is active.
+The home screen is a command center that appears when no session or workflow tab is active. It uses 3-tier progressive disclosure:
 
-- **Greeting** — Shows your WSL username and the current date
-- **Pinned Projects** — Cards for your saved projects, click to open a session
-- **Agent Grid** — Shows all available agents with detection status, version info, and update buttons
-- **Quick Actions** — New Project (Ctrl+N), New Terminal (Ctrl+T), open Command Palette (Esc)
+### Tier 1 — Critical (always visible)
+- **Greeting + Date** — Shows your WSL username and current date
+- **Daily Digest** — Today's session count, total cost, exit rate, and top agent
+- **Quick Actions** — New Session, Run Workflow, From Template, Resume Last
+
+### Tier 2 — Operational
+- **Live Session Grid** — Real-time cards for running sessions showing agent name, elapsed time, activity pulse, token gauge, and cost
+- **Projects** — Pinned project cards with git status (branch, uncommitted changes), agent pills, and stack badge. Click to open a session.
+- **Suggestions Panel** — Proactive recommendations (stale projects, unused templates, available updates)
+- **Review Queue** — Agent-produced diffs awaiting human review
+- **Recent Workflows** — Last 3 workflow runs with status badges
+
+### Tier 3 — Reference (collapsible)
+- **Session Timeline** — Horizontal bars showing activity phases (read, write, think, command, error) for each session today
+- **Cost Dashboard** — Daily cost with per-agent breakdown, 7-day sparkline history, budget bar
+- **Agent Strip** — All 7 agents with detection status, version, and context window
+
+Data on the home screen persists after closing session tabs — cost, timeline, and digest show cumulative stats for the entire app session.
 
 ### Agent Detection
 
@@ -571,6 +585,8 @@ The cost and token count are always consistent — both reflect the same set of 
 - On the first turn, Claude shows high token counts due to system prompt caching — this drops dramatically on subsequent turns
 - Cost data is per-session and resets when the session closes
 
+The Cost Dashboard on the home screen shows a 7-day cost history sparkline, today's total with per-agent breakdown, and an optional daily budget bar. Cost data refreshes every 30 seconds and persists after closing session tabs.
+
 ---
 
 ## Git Worktree Isolation
@@ -651,6 +667,8 @@ AgentDeck includes 8 themes:
 4. Enter to apply
 
 Theme changes use a circular reveal animation (View Transition API). Light themes keep terminal backgrounds dark for readability.
+
+All 8 themes use theme-adaptive surface tokens. Light themes (Parchment, Fog, Lavender, Stone) have proper contrast with dark tints for borders, hover states, and shadows.
 
 ---
 
