@@ -263,9 +263,3 @@
   border-color: var(--purple);
   background: rgba(var(--purple-rgb), 0.2);
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .wf-log-node-hdr-dot.run {
-    animation: none;
-  }
-}

@@ -26,10 +26,10 @@
 }
 
 .wf-node-inner.running {
-  border-color: var(--green-border);
+  border-color: rgb(var(--green-rgb));
   box-shadow:
-    0 0 0 1px rgba(var(--green-rgb), 0.15),
-    0 0 20px rgba(var(--green-rgb), 0.1);
+    0 0 0 1px rgba(var(--green-rgb), 0.5),
+    0 0 24px rgba(var(--green-rgb), 0.35);
   position: relative;
 }
 
@@ -37,18 +37,18 @@
 .wf-node-inner.running::after {
   content: '';
   position: absolute;
-  inset: -1px;
+  inset: -2px;
   border-radius: inherit;
   box-shadow:
-    0 0 0 1px rgba(var(--green-rgb), 0.3),
-    0 0 30px rgba(var(--green-rgb), 0.2);
+    0 0 0 2px rgba(var(--green-rgb), 0.8),
+    0 0 40px 4px rgba(var(--green-rgb), 0.55);
   opacity: 0;
-  animation: wf-node-pulse 2s infinite;
+  animation: wf-node-pulse 1.6s ease-in-out infinite;
   pointer-events: none;
 }
 
 .wf-node-inner.done {
-  border-color: var(--green-border);
+  border-color: rgb(var(--green-rgb));
   position: relative;
 }
 
@@ -56,31 +56,31 @@
 .wf-node-inner.done::after {
   content: '';
   position: absolute;
-  inset: -1px;
+  inset: -2px;
   border-radius: inherit;
   box-shadow:
-    0 0 0 1px rgba(var(--green-rgb), 0.3),
-    0 0 20px 4px rgba(var(--green-rgb), 0.3);
+    0 0 0 2px rgba(var(--green-rgb), 0.7),
+    0 0 32px 6px rgba(var(--green-rgb), 0.6);
   opacity: 0;
-  animation: wf-node-flash 0.4s ease forwards;
+  animation: wf-node-flash 0.6s ease-out forwards;
   pointer-events: none;
 }
 
 .wf-node-inner.error {
-  border-color: rgba(var(--red-rgb), 0.5);
+  border-color: rgb(var(--red-rgb));
   position: relative;
 }
 
 .wf-node-inner.error::after {
   content: '';
   position: absolute;
-  inset: -1px;
+  inset: -2px;
   border-radius: inherit;
   box-shadow:
-    0 0 0 1px rgba(var(--red-rgb), 0.3),
-    0 0 20px 4px rgba(var(--red-rgb), 0.3);
+    0 0 0 2px rgba(var(--red-rgb), 0.7),
+    0 0 32px 6px rgba(var(--red-rgb), 0.6);
   opacity: 0;
-  animation: wf-node-flash 0.4s ease forwards;
+  animation: wf-node-flash 0.6s ease-out forwards;
   pointer-events: none;
 }
 
@@ -448,19 +448,4 @@
 
 .wf-node-dropdown-item.danger:hover {
   background: var(--red-dim);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .wf-node-inner.running::after {
-    animation: none !important;
-  }
-  .wf-node-inner.done::after {
-    animation: none !important;
-  }
-  .wf-node-inner.error::after {
-    animation: none !important;
-  }
-  .wf-node-inner.running .wf-node-type-icon {
-    animation: none !important;
-  }
 }
