@@ -72,8 +72,9 @@
   }
 }
 
-/* Loop edge: always dashed */
-.wf-edge-loop {
+/* Loop edge: statically dashed (via strokeDasharray on the SVG),
+   animated only while the loop is actively executing */
+.wf-edge-loop.wf-edge-active {
   animation: wf-dash 1s linear infinite;
 }
 
