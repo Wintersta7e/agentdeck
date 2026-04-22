@@ -1,0 +1,107 @@
+.scope-viz {
+  position: relative;
+  margin: 0 auto;
+}
+
+.scope-viz__svg {
+  position: absolute;
+  inset: 0;
+}
+
+/* Radial gradient stops — theme-aware via currentColor */
+.scope-viz__grad-stop-inner {
+  stop-color: var(--accent);
+  stop-opacity: 0.25;
+}
+.scope-viz__grad-stop-mid {
+  stop-color: var(--accent);
+  stop-opacity: 0.04;
+}
+
+.scope-viz__sweep-stop-start {
+  stop-color: var(--accent);
+  stop-opacity: 0;
+}
+.scope-viz__sweep-stop-end {
+  stop-color: var(--accent);
+  stop-opacity: 0.5;
+}
+
+.scope-viz__ring {
+  stroke: var(--accent-border);
+  stroke-width: 1;
+}
+
+.scope-viz__tick {
+  stroke: var(--accent);
+  stroke-opacity: 0.25;
+}
+.scope-viz__tick--major {
+  stroke-opacity: 0.6;
+}
+
+.scope-viz__crosshair {
+  stroke: var(--border);
+  stroke-dasharray: 2 4;
+}
+
+.scope-viz__sweep {
+  animation: scope-viz-sweep 5s linear infinite;
+}
+
+.scope-viz__blip-halo {
+  fill: var(--accent);
+  opacity: 0.12;
+}
+
+.scope-viz__blip-core {
+  fill: var(--accent);
+}
+
+.scope-viz__blip-label {
+  fill: var(--accent);
+  font-size: 9px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+}
+
+.scope-viz__origin {
+  fill: var(--accent);
+}
+
+.scope-viz__caption {
+  position: absolute;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  pointer-events: none;
+}
+
+.scope-viz__caption--tl {
+  top: 10px;
+  left: 12px;
+  color: var(--accent);
+}
+.scope-viz__caption--br {
+  bottom: 10px;
+  right: 12px;
+  color: var(--text3);
+}
+
+@keyframes scope-viz-sweep {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scope-viz__sweep {
+    animation: none;
+  }
+  .scope-viz__blip-halo animate {
+    animation-duration: 0s;
+  }
+}
