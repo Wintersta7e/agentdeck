@@ -95,6 +95,19 @@ export function AppSettingsScreen(): React.JSX.Element {
         </div>
       </section>
 
+      <section className="app-settings-block" aria-labelledby="settings-mascot">
+        <header className="app-settings-block__head">
+          <h2 id="settings-mascot" className="app-settings-block__title">
+            Mascot
+          </h2>
+          <p className="app-settings-block__sub">
+            Show Pixel, the ops-room cat, in the Home greeting row. Pose reflects running sessions,
+            alerts, and local time. Off by default.
+          </p>
+        </header>
+        <MascotToggle />
+      </section>
+
       <section className="app-settings-block" aria-labelledby="settings-about">
         <header className="app-settings-block__head">
           <h2 id="settings-about" className="app-settings-block__title">
@@ -106,5 +119,21 @@ export function AppSettingsScreen(): React.JSX.Element {
         </header>
       </section>
     </ScreenShell>
+  )
+}
+
+function MascotToggle(): React.JSX.Element {
+  const enabled = useAppStore((s) => s.mascotEnabled)
+  const setMascotEnabled = useAppStore((s) => s.setMascotEnabled)
+  return (
+    <div className="app-settings-row">
+      <div>
+        <div className="app-settings-row__label">Current state</div>
+        <div className="app-settings-row__value">{enabled ? 'ENABLED' : 'DISABLED'}</div>
+      </div>
+      <button type="button" className="app-settings-btn" onClick={() => setMascotEnabled(!enabled)}>
+        {enabled ? 'Turn off' : 'Turn on'}
+      </button>
+    </div>
   )
 }

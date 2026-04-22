@@ -9,6 +9,7 @@ import { SessionTimelineB1 } from '../home/SessionTimelineB1'
 import { AgentChipStripB1 } from '../home/AgentChipB1'
 import { ProjectCardB1 } from '../home/ProjectCardB1'
 import { CostReadoutB1 } from '../home/CostReadoutB1'
+import { Mascot } from '../Mascot/Mascot'
 import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
 import { getProjectAgents } from '../../../shared/agent-helpers'
 import type { AgentConfig, Project } from '../../../shared/types'
@@ -69,6 +70,7 @@ export function HomeScreen({
   const setCurrentView = useAppStore((s) => s.setCurrentView)
   const setTab = useAppStore((s) => s.setTab)
   const username = useAppStore((s) => s.wslUsername)
+  const mascotEnabled = useAppStore((s) => s.mascotEnabled)
 
   const runningCount = useAppStore(
     (s) => Object.values(s.sessions).filter((sess) => sess.status === 'running').length,
@@ -153,7 +155,12 @@ export function HomeScreen({
   return (
     <div className="home-main home-main--redesign">
       {/* ── Row 1 · Greeting ─────────────────────────────────── */}
-      <section className="home-greeting">
+      <section className={`home-greeting${mascotEnabled ? ' home-greeting--mascot' : ''}`}>
+        {mascotEnabled && (
+          <div className="home-greeting__mascot" aria-hidden="true">
+            <Mascot size={130} />
+          </div>
+        )}
         <div className="home-greeting__left">
           <div className="home-date">{dateCaption}</div>
           <h1 className="home-headline">
@@ -179,9 +186,9 @@ export function HomeScreen({
             <button
               type="button"
               className="home-cta home-cta--ghost"
-              onClick={() => setTab('diff')}
+              onClick={() => setTab('alerts')}
             >
-              REVIEW DIFFS{alertCount > 0 ? ` · ${alertCount}` : ''}
+              REVIEW ALERTS{alertCount > 0 ? ` · ${alertCount}` : ''}
             </button>
           </div>
         </div>

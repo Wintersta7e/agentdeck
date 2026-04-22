@@ -74,6 +74,10 @@ export interface UiSlice {
   // Theme
   theme: string
   setTheme: (name: string) => void
+
+  // Mascot (Phase 4) — gated off by default
+  mascotEnabled: boolean
+  setMascotEnabled: (enabled: boolean) => void
 }
 
 export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get) => ({
@@ -255,5 +259,19 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
       window.agentDeck.log.send('warn', 'ui', 'Theme persist failed', { err: String(err) })
     })
     set({ theme: name })
+  },
+
+  // Mascot — default off per plan Phase 4; persisted via localStorage
+  mascotEnabled:
+    typeof localStorage !== 'undefined' && localStorage.getItem('mascot.enabled') === '1',
+  setMascotEnabled: (enabled) => {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('mascot.enabled', enabled ? '1' : '0')
+      }
+    } catch {
+      // Storage unavailable (private mode, quota) — silently ignore
+    }
+    set({ mascotEnabled: enabled })
   },
 })

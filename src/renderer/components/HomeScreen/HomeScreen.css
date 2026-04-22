@@ -44,6 +44,17 @@
   gap: var(--sp-5);
 }
 
+.home-greeting--mascot {
+  grid-template-columns: auto 1fr auto;
+}
+
+.home-greeting__mascot {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: var(--sp-1);
+}
+
 .home-greeting__left {
   min-width: 0;
 }
