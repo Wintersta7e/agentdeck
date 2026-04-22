@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { Titlebar } from './components/Titlebar/Titlebar'
 import { TopTabBar } from './components/TopTabBar/TopTabBar'
 import { SessionsScreen } from './screens/SessionsScreen/SessionsScreen'
+import { AgentsScreen } from './screens/AgentsScreen/AgentsScreen'
 import { Sidebar } from './components/Sidebar/Sidebar'
 import { StatusBar } from './components/StatusBar/StatusBar'
 import { HomeScreen } from './components/HomeScreen/HomeScreen'
@@ -608,13 +609,7 @@ export function App(): React.JSX.Element {
               subtitle="Single-project overview with sessions, settings entry point, and recent activity."
             />
           )}
-          {currentView === 'agents' && (
-            <PlaceholderScreen
-              phase="Phase 3.6"
-              title="Agents"
-              subtitle="All 7 agents with version, context window, and one-click update."
-            />
-          )}
+          {currentView === 'agents' && <AgentsScreen />}
           {currentView === 'workflows' && !activeWorkflowId && (
             <PlaceholderScreen
               phase="Phase 3.7"
