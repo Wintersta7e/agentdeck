@@ -7,6 +7,15 @@ export interface UiSlice {
   currentView: ViewType
   setCurrentView: (view: ViewType) => void
 
+  /**
+   * Parameters for the active tab view (e.g. { sessionId }, { projectId }, { workflowId }).
+   * Reset when a new top-level tab is selected via setTab().
+   */
+  tabParams: Record<string, unknown>
+  setTabParams: (params: Record<string, unknown>) => void
+  /** Switch to a top-level tab and reset tabParams atomically. */
+  setTab: (view: ViewType, params?: Record<string, unknown>) => void
+
   settingsProjectId: string | null
   viewStack: ViewType[]
 
@@ -70,6 +79,15 @@ export interface UiSlice {
 export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get) => ({
   currentView: 'home',
   setCurrentView: (view) => set({ currentView: view }),
+
+  tabParams: {},
+  setTabParams: (params) => set({ tabParams: params }),
+  setTab: (view, params) =>
+    set((state) => ({
+      currentView: view,
+      tabParams: params ?? {},
+      viewStack: [...state.viewStack, state.currentView],
+    })),
 
   settingsProjectId: null,
   viewStack: [] as ViewType[],

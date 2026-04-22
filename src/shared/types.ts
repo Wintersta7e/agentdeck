@@ -105,7 +105,24 @@ export interface Session {
   agentFlagsOverride?: string | undefined
 }
 
-export type ViewType = 'home' | 'session' | 'wizard' | 'settings' | 'template-editor' | 'workflow'
+export type ViewType =
+  | 'home'
+  | 'session'
+  | 'wizard'
+  | 'settings'
+  | 'template-editor'
+  | 'workflow'
+  // Redesign (Option B) tab views
+  | 'sessions'
+  | 'projects'
+  | 'project-detail'
+  | 'agents'
+  | 'workflows'
+  | 'history'
+  | 'alerts'
+  | 'app-settings'
+  | 'new-session'
+  | 'diff'
 
 export type PaneLayout = 1 | 2 | 3
 

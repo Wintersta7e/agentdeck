@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Titlebar } from './components/Titlebar/Titlebar'
+import { TopTabBar } from './components/TopTabBar/TopTabBar'
 import { Sidebar } from './components/Sidebar/Sidebar'
 import { StatusBar } from './components/StatusBar/StatusBar'
 import { HomeScreen } from './components/HomeScreen/HomeScreen'
@@ -11,10 +12,21 @@ import { AboutDialog } from './components/AboutDialog/AboutDialog'
 import { ShortcutsDialog } from './components/ShortcutsDialog/ShortcutsDialog'
 import { NotificationToast } from './components/NotificationToast/NotificationToast'
 import { ConfirmDialog } from './components/shared/ConfirmDialog'
+import { PlaceholderScreen } from './components/PlaceholderScreen/PlaceholderScreen'
 import { useAppStore } from './store/appStore'
 import { useProjects } from './hooks/useProjects'
-import type { ActivityEvent, AgentConfig, Project, WorkflowEvent } from '../shared/types'
+import type { ActivityEvent, AgentConfig, Project, ViewType, WorkflowEvent } from '../shared/types'
 import './App.css'
+
+/** Top-level tabs that should hide the contextual sidebar. */
+const SIDEBAR_HIDDEN_VIEWS: readonly ViewType[] = [
+  'agents',
+  'history',
+  'alerts',
+  'app-settings',
+  'new-session',
+  'diff',
+]
 
 const WorkflowEditor = lazy(() => import('./screens/WorkflowEditor/WorkflowEditor'))
 const ProjectSettings = lazy(() =>
@@ -534,6 +546,8 @@ export function App(): React.JSX.Element {
     }
   }, [openWorkflowIdList])
 
+  const sidebarHidden = SIDEBAR_HIDDEN_VIEWS.includes(currentView)
+
   return (
     <div className="app">
       <Titlebar
@@ -541,30 +555,35 @@ export function App(): React.JSX.Element {
         onCloseWorkflowTab={handleCloseWorkflowTab}
         onAddTab={handleAddTab}
       />
+      <TopTabBar />
       <div className="app-body">
         {wslAvailable === false && (
           <div className="wsl-warning-banner" role="alert">
             WSL not detected — check that your distribution is running
           </div>
         )}
-        <div
-          ref={sidebarRef}
-          className={`sidebar-wrapper${sidebarOpen ? '' : ' collapsed'}`}
-          style={sidebarStyle}
-        >
-          <Sidebar
-            onOpenProject={handleOpenProject}
-            onOpenProjectWithAgent={handleOpenProjectWithAgent}
-          />
-        </div>
-        {sidebarOpen && (
-          <PanelDivider
-            side="left"
-            panelRef={sidebarRef}
-            minWidth={160}
-            maxWidth={400}
-            onResizeEnd={setSidebarWidth}
-          />
+        {!sidebarHidden && (
+          <>
+            <div
+              ref={sidebarRef}
+              className={`sidebar-wrapper${sidebarOpen ? '' : ' collapsed'}`}
+              style={sidebarStyle}
+            >
+              <Sidebar
+                onOpenProject={handleOpenProject}
+                onOpenProjectWithAgent={handleOpenProjectWithAgent}
+              />
+            </div>
+            {sidebarOpen && (
+              <PanelDivider
+                side="left"
+                panelRef={sidebarRef}
+                minWidth={160}
+                maxWidth={400}
+                onResizeEnd={setSidebarWidth}
+              />
+            )}
+          </>
         )}
         <div className="app-main">
           {currentView === 'home' && (
@@ -573,13 +592,84 @@ export function App(): React.JSX.Element {
               onOpenProjectWithAgent={handleOpenProjectWithAgent}
             />
           )}
+          {currentView === 'sessions' && (
+            <PlaceholderScreen
+              phase="Phase 3.2"
+              title="Sessions"
+              subtitle="List of active and recent agent sessions. Opens into session detail on click."
+            />
+          )}
+          {currentView === 'projects' && (
+            <PlaceholderScreen
+              phase="Phase 3.5"
+              title="Projects"
+              subtitle="Browse and pin projects. Detection of stack + agents, last activity, dirty-branch badges."
+            />
+          )}
+          {currentView === 'project-detail' && (
+            <PlaceholderScreen
+              phase="Phase 3.5"
+              title="Project Detail"
+              subtitle="Single-project overview with sessions, settings entry point, and recent activity."
+            />
+          )}
+          {currentView === 'agents' && (
+            <PlaceholderScreen
+              phase="Phase 3.6"
+              title="Agents"
+              subtitle="All 7 agents with version, context window, and one-click update."
+            />
+          )}
+          {currentView === 'workflows' && !activeWorkflowId && (
+            <PlaceholderScreen
+              phase="Phase 3.7"
+              title="Workflows"
+              subtitle="Workflow library + React Flow editor for the selected workflow."
+            />
+          )}
+          {currentView === 'history' && (
+            <PlaceholderScreen
+              phase="Phase 3.9"
+              title="History"
+              subtitle="14-day heatmap of session cost and count, plus paginated archive."
+            />
+          )}
+          {currentView === 'alerts' && (
+            <PlaceholderScreen
+              phase="Phase 3.10"
+              title="Alerts"
+              subtitle="Grouped notifications: fail · review · cost · done."
+            />
+          )}
+          {currentView === 'app-settings' && (
+            <PlaceholderScreen
+              phase="Phase 3.11"
+              title="Settings"
+              subtitle="Global preferences + theme picker with live preview of all 11 themes."
+            />
+          )}
+          {currentView === 'new-session' && (
+            <PlaceholderScreen
+              phase="Phase 3.4"
+              title="New Session"
+              subtitle="Composer to launch an agent against an existing project: template, prompt, mode, launch card."
+            />
+          )}
+          {currentView === 'diff' && (
+            <PlaceholderScreen
+              phase="Phase 3.8"
+              title="Diff Review"
+              subtitle="File tree + unified diff + per-file comments. Keep / Discard / Request changes."
+            />
+          )}
           <Suspense fallback={<div className="suspense-spinner" />}>
             {currentView === 'wizard' && <NewProjectWizard onCreateProject={handleOpenProject} />}
             {currentView === 'settings' && <ProjectSettings key={settingsProjectId} />}
             {currentView === 'template-editor' && <TemplateEditor />}
-            {currentView === 'workflow' && activeWorkflowId && (
-              <WorkflowEditor key={activeWorkflowId} workflowId={activeWorkflowId} />
-            )}
+            {(currentView === 'workflow' || (currentView === 'workflows' && activeWorkflowId)) &&
+              activeWorkflowId && (
+                <WorkflowEditor key={activeWorkflowId} workflowId={activeWorkflowId} />
+              )}
           </Suspense>
           <div
             className={`view-panel ${currentView === 'session' ? 'view-panel--visible' : 'view-panel--hidden'}`}
