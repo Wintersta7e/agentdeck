@@ -166,6 +166,15 @@
   --dialog-shadow: 0 24px 64px rgba(0, 0, 0, 0.6), 0 8px 24px rgba(0, 0, 0, 0.3);
   --context-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 
+  /* ── Per-agent signature colors ── */
+  --agent-claude: #d97757;
+  --agent-codex: #10a37f;
+  --agent-aider: #e5b659;
+  --agent-goose: #a78bfa;
+  --agent-gemini: #5b9bd5;
+  --agent-amazonq: #ff9900;
+  --agent-opencode: #4adecd;
+
   /* Shape */
   --r: 4px;
 

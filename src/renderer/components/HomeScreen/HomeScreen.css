@@ -240,6 +240,14 @@
   min-height: 240px;
 }
 
+.home-projects-empty {
+  padding: var(--sp-6) var(--sp-3);
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--text2);
+}
+
 .home-project-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -285,6 +293,52 @@
 
 /* ─── Welcome (first-run) ─── */
 .home-welcome {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-2);
+}
+
+.home-welcome__step {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border);
+  background: color-mix(in oklch, var(--bg1) 55%, transparent);
+}
+
+.home-welcome__num {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+}
+
+.home-welcome__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-base);
+  font-weight: 600;
+  color: var(--text0);
+}
+
+.home-welcome__desc {
+  font-family: var(--font-ui);
+  font-size: var(--fs-sm);
+  color: var(--text2);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+.home-welcome__cta {
+  margin-top: var(--sp-2);
+  align-self: flex-start;
+}
+
+/* ─── Legacy welcome styles (for other callers) ─── */
+.home-welcome-legacy {
   display: flex;
   flex-direction: column;
   align-items: center;

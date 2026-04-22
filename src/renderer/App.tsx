@@ -25,14 +25,23 @@ import { useProjects } from './hooks/useProjects'
 import type { ActivityEvent, AgentConfig, Project, ViewType, WorkflowEvent } from '../shared/types'
 import './App.css'
 
-/** Top-level tabs that should hide the contextual sidebar. */
+/**
+ * Sidebar is contextual in Option B — only surfaces inside Sessions and
+ * Projects list tabs. Everywhere else, the top tab bar + in-screen content
+ * carry the nav.
+ */
 const SIDEBAR_HIDDEN_VIEWS: readonly ViewType[] = [
+  'home',
   'agents',
+  'workflows',
+  'workflow',
   'history',
   'alerts',
   'app-settings',
   'new-session',
   'diff',
+  'template-editor',
+  'wizard',
 ]
 
 const WorkflowEditor = lazy(() => import('./screens/WorkflowEditor/WorkflowEditor'))

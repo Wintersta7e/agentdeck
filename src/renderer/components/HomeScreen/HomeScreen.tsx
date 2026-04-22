@@ -1,20 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowRight, Plus, FolderOpen, Bot, Terminal } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import { useGitStatusBatch } from '../../hooks/useGitStatus'
 import { useDailyDigest } from '../../hooks/useDailyDigest'
 import { ScopeViz } from '../home/ScopeViz'
 import { Panel } from '../home/Panel'
 import { KpiTile } from '../home/KpiTile'
-import { QuickActions } from './QuickActions'
-import { LiveSessionGrid } from './LiveSessionGrid'
-import { ProjectCardV2 } from './ProjectCardV2'
-import { SuggestionsPanel } from './SuggestionsPanel'
-import { ReviewQueue } from './ReviewQueue'
-import { RecentWorkflows } from './RecentWorkflows'
-import { SessionTimeline } from './SessionTimeline'
-import { CostDashboard } from './CostDashboard'
-import { AgentStrip } from './AgentStrip'
+import { SessionTimelineB1 } from '../home/SessionTimelineB1'
+import { AgentChipStripB1 } from '../home/AgentChipB1'
+import { ProjectCardB1 } from '../home/ProjectCardB1'
+import { CostReadoutB1 } from '../home/CostReadoutB1'
 import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
 import { getProjectAgents } from '../../../shared/agent-helpers'
 import type { AgentConfig, Project } from '../../../shared/types'
@@ -24,15 +18,14 @@ const AGENT_META_MAP = new Map<string, (typeof SHARED_AGENTS)[number]>(
   SHARED_AGENTS.map((a) => [a.id, a]),
 )
 
-function getGreeting(): string {
-  const h = new Date().getHours()
-  if (h < 12) return 'Good morning'
-  if (h < 18) return 'Good afternoon'
+function getGreeting(hour: number): string {
+  if (hour < 12) return 'Good morning'
+  if (hour < 18) return 'Good afternoon'
   return 'Good evening'
 }
 
-function formatDateCaption(): string {
-  return new Date()
+function formatDateCaption(d: Date): string {
+  return d
     .toLocaleDateString('en-US', {
       weekday: 'short',
       day: 'numeric',
@@ -41,8 +34,8 @@ function formatDateCaption(): string {
     .toUpperCase()
 }
 
-function formatClock(): string {
-  return new Date().toLocaleTimeString('en-US', {
+function formatClock(d: Date): string {
+  return d.toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
@@ -74,6 +67,7 @@ export function HomeScreen({
   const openCommandPalette = useAppStore((s) => s.openCommandPalette)
   const setActiveSession = useAppStore((s) => s.setActiveSession)
   const setCurrentView = useAppStore((s) => s.setCurrentView)
+  const setTab = useAppStore((s) => s.setTab)
   const username = useAppStore((s) => s.wslUsername)
 
   const runningCount = useAppStore(
@@ -95,11 +89,16 @@ export function HomeScreen({
   const digest = useDailyDigest()
   const cleanExitPct = digest.cleanExitRate !== null ? `${Math.round(digest.cleanExitRate)}%` : '—'
 
-  const [clock, setClock] = useState(formatClock)
+  // Live clock — ticks every 15s, keeps "now" stable across children
+  const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
-    const id = window.setInterval(() => setClock(formatClock()), 30_000)
+    const id = window.setInterval(() => setNow(Date.now()), 15_000)
     return () => window.clearInterval(id)
   }, [])
+  const nowDate = useMemo(() => new Date(now), [now])
+  const greeting = getGreeting(nowDate.getHours())
+  const dateCaption = formatDateCaption(nowDate)
+  const clock = formatClock(nowDate)
 
   const [cardMenu, setCardMenu] = useState<{
     x: number
@@ -142,25 +141,25 @@ export function HomeScreen({
     }
   }, [setActiveSession, setCurrentView])
 
-  const greeting = getGreeting()
-  const dateCaption = formatDateCaption()
-  const totalSessionsMessage = useMemo(() => {
+  const summaryLine = useMemo(() => {
     const parts: string[] = []
     parts.push(`${runningCount} running`)
     parts.push(`${projects.length} project${projects.length === 1 ? '' : 's'}`)
     parts.push(`${templates.length} template${templates.length === 1 ? '' : 's'}`)
+    if (errorCount > 0) parts.push(`${errorCount} error${errorCount === 1 ? '' : 's'}`)
     return parts.join(' · ')
-  }, [runningCount, projects.length, templates.length])
+  }, [runningCount, projects.length, templates.length, errorCount])
 
   return (
     <div className="home-main home-main--redesign">
-      <div className="home-greeting">
+      {/* ── Row 1 · Greeting ─────────────────────────────────── */}
+      <section className="home-greeting">
         <div className="home-greeting__left">
           <div className="home-date">{dateCaption}</div>
           <h1 className="home-headline">
             {greeting}, <span className="home-headline__accent">{username || 'operator'}</span>.
           </h1>
-          <div className="home-sub">{totalSessionsMessage}</div>
+          <div className="home-sub">{summaryLine}</div>
           <div className="home-cta-row">
             <button
               type="button"
@@ -180,9 +179,9 @@ export function HomeScreen({
             <button
               type="button"
               className="home-cta home-cta--ghost"
-              onClick={() => setCurrentView('diff')}
+              onClick={() => setTab('diff')}
             >
-              REVIEW DIFFS {alertCount > 0 ? `· ${alertCount}` : ''}
+              REVIEW DIFFS{alertCount > 0 ? ` · ${alertCount}` : ''}
             </button>
           </div>
         </div>
@@ -193,16 +192,17 @@ export function HomeScreen({
             {pinned.length} pinned project{pinned.length === 1 ? '' : 's'}
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="home-hero-row">
+      {/* ── Row 2 · Hero (scope + KPI strip + timeline) ──────── */}
+      <section className="home-hero-row">
         <Panel
           title="OVERVIEW"
-          sub={`${runningCount} session${runningCount === 1 ? '' : 's'} · ${projects.length} project${projects.length === 1 ? '' : 's'}`}
+          sub={`${runningCount} LIVE · ${projects.length} PROJECTS`}
           className="home-hero-panel"
         >
           <div className="home-hero-panel__viz">
-            <ScopeViz size={280} />
+            <ScopeViz size={300} />
           </div>
         </Panel>
 
@@ -219,7 +219,7 @@ export function HomeScreen({
               sub="today"
               tone="purple"
             />
-            <KpiTile label="TOKENS" value={formatTokens(totalTokens)} sub="total" />
+            <KpiTile label="TOKENS" value={formatTokens(totalTokens)} sub="input+output" />
             <KpiTile label="EXIT RATE" value={cleanExitPct} sub="clean" tone="green" />
             <KpiTile
               label="ALERTS"
@@ -228,107 +228,102 @@ export function HomeScreen({
               tone={alertCount > 0 ? 'red' : 'green'}
             />
           </div>
-          <Panel title="ACTIVITY" sub="last 60 min" className="home-activity-panel">
-            <SessionTimeline />
+          <Panel title="ACTIVITY" sub="LAST 60 MIN" className="home-activity-panel">
+            <SessionTimelineB1 now={now} />
           </Panel>
         </div>
-      </div>
+      </section>
 
+      {/* ── Row 3 · Agents ───────────────────────────────────── */}
       <Panel
-        title="LIVE SESSIONS"
-        sub={`${runningCount} live · ${pinned.length} pinned`}
-        className="home-live-panel"
+        title="AGENTS"
+        sub="7 AVAILABLE · CARDS DESIGNATE BINARY + CTX"
+        className="home-agents-panel"
       >
-        <LiveSessionGrid />
+        <AgentChipStripB1 />
       </Panel>
 
-      <Panel title="AGENTS" sub="7 available" className="home-agents-panel">
-        <AgentStrip />
-      </Panel>
-
-      <div className="home-projects-row">
+      {/* ── Row 4 · Projects + Cost ─────────────────────────── */}
+      <section className="home-projects-row">
         {hasProjects ? (
           <Panel
             title="PROJECTS"
-            sub={`pinned · ${pinned.length}`}
+            sub={`${pinned.length} PINNED · ${projects.length} TOTAL`}
             className="home-projects-panel"
             action={
               <button
                 type="button"
                 className="home-inline-btn"
                 onClick={openWizard}
-                title="New project"
+                title="New project (Ctrl+N)"
               >
-                <Plus size={12} aria-hidden="true" /> NEW
+                + NEW
               </button>
             }
           >
-            <div className="home-project-grid">
-              {pinned.map((p) => (
-                <ProjectCardV2
-                  key={p.id}
-                  project={p}
-                  onOpen={() => onOpenProject(p)}
-                  onContextMenu={(e) => {
-                    e.preventDefault()
-                    setCardMenu({ x: e.clientX, y: e.clientY, projectId: p.id })
-                  }}
-                />
-              ))}
-              <button className="home-add-card" onClick={openWizard} type="button">
-                <Plus size={16} />
-                <span>New project</span>
+            {pinned.length === 0 ? (
+              <div className="home-projects-empty">
+                Pin a project for quick access. Right-click any card in the Projects tab.
+              </div>
+            ) : (
+              <div className="home-project-grid">
+                {pinned.map((p) => (
+                  <ProjectCardB1
+                    key={p.id}
+                    project={p}
+                    onOpen={() => onOpenProject(p)}
+                    onContextMenu={(e) => {
+                      e.preventDefault()
+                      setCardMenu({ x: e.clientX, y: e.clientY, projectId: p.id })
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </Panel>
+        ) : (
+          <Panel title="GET STARTED" sub="NEW TO AGENTDECK" className="home-projects-panel">
+            <div className="home-welcome">
+              <div className="home-welcome__step">
+                <div className="home-welcome__num">01</div>
+                <div>
+                  <div className="home-welcome__title">Pick a folder</div>
+                  <div className="home-welcome__desc">Point AgentDeck at a WSL project path</div>
+                </div>
+              </div>
+              <div className="home-welcome__step">
+                <div className="home-welcome__num">02</div>
+                <div>
+                  <div className="home-welcome__title">Choose an agent</div>
+                  <div className="home-welcome__desc">
+                    7 agents supported — install via the Agents tab
+                  </div>
+                </div>
+              </div>
+              <div className="home-welcome__step">
+                <div className="home-welcome__num">03</div>
+                <div>
+                  <div className="home-welcome__title">Launch a session</div>
+                  <div className="home-welcome__desc">Ctrl+K → New Session, or press ▸ above</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="home-cta home-cta--primary home-welcome__cta"
+                onClick={openWizard}
+              >
+                ▸ CREATE PROJECT
               </button>
             </div>
           </Panel>
-        ) : (
-          <div className="home-welcome">
-            <h2 className="home-welcome-title">Get started</h2>
-            <div className="home-welcome-steps">
-              <div className="home-welcome-step">
-                <FolderOpen size={20} className="home-welcome-icon" />
-                <div className="home-welcome-step-num">1</div>
-                <div className="home-welcome-step-title">Pick a folder</div>
-                <div className="home-welcome-step-desc">Point AgentDeck at your project</div>
-              </div>
-              <div className="home-welcome-step">
-                <Bot size={20} className="home-welcome-icon" />
-                <div className="home-welcome-step-num">2</div>
-                <div className="home-welcome-step-title">Choose an agent</div>
-                <div className="home-welcome-step-desc">7 agents supported</div>
-              </div>
-              <div className="home-welcome-step">
-                <Terminal size={20} className="home-welcome-icon" />
-                <div className="home-welcome-step-num">3</div>
-                <div className="home-welcome-step-title">Start coding</div>
-                <div className="home-welcome-step-desc">Launch a session and go</div>
-              </div>
-            </div>
-            <button className="home-welcome-cta" onClick={openWizard} type="button">
-              Create Project <ArrowRight size={14} />
-            </button>
-            <div className="home-welcome-hint">or press Ctrl+N anytime</div>
-          </div>
         )}
 
-        <Panel title="COST / WK" sub="7-day" className="home-cost-panel">
-          <CostDashboard />
+        <Panel title="COST / WK" sub="7-DAY ROLLUP" className="home-cost-panel">
+          <CostReadoutB1 />
         </Panel>
-      </div>
+      </section>
 
-      <div className="home-extra-row">
-        <QuickActions
-          onNewSession={() => openCommandPalette(undefined, 'all')}
-          onRunWorkflow={() => openCommandPalette(undefined, 'workflow')}
-          onFromTemplate={() => openCommandPalette(undefined, 'template')}
-          onResumeLast={handleResumeLast}
-          resumeDisabled={runningCount === 0}
-        />
-        <SuggestionsPanel />
-        <ReviewQueue />
-        <RecentWorkflows />
-      </div>
-
+      {/* Context menu (Launch with …) */}
       {cardMenu &&
         (() => {
           const project = projects.find((pp) => pp.id === cardMenu.projectId)
@@ -339,16 +334,18 @@ export function HomeScreen({
               ref={cardMenuRef}
               className="home-context-menu"
               style={{
-                top: Math.min(cardMenu.y, window.innerHeight - 200),
-                left: Math.min(cardMenu.x, window.innerWidth - 180),
+                top: Math.min(cardMenu.y, window.innerHeight - 240),
+                left: Math.min(cardMenu.x, window.innerWidth - 220),
               }}
+              role="menu"
             >
-              <div className="home-context-header">Launch with...</div>
+              <div className="home-context-header">Launch with…</div>
               {projectAgents.map((ac) => {
                 const agentMeta = AGENT_META_MAP.get(ac.agent)
                 return (
                   <button
                     key={ac.agent}
+                    type="button"
                     className="home-context-item"
                     onClick={() => {
                       onOpenProjectWithAgent(project, ac)

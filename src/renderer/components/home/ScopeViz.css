@@ -6,86 +6,129 @@
 .scope-viz__svg {
   position: absolute;
   inset: 0;
+  overflow: visible;
 }
 
-/* Radial gradient stops — theme-aware via currentColor */
-.scope-viz__grad-stop-inner {
+/* Radial gradient — brighter at core, reads on warm charcoal */
+.scope-viz__grad-inner {
   stop-color: var(--accent);
-  stop-opacity: 0.25;
+  stop-opacity: 0.35;
 }
-.scope-viz__grad-stop-mid {
+.scope-viz__grad-mid {
   stop-color: var(--accent);
-  stop-opacity: 0.04;
+  stop-opacity: 0.08;
 }
 
-.scope-viz__sweep-stop-start {
+/* Sweep gradient — invisible at base, bright trailing edge */
+.scope-viz__sweep-start {
   stop-color: var(--accent);
   stop-opacity: 0;
 }
-.scope-viz__sweep-stop-end {
+.scope-viz__sweep-end {
   stop-color: var(--accent);
-  stop-opacity: 0.5;
+  stop-opacity: 0.55;
 }
 
+/* Rings */
 .scope-viz__ring {
-  stroke: var(--accent-border);
+  fill: none;
+  stroke: var(--accent);
+  stroke-opacity: 0.22;
   stroke-width: 1;
 }
 
+/* Ticks — minor + major */
 .scope-viz__tick {
   stroke: var(--accent);
-  stroke-opacity: 0.25;
+  stroke-opacity: 0.35;
+  stroke-width: 1;
 }
+
 .scope-viz__tick--major {
-  stroke-opacity: 0.6;
+  stroke-opacity: 0.8;
+  stroke-width: 1.4;
 }
 
+/* Crosshair — subtle dashed lines through centre */
 .scope-viz__crosshair {
-  stroke: var(--border);
-  stroke-dasharray: 2 4;
+  stroke: var(--accent);
+  stroke-opacity: 0.14;
+  stroke-dasharray: 2 5;
+  stroke-width: 1;
 }
 
+/* Rotating wedge sweep */
 .scope-viz__sweep {
-  animation: scope-viz-sweep 5s linear infinite;
+  animation: scope-viz-sweep 6s linear infinite;
 }
 
+/* Leading edge line that rotates with the sweep */
+.scope-viz__sweep-edge {
+  stroke: var(--accent);
+  stroke-opacity: 0.9;
+  stroke-width: 1.5;
+  animation: scope-viz-sweep 6s linear infinite;
+}
+
+/* Agent blips — inherit color from parent <g style="color:…"> */
 .scope-viz__blip-halo {
-  fill: var(--accent);
-  opacity: 0.12;
+  fill: currentColor;
+  opacity: 0.5;
 }
 
 .scope-viz__blip-core {
-  fill: var(--accent);
+  fill: currentColor;
+  stroke: var(--bg0);
+  stroke-width: 1;
 }
 
 .scope-viz__blip-label {
-  fill: var(--accent);
-  font-size: 9px;
+  fill: currentColor;
   font-family: var(--font-mono);
-  letter-spacing: 0.08em;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
-.scope-viz__origin {
+/* Origin dot */
+.scope-viz__origin-outer {
+  fill: var(--accent);
+  opacity: 0.25;
+}
+.scope-viz__origin-inner {
   fill: var(--accent);
 }
 
+/* Captions */
 .scope-viz__caption {
   position: absolute;
   font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.15em;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
   pointer-events: none;
 }
 
 .scope-viz__caption--tl {
-  top: 10px;
-  left: 12px;
+  top: 12px;
+  left: 14px;
   color: var(--accent);
 }
+
 .scope-viz__caption--br {
-  bottom: 10px;
-  right: 12px;
+  right: 14px;
+  bottom: 12px;
   color: var(--text3);
+}
+
+.scope-viz__caption--center {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, calc(-50% + 40px));
+  color: var(--text2);
+  font-size: 9px;
+  letter-spacing: 0.4em;
 }
 
 @keyframes scope-viz-sweep {
@@ -98,10 +141,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .scope-viz__sweep {
+  .scope-viz__sweep,
+  .scope-viz__sweep-edge {
     animation: none;
   }
-  .scope-viz__blip-halo animate {
-    animation-duration: 0s;
+  .scope-viz__blip-halo {
+    /* drop SMIL animations visually by hiding the halo */
+    opacity: 0.3;
   }
 }
