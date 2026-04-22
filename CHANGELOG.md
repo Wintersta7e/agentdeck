@@ -5,6 +5,45 @@ All notable changes to AgentDeck will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.0.0] - 2026-04-23
+
+### Added
+- **Three new dark palettes** — `tungsten` (sodium amber on warm charcoal), `phosphor` (retro CRT green on ink), `dusk` (violet + coral on plum-black). Grouped as **Redesign** in the theme picker alongside the existing Dark/Light groups (11 themes total).
+- **Space Grotesk display font** via `@fontsource/space-grotesk`; redesign themes override `--font-display`.
+- **Top tab bar** (`TopTabBar`) replaces the sidebar as primary navigation — Home · Sessions · Projects · Agents · Workflows · History · Alerts · Settings. Alerts tab shows a live badge from the notifications slice. `Alt+1`..`Alt+8` jump between tabs.
+- `ad-pulse` keyframes + `.ad-pulse` utility class for running-session indicators (honors `prefers-reduced-motion`).
+- **Sessions tab** (`SessionsScreen`) — dense table of every known session with filter chips (All / Active / Done / Error), search, and click-to-open.
+- **Projects tab** (`ProjectsScreen`) — card grid with Pinned / Dirty filters (derived from gitStatuses) and search.
+- **Agents tab** (`AgentsScreen`) — responsive grid of all 7 agents with install state, version, context window, one-click update button.
+- **Workflows tab** (`WorkflowsScreen`) — read-only workflow library cards; opens the existing React Flow editor unchanged.
+- **History tab** (`HistoryScreen`) — 14-day × 24-hour heatmap with by-count / by-cost toggle, plus a scrollable archive of the 60 most recent sessions.
+- **Alerts tab** (`AlertsScreen`) — notifications grouped by type (errors / warnings / notices), per-item dismiss, bulk clear.
+- **Settings tab** (`AppSettingsScreen`) — 11-theme picker with live swatch preview, zoom status + reset, about block.
+- **Home screen primitives** — new `ScopeViz` concentric-ring session scope, `Panel` chrome with corner ticks, `KpiTile` dense stat tile.
+- **ScreenShell** + **FilterChip** shared primitives under `components/shared/` for consistent header + filter rows across redesign screens.
+- `tabParams` + `setTab(view, params?)` added to the UI slice for atomic tab + param routing.
+- `XTERM_THEME_OVERRIDES` extended with tungsten / phosphor / dusk entries so the terminal background tracks the active palette.
+
+### Changed
+- **Default navigation model** — sidebar is now contextual (hidden on agents / history / alerts / app-settings / new-session / diff views) while the top tab bar owns primary nav. Home / sessions / projects / session-detail keep the sidebar until Phase 3.3 Session Detail hero formally relocates its contents.
+- **Home screen** reorganized around a hero row (scope viz + KPI strip + session timeline panel), followed by live sessions, agents, projects + cost, and extras rows — all wrapped in the new `Panel` chrome.
+- `ViewType` (`src/shared/types.ts`) extended with redesign tab ids: `sessions`, `projects`, `project-detail`, `agents`, `workflows`, `history`, `alerts`, `app-settings`, `new-session`, `diff`.
+- Theme picker tooltips now reflect the real keymap (previously advertised `⌘N`, actual binding is `Alt+N`).
+
+### Preserved
+- All 7 agents, `src/shared/agents.ts` registry verbatim.
+- All 8 IPC modules, `pty-manager.ts`, `workflow-engine.ts`, `edge-scheduler.ts`, `cost-tracker.ts`, `worktree-manager.ts`, `agent-updater.ts`, `log-adapters.ts`, `project-store.ts`, `git-port.ts`, `variable-substitution.ts`, `workflow-run-store.ts`.
+- All 8 legacy themes (amber / cyan / violet / ice / parchment / fog / lavender / stone) — still selectable.
+- Zustand store shape (7 slices), every hook (`useProjects`, `usePty`, `useRolesMap`, `useMidnight`, `useSessionTimeline`, `useCostHistory`, etc.), the full xterm stack with addons, per-session git worktree + Keep/Discard flow.
+- 765 tests, lint + typecheck clean on every commit.
+
+### Known gaps (still pending from the redesign plan)
+- Phase 3.3 Session Detail hero (left step rail + inspector tabs + bottom metric strip).
+- Phase 3.4 New Session composer.
+- Phase 3.8 Diff review screen.
+- Phase 4 Mascot (optional).
+- Phase 5 polish tail (`.ad-pulse` on existing running-session dots, empty-state copy sweep, command-palette restyle).
+
 ## [5.0.0] - 2026-04-08
 
 ### Added
