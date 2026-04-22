@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Titlebar } from './components/Titlebar/Titlebar'
 import { TopTabBar } from './components/TopTabBar/TopTabBar'
+import { SessionsScreen } from './screens/SessionsScreen/SessionsScreen'
 import { Sidebar } from './components/Sidebar/Sidebar'
 import { StatusBar } from './components/StatusBar/StatusBar'
 import { HomeScreen } from './components/HomeScreen/HomeScreen'
@@ -592,13 +593,7 @@ export function App(): React.JSX.Element {
               onOpenProjectWithAgent={handleOpenProjectWithAgent}
             />
           )}
-          {currentView === 'sessions' && (
-            <PlaceholderScreen
-              phase="Phase 3.2"
-              title="Sessions"
-              subtitle="List of active and recent agent sessions. Opens into session detail on click."
-            />
-          )}
+          {currentView === 'sessions' && <SessionsScreen />}
           {currentView === 'projects' && (
             <PlaceholderScreen
               phase="Phase 3.5"
