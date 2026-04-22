@@ -6,6 +6,7 @@ import { AgentsScreen } from './screens/AgentsScreen/AgentsScreen'
 import { AlertsScreen } from './screens/AlertsScreen/AlertsScreen'
 import { AppSettingsScreen } from './screens/AppSettingsScreen/AppSettingsScreen'
 import { WorkflowsScreen } from './screens/WorkflowsScreen/WorkflowsScreen'
+import { ProjectsScreen } from './screens/ProjectsScreen/ProjectsScreen'
 import { Sidebar } from './components/Sidebar/Sidebar'
 import { StatusBar } from './components/StatusBar/StatusBar'
 import { HomeScreen } from './components/HomeScreen/HomeScreen'
@@ -599,10 +600,9 @@ export function App(): React.JSX.Element {
           )}
           {currentView === 'sessions' && <SessionsScreen />}
           {currentView === 'projects' && (
-            <PlaceholderScreen
-              phase="Phase 3.5"
-              title="Projects"
-              subtitle="Browse and pin projects. Detection of stack + agents, last activity, dirty-branch badges."
+            <ProjectsScreen
+              onOpenProject={handleOpenProject}
+              onOpenProjectWithAgent={handleOpenProjectWithAgent}
             />
           )}
           {currentView === 'project-detail' && (
