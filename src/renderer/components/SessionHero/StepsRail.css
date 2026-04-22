@@ -1,0 +1,206 @@
+.steps-rail {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  padding: var(--sp-3);
+  background: color-mix(in oklch, var(--bg1) 55%, transparent);
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.steps-rail__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-1) var(--sp-2);
+  border-bottom: 1px dashed var(--border-bright);
+  margin-bottom: var(--sp-2);
+}
+
+.steps-rail__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.steps-rail__count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text3);
+  font-variant-numeric: tabular-nums;
+}
+
+.steps-rail__empty {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  line-height: 1.45;
+  color: var(--text3);
+  padding: var(--sp-3) var(--sp-2);
+}
+
+.steps-rail__list {
+  list-style: none;
+  margin: 0;
+  padding: 0 var(--sp-1);
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.steps-rail__list::-webkit-scrollbar {
+  width: 4px;
+}
+.steps-rail__list::-webkit-scrollbar-thumb {
+  background: var(--bg4);
+}
+
+.steps-rail__step {
+  position: relative;
+  padding: var(--sp-2) 0 var(--sp-2) 22px;
+}
+
+.steps-rail__connector {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 7px;
+  width: 1px;
+  background: var(--border);
+}
+
+.steps-rail__step:first-child .steps-rail__connector {
+  top: 50%;
+}
+
+.steps-rail__step:last-child .steps-rail__connector {
+  bottom: 50%;
+}
+
+.steps-rail__dot {
+  position: absolute;
+  top: calc(var(--sp-2) + 2px);
+  left: 3px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--bg0);
+  border: 1.5px solid var(--text3);
+}
+
+.steps-rail__step--read .steps-rail__dot {
+  border-color: var(--blue);
+}
+.steps-rail__step--write .steps-rail__dot {
+  border-color: var(--green);
+}
+.steps-rail__step--command .steps-rail__dot {
+  border-color: var(--accent);
+}
+.steps-rail__step--tool .steps-rail__dot {
+  border-color: var(--purple);
+}
+.steps-rail__step--think .steps-rail__dot {
+  border-color: var(--text2);
+}
+.steps-rail__step--error .steps-rail__dot {
+  border-color: var(--red);
+}
+
+.steps-rail__step--done .steps-rail__dot {
+  background: currentColor;
+  color: transparent;
+}
+
+.steps-rail__step--pending .steps-rail__dot {
+  opacity: 0.55;
+}
+
+.steps-rail__step--active .steps-rail__dot {
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent) 30%, transparent);
+  animation: steps-rail-pulse 1.4s ease-in-out infinite;
+}
+
+.steps-rail__step.is-active .steps-rail__body {
+  background: var(--accent-glow2);
+  padding: var(--sp-2) var(--sp-2);
+  margin-left: -6px;
+  border-left: 2px solid var(--accent);
+}
+
+.steps-rail__body {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text1);
+  line-height: 1.4;
+}
+
+.steps-rail__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--sp-2);
+}
+
+.steps-rail__type {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--text2);
+}
+
+.steps-rail__step--read .steps-rail__type {
+  color: var(--blue);
+}
+.steps-rail__step--write .steps-rail__type {
+  color: var(--green);
+}
+.steps-rail__step--command .steps-rail__type {
+  color: var(--accent);
+}
+.steps-rail__step--tool .steps-rail__type {
+  color: var(--purple);
+}
+.steps-rail__step--error .steps-rail__type {
+  color: var(--red);
+}
+
+.steps-rail__time {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text3);
+  letter-spacing: 0.1em;
+}
+
+.steps-rail__title-row {
+  color: var(--text0);
+  margin: 2px 0;
+}
+
+.steps-rail__detail {
+  color: var(--text2);
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@keyframes steps-rail-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent) 35%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 6px color-mix(in oklch, var(--accent) 10%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .steps-rail__step--active .steps-rail__dot {
+    animation: none;
+  }
+}

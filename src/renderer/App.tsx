@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { Titlebar } from './components/Titlebar/Titlebar'
 import { TopTabBar } from './components/TopTabBar/TopTabBar'
 import { SessionsScreen } from './screens/SessionsScreen/SessionsScreen'
+import { SessionHero } from './components/SessionHero/SessionHero'
 import { AgentsScreen } from './screens/AgentsScreen/AgentsScreen'
 import { AlertsScreen } from './screens/AlertsScreen/AlertsScreen'
 import { AppSettingsScreen } from './screens/AppSettingsScreen/AppSettingsScreen'
@@ -672,21 +673,23 @@ export function App(): React.JSX.Element {
           <div
             className={`view-panel ${currentView === 'session' ? 'view-panel--visible' : 'view-panel--hidden'}`}
           >
-            <SplitView />
-            {rightPanelOpen && (
-              <>
-                <PanelDivider
-                  side="right"
-                  panelRef={rightPanelRef}
-                  minWidth={180}
-                  maxWidth={500}
-                  onResizeEnd={setRightPanelWidth}
-                />
-                <div ref={rightPanelRef} style={rightPanelStyle}>
-                  <RightPanel />
-                </div>
-              </>
-            )}
+            <SessionHero>
+              <SplitView />
+              {rightPanelOpen && (
+                <>
+                  <PanelDivider
+                    side="right"
+                    panelRef={rightPanelRef}
+                    minWidth={180}
+                    maxWidth={500}
+                    onResizeEnd={setRightPanelWidth}
+                  />
+                  <div ref={rightPanelRef} style={rightPanelStyle}>
+                    <RightPanel />
+                  </div>
+                </>
+              )}
+            </SessionHero>
           </div>
         </div>
       </div>
