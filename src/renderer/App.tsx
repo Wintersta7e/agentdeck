@@ -7,6 +7,7 @@ import { AlertsScreen } from './screens/AlertsScreen/AlertsScreen'
 import { AppSettingsScreen } from './screens/AppSettingsScreen/AppSettingsScreen'
 import { WorkflowsScreen } from './screens/WorkflowsScreen/WorkflowsScreen'
 import { ProjectsScreen } from './screens/ProjectsScreen/ProjectsScreen'
+import { HistoryScreen } from './screens/HistoryScreen/HistoryScreen'
 import { Sidebar } from './components/Sidebar/Sidebar'
 import { StatusBar } from './components/StatusBar/StatusBar'
 import { HomeScreen } from './components/HomeScreen/HomeScreen'
@@ -614,13 +615,7 @@ export function App(): React.JSX.Element {
           )}
           {currentView === 'agents' && <AgentsScreen />}
           {currentView === 'workflows' && !activeWorkflowId && <WorkflowsScreen />}
-          {currentView === 'history' && (
-            <PlaceholderScreen
-              phase="Phase 3.9"
-              title="History"
-              subtitle="14-day heatmap of session cost and count, plus paginated archive."
-            />
-          )}
+          {currentView === 'history' && <HistoryScreen />}
           {currentView === 'alerts' && <AlertsScreen />}
           {currentView === 'app-settings' && <AppSettingsScreen />}
           {currentView === 'new-session' && (
