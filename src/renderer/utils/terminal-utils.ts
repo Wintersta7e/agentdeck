@@ -120,6 +120,30 @@ export const XTERM_THEME_OVERRIDES: Readonly<Record<string, Partial<ITheme>>> = 
     selectionBackground: 'rgba(13,148,136,0.25)',
     black: '#1a1916',
   },
+  tungsten: {
+    background: '#100d0b',
+    foreground: '#f4ece0',
+    cursor: '#100d0b',
+    cursorAccent: '#100d0b',
+    selectionBackground: 'rgba(245,166,35,0.22)',
+    black: '#100d0b',
+  },
+  phosphor: {
+    background: '#05080a',
+    foreground: '#d7ffe5',
+    cursor: '#05080a',
+    cursorAccent: '#05080a',
+    selectionBackground: 'rgba(74,255,144,0.22)',
+    black: '#05080a',
+  },
+  dusk: {
+    background: '#0d0812',
+    foreground: '#ede4f5',
+    cursor: '#0d0812',
+    cursorAccent: '#0d0812',
+    selectionBackground: 'rgba(196,156,255,0.22)',
+    black: '#0d0812',
+  },
 })
 
 /**

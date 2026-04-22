@@ -477,3 +477,132 @@
 .terminal-container * {
   transition: none !important;
 }
+
+/* ─────────────────────────────────────────────────────────────
+ * Redesign palettes (tungsten / phosphor / dusk)
+ * Additive; default theme stays amber until Phase 3 ships.
+ * ───────────────────────────────────────────────────────────── */
+
+/* ─── Theme: Tungsten (sodium amber on warm charcoal) ─── */
+[data-theme='tungsten'] {
+  --bg0: #100d0b;
+  --bg1: #161210;
+  --bg2: #1e1815;
+  --bg3: #261e19;
+  --bg4: #2e241d;
+  --border: #2a221c;
+  --border-bright: #3d3025;
+  --text0: #f4ece0;
+  --text1: #b7a691;
+  --text2: #8d7b68;
+  --text3: #6d5f50;
+  --accent: #f5a623;
+  --accent-dim: #a6701a;
+  --accent-glow: rgba(245, 166, 35, 0.12);
+  --accent-glow2: rgba(245, 166, 35, 0.06);
+  --accent-border: rgba(245, 166, 35, 0.4);
+  --accent-hover: rgba(245, 166, 35, 0.5);
+  --accent-rgb: 245, 166, 35;
+  --bg1-rgb: 22, 18, 16;
+  --green-rgb: 94, 210, 124;
+  --red-rgb: 239, 106, 92;
+  --green: #5ed27c;
+  --green-dim: rgba(94, 210, 124, 0.12);
+  --green-border: rgba(94, 210, 124, 0.2);
+  --red: #ef6a5c;
+  --red-dim: rgba(239, 106, 92, 0.12);
+  --red-border: rgba(239, 106, 92, 0.2);
+  --blue: #8fc5ff;
+  --purple: #c49cff;
+  --font-display: 'Space Grotesk', 'Syne Variable', sans-serif;
+}
+
+/* ─── Theme: Phosphor (retro CRT green on ink) ─── */
+[data-theme='phosphor'] {
+  --bg0: #05080a;
+  --bg1: #0a0e0b;
+  --bg2: #0f1410;
+  --bg3: #131a15;
+  --bg4: #19221c;
+  --border: #12201a;
+  --border-bright: #1c3028;
+  --text0: #d7ffe5;
+  --text1: #7fb694;
+  --text2: #5a8670;
+  --text3: #46644f;
+  --accent: #4aff90;
+  --accent-dim: #2bb561;
+  --accent-glow: rgba(74, 255, 144, 0.12);
+  --accent-glow2: rgba(74, 255, 144, 0.06);
+  --accent-border: rgba(74, 255, 144, 0.35);
+  --accent-hover: rgba(74, 255, 144, 0.45);
+  --accent-rgb: 74, 255, 144;
+  --bg1-rgb: 10, 14, 11;
+  --green-rgb: 74, 255, 144;
+  --red-rgb: 255, 106, 122;
+  --green: #4aff90;
+  --green-dim: rgba(74, 255, 144, 0.12);
+  --green-border: rgba(74, 255, 144, 0.2);
+  --red: #ff6a7a;
+  --red-dim: rgba(255, 106, 122, 0.12);
+  --red-border: rgba(255, 106, 122, 0.2);
+  --blue: #64d0ff;
+  --purple: #a98bff;
+  --font-display: 'Space Grotesk', 'Syne Variable', sans-serif;
+}
+
+/* ─── Theme: Dusk (violet & coral on plum-black) ─── */
+[data-theme='dusk'] {
+  --bg0: #0d0812;
+  --bg1: #15101a;
+  --bg2: #1d1724;
+  --bg3: #251d2f;
+  --bg4: #2d2439;
+  --border: #261d33;
+  --border-bright: #342846;
+  --text0: #ede4f5;
+  --text1: #a999bf;
+  --text2: #7e6c94;
+  --text3: #5f5273;
+  --accent: #c49cff;
+  --accent-dim: #7e56c1;
+  --accent-glow: rgba(196, 156, 255, 0.12);
+  --accent-glow2: rgba(196, 156, 255, 0.06);
+  --accent-border: rgba(196, 156, 255, 0.35);
+  --accent-hover: rgba(196, 156, 255, 0.45);
+  --accent-rgb: 196, 156, 255;
+  --bg1-rgb: 21, 16, 26;
+  --green-rgb: 126, 255, 184;
+  --red-rgb: 255, 106, 138;
+  --green: #7effb8;
+  --green-dim: rgba(126, 255, 184, 0.12);
+  --green-border: rgba(126, 255, 184, 0.2);
+  --red: #ff6a8a;
+  --red-dim: rgba(255, 106, 138, 0.12);
+  --red-border: rgba(255, 106, 138, 0.2);
+  --blue: #8fb8ff;
+  --purple: #c49cff;
+  --font-display: 'Space Grotesk', 'Syne Variable', sans-serif;
+}
+
+/* ─── Pulse animation (for running-session indicators) ─── */
+@keyframes ad-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(0.92);
+  }
+}
+.ad-pulse {
+  animation: ad-pulse 1.8s ease infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ad-pulse {
+    animation: none;
+  }
+}

@@ -11,6 +11,14 @@ export interface ThemeGroup {
 
 export const THEME_GROUPS: ThemeGroup[] = [
   {
+    label: 'Redesign',
+    themes: [
+      { id: 'tungsten', label: 'Tungsten', accent: '#f5a623' },
+      { id: 'phosphor', label: 'Phosphor', accent: '#4aff90' },
+      { id: 'dusk', label: 'Dusk', accent: '#c49cff' },
+    ],
+  },
+  {
     label: 'Dark',
     themes: [
       { id: '', label: 'Amber', accent: '#f5a623' },
