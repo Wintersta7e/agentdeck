@@ -18,8 +18,14 @@ const TICK_COUNT = 24
  * sweep beam behind them. Pure CSS/SVG; no Canvas. Respects reduced-motion.
  */
 export function ScopeViz({ size = 280 }: ScopeVizProps): React.JSX.Element {
-  const running = useAppStore((s) =>
-    Object.values(s.sessions).filter((sess) => sess.status === 'running'),
+  // Subscribe to the raw sessions ref (stable) and derive the running list
+  // via useMemo. Returning `.filter(...)` from the selector itself would
+  // yield a new array every call, which breaks useSyncExternalStore's
+  // snapshot-stability contract and triggers React error #185.
+  const sessions = useAppStore((s) => s.sessions)
+  const running = useMemo(
+    () => Object.values(sessions).filter((sess) => sess.status === 'running'),
+    [sessions],
   )
   const center = size / 2
   const agentById = useMemo(() => new Map(AGENTS.map((a) => [a.id, a])), [])

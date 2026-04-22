@@ -11,29 +11,11 @@ export interface ThemeGroup {
 
 export const THEME_GROUPS: ThemeGroup[] = [
   {
-    label: 'Redesign',
+    label: 'Themes',
     themes: [
-      { id: 'tungsten', label: 'Tungsten', accent: '#f5a623' },
+      { id: '', label: 'Tungsten', accent: '#f5a623' },
       { id: 'phosphor', label: 'Phosphor', accent: '#4aff90' },
       { id: 'dusk', label: 'Dusk', accent: '#c49cff' },
-    ],
-  },
-  {
-    label: 'Dark',
-    themes: [
-      { id: '', label: 'Amber', accent: '#f5a623' },
-      { id: 'cyan', label: 'Navy + Cyan', accent: '#00d4ff' },
-      { id: 'violet', label: 'Midnight + Violet', accent: '#a78bfa' },
-      { id: 'ice', label: 'Charcoal + Ice', accent: '#60a5fa' },
-    ],
-  },
-  {
-    label: 'Light',
-    themes: [
-      { id: 'parchment', label: 'Parchment', accent: '#c87800' },
-      { id: 'fog', label: 'Fog', accent: '#2563eb' },
-      { id: 'lavender', label: 'Lavender', accent: '#6d28d9' },
-      { id: 'stone', label: 'Stone', accent: '#0d9488' },
     ],
   },
 ]

@@ -63,64 +63,8 @@ export const BASE_XTERM_THEME: Readonly<ITheme> = Object.freeze({
 })
 
 export const XTERM_THEME_OVERRIDES: Readonly<Record<string, Partial<ITheme>>> = Object.freeze({
-  '': {},
-  cyan: {
-    background: '#080b14',
-    foreground: '#a8b5cc',
-    cursor: '#080b14',
-    cursorAccent: '#080b14',
-    selectionBackground: 'rgba(0,212,255,0.20)',
-    black: '#080b14',
-  },
-  violet: {
-    background: '#0a0a12',
-    foreground: '#b0aacc',
-    cursor: '#0a0a12',
-    cursorAccent: '#0a0a12',
-    selectionBackground: 'rgba(167,139,250,0.20)',
-    black: '#0a0a12',
-  },
-  ice: {
-    background: '#0c0d10',
-    foreground: '#a8afc4',
-    cursor: '#0c0d10',
-    cursorAccent: '#0c0d10',
-    selectionBackground: 'rgba(96,165,250,0.20)',
-    black: '#0c0d10',
-  },
-  parchment: {
-    background: '#1a1510',
-    foreground: '#f0ede8',
-    cursor: '#1a1510',
-    cursorAccent: '#1a1510',
-    selectionBackground: 'rgba(200,120,0,0.25)',
-    black: '#1a1510',
-  },
-  fog: {
-    background: '#0f1f33',
-    foreground: '#e4eaf2',
-    cursor: '#0f1f33',
-    cursorAccent: '#0f1f33',
-    selectionBackground: 'rgba(37,99,235,0.25)',
-    black: '#0f1f33',
-  },
-  lavender: {
-    background: '#1a1030',
-    foreground: '#ece8f4',
-    cursor: '#1a1030',
-    cursorAccent: '#1a1030',
-    selectionBackground: 'rgba(109,40,217,0.25)',
-    black: '#1a1030',
-  },
-  stone: {
-    background: '#1a1916',
-    foreground: '#f2f1ef',
-    cursor: '#1a1916',
-    cursorAccent: '#1a1916',
-    selectionBackground: 'rgba(13,148,136,0.25)',
-    black: '#1a1916',
-  },
-  tungsten: {
+  // Default = Tungsten (sodium amber on warm charcoal)
+  '': {
     background: '#100d0b',
     foreground: '#f4ece0',
     cursor: '#100d0b',
