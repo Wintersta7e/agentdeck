@@ -3,6 +3,9 @@ import { Titlebar } from './components/Titlebar/Titlebar'
 import { TopTabBar } from './components/TopTabBar/TopTabBar'
 import { SessionsScreen } from './screens/SessionsScreen/SessionsScreen'
 import { AgentsScreen } from './screens/AgentsScreen/AgentsScreen'
+import { AlertsScreen } from './screens/AlertsScreen/AlertsScreen'
+import { AppSettingsScreen } from './screens/AppSettingsScreen/AppSettingsScreen'
+import { WorkflowsScreen } from './screens/WorkflowsScreen/WorkflowsScreen'
 import { Sidebar } from './components/Sidebar/Sidebar'
 import { StatusBar } from './components/StatusBar/StatusBar'
 import { HomeScreen } from './components/HomeScreen/HomeScreen'
@@ -610,13 +613,7 @@ export function App(): React.JSX.Element {
             />
           )}
           {currentView === 'agents' && <AgentsScreen />}
-          {currentView === 'workflows' && !activeWorkflowId && (
-            <PlaceholderScreen
-              phase="Phase 3.7"
-              title="Workflows"
-              subtitle="Workflow library + React Flow editor for the selected workflow."
-            />
-          )}
+          {currentView === 'workflows' && !activeWorkflowId && <WorkflowsScreen />}
           {currentView === 'history' && (
             <PlaceholderScreen
               phase="Phase 3.9"
@@ -624,20 +621,8 @@ export function App(): React.JSX.Element {
               subtitle="14-day heatmap of session cost and count, plus paginated archive."
             />
           )}
-          {currentView === 'alerts' && (
-            <PlaceholderScreen
-              phase="Phase 3.10"
-              title="Alerts"
-              subtitle="Grouped notifications: fail · review · cost · done."
-            />
-          )}
-          {currentView === 'app-settings' && (
-            <PlaceholderScreen
-              phase="Phase 3.11"
-              title="Settings"
-              subtitle="Global preferences + theme picker with live preview of all 11 themes."
-            />
-          )}
+          {currentView === 'alerts' && <AlertsScreen />}
+          {currentView === 'app-settings' && <AppSettingsScreen />}
           {currentView === 'new-session' && (
             <PlaceholderScreen
               phase="Phase 3.4"
