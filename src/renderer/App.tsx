@@ -428,6 +428,25 @@ export function App(): React.JSX.Element {
         useAppStore.getState().setPaneLayout(Number(e.key) as 1 | 2 | 3)
         return
       }
+      // Alt+1..8 — jump to top-level tab. Matches TopTabBar order exactly.
+      if (e.altKey && !e.ctrlKey && !e.shiftKey) {
+        const TAB_MAP: Record<string, ViewType> = {
+          '1': 'home',
+          '2': 'sessions',
+          '3': 'projects',
+          '4': 'agents',
+          '5': 'workflows',
+          '6': 'history',
+          '7': 'alerts',
+          '8': 'app-settings',
+        }
+        const target = TAB_MAP[e.key]
+        if (target) {
+          e.preventDefault()
+          useAppStore.getState().setTab(target)
+          return
+        }
+      }
       if (e.ctrlKey && e.key === 'Tab') {
         e.preventDefault()
         const state = useAppStore.getState()

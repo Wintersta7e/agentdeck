@@ -29,14 +29,14 @@ interface TabDef {
  * under their owning tab via tabParams.
  */
 const TABS: readonly TabDef[] = [
-  { id: 'home', label: 'Home', view: 'home', shortcut: '⌘1' },
-  { id: 'sessions', label: 'Sessions', view: 'sessions', shortcut: '⌘2' },
-  { id: 'projects', label: 'Projects', view: 'projects', shortcut: '⌘3' },
-  { id: 'agents', label: 'Agents', view: 'agents', shortcut: '⌘4' },
-  { id: 'workflows', label: 'Workflows', view: 'workflows', shortcut: '⌘5' },
-  { id: 'history', label: 'History', view: 'history', shortcut: '⌘6' },
-  { id: 'alerts', label: 'Alerts', view: 'alerts', shortcut: '⌘7' },
-  { id: 'settings', label: 'Settings', view: 'app-settings', shortcut: '⌘8' },
+  { id: 'home', label: 'Home', view: 'home', shortcut: 'Alt+1' },
+  { id: 'sessions', label: 'Sessions', view: 'sessions', shortcut: 'Alt+2' },
+  { id: 'projects', label: 'Projects', view: 'projects', shortcut: 'Alt+3' },
+  { id: 'agents', label: 'Agents', view: 'agents', shortcut: 'Alt+4' },
+  { id: 'workflows', label: 'Workflows', view: 'workflows', shortcut: 'Alt+5' },
+  { id: 'history', label: 'History', view: 'history', shortcut: 'Alt+6' },
+  { id: 'alerts', label: 'Alerts', view: 'alerts', shortcut: 'Alt+7' },
+  { id: 'settings', label: 'Settings', view: 'app-settings', shortcut: 'Alt+8' },
 ] as const
 
 /** Map an arbitrary ViewType to its owning top-level tab. */
