@@ -1,31 +1,38 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { X, AlertTriangle, Info, Copy, Check } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import './NotificationToast.css'
 
 export function NotificationToast(): React.JSX.Element | null {
   const notifications = useAppStore((s) => s.notifications)
-  const dismissNotification = useAppStore((s) => s.dismissNotification)
+  const silencedToastIds = useAppStore((s) => s.silencedToastIds)
+  const silenceToast = useAppStore((s) => s.silenceToast)
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const timedIdRef = useRef<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
-  // Auto-dismiss after 5 seconds — skip error toasts (they require manual close)
+  // Only notifications that haven't been silenced (i.e. never surfaced on the
+  // toast rail or manually closed) are candidates for display. The persistent
+  // list remains available in the Alerts tab.
+  const active = useMemo(() => {
+    const silenced = new Set(silencedToastIds)
+    return notifications.filter((n) => !silenced.has(n.id))
+  }, [notifications, silencedToastIds])
+
+  // Auto-silence (not delete) after 5 s — skip error toasts (sticky).
   useEffect(() => {
-    if (notifications.length === 0) {
+    if (active.length === 0) {
       timedIdRef.current = null
       return
     }
-    const oldest = notifications[0]
+    const oldest = active[0]
     if (!oldest) return
-    // Error toasts don't auto-dismiss
     if (oldest.type === 'error') {
       timedIdRef.current = null
       return
     }
-    // Don't reset the timer if we're already timing this notification
     if (timedIdRef.current === oldest.id) return
 
     timedIdRef.current = oldest.id
@@ -34,13 +41,13 @@ export function NotificationToast(): React.JSX.Element | null {
     timerRef.current = setTimeout(() => {
       timerRef.current = null
       timedIdRef.current = null
-      dismissNotification(oldest.id)
+      silenceToast(oldest.id)
     }, remaining)
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
     }
-  }, [notifications, dismissNotification])
+  }, [active, silenceToast])
 
   const handleCopy = useCallback((e: React.MouseEvent, id: string, message: string) => {
     e.stopPropagation()
@@ -49,19 +56,21 @@ export function NotificationToast(): React.JSX.Element | null {
     setTimeout(() => setCopiedId(null), 1500)
   }, [])
 
+  // Clicking the toast expands it; clicking again hides the toast (silences,
+  // still readable in Alerts tab). The explicit × button fully dismisses.
   const handleClick = useCallback(
     (id: string) => {
       if (expandedId === id) {
-        dismissNotification(id)
+        silenceToast(id)
         setExpandedId(null)
       } else {
         setExpandedId(id)
       }
     },
-    [expandedId, dismissNotification],
+    [expandedId, silenceToast],
   )
 
-  const visible = notifications.slice(0, 5)
+  const visible = active.slice(0, 5)
 
   if (visible.length === 0) return null
 
@@ -99,10 +108,12 @@ export function NotificationToast(): React.JSX.Element | null {
               className="toast-close"
               onClick={(e) => {
                 e.stopPropagation()
-                dismissNotification(n.id)
+                // Close from toast = silence only (keeps a copy in Alerts);
+                // Alerts tab has its own full-dismiss buttons.
+                silenceToast(n.id)
                 if (expandedId === n.id) setExpandedId(null)
               }}
-              aria-label="Dismiss notification"
+              aria-label="Hide toast"
               type="button"
             >
               <X size={12} />

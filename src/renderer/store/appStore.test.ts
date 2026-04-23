@@ -213,11 +213,11 @@ describe('Notifications', () => {
     expect(useAppStore.getState().notifications[0]?.message).toBe('Hello')
   })
 
-  it('caps notifications at 10', () => {
-    for (let i = 0; i < 15; i++) {
+  it('caps notifications at 50', () => {
+    for (let i = 0; i < 60; i++) {
       useAppStore.getState().addNotification('info', `msg ${i}`)
     }
-    expect(useAppStore.getState().notifications).toHaveLength(10)
+    expect(useAppStore.getState().notifications).toHaveLength(50)
   })
 
   it('dismisses by id', () => {
