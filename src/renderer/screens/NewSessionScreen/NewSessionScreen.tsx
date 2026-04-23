@@ -3,7 +3,7 @@ import { useAppStore } from '../../store/appStore'
 import { AGENTS } from '../../../shared/agents'
 import { ScreenShell } from '../../components/shared/ScreenShell'
 import { AGENT_BY_ID, agentColorVar, agentShort } from '../../utils/agent-ui'
-import type { AgentConfig, AgentType, Template } from '../../../shared/types'
+import type { AgentType, SessionLaunchConfig, Template } from '../../../shared/types'
 import './NewSessionScreen.css'
 
 type Mode = 'watch' | 'auto' | 'plan-first'
@@ -94,14 +94,34 @@ export function NewSessionScreen(): React.JSX.Element {
 
   const handleLaunch = useCallback(() => {
     if (!project) return
-    const overrides: { agentOverride: AgentConfig['agent']; agentFlagsOverride?: string } = {
+    const trimmedPrompt = prompt.trim()
+    const trimmedBranch = branch.trim()
+    const overrides: SessionLaunchConfig = {
       agentOverride: agentId,
+      initialPrompt: trimmedPrompt.length > 0 ? trimmedPrompt : undefined,
+      branchMode,
+      initialBranch: trimmedBranch.length > 0 ? trimmedBranch : undefined,
+      costCap: costCap > 0 ? costCap : undefined,
+      runMode: mode,
+      approve,
     }
     const sessionId = `session-${project.id}-${Date.now()}`
     addSession(sessionId, project.id, overrides)
     setActiveSession(sessionId)
     setCurrentView('session')
-  }, [project, agentId, addSession, setActiveSession, setCurrentView])
+  }, [
+    project,
+    agentId,
+    prompt,
+    branch,
+    branchMode,
+    costCap,
+    mode,
+    approve,
+    addSession,
+    setActiveSession,
+    setCurrentView,
+  ])
 
   return (
     <ScreenShell

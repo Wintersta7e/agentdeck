@@ -106,9 +106,12 @@ export function SessionMetricsStrip({ sessionId }: SessionMetricsStripProps): Re
       <div className="session-strip__sep" aria-hidden="true" />
 
       <div className="session-strip__item">
-        <div className="session-strip__label">COST</div>
+        <div className="session-strip__label">
+          COST{session?.costCap ? ` / CAP ${formatCost(session.costCap)}` : ''}
+        </div>
         <div className="session-strip__value session-strip__value--cost">
           {formatCost(totals.cost)}
+          {session?.costCap && totals.cost >= session.costCap ? ' ⚠' : ''}
         </div>
       </div>
 

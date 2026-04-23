@@ -426,13 +426,37 @@ export function TerminalPane({
         if (cancelled) return
         spawnTimestamp = Date.now()
         const { cols, rows } = term
+
+        // Pull session launch config (prompt, branch, branchMode) once at
+        // spawn time. These come from NewSessionScreen's handleLaunch.
+        const launchSession = useAppStore.getState().sessions[sessionId]
+        const SAFE_BRANCH_RE = /^[a-zA-Z0-9_/.-]+$/
+        const branchCmds: string[] = []
+        if (
+          launchSession?.branchMode === 'existing' &&
+          launchSession.initialBranch &&
+          SAFE_BRANCH_RE.test(launchSession.initialBranch)
+        ) {
+          branchCmds.push(`git checkout ${launchSession.initialBranch}`)
+        } else if (
+          launchSession?.branchMode === 'new' &&
+          launchSession.initialBranch &&
+          SAFE_BRANCH_RE.test(launchSession.initialBranch)
+        ) {
+          branchCmds.push(`git checkout -b ${launchSession.initialBranch}`)
+        }
+        const mergedStartup =
+          branchCmds.length > 0
+            ? [...branchCmds, ...(startupRef.current ?? [])]
+            : startupRef.current
+
         try {
           await window.agentDeck.pty.spawn(
             sessionId,
             cols,
             rows,
             spawnPath,
-            startupRef.current,
+            mergedStartup,
             envRef.current,
             agentRef.current,
             agentFlagsRef.current,
@@ -450,6 +474,17 @@ export function TerminalPane({
               /* cost tracking is best-effort */
             })
           setSessionStatus(sessionId, 'running')
+
+          // Pipe the launch prompt into the agent's stdin after a short grace
+          // period so the agent has time to print its greeting. Only runs once
+          // per session — the useEffect guards against reattach re-spawns.
+          if (launchSession?.initialPrompt) {
+            const promptToSend = launchSession.initialPrompt
+            setTimeout(() => {
+              if (cancelled) return
+              void window.agentDeck.pty.write(sessionId, promptToSend + '\n')
+            }, 2000)
+          }
         } catch (err: unknown) {
           if (cancelled) return
           window.agentDeck.log.send('error', 'terminal', `PTY spawn failed for ${sessionId}`, {

@@ -1,8 +1,8 @@
 import type { StateCreator } from 'zustand'
 import type { AppState } from '../appStore'
 import type {
-  AgentType,
   Session,
+  SessionLaunchConfig,
   SessionStatus,
   ActivityEvent,
   TokenUsage,
@@ -12,11 +12,7 @@ import { ACTIVITY_FEED_CAP, MAX_EXITED_SESSIONS, MAX_PANE_COUNT } from '../../..
 export interface SessionsSlice {
   sessions: Record<string, Session>
   activeSessionId: string | null
-  addSession: (
-    sessionId: string,
-    projectId: string,
-    overrides?: { agentOverride?: AgentType; agentFlagsOverride?: string },
-  ) => void
+  addSession: (sessionId: string, projectId: string, overrides?: SessionLaunchConfig) => void
   setSessionStatus: (sessionId: string, status: SessionStatus) => void
   setActiveSession: (sessionId: string) => void
   removeSession: (sessionId: string) => void
@@ -68,6 +64,12 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
         startedAt: Date.now(),
         agentOverride: overrides?.agentOverride,
         agentFlagsOverride: overrides?.agentFlagsOverride,
+        initialPrompt: overrides?.initialPrompt,
+        branchMode: overrides?.branchMode,
+        initialBranch: overrides?.initialBranch,
+        costCap: overrides?.costCap,
+        runMode: overrides?.runMode,
+        approve: overrides?.approve,
       }
       return {
         sessions: {
