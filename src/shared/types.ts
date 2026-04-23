@@ -135,7 +135,7 @@ export interface ActivityEvent {
   timestamp: number
 }
 
-export type RightPanelTab = 'context' | 'activity' | 'memory'
+export type RightPanelTab = 'context' | 'activity' | 'memory' | 'diff' | 'files' | 'cost' | 'config'
 
 export interface DetectedStack {
   badge: StackBadge
