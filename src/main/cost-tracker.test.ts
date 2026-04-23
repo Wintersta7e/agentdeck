@@ -59,8 +59,8 @@ function makeTestAdapter(overrides: Partial<LogAdapter> = {}): LogAdapter {
 
 const BIND_OPTS = {
   agent: 'claude-code',
-  projectPath: '/home/rooty/project',
-  cwd: '/home/rooty/project',
+  projectPath: '/home/testuser/project',
+  cwd: '/home/testuser/project',
   spawnAt: Date.now(),
 }
 
@@ -75,10 +75,10 @@ function makeRoutingMock(overrides?: {
   headResult?: string
   tailResults?: string[]
 }): void {
-  const home = overrides?.home ?? '/home/rooty'
+  const home = overrides?.home ?? '/home/testuser'
   const findResult =
-    overrides?.findResult ?? '/home/rooty/.claude/projects/test/sessions/abc.jsonl\n'
-  const headResult = overrides?.headResult ?? '{"cwd":"/home/rooty/project"}\n'
+    overrides?.findResult ?? '/home/testuser/.claude/projects/test/sessions/abc.jsonl\n'
+  const headResult = overrides?.headResult ?? '{"cwd":"/home/testuser/project"}\n'
   const tailResults = overrides?.tailResults ?? ['80\n{"line":"one"}\n{"line":"two"}\n', '80\n']
   let tailIndex = 0
 
@@ -190,7 +190,7 @@ describe('unbindSession', () => {
   it('is a no-op for unknown sessionId', () => {
     mockExecFile.mockImplementation(
       (_bin: string, _args: string[], _opts: unknown, cb: ExecFileCb) => {
-        cb(null, '/home/rooty\n', '')
+        cb(null, '/home/testuser\n', '')
       },
     )
     const win = makeMockWindow()
@@ -325,16 +325,16 @@ describe('file discovery', () => {
     mockExecFile.mockImplementation(
       (_bin: string, args: string[], _opts: unknown, cb: ExecFileCb) => {
         const cmd = Array.isArray(args) ? args.join(' ') : ''
-        if (cmd.includes('echo "$HOME"')) cb(null, '/home/rooty\n', '')
+        if (cmd.includes('echo "$HOME"')) cb(null, '/home/testuser\n', '')
         else if (cmd.includes('CLAUDE_CONFIG_DIR') || cmd.includes('CODEX_HOME')) cb(null, '\n', '')
         else if (cmd.includes('find ')) {
           cb(
             null,
-            phase === 'pre' ? '' : '/home/rooty/.claude/projects/test/sessions/abc.jsonl\n',
+            phase === 'pre' ? '' : '/home/testuser/.claude/projects/test/sessions/abc.jsonl\n',
             '',
           )
         } else if (cmd.includes('head ')) {
-          cb(null, '{"cwd":"/home/rooty/project"}\n', '')
+          cb(null, '{"cwd":"/home/testuser/project"}\n', '')
         } else if (cmd.includes('stat ') || cmd.includes('tail ')) {
           cb(null, phase === 'pre' ? earlyTail : lateTail, '')
         } else {
@@ -368,7 +368,7 @@ describe('file discovery', () => {
   })
 
   it('skips files already bound to another session', async () => {
-    const file = '/home/rooty/.claude/projects/test/sessions/abc.jsonl'
+    const file = '/home/testuser/.claude/projects/test/sessions/abc.jsonl'
     const matchSession = vi.fn(() => true)
     makeRoutingMock({ findResult: `${file}\n` })
     const win = makeMockWindow()
@@ -395,7 +395,7 @@ describe('file discovery', () => {
   })
 
   it('releases bound file on unbind so other sessions can claim it', async () => {
-    const file = '/home/rooty/.claude/projects/test/sessions/abc.jsonl'
+    const file = '/home/testuser/.claude/projects/test/sessions/abc.jsonl'
     makeRoutingMock({ findResult: `${file}\n` })
     const win = makeMockWindow()
     const adapter = makeTestAdapter({ matchSession: () => true })

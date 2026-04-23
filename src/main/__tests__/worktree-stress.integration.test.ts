@@ -10,11 +10,17 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
 import { execFileSync } from 'child_process'
 import * as fs from 'fs'
+import { homedir } from 'os'
 import * as path from 'path'
 import { createWslGitPort } from '../git-port'
 import { createWorktreeManager, type WorktreeManager } from '../worktree-manager'
 
-const TEST_REPO = '/home/rooty/agentdeck-test/git-project'
+const TEST_REPO = path.posix.join(homedir().replace(/\\/g, '/'), 'agentdeck-test', 'git-project')
+const NON_GIT_DIR = path.posix.join(
+  homedir().replace(/\\/g, '/'),
+  'agentdeck-test',
+  'non-git-project',
+)
 const REGISTRY_DIR = path.join(process.env['TEMP'] ?? '/tmp', `agentdeck-stress-${Date.now()}`)
 const WSL_WORKTREE_DIR = `/tmp/agentdeck-stress-wt-${Date.now()}`
 
@@ -307,14 +313,14 @@ describeIf('Worktree Stress Tests (real git)', () => {
   it('non-git project returns original path without error', async () => {
     const nonGitMgr = await createWorktreeManager(
       git,
-      () => '/home/rooty/agentdeck-test/non-git-project',
+      () => NON_GIT_DIR,
       REGISTRY_DIR,
       WSL_WORKTREE_DIR,
     )
 
     const r1 = await nonGitMgr.acquire('non-git', 'ng-session-1')
     expect(r1.isolated).toBe(false)
-    expect(r1.path).toBe('/home/rooty/agentdeck-test/non-git-project')
+    expect(r1.path).toBe(NON_GIT_DIR)
 
     const r2 = await nonGitMgr.acquire('non-git', 'ng-session-2')
     expect(r2.isolated).toBe(false) // can't isolate non-git
