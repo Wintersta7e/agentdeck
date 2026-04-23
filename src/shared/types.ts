@@ -113,6 +113,12 @@ export interface SessionLaunchConfig {
   runMode?: 'watch' | 'auto' | 'plan-first' | undefined
   /** Permission gates — stored as intent; runtime enforcement is a follow-up. */
   approve?: { reads?: boolean; writes?: boolean; commands?: boolean; commits?: boolean } | undefined
+  /** Raw model id captured from active-model detector at spawn. Immutable. */
+  model?: string | undefined
+  /** Resolved context window captured at spawn. Immutable. */
+  resolvedContextWindow?: number | undefined
+  /** Source of resolvedContextWindow at spawn for the SessionHero badge. Immutable. */
+  resolvedContextSource?: ContextSource | undefined
 }
 
 export interface Session extends SessionLaunchConfig {
