@@ -5,7 +5,7 @@ import type { ContextResult } from './context-types'
 export interface ContextResolverInput {
   agentId: string
   activeModel: string | null
-  cliContextOverride?: number | undefined
+  cliContextOverride?: number
   overrides: {
     agent: Record<string, number>
     model: Record<string, number>
