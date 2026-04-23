@@ -14,16 +14,31 @@ export function safeWrite(sessionId: string, data: string): void {
     .write(sessionId, data)
     .then((result) => {
       if (!result.ok) {
-        void window.agentDeck.log.send('warn', 'pty-write', 'pty.write returned !ok', {
-          sessionId,
-          error: result.error,
-        })
+        // The logger IPC can itself reject (logger disk full, main-side
+        // crash). Last-resort swallow here: the original !ok info is
+        // already captured in the send args, and re-logging a failed log
+        // has no useful recipient.
+        window.agentDeck.log
+          .send('warn', 'pty-write', 'pty.write returned !ok', {
+            sessionId,
+            error: result.error,
+          })
+          .catch(() => {
+            /* logger itself failed; nothing more we can do */
+          })
       }
     })
     .catch((err: unknown) => {
-      void window.agentDeck.log.send('error', 'pty-write', 'pty.write promise rejected', {
-        sessionId,
-        error: err instanceof Error ? err.message : String(err),
-      })
+      // Inside the terminal .catch there is no outer handler — a bare
+      // `void log.send(...)` would become an unhandledRejection if the
+      // logger IPC rejects. Swallow the logger's own error.
+      window.agentDeck.log
+        .send('error', 'pty-write', 'pty.write promise rejected', {
+          sessionId,
+          error: err instanceof Error ? err.message : String(err),
+        })
+        .catch(() => {
+          /* logger itself failed; nothing more we can do */
+        })
     })
 }
