@@ -68,6 +68,7 @@ const TemplateEditor = lazy(() =>
 export function App(): React.JSX.Element {
   const currentView = useAppStore((s) => s.currentView)
   const addSession = useAppStore((s) => s.addSession)
+  const captureSessionSnapshot = useAppStore((s) => s.captureSessionSnapshot)
   const removeSession = useAppStore((s) => s.removeSession)
 
   const activeWorkflowId = useAppStore((s) => s.activeWorkflowId)
@@ -132,13 +133,16 @@ export function App(): React.JSX.Element {
     (project: Project) => {
       const sessionId = `session-${project.id}-${Date.now()}`
       addSession(sessionId, project.id)
+      if (project.agent) {
+        void captureSessionSnapshot(sessionId, project.agent)
+      }
       void updateProject({ ...project, lastOpened: Date.now() }).catch((err: unknown) => {
         window.agentDeck.log.send('warn', 'app', 'Failed to update lastOpened', {
           err: String(err),
         })
       })
     },
-    [addSession, updateProject],
+    [addSession, captureSessionSnapshot, updateProject],
   )
 
   const handleOpenProjectWithAgent = useCallback(
@@ -151,13 +155,14 @@ export function App(): React.JSX.Element {
         overrides.agentFlagsOverride = agentConfig.agentFlags
       }
       addSession(sessionId, project.id, overrides)
+      void captureSessionSnapshot(sessionId, agentConfig.agent)
       void updateProject({ ...project, lastOpened: Date.now() }).catch((err: unknown) => {
         window.agentDeck.log.send('warn', 'app', 'Failed to update lastOpened', {
           err: String(err),
         })
       })
     },
-    [addSession, updateProject],
+    [addSession, captureSessionSnapshot, updateProject],
   )
 
   /** Kill PTY + remove session (non-worktree path, or after worktree cleanup). */

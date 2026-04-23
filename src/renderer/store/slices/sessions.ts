@@ -1,6 +1,7 @@
 import type { StateCreator } from 'zustand'
 import type { AppState } from '../appStore'
 import type {
+  AgentType,
   Session,
   SessionLaunchConfig,
   SessionStatus,
@@ -13,6 +14,7 @@ export interface SessionsSlice {
   sessions: Record<string, Session>
   activeSessionId: string | null
   addSession: (sessionId: string, projectId: string, overrides?: SessionLaunchConfig) => void
+  captureSessionSnapshot: (sessionId: string, agentId: AgentType) => Promise<void>
   setSessionStatus: (sessionId: string, status: SessionStatus) => void
   setActiveSession: (sessionId: string) => void
   removeSession: (sessionId: string) => void
@@ -81,6 +83,33 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
         paneSessions,
       }
     }),
+
+  captureSessionSnapshot: async (sessionId, agentId) => {
+    try {
+      const result = await window.agentDeck.agents.getEffectiveContext(agentId)
+      if ('error' in result) return
+      set((state) => {
+        const existing = state.sessions[sessionId]
+        if (!existing) return state
+        // Immutable once captured: only write if not already set (prevents race
+        // with a later captureSessionSnapshot call on the same session).
+        if (existing.resolvedContextWindow !== undefined) return state
+        return {
+          sessions: {
+            ...state.sessions,
+            [sessionId]: {
+              ...existing,
+              model: result.modelId ?? undefined,
+              resolvedContextWindow: result.value,
+              resolvedContextSource: result.source,
+            },
+          },
+        }
+      })
+    } catch {
+      // Swallow — SessionHero falls back gracefully if snapshot is missing.
+    }
+  },
 
   setSessionStatus: (sessionId, status) =>
     set((state) => {
