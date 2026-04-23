@@ -1,84 +1,94 @@
-/* ── Workflow Node (React Flow custom node inner) ── */
+/* ── Workflow Node — B1 compact box ──
+ *
+ * A workflow node is a flat, ~160px-wide box with an agent-coloured
+ * border + soft glow and a small uppercase type-notch at the top-left
+ * (inspired by the B1 variation-b1.jsx mockup). Agent nodes inherit
+ * their agent's signature colour; shell / condition / checkpoint use
+ * a palette slot so the graph still reads as a typed flow.
+ *
+ * Body fields are hidden in the compact view — details live in the
+ * side editor panel. Double-click still opens the inline edit form.
+ */
 
 .wf-node-inner {
-  width: 200px;
-  background: var(--bg2);
-  border: 1px solid var(--border-bright);
-  border-radius: 8px;
+  --node-accent: var(--accent);
+  position: relative;
+  min-width: 160px;
+  max-width: 200px;
+  padding: var(--sp-2) var(--sp-3);
+  background: color-mix(in oklch, var(--bg0) 92%, var(--node-accent) 3%);
+  border: 1px solid color-mix(in oklch, var(--node-accent) 45%, transparent);
+  color: var(--text1);
   cursor: grab;
   user-select: none;
+  font-family: var(--font-display);
+  box-shadow:
+    0 0 16px color-mix(in oklch, var(--node-accent) 16%, transparent),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.02);
   transition:
     border-color var(--duration-base),
     box-shadow var(--duration-base);
-  box-shadow: var(--context-shadow);
 }
 
 .wf-node-inner:hover {
-  border-color: var(--border-bright);
-  box-shadow: var(--dialog-shadow);
+  border-color: color-mix(in oklch, var(--node-accent) 65%, transparent);
+  box-shadow:
+    0 0 20px color-mix(in oklch, var(--node-accent) 22%, transparent),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.03);
 }
 
 .wf-node-inner.selected {
-  border-color: var(--accent-border);
+  border-color: var(--node-accent);
   box-shadow:
-    0 0 0 1px rgba(var(--accent-rgb), 0.2),
-    var(--dialog-shadow);
+    0 0 0 1px color-mix(in oklch, var(--node-accent) 35%, transparent),
+    0 0 24px color-mix(in oklch, var(--node-accent) 30%, transparent);
 }
+
+/* ── Status overlays (running / done / error / skipped) ── */
 
 .wf-node-inner.running {
-  border-color: rgb(var(--green-rgb));
-  box-shadow:
-    0 0 0 1px rgba(var(--green-rgb), 0.5),
-    0 0 24px rgba(var(--green-rgb), 0.35);
-  position: relative;
+  border-color: var(--green);
 }
 
-/* GPU-composited pulse: animate opacity on ::after instead of box-shadow directly */
 .wf-node-inner.running::after {
   content: '';
   position: absolute;
   inset: -2px;
-  border-radius: inherit;
   box-shadow:
-    0 0 0 2px rgba(var(--green-rgb), 0.8),
-    0 0 40px 4px rgba(var(--green-rgb), 0.55);
+    0 0 0 2px rgba(var(--green-rgb), 0.75),
+    0 0 40px 4px rgba(var(--green-rgb), 0.5);
   opacity: 0;
   animation: wf-node-pulse 1.6s ease-in-out infinite;
   pointer-events: none;
 }
 
 .wf-node-inner.done {
-  border-color: rgb(var(--green-rgb));
-  position: relative;
+  border-color: var(--green);
 }
 
-/* GPU-composited flash: animate opacity on ::after instead of box-shadow directly */
 .wf-node-inner.done::after {
   content: '';
   position: absolute;
   inset: -2px;
-  border-radius: inherit;
   box-shadow:
     0 0 0 2px rgba(var(--green-rgb), 0.7),
-    0 0 32px 6px rgba(var(--green-rgb), 0.6);
+    0 0 32px 6px rgba(var(--green-rgb), 0.55);
   opacity: 0;
   animation: wf-node-flash 0.6s ease-out forwards;
   pointer-events: none;
 }
 
 .wf-node-inner.error {
-  border-color: rgb(var(--red-rgb));
-  position: relative;
+  border-color: var(--red);
 }
 
 .wf-node-inner.error::after {
   content: '';
   position: absolute;
   inset: -2px;
-  border-radius: inherit;
   box-shadow:
     0 0 0 2px rgba(var(--red-rgb), 0.7),
-    0 0 32px 6px rgba(var(--red-rgb), 0.6);
+    0 0 32px 6px rgba(var(--red-rgb), 0.55);
   opacity: 0;
   animation: wf-node-flash 0.6s ease-out forwards;
   pointer-events: none;
@@ -111,20 +121,40 @@
   }
 }
 
-/* ── Header ── */
+/* ── ID notch (top-left, overlapping the border) ── */
+
+.wf-node-id-badge {
+  position: absolute;
+  top: -7px;
+  left: var(--sp-2);
+  padding: 0 var(--sp-1);
+  background: var(--bg0);
+  color: var(--node-accent);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.2em;
+  line-height: 14px;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+/* ── Header row: glyph · name · menu ── */
 
 .wf-node-header {
-  padding: var(--sp-3) var(--sp-3) var(--sp-2);
-  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   gap: var(--sp-2);
+  min-width: 0;
 }
 
 .wf-node-type-icon {
-  font-size: var(--fs-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
   flex-shrink: 0;
-  color: var(--text3);
+  color: var(--node-accent);
   transition: color var(--duration-slow);
 }
 
@@ -151,16 +181,18 @@
     opacity: 1;
   }
   50% {
-    opacity: 0.3;
+    opacity: 0.35;
   }
 }
 
 .wf-node-name {
-  font-family: var(--font-display);
-  font-size: var(--fs-sm);
-  font-weight: 700;
-  color: var(--text0);
   flex: 1;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: var(--text0);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -170,57 +202,30 @@
   background: none;
   border: none;
   color: var(--text3);
-  font-size: var(--fs-base);
+  padding: 0 var(--sp-1);
   cursor: pointer;
-  padding: 0 2px;
-  transition: color var(--duration-base);
   font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--duration-base);
 }
 
 .wf-node-menu:hover {
   color: var(--text1);
 }
 
-/* ── Type badge (header) ── */
-
-.wf-node-type-badge {
-  font-size: 8px;
-  padding: 1px var(--sp-1);
-  border-radius: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  flex-shrink: 0;
-}
-
-.wf-type-badge-agent {
-  background: var(--purple-dim);
-  color: var(--purple);
-  border: 1px solid var(--purple-border);
-}
-
-.wf-type-badge-shell {
-  background: rgba(var(--accent-rgb), 0.12);
-  color: var(--accent);
-  border: 1px solid rgba(var(--accent-rgb), 0.25);
-}
-
-.wf-type-badge-condition {
-  background: var(--purple-dim);
-  color: var(--purple);
-  border: 1px solid var(--purple-border);
-}
-
-.wf-type-badge-checkpoint {
-  background: var(--blue-dim);
-  color: var(--blue);
-  border: 1px solid var(--blue-border);
-}
-
-/* ── Body: labeled fields ── */
+/* ── Body: hidden in compact view, visible when editing or selected ── */
 
 .wf-node-body {
-  padding: var(--sp-2) var(--sp-3);
+  display: none;
+  margin-top: var(--sp-2);
+  padding-top: var(--sp-2);
+  border-top: 1px dashed color-mix(in oklch, var(--node-accent) 25%, transparent);
+}
+
+.wf-node-inner.selected .wf-node-body {
+  display: block;
 }
 
 .wf-node-field {
@@ -232,14 +237,16 @@
 }
 
 .wf-node-field-label {
-  font-size: var(--fs-xs);
-  color: var(--text2);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  color: var(--text3);
   margin-bottom: 2px;
 }
 
 .wf-node-field-value {
+  font-family: var(--font-mono);
   font-size: var(--fs-xs);
   color: var(--text1);
   line-height: 1.4;
@@ -254,19 +261,18 @@
   -webkit-box-orient: vertical;
 }
 
-/* ── Role badge (cyan pill inside node body) ── */
-
 .wf-node-role-badge {
   display: inline-flex;
   align-items: center;
   gap: var(--sp-1);
   padding: 2px var(--sp-2);
-  border-radius: 10px;
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  background: var(--cyan-dim2);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
   color: var(--cyan);
-  border: 1px solid var(--cyan-border);
+  background: color-mix(in oklch, var(--cyan) 10%, transparent);
+  border: 1px solid color-mix(in oklch, var(--cyan) 40%, transparent);
 }
 
 .wf-node-role-badge-icon {
@@ -276,11 +282,11 @@
 /* ── React Flow Handles (ports) ── */
 
 .wf-handle {
-  width: 10px !important;
-  height: 10px !important;
+  width: 8px !important;
+  height: 8px !important;
   border-radius: 50% !important;
-  background: var(--bg3) !important;
-  border: 2px solid var(--border-bright) !important;
+  background: var(--bg0) !important;
+  border: 1.5px solid color-mix(in oklch, var(--node-accent) 70%, transparent) !important;
   transition:
     background var(--duration-base),
     border-color var(--duration-base),
@@ -289,9 +295,9 @@
 }
 
 .wf-handle:hover {
-  background: var(--accent) !important;
-  border-color: var(--accent) !important;
-  box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.5) !important;
+  background: var(--node-accent) !important;
+  border-color: var(--node-accent) !important;
+  box-shadow: 0 0 8px color-mix(in oklch, var(--node-accent) 50%, transparent) !important;
   transform: scale(1.3) !important;
 }
 
@@ -305,70 +311,46 @@
   border-color: var(--red) !important;
 }
 
-/* ── Inline edit form ── */
+/* ── Inline edit form (double-click to open) ── */
 
 .wf-node-edit-form {
-  padding: var(--sp-2) var(--sp-3) var(--sp-3);
-  border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   gap: var(--sp-2);
+  margin-top: var(--sp-2);
+  padding-top: var(--sp-2);
+  border-top: 1px dashed color-mix(in oklch, var(--node-accent) 25%, transparent);
 }
 
-.wf-node-edit-input {
+.wf-node-edit-input,
+.wf-node-edit-textarea,
+.wf-node-edit-select {
   width: 100%;
-  background: var(--bg3);
-  border: 1px solid var(--border-bright);
-  border-radius: var(--r);
+  padding: var(--sp-1) var(--sp-2);
+  background: var(--bg0);
+  border: 1px solid var(--border);
   color: var(--text0);
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
-  padding: var(--sp-1) var(--sp-2);
   outline: none;
   transition: border-color var(--duration-base);
-}
-
-.wf-node-edit-input:focus {
-  border-color: var(--accent-border);
 }
 
 .wf-node-edit-textarea {
-  width: 100%;
   min-height: 48px;
   max-height: 96px;
   resize: vertical;
-  background: var(--bg3);
-  border: 1px solid var(--border-bright);
-  border-radius: var(--r);
-  color: var(--text0);
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
   line-height: 1.5;
-  padding: var(--sp-1) var(--sp-2);
-  outline: none;
-  transition: border-color var(--duration-base);
-}
-
-.wf-node-edit-textarea:focus {
-  border-color: var(--accent-border);
 }
 
 .wf-node-edit-select {
-  width: 100%;
-  background: var(--bg3);
-  border: 1px solid var(--border-bright);
-  border-radius: var(--r);
-  color: var(--text0);
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  padding: var(--sp-1) var(--sp-2);
-  outline: none;
   cursor: pointer;
-  transition: border-color var(--duration-base);
 }
 
+.wf-node-edit-input:focus,
+.wf-node-edit-textarea:focus,
 .wf-node-edit-select:focus {
-  border-color: var(--accent-border);
+  border-color: var(--node-accent);
 }
 
 .wf-node-edit-actions {
@@ -379,45 +361,49 @@
 
 .wf-node-edit-btn {
   padding: 3px var(--sp-3);
-  border-radius: var(--r);
   font-family: var(--font-mono);
-  font-size: var(--fs-xs);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
   cursor: pointer;
-  border: 1px solid var(--border-bright);
-  background: none;
-  color: var(--text1);
-  transition: all var(--duration-base);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text2);
+  transition:
+    border-color var(--duration-base),
+    background var(--duration-base),
+    color var(--duration-base);
 }
 
 .wf-node-edit-btn.save {
-  border-color: rgba(var(--green-rgb), 0.5);
+  border-color: color-mix(in oklch, var(--green) 55%, transparent);
   color: var(--green);
-  background: var(--green-dim);
+  background: color-mix(in oklch, var(--green) 10%, transparent);
 }
 
 .wf-node-edit-btn.save:hover {
   border-color: var(--green);
-  background: rgba(var(--green-rgb), 0.2);
+  background: color-mix(in oklch, var(--green) 20%, transparent);
 }
 
 .wf-node-edit-btn.cancel:hover {
-  border-color: var(--border-bright);
+  border-color: var(--text2);
   color: var(--text0);
 }
 
-/* ── Node dropdown menu ── */
+/* ── Dropdown (top-right menu) ── */
 
 .wf-node-dropdown {
   position: absolute;
-  top: 100%;
+  top: calc(100% + var(--sp-1));
   right: 0;
-  margin-top: var(--sp-1);
-  background: var(--bg3);
-  border: 1px solid var(--border-bright);
-  border-radius: var(--r);
-  box-shadow: var(--context-shadow);
-  z-index: 50;
   min-width: 120px;
+  background: var(--bg1);
+  border: 1px solid color-mix(in oklch, var(--node-accent) 35%, transparent);
+  box-shadow:
+    0 0 24px color-mix(in oklch, var(--node-accent) 20%, transparent),
+    0 6px 16px rgba(0, 0, 0, 0.45);
+  z-index: var(--z-dropdown);
   overflow: hidden;
 }
 
@@ -430,6 +416,7 @@
   color: var(--text1);
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
+  letter-spacing: 0.05em;
   text-align: left;
   cursor: pointer;
   transition:
@@ -438,7 +425,7 @@
 }
 
 .wf-node-dropdown-item:hover {
-  background: var(--bg4);
+  background: color-mix(in oklch, var(--node-accent) 10%, transparent);
   color: var(--text0);
 }
 
@@ -447,5 +434,5 @@
 }
 
 .wf-node-dropdown-item.danger:hover {
-  background: var(--red-dim);
+  background: color-mix(in oklch, var(--red) 15%, transparent);
 }

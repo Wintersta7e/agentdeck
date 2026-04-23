@@ -8,6 +8,7 @@ import type {
   AgentType,
 } from '../../../shared/types'
 import { AGENTS } from '../../../shared/agents'
+import { agentColorVar } from '../../utils/agent-ui'
 import { useRolesMap } from '../../hooks/useRolesMap'
 import './WorkflowNode.css'
 
@@ -24,18 +25,25 @@ export type WfNode = Node<WorkflowNodeData, 'workflowNode'>
 
 const KNOWN_AGENTS: AgentType[] = AGENTS.map((a) => a.id)
 
-function getTypeBadgeClass(type: NodeType): string {
-  if (type === 'agent') return 'wf-type-badge-agent'
-  if (type === 'shell') return 'wf-type-badge-shell'
-  if (type === 'condition') return 'wf-type-badge-condition'
-  return 'wf-type-badge-checkpoint'
+/**
+ * Picks the CSS variable that drives a node's accent border, glow, glyph,
+ * and type-notch colour. Agent nodes get their agent's signature token;
+ * the other types map to a stable palette slot so a graph of mixed node
+ * types still reads as a coloured flow.
+ */
+function getNodeAccentVar(node: WorkflowNodeType): string {
+  if (node.type === 'agent' && node.agent) return `var(${agentColorVar(node.agent)})`
+  if (node.type === 'shell') return 'var(--green)'
+  if (node.type === 'condition') return 'var(--purple)'
+  if (node.type === 'checkpoint') return 'var(--blue)'
+  return 'var(--accent)'
 }
 
 function getTypeBadgeLabel(type: NodeType): string {
   if (type === 'agent') return 'Agent'
   if (type === 'shell') return 'Shell'
-  if (type === 'condition') return 'Cond'
-  return 'Check'
+  if (type === 'condition') return 'Condition'
+  return 'Checkpoint'
 }
 
 function getNodeText(node: WorkflowNodeType): string {
@@ -165,17 +173,24 @@ function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Ele
   const className = ['wf-node-inner', status, selected ? 'selected' : ''].filter(Boolean).join(' ')
 
   const nodeText = getNodeText(node)
+  const accentStyle = { '--node-accent': getNodeAccentVar(node) } as React.CSSProperties
 
   return (
-    <div className={className} onDoubleClick={handleDoubleClick}>
+    <div
+      className={className}
+      style={accentStyle}
+      data-type={node.type}
+      onDoubleClick={handleDoubleClick}
+    >
       <Handle type="target" position={Position.Left} className="wf-handle" />
+
+      <span className="wf-node-id-badge" aria-hidden="true">
+        {getTypeBadgeLabel(node.type)}
+      </span>
 
       <div className="wf-node-header">
         <span className="wf-node-type-icon">{getTypeIcon(node.type)}</span>
         <div className="wf-node-name">{node.name}</div>
-        <span className={`wf-node-type-badge ${getTypeBadgeClass(node.type)}`}>
-          {getTypeBadgeLabel(node.type)}
-        </span>
         <button
           className="wf-node-menu nodrag"
           onClick={handleMenuClick}
