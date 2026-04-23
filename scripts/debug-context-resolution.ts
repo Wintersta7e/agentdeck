@@ -13,7 +13,9 @@ async function main() {
     const r = getEffectiveContextWindow({
       agentId: a.id,
       activeModel: det.modelId,
-      cliContextOverride: det.cliContextOverride,
+      ...(det.cliContextOverride !== undefined
+        ? { cliContextOverride: det.cliContextOverride }
+        : {}),
       overrides: { agent: {}, model: {} },
       agentDefaults: defaults,
     })
