@@ -272,6 +272,16 @@ export interface WorkflowVariable {
   choices?: string[] | undefined
 }
 
+/** Source of a resolved context-window value, used for UI badges. */
+export type ContextSource =
+  | 'override-model'
+  | 'cli-context-override'
+  | 'registry-exact'
+  | 'heuristic'
+  | 'registry-pattern'
+  | 'override-agent'
+  | 'default'
+
 export interface WorkflowRun {
   id: string
   workflowId: string
