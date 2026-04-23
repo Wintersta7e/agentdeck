@@ -11,6 +11,7 @@ import type {
   ReviewItem,
   DailyCostEntry,
 } from '../shared/types'
+import type { ContextResult, SetContextOverrideArgs } from '../shared/context-types'
 
 // File drag-and-drop: accept drops visually (dragover), but let the default
 // drop behavior trigger navigation to file:// URL. The main process intercepts
@@ -157,6 +158,23 @@ contextBridge.exposeInMainWorld('agentDeck', {
       ipcRenderer.on('agents:versionInfo', handler)
       return () => ipcRenderer.removeListener('agents:versionInfo', handler)
     },
+    getEffectiveContext: (agentId: string) =>
+      ipcRenderer.invoke('agents:getEffectiveContext', agentId) as Promise<
+        ContextResult | { error: string }
+      >,
+    getEffectiveContextForModel: (agentId: string, modelId: string) =>
+      ipcRenderer.invoke('agents:getEffectiveContextForModel', agentId, modelId) as Promise<
+        ContextResult | { error: string }
+      >,
+    setContextOverride: (args: SetContextOverrideArgs) =>
+      ipcRenderer.invoke('agents:setContextOverride', args) as Promise<
+        { ok: true } | { ok: false; error: string }
+      >,
+    getOverrides: () =>
+      ipcRenderer.invoke('agents:getOverrides') as Promise<{
+        agent: Record<string, number>
+        model: Record<string, number>
+      }>,
   },
   projects: {
     detectStack: (path: string, distro?: string) =>

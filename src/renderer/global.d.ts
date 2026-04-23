@@ -11,6 +11,7 @@ import type {
   Template,
   TokenUsage,
 } from '../shared/types'
+import type { ContextResult, SetContextOverrideArgs } from '../shared/context-types'
 
 declare global {
   interface Window {
@@ -101,6 +102,18 @@ declare global {
             updateAvailable: boolean
           }) => void,
         ) => () => void
+        getEffectiveContext: (agentId: string) => Promise<ContextResult | { error: string }>
+        getEffectiveContextForModel: (
+          agentId: string,
+          modelId: string,
+        ) => Promise<ContextResult | { error: string }>
+        setContextOverride: (
+          args: SetContextOverrideArgs,
+        ) => Promise<{ ok: true } | { ok: false; error: string }>
+        getOverrides: () => Promise<{
+          agent: Record<string, number>
+          model: Record<string, number>
+        }>
       }
       projects: {
         detectStack: (path: string, distro?: string) => Promise<DetectedStack | null>
