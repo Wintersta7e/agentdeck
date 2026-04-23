@@ -30,8 +30,14 @@ export function DiffTab(): React.JSX.Element {
       .then((s) => {
         if (!cancelled) setSummary(s)
       })
-      .catch(() => {
-        if (!cancelled) setSummary(null)
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          void window.agentDeck.log.send('warn', 'diff-tab', 'worktree inspect failed', {
+            sessionId: activeSessionId,
+            error: err instanceof Error ? err.message : String(err),
+          })
+          setSummary(null)
+        }
       })
     return () => {
       cancelled = true

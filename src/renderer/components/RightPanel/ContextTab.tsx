@@ -59,8 +59,14 @@ export function ContextTab(): React.JSX.Element {
       .then((result) => {
         if (!cancelled) setSkills(result)
       })
-      .catch(() => {
-        if (!cancelled) setSkills([])
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          void window.agentDeck.log.send('warn', 'context-tab', 'skills.list failed', {
+            projectPath,
+            error: err instanceof Error ? err.message : String(err),
+          })
+          setSkills([])
+        }
       })
     return () => {
       cancelled = true

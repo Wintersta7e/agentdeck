@@ -20,8 +20,12 @@ export function AppSettingsScreen(): React.JSX.Element {
     window.agentDeck.zoom
       .reset()
       .then((z) => useAppStore.getState().setZoomFactor(z))
-      .catch(() => {
-        /* ignore */
+      .catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : String(err)
+        void window.agentDeck.log.send('error', 'app-settings', 'Zoom reset failed', {
+          error: message,
+        })
+        useAppStore.getState().addNotification('error', `Zoom reset failed: ${message}`)
       })
   }, [])
 
