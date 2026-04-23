@@ -1,8 +1,13 @@
 import { useMemo } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { useElapsedTime } from '../../hooks/useElapsedTime'
+import {
+  useEffectiveContext,
+  useEffectiveContextForModel,
+  badgeLabelFor,
+} from '../../hooks/useEffectiveContext'
 import { AGENTS } from '../../../shared/agents'
-import type { ActivityEvent } from '../../../shared/types'
+import type { ActivityEvent, ContextSource } from '../../../shared/types'
 import './LiveSessionCard.css'
 
 const AGENT_META = new Map(AGENTS.map((a) => [a.id, a]))
@@ -63,7 +68,47 @@ export function LiveSessionCard({ sessionId }: LiveSessionCardProps): React.JSX.
   const pulseClass = getPulseClass(latestActivity ?? undefined)
 
   const totalTokens = (usage?.inputTokens ?? 0) + (usage?.outputTokens ?? 0)
-  const contextWindow = meta?.contextWindow ?? DEFAULT_CONTEXT
+
+  // Primary: stored snapshot (immutable, captured at spawn)
+  const snapshotValue = session?.resolvedContextWindow
+  const snapshotSource = session?.resolvedContextSource ?? null
+
+  // Fallbacks — hooks called unconditionally per React rules
+  const byModel = useEffectiveContextForModel(agentId, session?.model ?? '')
+  const byAgent = useEffectiveContext(agentId)
+
+  // Resolve display value + source with priority
+  const { contextWindow, ctxSource, stale } = (() => {
+    if (snapshotValue !== undefined) {
+      return {
+        contextWindow: snapshotValue,
+        ctxSource: snapshotSource,
+        stale: false,
+      }
+    }
+    // Pre-v6.0.1 fallback tree
+    if (session?.model && byModel.value !== null) {
+      return {
+        contextWindow: byModel.value,
+        ctxSource: byModel.source,
+        stale: true,
+      }
+    }
+    if (byAgent.value !== null) {
+      return {
+        contextWindow: byAgent.value,
+        ctxSource: byAgent.source,
+        stale: true,
+      }
+    }
+    // Truly nothing — use registry default to keep the gauge from dividing by zero
+    return {
+      contextWindow: meta?.contextWindow ?? DEFAULT_CONTEXT,
+      ctxSource: null as ContextSource | null,
+      stale: true,
+    }
+  })()
+
   const tokenPct = Math.min(100, (totalTokens / contextWindow) * 100)
 
   if (!session) return <div className="live-card live-card-empty" />
@@ -97,6 +142,19 @@ export function LiveSessionCard({ sessionId }: LiveSessionCardProps): React.JSX.
         </div>
         <span className="live-card-gauge-val">
           {formatTokens(totalTokens)} / {formatTokens(contextWindow)}
+          {badgeLabelFor(ctxSource, session?.model ?? null) !== null && (
+            <span
+              className={`live-card-gauge-badge${stale ? ' is-stale' : ''}`}
+              aria-label={
+                stale
+                  ? 'Context value is stale — session spawned before snapshot was introduced'
+                  : undefined
+              }
+            >
+              {' '}
+              {badgeLabelFor(ctxSource, session?.model ?? null)}
+            </span>
+          )}
         </span>
       </div>
 
