@@ -20,6 +20,15 @@
   overflow: hidden;
 }
 
+/* Stretch every screen root to fill the available width.
+ * view-panel keeps its own flex:1 rule; suspense-spinner opts out. */
+.app-main > .home-main,
+.app-main > .screen-shell,
+.app-main > .placeholder-screen {
+  flex: 1;
+  min-width: 0;
+}
+
 .view-panel {
   flex: 1;
   overflow: hidden;

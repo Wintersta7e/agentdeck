@@ -261,9 +261,9 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
     set({ theme: name })
   },
 
-  // Mascot — default off per plan Phase 4; persisted via localStorage
+  // Mascot — on by default; persisted via localStorage (only '0' disables)
   mascotEnabled:
-    typeof localStorage !== 'undefined' && localStorage.getItem('mascot.enabled') === '1',
+    typeof localStorage !== 'undefined' ? localStorage.getItem('mascot.enabled') !== '0' : true,
   setMascotEnabled: (enabled) => {
     try {
       if (typeof localStorage !== 'undefined') {
