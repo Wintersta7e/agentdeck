@@ -18,7 +18,9 @@ AgentDeck puts all your agents in one place. Open a project, pick an agent, and 
 It's a desktop app, not a web service — your code stays local, your API keys are encrypted at rest, and everything runs through your own WSL environment.
 
 <p align="center">
-  <img src="screenshots/Screenshot%202026-04-23%20024055.png" width="720" alt="AgentDeck home screen — scope viz, KPI strip, activity graph, agent grid, cost dashboard" />
+  <img src="screenshots/Screenshot%202026-04-23%20024055.png" width="820" alt="AgentDeck home screen — scope viz, KPI strip, activity graph, agent grid, cost dashboard" />
+  <br/>
+  <sub><em>Home tab — scope viz, daily digest, live activity, agent grid, and 7-day cost.</em></sub>
 </p>
 
 ## Overview
@@ -40,8 +42,6 @@ AgentDeck provides a unified desktop environment for working with AI coding agen
 
 ### Terminal Sessions
 
-<img align="right" width="420" src="screenshots/Screenshot%202026-04-23%20024045.png" alt="Two agent sessions side by side — Claude Code writing code, Codex writing tests" />
-
 - **Split View** - Up to 3 terminal panes side-by-side with draggable dividers
 - **Bare Terminals** - Open plain WSL shells without a project (Ctrl+T)
 - **Terminal Caching** - Sessions persist across tab switches without re-rendering
@@ -50,7 +50,11 @@ AgentDeck provides a unified desktop environment for working with AI coding agen
 - **Right Panel** - 7 tabs per session: Context, Activity, Memory, Diff, Files, Cost, Config
 - **New Session Composer** - Dedicated screen to pick agent, drop in a prompt, set branch mode, and launch — the prompt is piped into the agent's stdin after spawn
 
-<br clear="right"/>
+<p align="center">
+  <img src="screenshots/Screenshot%202026-04-23%20024045.png" width="820" alt="Two agent sessions side by side — Claude Code writing code, Codex writing tests, right inspector showing activity + token usage" />
+  <br/>
+  <sub><em>Two agents running side by side — each pane has its own activity stream and token meter.</em></sub>
+</p>
 
 ### Home Screen Dashboard
 
@@ -79,8 +83,6 @@ AgentDeck provides a unified desktop environment for working with AI coding agen
 
 ### Agentic Workflows
 
-<img align="left" width="460" src="screenshots/Screenshot%202026-04-23%20024036.png" alt="Workflow editor — linear DAG with checkpoint, shell, agent nodes, a condition branch, run history sparkline, variables panel" />
-
 - **Visual Node Graph** - Drag-and-drop editor for agent, shell, checkpoint, and condition nodes
 - **Edge-Activation Scheduler** - Ready-queue execution with branching, skip propagation, and loop support
 - **Conditional Branching** - Route execution based on exit codes or output pattern matching
@@ -91,7 +93,11 @@ AgentDeck provides a unified desktop environment for working with AI coding agen
 - **Import/Export** - Share workflows as `.agentdeck-workflow.json` bundles with role remapping
 - **Execution History** - Per-run summaries with node timing, error tails, and a History tab
 
-<br clear="left"/>
+<p align="center">
+  <img src="screenshots/Screenshot%202026-04-23%20024036.png" width="820" alt="Workflow editor showing a linear DAG with checkpoint, shell, agent nodes and a condition branch; run history sparkline and variables panel at the bottom" />
+  <br/>
+  <sub><em>Workflow editor — branches, loops, checkpoints, variables, and a run-history sparkline.</em></sub>
+</p>
 
 ### Command Palette
 
