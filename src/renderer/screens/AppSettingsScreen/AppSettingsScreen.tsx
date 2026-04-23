@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { THEME_GROUPS, applyThemeWithTransition } from '../../components/CommandPalette/themeUtils'
 import { ScreenShell } from '../../components/shared/ScreenShell'
+import { ContextOverridesSection } from './ContextOverridesSection'
 import './AppSettingsScreen.css'
 
 export function AppSettingsScreen(): React.JSX.Element {
@@ -110,6 +111,18 @@ export function AppSettingsScreen(): React.JSX.Element {
           </p>
         </header>
         <MascotToggle />
+      </section>
+
+      <section className="app-settings-block" aria-labelledby="settings-context">
+        <header className="app-settings-block__head">
+          <h2 id="settings-context" className="app-settings-block__title">
+            Context windows
+          </h2>
+          <p className="app-settings-block__sub">
+            Override the detected or default context window sizes used for cost estimation.
+          </p>
+        </header>
+        <ContextOverridesSection />
       </section>
 
       <section className="app-settings-block" aria-labelledby="settings-about">
