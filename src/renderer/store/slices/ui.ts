@@ -86,12 +86,14 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
 
   tabParams: {},
   setTabParams: (params) => set({ tabParams: params }),
+  // Top-level tab navigation resets tabParams but does NOT push to
+  // viewStack. The stack is reserved for sub-view modals (wizard,
+  // settings, template-editor) so switching tabs isn't unbounded memory.
   setTab: (view, params) =>
-    set((state) => ({
+    set({
       currentView: view,
       tabParams: params ?? {},
-      viewStack: [...state.viewStack, state.currentView],
-    })),
+    }),
 
   settingsProjectId: null,
   viewStack: [] as ViewType[],

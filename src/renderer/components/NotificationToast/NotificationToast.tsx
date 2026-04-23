@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { X, AlertTriangle, Info, Copy, Check } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import './NotificationToast.css'
@@ -8,8 +8,6 @@ export function NotificationToast(): React.JSX.Element | null {
   const silencedToastIds = useAppStore((s) => s.silencedToastIds)
   const silenceToast = useAppStore((s) => s.silenceToast)
 
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const timedIdRef = useRef<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
@@ -21,32 +19,15 @@ export function NotificationToast(): React.JSX.Element | null {
     return notifications.filter((n) => !silenced.has(n.id))
   }, [notifications, silencedToastIds])
 
-  // Auto-silence (not delete) after 5 s — skip error toasts (sticky).
+  // Auto-silence (not delete) after 5 s — skip error toasts (sticky). The
+  // timer is closed over by a local const so the cleanup is always the timer
+  // we actually scheduled, even when `active` changes in quick bursts.
   useEffect(() => {
-    if (active.length === 0) {
-      timedIdRef.current = null
-      return
-    }
     const oldest = active[0]
-    if (!oldest) return
-    if (oldest.type === 'error') {
-      timedIdRef.current = null
-      return
-    }
-    if (timedIdRef.current === oldest.id) return
-
-    timedIdRef.current = oldest.id
-    if (timerRef.current) clearTimeout(timerRef.current)
+    if (!oldest || oldest.type === 'error') return
     const remaining = Math.max(0, oldest.timestamp + 5000 - Date.now())
-    timerRef.current = setTimeout(() => {
-      timerRef.current = null
-      timedIdRef.current = null
-      silenceToast(oldest.id)
-    }, remaining)
-
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current)
-    }
+    const timer = setTimeout(() => silenceToast(oldest.id), remaining)
+    return () => clearTimeout(timer)
   }, [active, silenceToast])
 
   const handleCopy = useCallback((e: React.MouseEvent, id: string, message: string) => {

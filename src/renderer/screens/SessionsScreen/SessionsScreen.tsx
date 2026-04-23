@@ -192,24 +192,18 @@ export function SessionsScreen(): React.JSX.Element {
       }
       className="sessions-screen"
     >
-      <div className="sessions-table" role="table" aria-label="Sessions list">
-        <div className="sessions-table__head" role="row">
-          <span role="columnheader">State</span>
-          <span role="columnheader">Agent</span>
-          <span role="columnheader">Project</span>
-          <span role="columnheader">Activity</span>
-          <span role="columnheader" className="sessions-table__num">
-            Tokens
-          </span>
-          <span role="columnheader" className="sessions-table__num">
-            Cost
-          </span>
-          <span role="columnheader" className="sessions-table__num">
-            Ago
-          </span>
+      <div className="sessions-table" role="list" aria-label="Sessions list">
+        <div className="sessions-table__head" aria-hidden="true">
+          <span>State</span>
+          <span>Agent</span>
+          <span>Project</span>
+          <span>Activity</span>
+          <span className="sessions-table__num">Tokens</span>
+          <span className="sessions-table__num">Cost</span>
+          <span className="sessions-table__num">Ago</span>
         </div>
         {filtered.length === 0 ? (
-          <div className="sessions-table__empty" role="row">
+          <div className="sessions-table__empty">
             {allSessions.length === 0
               ? 'No sessions yet. Press Ctrl+K or click ▸ NEW SESSION to launch one.'
               : 'No sessions match this filter.'}
@@ -235,36 +229,34 @@ export function SessionsScreen(): React.JSX.Element {
                 type="button"
                 className={`sessions-table__row sessions-row--${tone}`}
                 onClick={() => handleRowClick(session)}
-                role="row"
+                role="listitem"
                 title={`Open session ${session.id}`}
               >
-                <span className="sessions-row__state" role="cell">
+                <span className="sessions-row__state">
                   {session.status === 'running' && (
                     <span className="ad-pulse sessions-row__pulse" aria-hidden="true" />
                   )}
                   <span className="sessions-row__state-label">{statusLabel(session.status)}</span>
                 </span>
-                <span className="sessions-row__agent" role="cell">
+                <span className="sessions-row__agent">
                   <span className="sessions-row__agent-glyph" aria-hidden="true">
                     {agent?.icon ?? '◈'}
                   </span>
                   <span className="sessions-row__agent-name">{agent?.name ?? agentId}</span>
                 </span>
-                <span className="sessions-row__project" role="cell">
+                <span className="sessions-row__project">
                   <span className="sessions-row__project-name">
                     {project?.name ?? (session.projectId || 'ad-hoc')}
                   </span>
                 </span>
-                <span className="sessions-row__activity" role="cell">
-                  {activity}
-                </span>
-                <span className="sessions-row__num" role="cell">
+                <span className="sessions-row__activity">{activity}</span>
+                <span className="sessions-row__num">
                   {totalTokens > 0 ? formatTokens(totalTokens) : '—'}
                 </span>
-                <span className="sessions-row__num sessions-row__cost" role="cell">
+                <span className="sessions-row__num sessions-row__cost">
                   {cost > 0 ? formatCost(cost) : '—'}
                 </span>
-                <span className="sessions-row__num sessions-row__ago" role="cell">
+                <span className="sessions-row__num sessions-row__ago">
                   {formatAgo(session.startedAt)}
                 </span>
               </button>

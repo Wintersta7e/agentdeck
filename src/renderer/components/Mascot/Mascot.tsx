@@ -39,8 +39,15 @@ export function Mascot({ size = 140, onClick }: MascotProps): React.JSX.Element 
     const t1 = window.setTimeout(() => setGreeting(false), 2600)
     const start = performance.now()
     let rafId = 0
+    let lastTickMs = 0
+    // Throttle React state updates to ~20 fps. The SVG animations are sine-wave
+    // based and stay smooth at this rate, but we avoid a 60 Hz re-render of the
+    // entire mascot tree on the persistent Home screen.
     const step = (now: number): void => {
-      setTick((now - start) / 1000)
+      if (now - lastTickMs >= 50) {
+        setTick((now - start) / 1000)
+        lastTickMs = now
+      }
       rafId = window.requestAnimationFrame(step)
     }
     rafId = window.requestAnimationFrame(step)
@@ -62,6 +69,15 @@ export function Mascot({ size = 140, onClick }: MascotProps): React.JSX.Element 
 
   const breath = 1 + Math.sin(tick * 0.9) * 0.012
 
+  const handleKey = onClick
+    ? (e: React.KeyboardEvent<HTMLDivElement>): void => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onClick()
+        }
+      }
+    : undefined
+
   return (
     <div
       className={`mascot mascot--${state}`}
@@ -69,7 +85,9 @@ export function Mascot({ size = 140, onClick }: MascotProps): React.JSX.Element 
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
       onClick={onClick}
+      onKeyDown={handleKey}
       role={onClick ? 'button' : 'img'}
+      tabIndex={onClick ? 0 : undefined}
       aria-label={`Mascot · ${stateLabel(state, runningCount)}`}
     >
       <svg

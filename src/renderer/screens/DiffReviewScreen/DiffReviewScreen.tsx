@@ -31,25 +31,31 @@ export function DiffReviewScreen(): React.JSX.Element {
   const agent = AGENT_BY_ID.get(agentId)
   const colorVar = agentColorVar(agentId)
 
-  const refresh = useCallback(() => {
+  useEffect(() => {
     if (!activeSessionId) {
       setSummary(null)
       return
     }
+    let cancelled = false
     setLoading(true)
     window.agentDeck.worktree
       .inspect(activeSessionId)
-      .then((s) => setSummary(s))
-      .catch((err: unknown) => {
-        addNotification('warning', `Worktree inspect failed: ${String(err)}`)
-        setSummary(null)
+      .then((s) => {
+        if (!cancelled) setSummary(s)
       })
-      .finally(() => setLoading(false))
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          addNotification('warning', `Worktree inspect failed: ${String(err)}`)
+          setSummary(null)
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [activeSessionId, addNotification])
-
-  useEffect(() => {
-    refresh()
-  }, [refresh])
 
   const totals = useMemo(() => {
     if (!gitStatus) return null
