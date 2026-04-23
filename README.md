@@ -18,7 +18,7 @@ AgentDeck puts all your agents in one place. Open a project, pick an agent, and 
 It's a desktop app, not a web service — your code stays local, your API keys are encrypted at rest, and everything runs through your own WSL environment.
 
 <p align="center">
-  <img src="screenshots/Screenshot%202026-04-23%20024055.png" width="820" alt="AgentDeck home screen — scope viz, KPI strip, activity graph, agent grid, cost dashboard" />
+  <img src="screenshots/home-dashboard.png" width="820" alt="AgentDeck home screen — scope viz, KPI strip, activity graph, agent grid, cost dashboard" />
   <br/>
   <sub><em>Home tab — scope viz, daily digest, live activity, agent grid, and 7-day cost.</em></sub>
 </p>
@@ -49,12 +49,6 @@ AgentDeck provides a unified desktop environment for working with AI coding agen
 - **Activity Tracking** - Real-time parsing of agent tool use (file reads, writes, commands)
 - **Right Panel** - 7 tabs per session: Context, Activity, Memory, Diff, Files, Cost, Config
 - **New Session Composer** - Dedicated screen to pick agent, drop in a prompt, set branch mode, and launch — the prompt is piped into the agent's stdin after spawn
-
-<p align="center">
-  <img src="screenshots/Screenshot%202026-04-23%20024045.png" width="820" alt="Two agent sessions side by side — Claude Code writing code, Codex writing tests, right inspector showing activity + token usage" />
-  <br/>
-  <sub><em>Two agents running side by side — each pane has its own activity stream and token meter.</em></sub>
-</p>
 
 ### Home Screen Dashboard
 
@@ -94,9 +88,9 @@ AgentDeck provides a unified desktop environment for working with AI coding agen
 - **Execution History** - Per-run summaries with node timing, error tails, and a History tab
 
 <p align="center">
-  <img src="screenshots/Screenshot%202026-04-23%20024036.png" width="820" alt="Workflow editor showing a linear DAG with checkpoint, shell, agent nodes and a condition branch; run history sparkline and variables panel at the bottom" />
+  <img src="screenshots/workflow-editor.png" width="820" alt="Workflow editor — Bug Triage workflow with three agent nodes (Investigate, Fix, Regression Test) connected by step-elbow edges, Run Workflow / Add Node / Export / Import / Duplicate buttons in the toolbar" />
   <br/>
-  <sub><em>Workflow editor — branches, loops, checkpoints, variables, and a run-history sparkline.</em></sub>
+  <sub><em>Workflow editor — agent-coloured nodes, step-elbow edges, React Flow under the hood.</em></sub>
 </p>
 
 ### Command Palette
