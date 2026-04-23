@@ -10,7 +10,7 @@ export interface ModelEntry {
   deprecated?: boolean
 }
 
-export const MODELS: ModelEntry[] = [
+export const MODELS: readonly ModelEntry[] = Object.freeze([
   // Anthropic — Claude 4.x
   { id: 'claude-opus-4-7', displayName: 'Opus 4.7', provider: 'anthropic', contextWindow: 200_000 },
   {
@@ -93,7 +93,7 @@ export const MODELS: ModelEntry[] = [
     provider: 'deepseek',
     contextWindow: 64_000,
   },
-]
+])
 
 const EXACT_INDEX = new Map<string, ModelEntry>(MODELS.map((m) => [m.id.toLowerCase(), m]))
 
