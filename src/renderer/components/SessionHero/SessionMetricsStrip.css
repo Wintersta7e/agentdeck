@@ -21,29 +21,29 @@
 }
 
 .session-strip__label {
-  font-size: 9px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--text3);
 }
 
 .session-strip__value {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text0);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
-  margin-top: 2px;
+  margin-top: var(--sp-1);
 }
 
 .session-strip__value--agent {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-2);
   color: var(--strip-color, var(--accent));
 }
 
 .session-strip__glyph {
-  font-size: 14px;
+  font-size: var(--fs-base);
   line-height: 1;
 }
 
@@ -68,7 +68,7 @@
   height: 6px;
   border-radius: 50%;
   background: var(--green);
-  margin-right: 6px;
+  margin-right: var(--sp-2);
 }
 
 .session-strip__status--running {

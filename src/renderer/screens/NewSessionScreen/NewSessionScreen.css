@@ -38,7 +38,7 @@
 
 .ns-section__eyebrow {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.25em;
   color: var(--accent);
 }
@@ -83,7 +83,7 @@
 .ns-template {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--sp-1);
   padding: var(--sp-2) var(--sp-3);
   background: color-mix(in oklch, var(--bg1) 55%, transparent);
   border: 1px solid var(--border);
@@ -106,7 +106,7 @@
 
 .ns-template__cat {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--purple);
@@ -147,7 +147,7 @@
   padding: var(--sp-1) var(--sp-3);
   border-top: 1px solid var(--border);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.1em;
   color: var(--text3);
 }
@@ -161,12 +161,12 @@
 .ns-chip {
   display: inline-flex;
   align-items: center;
-  padding: 4px var(--sp-2);
+  padding: var(--sp-1) var(--sp-2);
   background: transparent;
   border: 1px solid var(--border);
   color: var(--text2);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.15em;
   text-transform: uppercase;
   cursor: pointer;
@@ -220,13 +220,13 @@
 
 .ns-context__name {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--text0);
 }
 
 .ns-context__size {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-xs);
   color: var(--text3);
 }
 
@@ -235,9 +235,9 @@
   border: none;
   color: var(--text3);
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--fs-base);
   line-height: 1;
-  padding: 2px 6px;
+  padding: var(--sp-1) var(--sp-2);
 }
 
 .ns-context__remove:hover {
@@ -272,7 +272,7 @@
 
 .ns-field__label {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.2em;
   color: var(--text3);
   text-transform: uppercase;
@@ -295,7 +295,7 @@
 
 .ns-field__buttons {
   display: flex;
-  gap: 4px;
+  gap: var(--sp-1);
 }
 
 .ns-slider {
@@ -305,12 +305,12 @@
 
 .ns-toggle {
   flex: 1;
-  padding: 5px 0;
+  padding: var(--sp-1) 0;
   background: transparent;
   border: 1px solid var(--border);
   color: var(--text3);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.15em;
   cursor: pointer;
   transition: all var(--duration-fast) var(--ease-out);
@@ -360,7 +360,7 @@
 
 .ns-target__label {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.2em;
   color: var(--text3);
   margin-bottom: var(--sp-2);
@@ -378,7 +378,7 @@
 }
 
 .ns-target__agent-glyph {
-  font-size: 24px;
+  font-size: var(--fs-xl);
   color: var(--sel-color, var(--accent));
   line-height: 1;
 }
@@ -392,7 +392,7 @@
 
 .ns-target__agent-ctx {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.1em;
   color: var(--text3);
 }
@@ -400,20 +400,20 @@
 .ns-target__agent-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--sp-1);
   margin-top: var(--sp-2);
 }
 
 .ns-agent-pill {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
+  gap: var(--sp-1);
+  padding: var(--sp-1) var(--sp-2);
   background: transparent;
   border: 1px solid var(--border);
   color: var(--text2);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.1em;
   cursor: pointer;
   transition: all var(--duration-fast) var(--ease-out);
@@ -431,7 +431,7 @@
 }
 
 .ns-agent-pill__glyph {
-  font-size: 12px;
+  font-size: var(--fs-sm);
 }
 
 /* Inputs */
@@ -458,9 +458,9 @@
 
 .ns-target__path {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text3);
-  margin-top: 4px;
+  margin-top: var(--sp-1);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -468,7 +468,7 @@
 
 .ns-target__pills {
   display: flex;
-  gap: 4px;
+  gap: var(--sp-1);
   margin-top: var(--sp-1);
   flex-wrap: wrap;
 }
@@ -502,7 +502,7 @@
 
 .ns-estimate__caption {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text3);
   letter-spacing: 0.1em;
 }
@@ -513,7 +513,7 @@
   font-weight: 700;
   color: var(--text0);
   font-variant-numeric: tabular-nums;
-  margin-top: 2px;
+  margin-top: var(--sp-1);
 }
 
 .ns-estimate__value--cost {
@@ -579,7 +579,7 @@
 
 .ns-target__hint {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.2em;
   color: var(--text3);
   text-align: center;

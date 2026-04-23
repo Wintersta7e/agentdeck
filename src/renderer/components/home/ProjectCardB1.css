@@ -1,8 +1,8 @@
 .pc-b1 {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px 12px;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
   background: color-mix(in oklch, var(--bg1) 55%, transparent);
   border: 1px solid var(--border);
   color: var(--text1);
@@ -22,7 +22,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--sp-2);
 }
 
 .pc-b1__row--head {
@@ -31,7 +31,7 @@
 
 .pc-b1__name {
   font-family: var(--font-display);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-weight: 700;
   color: var(--text0);
   letter-spacing: -0.005em;
@@ -43,17 +43,17 @@
 
 .pc-b1__badge {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  padding: 2px 6px;
+  padding: var(--sp-1) var(--sp-2);
   color: var(--badge-color, var(--badge-other));
   border: 1px solid color-mix(in oklch, var(--badge-color, var(--badge-other)) 55%, transparent);
 }
 
 .pc-b1__path {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.02em;
   color: var(--text3);
   overflow: hidden;
@@ -63,7 +63,7 @@
 
 .pc-b1__agent-row {
   display: flex;
-  gap: 4px;
+  gap: var(--sp-1);
 }
 
 .pc-b1__agent-glyph {
@@ -74,16 +74,16 @@
   height: 20px;
   color: var(--glyph-color, var(--accent));
   border: 1px solid color-mix(in oklch, var(--glyph-color, var(--accent)) 45%, transparent);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   line-height: 1;
 }
 
 .pc-b1__running {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--sp-1);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.15em;
   color: var(--accent);
 }
@@ -96,13 +96,13 @@
 }
 
 .pc-b1__row--foot {
-  padding-top: 2px;
+  padding-top: var(--sp-1);
   border-top: 1px dotted var(--border);
 }
 
 .pc-b1__branch {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-xs);
   color: var(--text3);
   letter-spacing: 0.05em;
   overflow: hidden;
@@ -113,7 +113,7 @@
 
 .pc-b1__dirty {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--red);
   letter-spacing: 0.05em;
   font-variant-numeric: tabular-nums;

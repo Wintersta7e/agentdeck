@@ -94,7 +94,12 @@ export function CostReadoutB1(): React.JSX.Element {
 
   const perAgent = useMemo(() => {
     const combined: Record<string, number> = {}
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+
     for (const entry of data.history.slice(-7)) {
+      if (entry.date === todayIso) continue
       for (const [agent, cost] of Object.entries(entry.perAgent ?? {})) {
         combined[agent] = (combined[agent] ?? 0) + cost
       }

@@ -61,6 +61,8 @@ export function ProjectCardB1({
     return s.staged + s.unstaged + s.untracked
   }, [gitStatuses, project.id])
 
+  const branchLabel = gitStatuses[project.id]?.branch || 'main'
+
   const agents = useMemo(() => {
     const configs = getProjectAgents(project)
     return configs
@@ -116,7 +118,9 @@ export function ProjectCardB1({
       </div>
 
       <div className="pc-b1__row pc-b1__row--foot">
-        <span className="pc-b1__branch">⎇ main</span>
+        <span className="pc-b1__branch" title={branchLabel}>
+          ⎇ {branchLabel}
+        </span>
         {dirtyCount > 0 && <span className="pc-b1__dirty">●{dirtyCount}</span>}
       </div>
     </button>

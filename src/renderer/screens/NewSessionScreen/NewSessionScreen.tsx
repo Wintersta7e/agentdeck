@@ -83,13 +83,14 @@ export function NewSessionScreen(): React.JSX.Element {
   )
   const perStepCost = Math.max(0.01, (tokenEstimate / 1000) * 0.01)
 
-  const handlePickTemplate = useCallback((t: Template) => {
-    setTemplateId((prev) => {
-      const next = prev === t.id ? null : t.id
+  const handlePickTemplate = useCallback(
+    (t: Template) => {
+      const next = templateId === t.id ? null : t.id
+      setTemplateId(next)
       if (next) setPrompt(t.content || t.description || '')
-      return next
-    })
-  }, [])
+    },
+    [templateId],
+  )
 
   const handleLaunch = useCallback(() => {
     if (!project) return

@@ -230,6 +230,7 @@ export function DiffReviewScreen(): React.JSX.Element {
                 placeholder="Leave feedback here — it gets piped straight into the agent's stdin when you click Request changes."
                 className="dr-textarea"
                 rows={6}
+                aria-label="Request changes comment"
               />
 
               <div className="dr-actions">
