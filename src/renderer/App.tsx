@@ -353,6 +353,22 @@ export function App(): React.JSX.Element {
     return unsub
   }, [])
 
+  // One-shot theme-migration notification: the v5.x → v6.0.0 palette rename
+  // normalises persisted theme values on first boot. Tell the user what
+  // changed so "my amber theme is gone" isn't a silent surprise.
+  useEffect(() => {
+    void window.agentDeck.theme.popMigration().then((migration) => {
+      if (!migration) return
+      const targetLabel = migration.to === '' ? 'tungsten' : migration.to
+      useAppStore
+        .getState()
+        .addNotification(
+          'info',
+          `Theme “${migration.from}” was retired in v6.0.0 — switched to “${targetLabel}”. Pick a different one in Settings if you like.`,
+        )
+    })
+  }, [])
+
   // Load saved zoom level on mount
   useEffect(() => {
     window.agentDeck.zoom

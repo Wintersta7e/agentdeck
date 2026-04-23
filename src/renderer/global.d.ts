@@ -51,6 +51,7 @@ declare global {
       theme: {
         get: () => Promise<string>
         set: (name: string) => Promise<string>
+        popMigration: () => Promise<{ from: string; to: string } | null>
       }
       layout: {
         get: () => Promise<{

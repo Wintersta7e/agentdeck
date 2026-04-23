@@ -90,6 +90,8 @@ contextBridge.exposeInMainWorld('agentDeck', {
   theme: {
     get: () => ipcRenderer.invoke('theme:get') as Promise<string>,
     set: (name: string) => ipcRenderer.invoke('theme:set', name) as Promise<string>,
+    popMigration: () =>
+      ipcRenderer.invoke('theme:popMigration') as Promise<{ from: string; to: string } | null>,
   },
   layout: {
     get: () =>
