@@ -6,7 +6,7 @@ A desktop terminal manager for WSL AI coding agents. Launch, manage, and orchest
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript)
 ![License: Elastic-2.0](https://img.shields.io/badge/License-Elastic--2.0-blue.svg)
-![Tests](https://img.shields.io/badge/Tests-761_passing-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-781_passing-brightgreen)
 ![CI](https://github.com/Wintersta7e/agentdeck/actions/workflows/ci.yml/badge.svg?branch=main)
 
 ## Why AgentDeck?
@@ -17,8 +17,9 @@ AgentDeck puts all your agents in one place. Open a project, pick an agent, and 
 
 It's a desktop app, not a web service — your code stays local, your API keys are encrypted at rest, and everything runs through your own WSL environment.
 
-<!-- TODO: Add screenshots/GIFs showcasing the UI -->
-<!-- ![AgentDeck Screenshot](docs/assets/screenshot.png) -->
+<p align="center">
+  <img src="screenshots/Screenshot%202026-04-23%20024055.png" width="720" alt="AgentDeck home screen — scope viz, KPI strip, activity graph, agent grid, cost dashboard" />
+</p>
 
 ## Overview
 
@@ -30,20 +31,26 @@ AgentDeck provides a unified desktop environment for working with AI coding agen
 - **Agentic Workflows** - Visual node-graph editor with conditions, loops, variables, and execution history
 - **Cost/Token Tracking** - Live per-session cost and token usage for Claude Code and Codex
 - **Git Worktree Isolation** - Per-session git branches with Keep/Discard review flow
-- **8 Themes** - 4 dark + 4 light themes with smooth view transitions
-- **Home Screen Dashboard** - Daily digest, live session monitoring, session timeline, cost dashboard, suggestions
+- **3 Themes** - Tungsten (warm amber), Phosphor (retro CRT green), Dusk (violet/coral) — smooth view transitions, Space Grotesk display type
+- **Home Screen Dashboard** - Scope viz, KPI strip, activity graph, live session monitoring, cost dashboard, project cards, optional "Pixel" mascot
+- **Top Tab Bar Navigation** - 8 tabs (Home / Sessions / Projects / Agents / Workflows / History / Alerts / Settings) with `Alt+1..8` jump shortcuts
 - **Command Palette** - Quick access to projects, sessions, templates, and tools
 
 ## Features
 
 ### Terminal Sessions
 
+<img align="right" width="420" src="screenshots/Screenshot%202026-04-23%20024045.png" alt="Two agent sessions side by side — Claude Code writing code, Codex writing tests" />
+
 - **Split View** - Up to 3 terminal panes side-by-side with draggable dividers
 - **Bare Terminals** - Open plain WSL shells without a project (Ctrl+T)
 - **Terminal Caching** - Sessions persist across tab switches without re-rendering
 - **Terminal Search** - Find text in terminal output (Ctrl+Shift+F) with regex and case-sensitive modes
 - **Activity Tracking** - Real-time parsing of agent tool use (file reads, writes, commands)
-- **Right Panel** - Context, Activity, and Memory tabs per session
+- **Right Panel** - 7 tabs per session: Context, Activity, Memory, Diff, Files, Cost, Config
+- **New Session Composer** - Dedicated screen to pick agent, drop in a prompt, set branch mode, and launch — the prompt is piped into the agent's stdin after spawn
+
+<br clear="right"/>
 
 ### Home Screen Dashboard
 
@@ -72,6 +79,8 @@ AgentDeck provides a unified desktop environment for working with AI coding agen
 
 ### Agentic Workflows
 
+<img align="left" width="460" src="screenshots/Screenshot%202026-04-23%20024036.png" alt="Workflow editor — linear DAG with checkpoint, shell, agent nodes, a condition branch, run history sparkline, variables panel" />
+
 - **Visual Node Graph** - Drag-and-drop editor for agent, shell, checkpoint, and condition nodes
 - **Edge-Activation Scheduler** - Ready-queue execution with branching, skip propagation, and loop support
 - **Conditional Branching** - Route execution based on exit codes or output pattern matching
@@ -81,6 +90,8 @@ AgentDeck provides a unified desktop environment for working with AI coding agen
 - **Checkpoints** - Pause/resume execution at designated points
 - **Import/Export** - Share workflows as `.agentdeck-workflow.json` bundles with role remapping
 - **Execution History** - Per-run summaries with node timing, error tails, and a History tab
+
+<br clear="left"/>
 
 ### Command Palette
 
@@ -112,14 +123,13 @@ AgentDeck provides a unified desktop environment for working with AI coding agen
 
 ### Theming
 
-| Dark | Light |
-|------|-------|
-| Amber (default) | Parchment |
-| Navy + Cyan | Fog |
-| Midnight + Violet | Lavender |
-| Charcoal + Ice | Stone |
+| Theme | Vibe |
+|-------|------|
+| **Tungsten** (default) | Sodium amber on warm charcoal |
+| **Phosphor** | Retro CRT green on ink |
+| **Dusk** | Violet + coral on plum-black |
 
-All themes use CSS custom properties. View transitions provide smooth theme switching with a circular reveal effect.
+All themes use CSS custom properties from `tokens.css`. Per-agent accent tokens (`--agent-claude`, `--agent-codex`, …) keep each agent's signature color consistent across themes. View transitions provide smooth theme switching with a circular reveal effect, and v5.x users' retired palettes are auto-migrated to the nearest successor on first boot.
 
 ## Keyboard Shortcuts
 
@@ -161,7 +171,7 @@ npm run dev
 # Build for production (validates TypeScript)
 npm run build
 
-# Run tests (761 tests)
+# Run tests (781 tests)
 npm test
 
 # Lint code (zero-warning policy)
@@ -226,7 +236,7 @@ src/
 | [node-pty](https://github.com/microsoft/node-pty) | Pseudo-terminal (WSL sessions) |
 | [Zustand](https://zustand-demo.pmnd.rs) | State management |
 | [React Flow](https://reactflow.dev) | Visual workflow node editor |
-| [Vitest 4](https://vitest.dev) | Testing framework (761 tests) |
+| [Vitest 4](https://vitest.dev) | Testing framework (781 tests) |
 | [ESLint 9](https://eslint.org) | Linting (flat config, zero-warning policy) |
 
 ## Documentation
