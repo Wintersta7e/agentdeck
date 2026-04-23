@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useCostHistory } from '../../hooks/useCostHistory'
+import { useMidnight } from '../../hooks/useMidnight'
 import { AGENT_BY_ID, agentColorVar } from '../../utils/agent-ui'
 import type { AgentType } from '../../../shared/types'
 import './CostReadoutB1.css'
@@ -73,31 +74,33 @@ function Spark({ data, width, height }: SparkProps): React.JSX.Element {
  */
 export function CostReadoutB1(): React.JSX.Element {
   const data = useCostHistory()
+  // Single source of truth for "today" — recomputed at midnight rollover.
+  // Both memos below derive their ISO key from this same timestamp so they
+  // can't disagree about which history entry corresponds to today.
+  const midnight = useMidnight()
+  const todayIso = useMemo(() => {
+    const d = new Date(midnight)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }, [midnight])
 
   // Build a dense 7-day series (oldest → today). Missing days render as 0.
   const series = useMemo(() => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
     const days: Array<{ iso: string; cost: number; dow: string }> = []
     for (let i = 6; i >= 0; i -= 1) {
-      const d = new Date(today.getTime() - i * 86_400_000)
+      const d = new Date(midnight - i * 86_400_000)
       const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
       const entry = data.history.find((e) => e.date === iso)
-      const cost = i === 0 ? data.todayCost : (entry?.totalCostUsd ?? 0)
+      const cost = iso === todayIso ? data.todayCost : (entry?.totalCostUsd ?? 0)
       days.push({ iso, cost, dow: WEEKDAYS[dowIndex(iso)] ?? '' })
     }
     return days
-  }, [data.history, data.todayCost])
+  }, [data.history, data.todayCost, midnight, todayIso])
 
   const total = useMemo(() => series.reduce((sum, d) => sum + d.cost, 0), [series])
   const avg = total / 7
 
   const perAgent = useMemo(() => {
     const combined: Record<string, number> = {}
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-
     for (const entry of data.history.slice(-7)) {
       if (entry.date === todayIso) continue
       for (const [agent, cost] of Object.entries(entry.perAgent ?? {})) {
@@ -111,7 +114,7 @@ export function CostReadoutB1(): React.JSX.Element {
       .filter(([, cost]) => cost > 0)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
-  }, [data.history, data.perAgentToday])
+  }, [data.history, data.perAgentToday, todayIso])
 
   const maxAgent = perAgent.length > 0 ? Math.max(...perAgent.map(([, v]) => v)) : 1
 

@@ -421,7 +421,7 @@ export function NewSessionScreen(): React.JSX.Element {
             <button
               type="button"
               className="ns-launch"
-              disabled={!project || prompt.length === 0}
+              disabled={!project || prompt.trim().length === 0}
               onClick={handleLaunch}
               style={{ ['--sel-color' as 'color']: `var(${colorVar})` }}
             >

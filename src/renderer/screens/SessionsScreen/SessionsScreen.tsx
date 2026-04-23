@@ -229,7 +229,6 @@ export function SessionsScreen(): React.JSX.Element {
                 type="button"
                 className={`sessions-table__row sessions-row--${tone}`}
                 onClick={() => handleRowClick(session)}
-                role="listitem"
                 title={`Open session ${session.id}`}
               >
                 <span className="sessions-row__state">

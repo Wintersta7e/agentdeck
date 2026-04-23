@@ -1,6 +1,9 @@
 import { app, ipcMain } from 'electron'
 import type { BrowserWindow } from 'electron'
 import type { AppStore } from '../project-store'
+import { createLogger } from '../logger'
+
+const log = createLogger('ipc-window')
 
 /**
  * Window/UI IPC handlers: window controls, zoom, theme, layout, app info.
@@ -92,7 +95,16 @@ export function registerWindowHandlers(
   /* ── Theme ──────────────────────────────────────────────────────── */
   ipcMain.handle('theme:get', () => store.get('appPrefs').theme ?? '')
   ipcMain.handle('theme:set', (_, theme: string) => {
-    const { safe } = normaliseTheme(theme)
+    const { safe, migratedFrom } = normaliseTheme(theme)
+    // Unknown input: neither a valid current theme nor a known legacy
+    // palette. The silent coerce to tungsten stays (we don't want to
+    // reject and leave the renderer in a half-applied state) but log so
+    // developers notice if a bad value is sent from the picker.
+    if (typeof theme === 'string' && theme !== '' && safe !== theme && !migratedFrom) {
+      log.warn('theme:set received unknown theme id; coerced to tungsten', {
+        received: theme,
+      })
+    }
     store.set('appPrefs', { ...store.get('appPrefs'), theme: safe })
     return safe
   })

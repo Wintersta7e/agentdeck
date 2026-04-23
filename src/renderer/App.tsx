@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { safeWrite } from './utils/pty-write'
 import { Titlebar } from './components/Titlebar/Titlebar'
 import { TopTabBar } from './components/TopTabBar/TopTabBar'
 import { SessionsScreen } from './screens/SessionsScreen/SessionsScreen'
@@ -304,7 +305,7 @@ export function App(): React.JSX.Element {
       const sid = state.paneSessions[state.focusedPane]
       if (!sid) return
       const escaped = wslPaths.map((p) => `'${p.replace(/'/g, "'\\''")}'`).join(' ')
-      void window.agentDeck.pty.write(sid, escaped)
+      safeWrite(sid, escaped)
     })
     return unsub
   }, [])
@@ -357,16 +358,23 @@ export function App(): React.JSX.Element {
   // normalises persisted theme values on first boot. Tell the user what
   // changed so "my amber theme is gone" isn't a silent surprise.
   useEffect(() => {
-    void window.agentDeck.theme.popMigration().then((migration) => {
-      if (!migration) return
-      const targetLabel = migration.to === '' ? 'tungsten' : migration.to
-      useAppStore
-        .getState()
-        .addNotification(
-          'info',
-          `Theme “${migration.from}” was retired in v6.0.0 — switched to “${targetLabel}”. Pick a different one in Settings if you like.`,
-        )
-    })
+    window.agentDeck.theme
+      .popMigration()
+      .then((migration) => {
+        if (!migration) return
+        const targetLabel = migration.to === '' ? 'tungsten' : migration.to
+        useAppStore
+          .getState()
+          .addNotification(
+            'info',
+            `Theme “${migration.from}” was retired in v6.0.0 — switched to “${targetLabel}”. Pick a different one in Settings if you like.`,
+          )
+      })
+      .catch((err: unknown) => {
+        void window.agentDeck.log.send('warn', 'theme-migration', 'popMigration failed', {
+          error: err instanceof Error ? err.message : String(err),
+        })
+      })
   }, [])
 
   // Load saved zoom level on mount
