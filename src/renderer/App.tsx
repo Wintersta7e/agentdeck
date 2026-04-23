@@ -1,5 +1,17 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { safeWrite } from './utils/pty-write'
 import { Titlebar } from './components/Titlebar/Titlebar'
+import { TopTabBar } from './components/TopTabBar/TopTabBar'
+import { SessionsScreen } from './screens/SessionsScreen/SessionsScreen'
+import { SessionHero } from './components/SessionHero/SessionHero'
+import { NewSessionScreen } from './screens/NewSessionScreen/NewSessionScreen'
+import { DiffReviewScreen } from './screens/DiffReviewScreen/DiffReviewScreen'
+import { AgentsScreen } from './screens/AgentsScreen/AgentsScreen'
+import { AlertsScreen } from './screens/AlertsScreen/AlertsScreen'
+import { AppSettingsScreen } from './screens/AppSettingsScreen/AppSettingsScreen'
+import { WorkflowsScreen } from './screens/WorkflowsScreen/WorkflowsScreen'
+import { ProjectsScreen } from './screens/ProjectsScreen/ProjectsScreen'
+import { HistoryScreen } from './screens/HistoryScreen/HistoryScreen'
 import { Sidebar } from './components/Sidebar/Sidebar'
 import { StatusBar } from './components/StatusBar/StatusBar'
 import { HomeScreen } from './components/HomeScreen/HomeScreen'
@@ -11,10 +23,30 @@ import { AboutDialog } from './components/AboutDialog/AboutDialog'
 import { ShortcutsDialog } from './components/ShortcutsDialog/ShortcutsDialog'
 import { NotificationToast } from './components/NotificationToast/NotificationToast'
 import { ConfirmDialog } from './components/shared/ConfirmDialog'
+import { PlaceholderScreen } from './components/PlaceholderScreen/PlaceholderScreen'
 import { useAppStore } from './store/appStore'
 import { useProjects } from './hooks/useProjects'
-import type { ActivityEvent, AgentConfig, Project, WorkflowEvent } from '../shared/types'
+import type { ActivityEvent, AgentConfig, Project, ViewType, WorkflowEvent } from '../shared/types'
 import './App.css'
+
+/**
+ * Sidebar is contextual in Option B — only surfaces inside Sessions and
+ * Projects list tabs. Everywhere else, the top tab bar + in-screen content
+ * carry the nav.
+ */
+const SIDEBAR_HIDDEN_VIEWS: readonly ViewType[] = [
+  'home',
+  'agents',
+  'workflows',
+  'workflow',
+  'history',
+  'alerts',
+  'app-settings',
+  'new-session',
+  'diff',
+  'template-editor',
+  'wizard',
+]
 
 const WorkflowEditor = lazy(() => import('./screens/WorkflowEditor/WorkflowEditor'))
 const ProjectSettings = lazy(() =>
@@ -273,7 +305,7 @@ export function App(): React.JSX.Element {
       const sid = state.paneSessions[state.focusedPane]
       if (!sid) return
       const escaped = wslPaths.map((p) => `'${p.replace(/'/g, "'\\''")}'`).join(' ')
-      window.agentDeck.pty.write(sid, escaped)
+      safeWrite(sid, escaped)
     })
     return unsub
   }, [])
@@ -320,6 +352,29 @@ export function App(): React.JSX.Element {
         .addNotification('warning', 'Encryption unavailable — API keys are stored as plaintext')
     })
     return unsub
+  }, [])
+
+  // One-shot theme-migration notification: the v5.x → v6.0.0 palette rename
+  // normalises persisted theme values on first boot. Tell the user what
+  // changed so "my amber theme is gone" isn't a silent surprise.
+  useEffect(() => {
+    window.agentDeck.theme
+      .popMigration()
+      .then((migration) => {
+        if (!migration) return
+        const targetLabel = migration.to === '' ? 'tungsten' : migration.to
+        useAppStore
+          .getState()
+          .addNotification(
+            'info',
+            `Theme “${migration.from}” was retired in v6.0.0 — switched to “${targetLabel}”. Pick a different one in Settings if you like.`,
+          )
+      })
+      .catch((err: unknown) => {
+        void window.agentDeck.log.send('warn', 'theme-migration', 'popMigration failed', {
+          error: err instanceof Error ? err.message : String(err),
+        })
+      })
   }, [])
 
   // Load saved zoom level on mount
@@ -408,6 +463,25 @@ export function App(): React.JSX.Element {
         e.preventDefault()
         useAppStore.getState().setPaneLayout(Number(e.key) as 1 | 2 | 3)
         return
+      }
+      // Alt+1..8 — jump to top-level tab. Matches TopTabBar order exactly.
+      if (e.altKey && !e.ctrlKey && !e.shiftKey) {
+        const TAB_MAP: Record<string, ViewType> = {
+          '1': 'home',
+          '2': 'sessions',
+          '3': 'projects',
+          '4': 'agents',
+          '5': 'workflows',
+          '6': 'history',
+          '7': 'alerts',
+          '8': 'app-settings',
+        }
+        const target = TAB_MAP[e.key]
+        if (target) {
+          e.preventDefault()
+          useAppStore.getState().setTab(target)
+          return
+        }
       }
       if (e.ctrlKey && e.key === 'Tab') {
         e.preventDefault()
@@ -534,6 +608,8 @@ export function App(): React.JSX.Element {
     }
   }, [openWorkflowIdList])
 
+  const sidebarHidden = SIDEBAR_HIDDEN_VIEWS.includes(currentView)
+
   return (
     <div className="app">
       <Titlebar
@@ -541,30 +617,35 @@ export function App(): React.JSX.Element {
         onCloseWorkflowTab={handleCloseWorkflowTab}
         onAddTab={handleAddTab}
       />
+      <TopTabBar />
       <div className="app-body">
         {wslAvailable === false && (
           <div className="wsl-warning-banner" role="alert">
             WSL not detected — check that your distribution is running
           </div>
         )}
-        <div
-          ref={sidebarRef}
-          className={`sidebar-wrapper${sidebarOpen ? '' : ' collapsed'}`}
-          style={sidebarStyle}
-        >
-          <Sidebar
-            onOpenProject={handleOpenProject}
-            onOpenProjectWithAgent={handleOpenProjectWithAgent}
-          />
-        </div>
-        {sidebarOpen && (
-          <PanelDivider
-            side="left"
-            panelRef={sidebarRef}
-            minWidth={160}
-            maxWidth={400}
-            onResizeEnd={setSidebarWidth}
-          />
+        {!sidebarHidden && (
+          <>
+            <div
+              ref={sidebarRef}
+              className={`sidebar-wrapper${sidebarOpen ? '' : ' collapsed'}`}
+              style={sidebarStyle}
+            >
+              <Sidebar
+                onOpenProject={handleOpenProject}
+                onOpenProjectWithAgent={handleOpenProjectWithAgent}
+              />
+            </div>
+            {sidebarOpen && (
+              <PanelDivider
+                side="left"
+                panelRef={sidebarRef}
+                minWidth={160}
+                maxWidth={400}
+                onResizeEnd={setSidebarWidth}
+              />
+            )}
+          </>
         )}
         <div className="app-main">
           {currentView === 'home' && (
@@ -573,32 +654,56 @@ export function App(): React.JSX.Element {
               onOpenProjectWithAgent={handleOpenProjectWithAgent}
             />
           )}
+          {currentView === 'sessions' && <SessionsScreen />}
+          {currentView === 'projects' && (
+            <ProjectsScreen
+              onOpenProject={handleOpenProject}
+              onOpenProjectWithAgent={handleOpenProjectWithAgent}
+            />
+          )}
+          {currentView === 'project-detail' && (
+            <PlaceholderScreen
+              phase="Phase 3.5"
+              title="Project Detail"
+              subtitle="Single-project overview with sessions, settings entry point, and recent activity."
+            />
+          )}
+          {currentView === 'agents' && <AgentsScreen />}
+          {currentView === 'workflows' && !activeWorkflowId && <WorkflowsScreen />}
+          {currentView === 'history' && <HistoryScreen />}
+          {currentView === 'alerts' && <AlertsScreen />}
+          {currentView === 'app-settings' && <AppSettingsScreen />}
+          {currentView === 'new-session' && <NewSessionScreen />}
+          {currentView === 'diff' && <DiffReviewScreen />}
           <Suspense fallback={<div className="suspense-spinner" />}>
             {currentView === 'wizard' && <NewProjectWizard onCreateProject={handleOpenProject} />}
             {currentView === 'settings' && <ProjectSettings key={settingsProjectId} />}
             {currentView === 'template-editor' && <TemplateEditor />}
-            {currentView === 'workflow' && activeWorkflowId && (
-              <WorkflowEditor key={activeWorkflowId} workflowId={activeWorkflowId} />
-            )}
+            {(currentView === 'workflow' || (currentView === 'workflows' && activeWorkflowId)) &&
+              activeWorkflowId && (
+                <WorkflowEditor key={activeWorkflowId} workflowId={activeWorkflowId} />
+              )}
           </Suspense>
           <div
             className={`view-panel ${currentView === 'session' ? 'view-panel--visible' : 'view-panel--hidden'}`}
           >
-            <SplitView />
-            {rightPanelOpen && (
-              <>
-                <PanelDivider
-                  side="right"
-                  panelRef={rightPanelRef}
-                  minWidth={180}
-                  maxWidth={500}
-                  onResizeEnd={setRightPanelWidth}
-                />
-                <div ref={rightPanelRef} style={rightPanelStyle}>
-                  <RightPanel />
-                </div>
-              </>
-            )}
+            <SessionHero>
+              <SplitView />
+              {rightPanelOpen && (
+                <>
+                  <PanelDivider
+                    side="right"
+                    panelRef={rightPanelRef}
+                    minWidth={180}
+                    maxWidth={500}
+                    onResizeEnd={setRightPanelWidth}
+                  />
+                  <div ref={rightPanelRef} style={rightPanelStyle}>
+                    <RightPanel />
+                  </div>
+                </>
+              )}
+            </SessionHero>
           </div>
         </div>
       </div>

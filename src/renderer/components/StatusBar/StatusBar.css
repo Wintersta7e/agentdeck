@@ -132,15 +132,3 @@
 .status-worktree {
   color: var(--accent);
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .status-cmd,
-  .status-version,
-  .status-dot {
-    transition: none;
-  }
-
-  .status-dot.active {
-    animation: none;
-  }
-}

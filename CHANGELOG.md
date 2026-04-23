@@ -5,6 +5,89 @@ All notable changes to AgentDeck will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.0.0] - 2026-04-23
+
+Full UI redesign with a new top tab bar, 8 first-class tabs, three new dark
+palettes, and a hardened IPC + state layer. Every engine (PTY, workflow
+scheduler, cost tracker, git worktree manager, 7-agent registry) is preserved
+untouched — ship state verified by a 3-round multi-agent pre-merge review.
+
+### Added
+
+**Screens and navigation**
+- `TopTabBar` primary nav — Home · Sessions · Projects · Agents · Workflows · History · Alerts · Settings. `Alt+1..Alt+8` jump shortcuts. Alerts tab carries a live count from the notifications slice.
+- `SessionsScreen`, `ProjectsScreen`, `AgentsScreen`, `WorkflowsScreen`, `HistoryScreen`, `AlertsScreen`, `AppSettingsScreen` — one screen per tab with consistent `ScreenShell` + `FilterChip` chrome.
+- `NewSessionScreen` composer — agent picker, prompt, branch mode (existing / new / worktree), cost cap, run mode, approval map. The prompt is piped into the agent's stdin 2 s after PTY spawn; `existing` / `new` mode prepend the correct `git checkout` before startup commands.
+- `DiffReviewScreen` — per-session Keep / Discard / Request-changes flow; comment text is sent to the agent's stdin with ack-based success/error toasts.
+- `SessionHero` — step rail + bottom metrics strip wrapping the session view. Metrics show tokens, elapsed (derived from `session.startedAt`), writes, cost (with optional `/ CAP $X.XX` marker and ⚠ once crossed).
+- `Mascot` (Pixel the cat) — optional pose that reflects running-session count, errors, local hour. On by default; `localStorage['mascot.enabled'] === '0'` disables.
+
+**Home primitives**
+- `ScopeViz` concentric-ring session scope with per-agent blips.
+- `Panel` chrome (corner ticks) + `KpiTile` stat tile.
+- `AgentChipB1`, `ProjectCardB1`, `CostReadoutB1`, `SessionTimelineB1` Home tiles.
+
+**Right Panel**
+- Four new inspector tabs alongside the legacy three: Diff, Files, Cost, Config (7 total).
+
+**Titlebar brand row**
+- Search pill that opens the Command Palette, LIVE dot bound to real session state, clock, READY / ATTENTION / WSL-DOWN status word, WSL distro + app version chip.
+
+**Themes and typography**
+- Three palettes: `tungsten` (default, sodium amber on warm charcoal), `phosphor` (retro CRT green on ink), `dusk` (violet + coral on plum-black). Space Grotesk display font via `@fontsource/space-grotesk`.
+- Per-agent accent tokens (`--agent-claude`, `--agent-codex`, …) for consistent agent-color treatment across themes.
+- One-shot migration of retired v5.x palette names (amber / cyan / violet / ice → dusk or phosphor; parchment / fog / lavender / stone → tungsten) with an info toast on first boot. Idempotent via `appPrefs.themeMigrated`.
+
+**IPC and data model**
+- `pty:write` converted from fire-and-forget `ipcMain.on` to `ipcMain.handle` returning `{ ok: boolean; error?: string }`. `PtyManager` gains `hasSession(id)` so the handler explicitly reports unknown-session writes instead of silently dropping.
+- `src/renderer/utils/pty-write.ts` exports `safeWrite` — chains `.then` + `.catch` around every fire-and-forget call site so a non-ok ack logs a warning and an IPC rejection can't escape as `unhandledRejection`.
+- `Session` extends a new `SessionLaunchConfig`: `initialPrompt`, `branchMode`, `initialBranch`, `costCap`, `runMode`, `approve`. `addSession` accepts the full config.
+- UI slice: `tabParams` + `setTab(view, params?)`. `setTab` does NOT push to `viewStack` — the stack is reserved for sub-view modals.
+- Notifications slice: `silencedToastIds` split from `notifications`. Toast auto-silences after 5 s; Alerts tab still shows the record until explicit dismiss.
+- `theme:popMigration` IPC channel returns the legacy→successor pair exactly once.
+- `appPrefs.themeMigrated` flag added to `AppPrefs`.
+
+**Tests**
+- 20 new renderer tests pinning load-bearing contracts: `setTab` nav primitive, `silenceToast` split, `ScopeViz` selector shape (guards against regression to the pre-`8e401f7` form that crashed with React #185), `agent-ui` helper fallbacks. Total: **781 passing** (was 761).
+
+### Changed
+
+- **Home screen** reorganized around a hero row (scope viz + KPI strip + session timeline), followed by live sessions, agents, projects + cost.
+- Sidebar becomes contextual — surfaces only inside Sessions and Projects tabs.
+- `ProjectCardB1` reads the real branch from `gitStatuses[project.id]?.branch` instead of a literal `main` string.
+- `CostReadoutB1` per-agent breakdown no longer double-counts today (history contains today; `perAgentToday` was being added on top). Both memos share one `todayIso` derived from `useMidnight` so they can't disagree across midnight.
+- `NotificationToast` auto-silence effect simplified to close over a local timer constant so bursts within the 5 s window can no longer cancel without rescheduling.
+- `DiffReviewScreen` worktree-inspect uses a cancelled flag; switching active session mid-inspect no longer commits stale summary / loading state.
+- `Mascot` rAF throttled to ~20 Hz (was 60 Hz); `role="button"` gains `tabIndex={0}` + Enter/Space keyboard activation.
+- `SessionsScreen` migrated from `role="table"/"row"/"cell"/"columnheader"` to `role="list"` with `<button>` rows — a button cannot legally contain cells.
+- `AgentsScreen.handleUpdate` writes the new version into `agentVersions` on success — the display refreshes and the Update button disables on its own instead of waiting for an explicit re-check.
+- Launch button in `NewSessionScreen` is disabled when the prompt trims to empty.
+- `XTERM_THEME_OVERRIDES` extended with tungsten / phosphor / dusk.
+- `ViewType` extended with redesign tab ids: `sessions`, `projects`, `project-detail`, `agents`, `workflows`, `history`, `alerts`, `app-settings`, `new-session`, `diff`.
+
+### Fixed
+
+- Theme data-loss on upgrade — the IPC allowlist previously narrowed silently and coerced every legacy name to `''`.
+- `DiffReviewScreen` "Request changes" and `ContextTab` template click both showed success toasts regardless of whether the bytes reached the agent — now branch on the new ack.
+- 7+ keystroke / paste / file-drop / onData sites routed through `safeWrite` so an IPC transport rejection can't escape as `unhandledRejection`.
+- `safeWrite`'s own fallback logger chains `.catch(() => {})` on its inner `log.send` calls so a logger-IPC failure can't itself produce the very failure mode `safeWrite` exists to prevent.
+- `App.tsx` `theme.popMigration().then(...)` gained a terminal `.catch` — a rejection would previously have skipped the migration toast silently.
+- `ipc-window.theme:set` logs a warn when an unknown theme id is coerced (was silent).
+- `AppSettingsScreen.handleResetZoom`, `DiffTab`, `ContextTab` previously swallowed IPC errors silently; each now logs through `agentDeck.log.send` or raises a notification.
+
+### Preserved (load-bearing; explicitly verified by Codex in the pre-merge review)
+
+- All 7 agents in `src/shared/agents.ts` — registry, icons, version + update commands, `SAFE_FLAGS_RE`, `KNOWN_AGENT_IDS`, `AGENT_BINARY_MAP`, `AGENT_DISPLAY`.
+- `pty-manager.ts`, `workflow-engine.ts`, `edge-scheduler.ts`, `cost-tracker.ts`, `cost-history.ts`, `worktree-manager.ts`, `git-port.ts`, `project-store.ts`, `variable-substitution.ts`, `workflow-run-store.ts`, `log-adapters.ts`, `agent-updater.ts` — diff-empty vs `main` apart from `hasSession` added to `PtyManager` and `themeMigrated` added to `AppPrefs`.
+- Full xterm stack with WebGL + search + unicode11 addons.
+- Per-session git worktree isolation and Keep / Discard review flow.
+- Every Zustand slice shape (sessions, ui, projects, workflows, templates, notifications, home) plus existing hooks.
+- Typecheck + ESLint `--max-warnings=0` clean on every commit; 781 tests passing.
+
+### Removed
+
+- The 8 legacy themes (`amber`, `cyan`, `violet`, `ice`, `parchment`, `fog`, `lavender`, `stone`) are no longer selectable. Users on those palettes are migrated to the nearest successor on first boot.
+
 ## [5.0.0] - 2026-04-08
 
 ### Added

@@ -1,0 +1,120 @@
+.pc-b1 {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  background: color-mix(in oklch, var(--bg1) 55%, transparent);
+  border: 1px solid var(--border);
+  color: var(--text1);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-out);
+  font-family: var(--font-ui);
+}
+
+.pc-b1:hover,
+.pc-b1:focus-visible {
+  border-color: var(--accent-border);
+  outline: none;
+}
+
+.pc-b1__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.pc-b1__row--head {
+  align-items: baseline;
+}
+
+.pc-b1__name {
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--text0);
+  letter-spacing: -0.005em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.pc-b1__badge {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: var(--sp-1) var(--sp-2);
+  color: var(--badge-color, var(--badge-other));
+  border: 1px solid color-mix(in oklch, var(--badge-color, var(--badge-other)) 55%, transparent);
+}
+
+.pc-b1__path {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.02em;
+  color: var(--text3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pc-b1__agent-row {
+  display: flex;
+  gap: var(--sp-1);
+}
+
+.pc-b1__agent-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: var(--glyph-color, var(--accent));
+  border: 1px solid color-mix(in oklch, var(--glyph-color, var(--accent)) 45%, transparent);
+  font-size: var(--fs-sm);
+  line-height: 1;
+}
+
+.pc-b1__running {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.15em;
+  color: var(--accent);
+}
+
+.pc-b1__running-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.pc-b1__row--foot {
+  padding-top: var(--sp-1);
+  border-top: 1px dotted var(--border);
+}
+
+.pc-b1__branch {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text3);
+  letter-spacing: 0.05em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.pc-b1__dirty {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--red);
+  letter-spacing: 0.05em;
+  font-variant-numeric: tabular-nums;
+}

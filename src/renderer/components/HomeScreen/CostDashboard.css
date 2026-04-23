@@ -89,9 +89,3 @@
   border-radius: 1px;
   background: var(--accent);
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .cost-fill {
-    transition: none;
-  }
-}

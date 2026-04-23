@@ -1,6 +1,9 @@
 import { app, ipcMain } from 'electron'
 import type { BrowserWindow } from 'electron'
 import type { AppStore } from '../project-store'
+import { createLogger } from '../logger'
+
+const log = createLogger('ipc-window')
 
 /**
  * Window/UI IPC handlers: window controls, zoom, theme, layout, app info.
@@ -15,10 +18,54 @@ const LAYOUT_KEYS = new Set([
   'wfLogPanelWidth',
 ])
 
+const VALID_THEMES = new Set(['', 'phosphor', 'dusk'])
+
+/**
+ * Legacy theme IDs from the v5.x palette, mapped to their closest v6.0.0
+ * successors. Warm themes lean toward `dusk`, cool toward `phosphor`, and
+ * the four light palettes fall back to the default tungsten (`''`) since
+ * there is no light variant in the current set.
+ */
+const LEGACY_THEME_MAP: Record<string, string> = {
+  amber: 'dusk',
+  cyan: 'phosphor',
+  violet: 'dusk',
+  ice: 'phosphor',
+  parchment: '',
+  fog: '',
+  lavender: '',
+  stone: '',
+}
+
+function normaliseTheme(raw: string | undefined): { safe: string; migratedFrom: string | null } {
+  if (!raw) return { safe: '', migratedFrom: null }
+  if (VALID_THEMES.has(raw)) return { safe: raw, migratedFrom: null }
+  if (raw in LEGACY_THEME_MAP) {
+    return { safe: LEGACY_THEME_MAP[raw] ?? '', migratedFrom: raw }
+  }
+  return { safe: '', migratedFrom: null }
+}
+
 export function registerWindowHandlers(
   getWindow: () => BrowserWindow | null,
   store: AppStore,
 ): void {
+  /* ── One-shot theme migration from v5.x palettes ─────────────────
+   * Runs exactly once per upgraded install. If a legacy theme value is
+   * persisted, coerce it to its successor, persist the normalised value,
+   * and stash the before/after so the renderer can surface a one-line
+   * toast on first boot after the upgrade.
+   */
+  let pendingThemeMigration: { from: string; to: string } | null = null
+  const prefs = store.get('appPrefs')
+  if (!prefs.themeMigrated) {
+    const { safe, migratedFrom } = normaliseTheme(prefs.theme)
+    if (migratedFrom) {
+      pendingThemeMigration = { from: migratedFrom, to: safe }
+    }
+    store.set('appPrefs', { ...prefs, theme: safe, themeMigrated: true })
+  }
+
   /* ── Window controls ────────────────────────────────────────────── */
   ipcMain.handle('window:close', () => getWindow()?.close())
   ipcMain.handle('window:minimize', () => getWindow()?.minimize())
@@ -48,10 +95,28 @@ export function registerWindowHandlers(
   /* ── Theme ──────────────────────────────────────────────────────── */
   ipcMain.handle('theme:get', () => store.get('appPrefs').theme ?? '')
   ipcMain.handle('theme:set', (_, theme: string) => {
-    const valid = ['', 'amber', 'cyan', 'violet', 'ice', 'parchment', 'fog', 'lavender', 'stone']
-    const safe = valid.includes(theme) ? theme : ''
+    const { safe, migratedFrom } = normaliseTheme(theme)
+    // Unknown input: neither a valid current theme nor a known legacy
+    // palette. The silent coerce to tungsten stays (we don't want to
+    // reject and leave the renderer in a half-applied state) but log so
+    // developers notice if a bad value is sent from the picker.
+    if (typeof theme === 'string' && theme !== '' && safe !== theme && !migratedFrom) {
+      log.warn('theme:set received unknown theme id; coerced to tungsten', {
+        received: theme,
+      })
+    }
     store.set('appPrefs', { ...store.get('appPrefs'), theme: safe })
     return safe
+  })
+  /**
+   * Renderer polls this once on mount. If the upgrade path migrated the
+   * user's old palette, the renderer surfaces a single info toast and
+   * the value is cleared so it never fires twice.
+   */
+  ipcMain.handle('theme:popMigration', () => {
+    const migration = pendingThemeMigration
+    pendingThemeMigration = null
+    return migration
   })
 
   /* ── Layout persistence ───────────────────────────────────────── */

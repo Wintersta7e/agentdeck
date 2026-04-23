@@ -158,16 +158,3 @@
   background: var(--bg3);
   color: var(--red);
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .term-search-bar {
-    animation: none;
-  }
-
-  .term-search-input,
-  .term-search-toggle,
-  .term-search-nav,
-  .term-search-close {
-    transition: none;
-  }
-}

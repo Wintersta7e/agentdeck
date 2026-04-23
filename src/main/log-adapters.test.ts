@@ -67,33 +67,33 @@ describe('ClaudeAdapter', () => {
   })
 
   it('getLogDirs returns project-specific dir only', () => {
-    const dirs = adapter.getLogDirs('/home/rooty/my-project')
+    const dirs = adapter.getLogDirs('/home/testuser/my-project')
     expect(dirs).toHaveLength(1)
   })
 
   it('getLogDirs entry contains path slug', () => {
-    const dirs = adapter.getLogDirs('/home/rooty/my-project')
+    const dirs = adapter.getLogDirs('/home/testuser/my-project')
     const first = dirs[0]
     if (!first) throw new Error('Expected first dir')
     // slashes replaced by dashes
-    expect(first).toContain('-home-rooty-my-project')
-    expect(first).toMatch(/~\/\.claude\/projects\/-home-rooty-my-project\/$/)
+    expect(first).toContain('-home-testuser-my-project')
+    expect(first).toMatch(/~\/\.claude\/projects\/-home-testuser-my-project\/$/)
   })
 
   it('getLogDirs uses CLAUDE_CONFIG_DIR from env context', () => {
-    const dirs = adapter.getLogDirs('/home/rooty/my-project', {
+    const dirs = adapter.getLogDirs('/home/testuser/my-project', {
       claudeConfigDir: '/custom/claude-config',
     })
     expect(dirs).toHaveLength(1)
     const first = dirs[0]
     if (!first) throw new Error('Expected first dir')
-    expect(first).toMatch(/^\/custom\/claude-config\/projects\/-home-rooty-my-project\/$/)
+    expect(first).toMatch(/^\/custom\/claude-config\/projects\/-home-testuser-my-project\/$/)
     // Should NOT contain tilde
     expect(first).not.toContain('~')
   })
 
   it('getLogDirs falls back to ~/.claude when env context has no claudeConfigDir', () => {
-    const dirs = adapter.getLogDirs('/home/rooty/my-project', {})
+    const dirs = adapter.getLogDirs('/home/testuser/my-project', {})
     expect(dirs).toHaveLength(1)
     const first = dirs[0]
     if (!first) throw new Error('Expected first dir')
@@ -117,7 +117,7 @@ describe('ClaudeAdapter', () => {
           cache_creation_input_tokens: 28750,
         },
       },
-      cwd: '/home/rooty/project',
+      cwd: '/home/testuser/project',
     })
     const result = adapter.parseUsage(line, { ...ZERO_USAGE })
     expect(result).not.toBeNull()
@@ -212,17 +212,17 @@ describe('ClaudeAdapter', () => {
   })
 
   it('matchSession returns true when cwd found in lines', () => {
-    const lines = [JSON.stringify({ type: 'summary', cwd: '/home/rooty/project', ts: 1000 })]
-    expect(adapter.matchSession(lines, '/home/rooty/project', 1000)).toBe(true)
+    const lines = [JSON.stringify({ type: 'summary', cwd: '/home/testuser/project', ts: 1000 })]
+    expect(adapter.matchSession(lines, '/home/testuser/project', 1000)).toBe(true)
   })
 
   it('matchSession returns false when cwd not found', () => {
-    const lines = [JSON.stringify({ type: 'summary', cwd: '/home/rooty/other', ts: 1000 })]
-    expect(adapter.matchSession(lines, '/home/rooty/project', 1000)).toBe(false)
+    const lines = [JSON.stringify({ type: 'summary', cwd: '/home/testuser/other', ts: 1000 })]
+    expect(adapter.matchSession(lines, '/home/testuser/project', 1000)).toBe(false)
   })
 
   it('matchSession returns false for empty lines', () => {
-    expect(adapter.matchSession([], '/home/rooty/project', 1000)).toBe(false)
+    expect(adapter.matchSession([], '/home/testuser/project', 1000)).toBe(false)
   })
 })
 
@@ -242,7 +242,7 @@ describe('CodexAdapter', () => {
   })
 
   it('getLogDirs returns today date dir in YYYY/MM/DD format', () => {
-    const dirs = adapter.getLogDirs('/home/rooty/any')
+    const dirs = adapter.getLogDirs('/home/testuser/any')
     expect(dirs).toHaveLength(1)
     const dir = dirs[0]
     if (!dir) throw new Error('Expected dir')
@@ -252,7 +252,7 @@ describe('CodexAdapter', () => {
   })
 
   it('getLogDirs uses CODEX_HOME from env context', () => {
-    const dirs = adapter.getLogDirs('/home/rooty/any', { codexHome: '/custom/codex' })
+    const dirs = adapter.getLogDirs('/home/testuser/any', { codexHome: '/custom/codex' })
     expect(dirs).toHaveLength(1)
     const dir = dirs[0]
     if (!dir) throw new Error('Expected dir')
@@ -262,7 +262,7 @@ describe('CodexAdapter', () => {
   })
 
   it('getLogDirs falls back to ~/.codex when env context has no codexHome', () => {
-    const dirs = adapter.getLogDirs('/home/rooty/any', {})
+    const dirs = adapter.getLogDirs('/home/testuser/any', {})
     expect(dirs).toHaveLength(1)
     const dir = dirs[0]
     if (!dir) throw new Error('Expected dir')
@@ -277,7 +277,7 @@ describe('CodexAdapter', () => {
     // First, feed a turn_context line to set the model
     const contextLine = JSON.stringify({
       type: 'turn_context',
-      payload: { turn_id: 't1', model: 'gpt-4o', cwd: '/home/rooty/project' },
+      payload: { turn_id: 't1', model: 'gpt-4o', cwd: '/home/testuser/project' },
     })
     adapter.parseUsage(contextLine, { ...ZERO_USAGE })
 
@@ -420,12 +420,12 @@ describe('CodexAdapter', () => {
   })
 
   it('matchSession returns true when cwd found in lines', () => {
-    const lines = [JSON.stringify({ type: 'event', cwd: '/home/rooty/project', ts: 1000 })]
-    expect(adapter.matchSession(lines, '/home/rooty/project', 1000)).toBe(true)
+    const lines = [JSON.stringify({ type: 'event', cwd: '/home/testuser/project', ts: 1000 })]
+    expect(adapter.matchSession(lines, '/home/testuser/project', 1000)).toBe(true)
   })
 
   it('matchSession returns false when cwd not found', () => {
-    const lines = [JSON.stringify({ type: 'event', cwd: '/home/rooty/other', ts: 1000 })]
-    expect(adapter.matchSession(lines, '/home/rooty/project', 1000)).toBe(false)
+    const lines = [JSON.stringify({ type: 'event', cwd: '/home/testuser/other', ts: 1000 })]
+    expect(adapter.matchSession(lines, '/home/testuser/project', 1000)).toBe(false)
   })
 })

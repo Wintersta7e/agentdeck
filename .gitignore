@@ -38,6 +38,9 @@ coverage/
 CLAUDE.md
 .claude/
 .superpowers/
+.codex
+.codex/
+.serena/
 
 # Git worktrees
 .worktrees/

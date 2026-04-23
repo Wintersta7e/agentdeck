@@ -33,6 +33,7 @@ export interface PtyManager {
     agentFlags?: string,
   ) => void
   write: (sessionId: string, data: string) => void
+  hasSession: (sessionId: string) => boolean
   resize: (sessionId: string, cols: number, rows: number) => void
   kill: (sessionId: string) => void
   killAll: () => void
@@ -304,6 +305,10 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
     if (proc) proc.write(data)
   }
 
+  function hasSession(sessionId: string): boolean {
+    return sessions.has(sessionId)
+  }
+
   function resize(sessionId: string, cols: number, rows: number): void {
     const proc = sessions.get(sessionId)
     if (!proc) return
@@ -352,5 +357,5 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
     }
   }
 
-  return { spawn, write, resize, kill, killAll }
+  return { spawn, write, hasSession, resize, kill, killAll }
 }

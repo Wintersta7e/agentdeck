@@ -166,15 +166,3 @@
   font-family: var(--font-mono);
   flex-shrink: 0;
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .pane-topbar,
-  .pane-btn,
-  .pane-status-dot {
-    transition: none;
-  }
-
-  .pane-status-dot.running {
-    animation: none;
-  }
-}
