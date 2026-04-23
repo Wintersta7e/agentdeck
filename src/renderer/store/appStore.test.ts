@@ -258,3 +258,86 @@ describe('Activity feeds', () => {
     expect(useAppStore.getState().activityFeeds['s1']).toHaveLength(0)
   })
 })
+
+describe('Top-level tab navigation (setTab)', () => {
+  it('setTab switches currentView and resets tabParams', () => {
+    useAppStore.getState().setTab('sessions')
+    let state = useAppStore.getState()
+    expect(state.currentView).toBe('sessions')
+    expect(state.tabParams).toEqual({})
+
+    useAppStore.getState().setTab('projects', { projectId: 'p-7' })
+    state = useAppStore.getState()
+    expect(state.currentView).toBe('projects')
+    expect(state.tabParams).toEqual({ projectId: 'p-7' })
+  })
+
+  it('setTab does NOT push the previous view onto viewStack', () => {
+    // Repeated tab clicks used to grow viewStack unboundedly. The sub-view
+    // modal stack should only grow via openWizard/openSettings.
+    useAppStore.getState().setTab('sessions')
+    useAppStore.getState().setTab('projects')
+    useAppStore.getState().setTab('agents')
+    useAppStore.getState().setTab('alerts')
+    expect(useAppStore.getState().viewStack).toEqual([])
+  })
+
+  it('setTab with undefined params clears previous tabParams', () => {
+    useAppStore.getState().setTab('sessions', { sessionId: 's1' })
+    expect(useAppStore.getState().tabParams).toEqual({ sessionId: 's1' })
+    useAppStore.getState().setTab('projects')
+    expect(useAppStore.getState().tabParams).toEqual({})
+  })
+
+  it('setTabParams mutates params without touching currentView or viewStack', () => {
+    useAppStore.getState().setTab('projects')
+    useAppStore.getState().setTabParams({ projectId: 'alpha' })
+    const state = useAppStore.getState()
+    expect(state.currentView).toBe('projects')
+    expect(state.tabParams).toEqual({ projectId: 'alpha' })
+    expect(state.viewStack).toEqual([])
+  })
+})
+
+describe('Toast-silencing split from persistent dismiss', () => {
+  it('silenceToast adds id without removing the notification', () => {
+    useAppStore.getState().addNotification('info', 'hello')
+    const notif = useAppStore.getState().notifications[0]
+    expect(notif).toBeDefined()
+    if (!notif) return
+    useAppStore.getState().silenceToast(notif.id)
+    const state = useAppStore.getState()
+    expect(state.silencedToastIds).toContain(notif.id)
+    // Still readable in the Alerts tab
+    expect(state.notifications.some((n) => n.id === notif.id)).toBe(true)
+  })
+
+  it('silenceToast is idempotent', () => {
+    useAppStore.getState().addNotification('info', 'hi')
+    const notif = useAppStore.getState().notifications[0]
+    if (!notif) throw new Error('notif missing')
+    useAppStore.getState().silenceToast(notif.id)
+    useAppStore.getState().silenceToast(notif.id)
+    useAppStore.getState().silenceToast(notif.id)
+    const ids = useAppStore.getState().silencedToastIds.filter((x) => x === notif.id)
+    expect(ids).toHaveLength(1)
+  })
+
+  it('dismissNotification removes from BOTH notifications and silencedToastIds', () => {
+    useAppStore.getState().addNotification('warning', 'oops')
+    const notif = useAppStore.getState().notifications[0]
+    if (!notif) throw new Error('notif missing')
+    useAppStore.getState().silenceToast(notif.id)
+    useAppStore.getState().dismissNotification(notif.id)
+    const state = useAppStore.getState()
+    expect(state.notifications.some((n) => n.id === notif.id)).toBe(false)
+    expect(state.silencedToastIds).not.toContain(notif.id)
+  })
+
+  it('silencedToastIds is capped at 50', () => {
+    for (let i = 0; i < 60; i += 1) {
+      useAppStore.getState().silenceToast(`id-${i}`)
+    }
+    expect(useAppStore.getState().silencedToastIds).toHaveLength(50)
+  })
+})
