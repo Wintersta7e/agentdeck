@@ -3,6 +3,8 @@ import { Titlebar } from './components/Titlebar/Titlebar'
 import { TopTabBar } from './components/TopTabBar/TopTabBar'
 import { SessionsScreen } from './screens/SessionsScreen/SessionsScreen'
 import { SessionHero } from './components/SessionHero/SessionHero'
+import { NewSessionScreen } from './screens/NewSessionScreen/NewSessionScreen'
+import { DiffReviewScreen } from './screens/DiffReviewScreen/DiffReviewScreen'
 import { AgentsScreen } from './screens/AgentsScreen/AgentsScreen'
 import { AlertsScreen } from './screens/AlertsScreen/AlertsScreen'
 import { AppSettingsScreen } from './screens/AppSettingsScreen/AppSettingsScreen'
@@ -647,20 +649,8 @@ export function App(): React.JSX.Element {
           {currentView === 'history' && <HistoryScreen />}
           {currentView === 'alerts' && <AlertsScreen />}
           {currentView === 'app-settings' && <AppSettingsScreen />}
-          {currentView === 'new-session' && (
-            <PlaceholderScreen
-              phase="Phase 3.4"
-              title="New Session"
-              subtitle="Composer to launch an agent against an existing project: template, prompt, mode, launch card."
-            />
-          )}
-          {currentView === 'diff' && (
-            <PlaceholderScreen
-              phase="Phase 3.8"
-              title="Diff Review"
-              subtitle="File tree + unified diff + per-file comments. Keep / Discard / Request changes."
-            />
-          )}
+          {currentView === 'new-session' && <NewSessionScreen />}
+          {currentView === 'diff' && <DiffReviewScreen />}
           <Suspense fallback={<div className="suspense-spinner" />}>
             {currentView === 'wizard' && <NewProjectWizard onCreateProject={handleOpenProject} />}
             {currentView === 'settings' && <ProjectSettings key={settingsProjectId} />}
