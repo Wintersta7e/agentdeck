@@ -2,31 +2,14 @@ import { useMemo } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { AGENTS } from '../../../shared/agents'
 import { AGENT_BY_ID, agentColorVar, agentShort } from '../../utils/agent-ui'
-import { useEffectiveContext } from '../../hooks/useEffectiveContext'
-import type { AgentType, ContextSource } from '../../../shared/types'
+import { useEffectiveContext, badgeLabelFor } from '../../hooks/useEffectiveContext'
+import type { AgentType } from '../../../shared/types'
 import './AgentChipB1.css'
 
 function formatContextWindow(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
   if (n >= 1000) return `${Math.round(n / 1000)}k`
   return String(n)
-}
-
-function badgeLabelFor(
-  source: ContextSource | null,
-  modelId: string | null,
-): 'override' | 'auto' | '?' | '(default)' | null {
-  if (!source) return null
-  if (source === 'override-model' || source === 'override-agent') return 'override'
-  if (
-    source === 'cli-context-override' ||
-    source === 'registry-exact' ||
-    source === 'registry-pattern' ||
-    source === 'heuristic'
-  )
-    return 'auto'
-  // source === 'default'
-  return modelId !== null ? '?' : '(default)'
 }
 
 interface AgentChipProps {

@@ -3,6 +3,7 @@ import { useAppStore } from '../../store/appStore'
 import { AGENTS } from '../../../shared/agents'
 import { ScreenShell } from '../../components/shared/ScreenShell'
 import { AGENT_BY_ID, agentColorVar, agentShort } from '../../utils/agent-ui'
+import { useEffectiveContext, badgeLabelFor } from '../../hooks/useEffectiveContext'
 import type { AgentType, SessionLaunchConfig, Template } from '../../../shared/types'
 import './NewSessionScreen.css'
 
@@ -75,6 +76,7 @@ export function NewSessionScreen(): React.JSX.Element {
   )
   const agent = AGENT_BY_ID.get(agentId)
   const colorVar = agentColorVar(agentId)
+  const ctxResolved = useEffectiveContext(agentId)
 
   const approvedCount = Object.values(approve).filter(Boolean).length
   const tokenEstimate = useMemo(
@@ -312,7 +314,13 @@ export function NewSessionScreen(): React.JSX.Element {
                 <div className="ns-target__agent-meta">
                   <div className="ns-target__agent-name">{agent.name}</div>
                   <div className="ns-target__agent-ctx">
-                    ctx {formatTokens(agent.contextWindow)}
+                    ctx {formatTokens(ctxResolved.value ?? agent.contextWindow)}
+                    {badgeLabelFor(ctxResolved.source, ctxResolved.modelId) !== null && (
+                      <span className="ns-target__agent-ctx-badge">
+                        {' '}
+                        {badgeLabelFor(ctxResolved.source, ctxResolved.modelId)}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

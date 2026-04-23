@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { ContextResult } from '../../shared/context-types'
+import type { ContextSource } from '../../shared/types'
 
 interface HookState {
   loading: boolean
@@ -15,6 +16,23 @@ const INITIAL: HookState = {
   source: null,
   modelId: null,
   unknownModelHint: undefined,
+}
+
+export function badgeLabelFor(
+  source: ContextSource | null,
+  modelId: string | null,
+): 'override' | 'auto' | '?' | '(default)' | null {
+  if (!source) return null
+  if (source === 'override-model' || source === 'override-agent') return 'override'
+  if (
+    source === 'cli-context-override' ||
+    source === 'registry-exact' ||
+    source === 'registry-pattern' ||
+    source === 'heuristic'
+  )
+    return 'auto'
+  // source === 'default'
+  return modelId !== null ? '?' : '(default)'
 }
 
 /**
