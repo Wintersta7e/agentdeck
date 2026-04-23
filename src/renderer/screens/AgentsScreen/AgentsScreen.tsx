@@ -107,6 +107,7 @@ export function AgentsScreen(): React.JSX.Element {
   const agentStatus = useAppStore((s) => s.agentStatus)
   const agentVersions = useAppStore((s) => s.agentVersions)
   const setAgentUpdating = useAppStore((s) => s.setAgentUpdating)
+  const setAgentVersion = useAppStore((s) => s.setAgentVersion)
   const addNotification = useAppStore((s) => s.addNotification)
 
   const [filter, setFilter] = useState<FilterId>('all')
@@ -152,6 +153,16 @@ export function AgentsScreen(): React.JSX.Element {
               'info',
               `${agentId} updated${result.newVersion ? ` → ${result.newVersion}` : ''}`,
             )
+            // Reflect the post-update state in the UI. Without this, the
+            // version stays stale and the Update button remains active
+            // because agentVersions still holds the pre-update numbers.
+            if (result.newVersion) {
+              setAgentVersion(agentId, {
+                current: result.newVersion,
+                latest: result.newVersion,
+                updateAvailable: false,
+              })
+            }
           } else {
             addNotification('error', `${agentId} update failed: ${result.message}`)
           }
@@ -163,7 +174,7 @@ export function AgentsScreen(): React.JSX.Element {
           setAgentUpdating(agentId, false)
         })
     },
-    [setAgentUpdating, addNotification],
+    [setAgentUpdating, setAgentVersion, addNotification],
   )
 
   return (
