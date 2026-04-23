@@ -51,6 +51,7 @@ const { createWorkflowEngine } = await import('./workflow-engine')
 const mockPtyManager: PtyManager = {
   spawn: vi.fn(),
   write: vi.fn(),
+  hasSession: vi.fn(() => true),
   resize: vi.fn(),
   kill: vi.fn(),
   killAll: vi.fn(),

@@ -32,26 +32,23 @@ export function DiffReviewScreen(): React.JSX.Element {
   const colorVar = agentColorVar(agentId)
 
   useEffect(() => {
-    if (!activeSessionId) {
-      setSummary(null)
-      return
-    }
+    if (!activeSessionId) return
     let cancelled = false
-    setLoading(true)
-    window.agentDeck.worktree
-      .inspect(activeSessionId)
-      .then((s) => {
+    const run = async (): Promise<void> => {
+      setLoading(true)
+      try {
+        const s = await window.agentDeck.worktree.inspect(activeSessionId)
         if (!cancelled) setSummary(s)
-      })
-      .catch((err: unknown) => {
+      } catch (err: unknown) {
         if (!cancelled) {
           addNotification('warning', `Worktree inspect failed: ${String(err)}`)
           setSummary(null)
         }
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setLoading(false)
-      })
+      }
+    }
+    void run()
     return () => {
       cancelled = true
     }
@@ -106,17 +103,22 @@ export function DiffReviewScreen(): React.JSX.Element {
   const handleRequestChanges = useCallback(() => {
     if (!activeSessionId || comment.trim().length === 0) return
     setInflight('comment')
-    try {
-      const payload = `\n[Review feedback]\n${comment.trim()}\n`
-      window.agentDeck.pty.write(activeSessionId, payload)
-      addNotification('info', 'Feedback sent to the agent.')
-      setComment('')
-      setCurrentView('session')
-    } catch (err) {
-      addNotification('error', `Send failed: ${String(err)}`)
-    } finally {
-      setInflight(null)
-    }
+    const payload = `\n[Review feedback]\n${comment.trim()}\n`
+    window.agentDeck.pty
+      .write(activeSessionId, payload)
+      .then((result) => {
+        if (result.ok) {
+          addNotification('info', 'Feedback sent to the agent.')
+          setComment('')
+          setCurrentView('session')
+        } else {
+          addNotification('error', `Send failed: ${result.error ?? 'unknown error'}`)
+        }
+      })
+      .catch((err: unknown) => {
+        addNotification('error', `Send failed: ${String(err)}`)
+      })
+      .finally(() => setInflight(null))
   }, [activeSessionId, comment, addNotification, setCurrentView])
 
   return (

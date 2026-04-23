@@ -43,7 +43,8 @@ contextBridge.exposeInMainWorld('agentDeck', {
         agent,
         agentFlags,
       ),
-    write: (sessionId: string, data: string) => ipcRenderer.send('pty:write', sessionId, data),
+    write: (sessionId: string, data: string): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke('pty:write', sessionId, data),
     resize: (sessionId: string, cols: number, rows: number) =>
       ipcRenderer.send('pty:resize', sessionId, cols, rows),
     kill: (sessionId: string) => ipcRenderer.invoke('pty:kill', sessionId),

@@ -304,7 +304,7 @@ export function App(): React.JSX.Element {
       const sid = state.paneSessions[state.focusedPane]
       if (!sid) return
       const escaped = wslPaths.map((p) => `'${p.replace(/'/g, "'\\''")}'`).join(' ')
-      window.agentDeck.pty.write(sid, escaped)
+      void window.agentDeck.pty.write(sid, escaped)
     })
     return unsub
   }, [])
