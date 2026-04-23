@@ -232,28 +232,3 @@ button:active,
    Disable UI transition animations but preserve semantic status indicators
    (running dots, progress pulses). Windows "Animation effects" OFF
    triggers this preference — a blanket * rule would kill ALL effects. */
-@media (prefers-reduced-motion: reduce) {
-  .home-main,
-  .wizard-shell,
-  .settings-main,
-  .template-editor,
-  .wf-editor {
-    animation: none !important;
-  }
-
-  button,
-  .tab,
-  .sidebar-item,
-  .new-project-btn,
-  .sidebar-new-wf,
-  .result-item,
-  .toast,
-  .cmd-palette {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-  }
-
-  .dot-running {
-    animation: none !important;
-  }
-}

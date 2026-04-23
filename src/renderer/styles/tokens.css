@@ -292,9 +292,3 @@
 .ad-pulse {
   animation: ad-pulse 1.8s ease infinite;
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .ad-pulse {
-    animation: none;
-  }
-}

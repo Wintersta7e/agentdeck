@@ -170,17 +170,7 @@
   font-family: var(--font-mono);
 }
 
-/* Reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  .live-pulse.thinking {
-    animation: none;
-  }
-  .live-card-gauge-fill {
-    transition: none;
-  }
-}
-
-/* ── LiveSessionGrid ── */
+/* Reduced motion */ /* ── LiveSessionGrid ── */
 .live-grid-wrapper {
   margin-bottom: var(--sp-4);
 }

@@ -112,9 +112,3 @@
     opacity: 0.3;
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .st-b1__edge {
-    animation: none;
-  }
-}

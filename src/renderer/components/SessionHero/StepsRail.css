@@ -198,9 +198,3 @@
     box-shadow: 0 0 0 6px color-mix(in oklch, var(--accent) 10%, transparent);
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .steps-rail__step--active .steps-rail__dot {
-    animation: none;
-  }
-}

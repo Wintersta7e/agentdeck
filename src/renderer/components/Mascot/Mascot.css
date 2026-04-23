@@ -197,11 +197,3 @@
     opacity: 1;
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .mascot__paw-wave,
-  .mascot__bang text,
-  .mascot__zzz text {
-    animation: none;
-  }
-}

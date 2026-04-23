@@ -430,9 +430,3 @@
 .wizard-section-sep {
   margin-top: var(--sp-6);
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .wizard-step-panel.active {
-    animation: none;
-  }
-}

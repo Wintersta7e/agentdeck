@@ -484,12 +484,3 @@
   color: var(--text3);
   margin-left: auto;
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .palette-overlay {
-    animation: none !important;
-  }
-  .palette {
-    animation: none !important;
-  }
-}

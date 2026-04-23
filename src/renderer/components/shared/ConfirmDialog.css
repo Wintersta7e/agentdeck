@@ -125,9 +125,3 @@
 .confirm-dialog-btn-confirm:hover {
   opacity: 0.85;
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .confirm-dialog-backdrop {
-    animation: none !important;
-  }
-}

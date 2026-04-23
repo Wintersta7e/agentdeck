@@ -181,9 +181,3 @@
   line-height: 1.4;
   max-width: 90%;
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .panel-tab {
-    transition: none;
-  }
-}

@@ -140,13 +140,8 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .scope-viz__sweep,
-  .scope-viz__sweep-edge {
-    animation: none;
-  }
-  .scope-viz__blip-halo {
-    /* drop SMIL animations visually by hiding the halo */
-    opacity: 0.3;
-  }
-}
+/* NOTE: no prefers-reduced-motion gate on the sweep — Windows 11
+ * toggles the query silently under battery saver / performance
+ * mode, which would leave the scope dead (see v5.1.2 workflow-
+ * animation fix). If a user genuinely needs it off, we can route
+ * that through a future settings toggle instead. */

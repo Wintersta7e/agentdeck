@@ -29,14 +29,24 @@ export function Mascot({ size = 140, onClick }: MascotProps): React.JSX.Element 
 
   const [hovering, setHovering] = useState(false)
   const [greeting, setGreeting] = useState(true)
+  // Tick = seconds elapsed since mount (float). requestAnimationFrame
+  // drives it at display refresh rate so breathing / tail swing / paw
+  // taps / blink feel continuous instead of the 1 Hz steps the
+  // prototype shipped with.
   const [tick, setTick] = useState(0)
 
   useEffect(() => {
     const t1 = window.setTimeout(() => setGreeting(false), 2600)
-    const t2 = window.setInterval(() => setTick((x) => x + 1), 1000)
+    const start = performance.now()
+    let rafId = 0
+    const step = (now: number): void => {
+      setTick((now - start) / 1000)
+      rafId = window.requestAnimationFrame(step)
+    }
+    rafId = window.requestAnimationFrame(step)
     return () => {
       window.clearTimeout(t1)
-      window.clearInterval(t2)
+      window.cancelAnimationFrame(rafId)
     }
   }, [])
 
@@ -243,7 +253,9 @@ function OpenEyes({ state, tick }: SubProps): React.JSX.Element {
   const working = state === 'working'
   const hover = state === 'hover'
   const dx = working ? Math.sin(tick * 1.8) * 1.2 : hover ? 1.2 : 0
-  const blink = tick % 6 === 0 ? 0.2 : 1
+  // Blink briefly (150 ms) every ~5 s. tick is seconds since mount.
+  const blinkPhase = tick % 5
+  const blink = blinkPhase < 0.15 ? 0.2 : 1
   return (
     <g>
       <ellipse
