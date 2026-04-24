@@ -6,7 +6,7 @@ import {
   groupBySections,
   type PaletteItem,
 } from '../paletteItems'
-import type { Project, Template } from '../../../../shared/types'
+import type { Project, LegacyTemplate as Template } from '../../../../shared/types'
 
 // ── Factories ──
 

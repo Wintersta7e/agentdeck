@@ -77,13 +77,57 @@ export type TemplateCategory =
   | 'Docs'
   | 'Git'
 
-export interface Template {
+/**
+ * Legacy flat Template shape — persisted in electron-store under the `templates`
+ * key. Consumers will be rewired to the new three-tier Template shape
+ * (TemplateFile / Template / TemplateDraft) in a later phase of the v6.1.0
+ * session-UI rework. Kept here so existing code compiles during the migration.
+ *
+ * @deprecated Use `TemplateFile` (persisted) / `Template` (loaded) / `TemplateDraft` (input).
+ */
+export interface LegacyTemplate {
   id: string
   name: string
   description: string
   content?: string | undefined
   category?: TemplateCategory | undefined
 }
+
+// ── Template types (v6.1.0 file-based) ─────────────────────────────
+export type TemplateScope = 'user' | 'project'
+
+/** Persisted JSON on disk. Derived fields are NOT in the file. */
+export interface TemplateFile {
+  id: string
+  name: string
+  description: string
+  content: string
+  category?: TemplateCategory | undefined
+  usageCount: number
+  lastUsedAt: number
+  pinned: boolean
+}
+
+/** Renderer-facing shape — TemplateFile + fields derived at load time. */
+export interface Template extends TemplateFile {
+  scope: TemplateScope
+  projectId: string | null
+  path: string
+  mtimeMs: number
+}
+
+/** Input to save operations. No path/scope-derived fields. */
+export interface TemplateDraft {
+  id?: string | undefined
+  name: string
+  description: string
+  content: string
+  category?: TemplateCategory | undefined
+}
+
+// ── Approval lifecycle (v6.1.0) ─────────────────────────────────────
+// Orthogonal to SessionStatus.
+export type ApprovalState = 'idle' | 'review' | 'kept' | 'discarded'
 
 export interface Role {
   id: string
@@ -126,6 +170,20 @@ export interface Session extends SessionLaunchConfig {
   projectId: string
   status: SessionStatus
   startedAt: number
+  /** Orthogonal review lifecycle. 'idle' means no pending changes. */
+  approvalState: ApprovalState
+  /** Template that seeded this session's initial prompt, if any. */
+  seedTemplateId: string | null
+}
+
+/**
+ * Input shape for opening a new session. Carries everything needed to launch
+ * the PTY plus the seed template that produced `initialPrompt` (or `null` when
+ * no template was used). Required-nullable — callers always know the value.
+ */
+export interface OpenSessionSeed extends SessionLaunchConfig {
+  projectId: string
+  seedTemplateId: string | null
 }
 
 export type ViewType =

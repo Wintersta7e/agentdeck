@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from 'react'
 import { useAppStore } from '../store/appStore'
 import { handleIpcError } from '../utils/ipcErrorHandler'
-import type { Project, Role, Template } from '../../shared/types'
+import type { Project, Role, LegacyTemplate as Template } from '../../shared/types'
 
 interface UseProjectsReturn {
   projects: Project[]

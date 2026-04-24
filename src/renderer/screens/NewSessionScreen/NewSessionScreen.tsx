@@ -4,7 +4,11 @@ import { AGENTS } from '../../../shared/agents'
 import { ScreenShell } from '../../components/shared/ScreenShell'
 import { AGENT_BY_ID, agentColorVar, agentShort } from '../../utils/agent-ui'
 import { useEffectiveContext, badgeLabelFor } from '../../hooks/useEffectiveContext'
-import type { AgentType, SessionLaunchConfig, Template } from '../../../shared/types'
+import type {
+  AgentType,
+  SessionLaunchConfig,
+  LegacyTemplate as Template,
+} from '../../../shared/types'
 import './NewSessionScreen.css'
 
 type Mode = 'watch' | 'auto' | 'plan-first'

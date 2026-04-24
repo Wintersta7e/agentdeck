@@ -1,4 +1,4 @@
-import type { Template, TemplateCategory } from '../../shared/types'
+import type { LegacyTemplate as Template, TemplateCategory } from '../../shared/types'
 
 export const CATEGORY_ORDER: readonly (TemplateCategory | 'Other')[] = [
   'Orient',

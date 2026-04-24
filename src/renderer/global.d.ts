@@ -8,7 +8,7 @@ import type {
   ReviewItem,
   Role,
   SkillInfo,
-  Template,
+  LegacyTemplate as Template,
   TokenUsage,
 } from '../shared/types'
 import type { ContextResult, SetContextOverrideArgs } from '../shared/context-types'

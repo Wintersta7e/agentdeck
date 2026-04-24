@@ -3,7 +3,7 @@
  */
 import type {
   Project,
-  Template,
+  LegacyTemplate as Template,
   Role,
   Workflow,
   WorkflowNode,
@@ -94,6 +94,8 @@ export function makeSession(overrides: Partial<Session> = {}): Session {
     projectId: 'proj-1',
     status: 'running',
     startedAt: Date.now(),
+    approvalState: 'idle',
+    seedTemplateId: null,
     ...overrides,
   }
 }

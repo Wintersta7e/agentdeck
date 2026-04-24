@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { Project, Template, Role, EnvVar } from '../shared/types'
+import type { Project, LegacyTemplate as Template, Role, EnvVar } from '../shared/types'
 import type { StoreSchema, AppStore } from './project-store'
 
 // Mock electron

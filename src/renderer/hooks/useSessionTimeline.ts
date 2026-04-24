@@ -116,6 +116,8 @@ export function useSessionTimeline(): TimelineRow[] {
         projectId: projectId ?? '',
         status: (status ?? 'exited') as Session['status'],
         startedAt: Number(startedAt),
+        approvalState: 'idle',
+        seedTemplateId: null,
       }
     }
     return result

@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto'
-import type { Role, Template, TemplateCategory } from '../shared/types'
+import type { Role, LegacyTemplate as Template, TemplateCategory } from '../shared/types'
 import type { AppStore } from './project-store'
 import { createLogger } from './logger'
 
