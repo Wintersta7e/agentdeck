@@ -107,11 +107,3 @@
 .split-pane--hidden {
   display: none;
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .split-pane,
-  .split-divider,
-  .lc-btn {
-    transition: none;
-  }
-}

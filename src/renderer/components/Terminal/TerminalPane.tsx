@@ -13,6 +13,7 @@ import {
   HIDDEN_BUFFER_TRIM_TARGET,
 } from '../../../shared/constants'
 import { subscribeTheme } from '../../utils/themeObserver'
+import { safeWrite } from '../../utils/pty-write'
 import {
   getXtermTheme,
   validScrollback,
@@ -267,7 +268,7 @@ export function TerminalPane({
               // Permission denied or no text — fall through to file paths
             }
             if (text) {
-              window.agentDeck.pty.write(sessionId, text)
+              safeWrite(sessionId, text)
               return
             }
             // No text on clipboard — check for copied files
@@ -276,7 +277,7 @@ export function TerminalPane({
               // Single-quote escaping (POSIX safe) — prevents injection via
               // filenames containing ", $, `, \, or ! on shared filesystems.
               const escaped = paths.map((p) => `'${p.replace(/'/g, "'\\''")}'`).join(' ')
-              window.agentDeck.pty.write(sessionId, escaped)
+              safeWrite(sessionId, escaped)
             }
           })().catch((err: unknown) => {
             window.agentDeck.log.send('warn', 'terminal', `Paste failed for ${sessionId}`, {
@@ -426,13 +427,37 @@ export function TerminalPane({
         if (cancelled) return
         spawnTimestamp = Date.now()
         const { cols, rows } = term
+
+        // Pull session launch config (prompt, branch, branchMode) once at
+        // spawn time. These come from NewSessionScreen's handleLaunch.
+        const launchSession = useAppStore.getState().sessions[sessionId]
+        const SAFE_BRANCH_RE = /^[a-zA-Z0-9_/.-]+$/
+        const branchCmds: string[] = []
+        if (
+          launchSession?.branchMode === 'existing' &&
+          launchSession.initialBranch &&
+          SAFE_BRANCH_RE.test(launchSession.initialBranch)
+        ) {
+          branchCmds.push(`git checkout ${launchSession.initialBranch}`)
+        } else if (
+          launchSession?.branchMode === 'new' &&
+          launchSession.initialBranch &&
+          SAFE_BRANCH_RE.test(launchSession.initialBranch)
+        ) {
+          branchCmds.push(`git checkout -b ${launchSession.initialBranch}`)
+        }
+        const mergedStartup =
+          branchCmds.length > 0
+            ? [...branchCmds, ...(startupRef.current ?? [])]
+            : startupRef.current
+
         try {
           await window.agentDeck.pty.spawn(
             sessionId,
             cols,
             rows,
             spawnPath,
-            startupRef.current,
+            mergedStartup,
             envRef.current,
             agentRef.current,
             agentFlagsRef.current,
@@ -450,6 +475,17 @@ export function TerminalPane({
               /* cost tracking is best-effort */
             })
           setSessionStatus(sessionId, 'running')
+
+          // Pipe the launch prompt into the agent's stdin after a short grace
+          // period so the agent has time to print its greeting. Only runs once
+          // per session — the useEffect guards against reattach re-spawns.
+          if (launchSession?.initialPrompt) {
+            const promptToSend = launchSession.initialPrompt
+            setTimeout(() => {
+              if (cancelled) return
+              safeWrite(sessionId, promptToSend + '\n')
+            }, 2000)
+          }
         } catch (err: unknown) {
           if (cancelled) return
           window.agentDeck.log.send('error', 'terminal', `PTY spawn failed for ${sessionId}`, {
@@ -508,7 +544,7 @@ export function TerminalPane({
     // correctly, but some apps don't consume the response and display it as text.
     const onDataDisposable = term.onData((data) => {
       const filtered = data.replace(OSC_RESPONSE_RE, '')
-      if (filtered) window.agentDeck.pty.write(sessionId, filtered)
+      if (filtered) safeWrite(sessionId, filtered)
     })
 
     const QUICK_EXIT_MS = 2000
@@ -825,7 +861,7 @@ export function TerminalPane({
           navigator.clipboard
             .readText()
             .then((text) => {
-              if (text) window.agentDeck.pty.write(sessionId, text)
+              if (text) safeWrite(sessionId, text)
             })
             .catch(() => {})
           break
@@ -839,7 +875,7 @@ export function TerminalPane({
           //    its UI on the now-clean screen
           term.write('\x1b[2J\x1b[3J\x1b[H')
           term.clear()
-          window.agentDeck.pty.write(sessionId, '\x0c')
+          safeWrite(sessionId, '\x0c')
           break
         case 'search':
           setSearchOpen(true)

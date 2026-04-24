@@ -18,6 +18,7 @@ export function ProjectSettings(): React.JSX.Element | null {
   const projects = useAppStore((s) => s.projects)
   const getSessionForProject = useAppStore((s) => s.getSessionForProject)
   const addSession = useAppStore((s) => s.addSession)
+  const captureSessionSnapshot = useAppStore((s) => s.captureSessionSnapshot)
   const setActiveSession = useAppStore((s) => s.setActiveSession)
   const { updateProject, deleteProject } = useProjects()
 
@@ -143,7 +144,11 @@ export function ProjectSettings(): React.JSX.Element | null {
                 if (existing) {
                   setActiveSession(existing.id)
                 } else {
-                  addSession(`session-${storedProject.id}`, storedProject.id)
+                  const sessionId = `session-${storedProject.id}`
+                  addSession(sessionId, storedProject.id)
+                  if (storedProject.agent) {
+                    void captureSessionSnapshot(sessionId, storedProject.agent)
+                  }
                 }
                 closeSettings()
               }}

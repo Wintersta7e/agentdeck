@@ -1,0 +1,55 @@
+.ri-files {
+  list-style: none;
+  margin: 0;
+  padding: var(--sp-2) 0;
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+.ri-files__item {
+  display: grid;
+  grid-template-columns: 20px 1fr auto;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text1);
+}
+
+.ri-files__item:hover {
+  background: var(--accent-glow2);
+}
+
+.ri-files__glyph {
+  text-align: center;
+  color: var(--text3);
+}
+
+.ri-files__item--write .ri-files__glyph {
+  color: var(--green);
+}
+
+.ri-files__item--read .ri-files__glyph {
+  color: var(--blue);
+}
+
+.ri-files__path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ri-files__action {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--text3);
+}
+
+.ri-files__item--write .ri-files__action {
+  color: var(--green);
+}
+.ri-files__item--read .ri-files__action {
+  color: var(--blue);
+}

@@ -1,0 +1,147 @@
+.scope-viz {
+  position: relative;
+  margin: 0 auto;
+}
+
+.scope-viz__svg {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+/* Radial gradient — brighter at core, reads on warm charcoal */
+.scope-viz__grad-inner {
+  stop-color: var(--accent);
+  stop-opacity: 0.35;
+}
+.scope-viz__grad-mid {
+  stop-color: var(--accent);
+  stop-opacity: 0.08;
+}
+
+/* Sweep gradient — invisible at base, bright trailing edge */
+.scope-viz__sweep-start {
+  stop-color: var(--accent);
+  stop-opacity: 0;
+}
+.scope-viz__sweep-end {
+  stop-color: var(--accent);
+  stop-opacity: 0.55;
+}
+
+/* Rings */
+.scope-viz__ring {
+  fill: none;
+  stroke: var(--accent);
+  stroke-opacity: 0.22;
+  stroke-width: 1;
+}
+
+/* Ticks — minor + major */
+.scope-viz__tick {
+  stroke: var(--accent);
+  stroke-opacity: 0.35;
+  stroke-width: 1;
+}
+
+.scope-viz__tick--major {
+  stroke-opacity: 0.8;
+  stroke-width: 1.4;
+}
+
+/* Crosshair — subtle dashed lines through centre */
+.scope-viz__crosshair {
+  stroke: var(--accent);
+  stroke-opacity: 0.14;
+  stroke-dasharray: 2 5;
+  stroke-width: 1;
+}
+
+/* Rotating wedge sweep */
+.scope-viz__sweep {
+  animation: scope-viz-sweep 6s linear infinite;
+}
+
+/* Leading edge line that rotates with the sweep */
+.scope-viz__sweep-edge {
+  stroke: var(--accent);
+  stroke-opacity: 0.9;
+  stroke-width: 1.5;
+  animation: scope-viz-sweep 6s linear infinite;
+}
+
+/* Agent blips — inherit color from parent <g style="color:…"> */
+.scope-viz__blip-halo {
+  fill: currentColor;
+  opacity: 0.5;
+}
+
+.scope-viz__blip-core {
+  fill: currentColor;
+  stroke: var(--bg0);
+  stroke-width: 1;
+}
+
+.scope-viz__blip-label {
+  fill: currentColor;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Origin dot */
+.scope-viz__origin-outer {
+  fill: var(--accent);
+  opacity: 0.25;
+}
+.scope-viz__origin-inner {
+  fill: var(--accent);
+}
+
+/* Captions */
+.scope-viz__caption {
+  position: absolute;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.scope-viz__caption--tl {
+  top: 12px;
+  left: 14px;
+  color: var(--accent);
+}
+
+.scope-viz__caption--br {
+  right: 14px;
+  bottom: 12px;
+  color: var(--text3);
+}
+
+.scope-viz__caption--center {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, calc(-50% + 40px));
+  color: var(--text2);
+  font-size: 9px;
+  letter-spacing: 0.4em;
+}
+
+@keyframes scope-viz-sweep {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* NOTE: no prefers-reduced-motion gate on the sweep — Windows 11
+ * toggles the query silently under battery saver / performance
+ * mode, which would leave the scope dead (see v5.1.2 workflow-
+ * animation fix). If a user genuinely needs it off, we can route
+ * that through a future settings toggle instead. */

@@ -1,0 +1,199 @@
+.mascot {
+  position: relative;
+  display: inline-block;
+  user-select: none;
+}
+
+.mascot[role='button'] {
+  cursor: pointer;
+}
+
+.mascot--alert .mascot__svg {
+  filter: drop-shadow(0 0 8px var(--red));
+}
+
+.mascot__svg {
+  display: block;
+  overflow: visible;
+}
+
+/* Fur gradient stops */
+.mascot__fur-stop-in {
+  stop-color: var(--accent);
+  stop-opacity: 1;
+}
+.mascot__fur-stop-out {
+  stop-color: var(--accent-dim);
+  stop-opacity: 1;
+}
+
+/* Shadow puddle */
+.mascot__puddle-stop-in {
+  stop-color: var(--accent);
+  stop-opacity: 0.25;
+}
+.mascot__puddle-stop-out {
+  stop-color: var(--accent);
+  stop-opacity: 0;
+}
+
+.mascot__belly {
+  fill: var(--accent-dim);
+  opacity: 0.55;
+}
+
+.mascot__head {
+  fill: var(--accent);
+}
+
+.mascot__face-mask {
+  fill: var(--accent-dim);
+  opacity: 0.35;
+}
+
+.mascot__forehead {
+  fill: var(--purple);
+  opacity: 0.55;
+}
+
+.mascot__ear {
+  fill: var(--accent);
+}
+
+.mascot__ear-inner {
+  fill: #ff9eb4;
+  opacity: 0.6;
+}
+
+.mascot__nose {
+  fill: #ff9eb4;
+}
+
+.mascot__mouth {
+  stroke: #2a1208;
+  stroke-width: 1.4;
+}
+
+.mascot__yawn {
+  fill: #2a1208;
+}
+
+.mascot__whiskers {
+  stroke: var(--accent-dim);
+  stroke-width: 0.7;
+  opacity: 0.7;
+}
+
+.mascot__eye-white {
+  fill: #f8f5ee;
+}
+
+.mascot__pupil {
+  fill: #0a0a0a;
+}
+
+.mascot__catchlight {
+  fill: #ffffff;
+}
+
+.mascot__eye-line {
+  stroke: #0a0a0a;
+  stroke-width: 1.4;
+}
+
+.mascot__eye-line--sleep {
+  stroke-width: 1.2;
+  opacity: 0.8;
+}
+
+.mascot__tail {
+  fill: var(--accent);
+}
+
+.mascot__tail-stripe {
+  stroke: var(--purple);
+  stroke-width: 1.5;
+  fill: none;
+  opacity: 0.6;
+}
+
+.mascot__paw {
+  fill: var(--accent);
+}
+
+.mascot__paw-pad {
+  fill: var(--accent-dim);
+  opacity: 0.5;
+}
+
+.mascot__zzz text {
+  fill: var(--accent);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  opacity: 0.7;
+  animation: mascot-zzz 2.4s ease-in-out infinite;
+}
+
+.mascot__zzz text:nth-child(2) {
+  animation-delay: 0.4s;
+}
+
+.mascot__zzz text:nth-child(3) {
+  animation-delay: 0.8s;
+}
+
+.mascot__bang text {
+  fill: var(--red);
+  font-family: var(--font-mono);
+  font-weight: 900;
+  animation: mascot-shake 0.3s ease-in-out infinite alternate;
+}
+
+.mascot__paw-wave {
+  animation: mascot-wave 0.9s ease-in-out infinite;
+}
+
+.mascot__label {
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+  opacity: 0.72;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Animations */
+@keyframes mascot-wave {
+  0%,
+  100% {
+    transform: rotate(-30deg);
+  }
+  50% {
+    transform: translateY(-4px) rotate(20deg);
+  }
+}
+
+@keyframes mascot-shake {
+  from {
+    transform: translateX(-1px);
+  }
+  to {
+    transform: translateX(1px);
+  }
+}
+
+@keyframes mascot-zzz {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}

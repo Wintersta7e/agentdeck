@@ -1,0 +1,114 @@
+.st-b1 {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.st-b1__ruler {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0 4px 6px;
+  border-bottom: 1px dotted var(--border-bright);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--text3);
+}
+
+.st-b1__empty {
+  padding: var(--sp-4) var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.05em;
+  color: var(--text2);
+  text-align: center;
+}
+
+.st-b1__list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.st-b1__row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 110px) 1fr 80px;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px;
+  border-bottom: 1px dotted var(--border);
+  color: var(--text1);
+}
+
+.st-b1__row--last {
+  border-bottom: none;
+}
+
+.st-b1__glyph {
+  color: var(--row-color, var(--accent));
+  font-size: 16px;
+  line-height: 1;
+  text-align: center;
+}
+
+.st-b1__project {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: var(--text0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.st-b1__track {
+  position: relative;
+  height: 14px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.st-b1__bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklch, var(--row-color) 12%, transparent),
+    color-mix(in oklch, var(--row-color) 55%, transparent)
+  );
+  border-left: 2px solid var(--row-color, var(--accent));
+}
+
+.st-b1__edge {
+  position: absolute;
+  right: 0;
+  top: 2px;
+  bottom: 2px;
+  width: 2px;
+  background: var(--row-color, var(--accent));
+  animation: st-b1-blink 1.2s ease-in-out infinite;
+}
+
+.st-b1__stat {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text2);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes st-b1-blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0.3;
+  }
+}

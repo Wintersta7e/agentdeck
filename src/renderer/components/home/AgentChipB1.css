@@ -1,0 +1,92 @@
+.agent-chip-b1__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 1100px) {
+  .agent-chip-b1__grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 700px) {
+  .agent-chip-b1__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.agent-chip-b1 {
+  position: relative;
+  padding: 10px;
+  border: 1px solid color-mix(in oklch, var(--chip-color, var(--accent)) 35%, transparent);
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--chip-color, var(--accent)) 8%, transparent),
+    transparent
+  );
+  border-radius: 2px;
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+
+.agent-chip-b1:hover {
+  border-color: var(--chip-color, var(--accent));
+}
+
+.agent-chip-b1__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.agent-chip-b1__glyph {
+  font-size: 18px;
+  line-height: 1;
+  color: var(--chip-color, var(--accent));
+}
+
+.agent-chip-b1__short {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text2);
+}
+
+.agent-chip-b1__name {
+  margin-top: 4px;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text0);
+  letter-spacing: -0.005em;
+}
+
+.agent-chip-b1__ctx {
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  color: var(--text3);
+}
+
+.agent-chip-b1__running {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  color: var(--chip-color, var(--accent));
+}
+
+.agent-chip-b1__running-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--chip-color, var(--accent));
+}

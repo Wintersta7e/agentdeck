@@ -122,9 +122,3 @@
   color: var(--text2);
   white-space: nowrap;
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .shortcuts-overlay {
-    animation: none !important;
-  }
-}

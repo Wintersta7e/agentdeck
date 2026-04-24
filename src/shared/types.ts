@@ -96,16 +96,56 @@ export interface Role {
 
 export type SessionStatus = 'starting' | 'running' | 'error' | 'exited'
 
-export interface Session {
+export type BranchMode = 'existing' | 'new' | 'worktree'
+
+export interface SessionLaunchConfig {
+  agentOverride?: AgentType | undefined
+  agentFlagsOverride?: string | undefined
+  /** Text to pipe into the agent's stdin once the PTY is ready. */
+  initialPrompt?: string | undefined
+  /** Whether to check out an existing branch, create a new one, or use a worktree. */
+  branchMode?: BranchMode | undefined
+  /** Branch name for the mode above. */
+  initialBranch?: string | undefined
+  /** Soft cap in USD — displayed in the metrics strip, not enforced in v6.0.0. */
+  costCap?: number | undefined
+  /** Run mode — stored as intent; runtime enforcement is a follow-up. */
+  runMode?: 'watch' | 'auto' | 'plan-first' | undefined
+  /** Permission gates — stored as intent; runtime enforcement is a follow-up. */
+  approve?: { reads?: boolean; writes?: boolean; commands?: boolean; commits?: boolean } | undefined
+  /** Raw model id captured from active-model detector at spawn. Immutable. */
+  model?: string | undefined
+  /** Resolved context window captured at spawn. Immutable. */
+  resolvedContextWindow?: number | undefined
+  /** Source of resolvedContextWindow at spawn for the SessionHero badge. Immutable. */
+  resolvedContextSource?: ContextSource | undefined
+}
+
+export interface Session extends SessionLaunchConfig {
   id: string
   projectId: string
   status: SessionStatus
   startedAt: number
-  agentOverride?: AgentType | undefined
-  agentFlagsOverride?: string | undefined
 }
 
-export type ViewType = 'home' | 'session' | 'wizard' | 'settings' | 'template-editor' | 'workflow'
+export type ViewType =
+  | 'home'
+  | 'session'
+  | 'wizard'
+  | 'settings'
+  | 'template-editor'
+  | 'workflow'
+  // Redesign (Option B) tab views
+  | 'sessions'
+  | 'projects'
+  | 'project-detail'
+  | 'agents'
+  | 'workflows'
+  | 'history'
+  | 'alerts'
+  | 'app-settings'
+  | 'new-session'
+  | 'diff'
 
 export type PaneLayout = 1 | 2 | 3
 
@@ -118,7 +158,7 @@ export interface ActivityEvent {
   timestamp: number
 }
 
-export type RightPanelTab = 'context' | 'activity' | 'memory'
+export type RightPanelTab = 'context' | 'activity' | 'memory' | 'diff' | 'files' | 'cost' | 'config'
 
 export interface DetectedStack {
   badge: StackBadge
@@ -237,6 +277,16 @@ export interface WorkflowVariable {
   required?: boolean | undefined
   choices?: string[] | undefined
 }
+
+/** Source of a resolved context-window value, used for UI badges. */
+export type ContextSource =
+  | 'override-model'
+  | 'cli-context-override'
+  | 'registry-exact'
+  | 'heuristic'
+  | 'registry-pattern'
+  | 'override-agent'
+  | 'default'
 
 export interface WorkflowRun {
   id: string

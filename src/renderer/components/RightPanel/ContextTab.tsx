@@ -16,13 +16,23 @@ export function ContextTab(): React.JSX.Element {
   const templates = useAppStore((s) => s.templates)
   const activeSessionId = useAppStore((s) => s.activeSessionId)
   const setRightPanelTab = useAppStore((s) => s.setRightPanelTab)
+  const addNotification = useAppStore((s) => s.addNotification)
 
   const handleTemplateClick = useCallback(
     (template: Template) => {
       if (!activeSessionId || !template.content) return
-      void window.agentDeck.pty.write(activeSessionId, template.content + '\n')
+      window.agentDeck.pty
+        .write(activeSessionId, template.content + '\n')
+        .then((result) => {
+          if (!result.ok) {
+            addNotification('error', `Template send failed: ${result.error ?? 'unknown error'}`)
+          }
+        })
+        .catch((err: unknown) => {
+          addNotification('error', `Template send failed: ${String(err)}`)
+        })
     },
-    [activeSessionId],
+    [activeSessionId, addNotification],
   )
 
   const attachedTemplates = useMemo(
@@ -59,8 +69,14 @@ export function ContextTab(): React.JSX.Element {
       .then((result) => {
         if (!cancelled) setSkills(result)
       })
-      .catch(() => {
-        if (!cancelled) setSkills([])
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          void window.agentDeck.log.send('warn', 'context-tab', 'skills.list failed', {
+            projectPath,
+            error: err instanceof Error ? err.message : String(err),
+          })
+          setSkills([])
+        }
       })
     return () => {
       cancelled = true

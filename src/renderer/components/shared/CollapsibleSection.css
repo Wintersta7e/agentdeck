@@ -57,12 +57,3 @@
     transform: translateY(0);
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .collapsible-chevron {
-    transition: none;
-  }
-  .collapsible-body {
-    animation: none;
-  }
-}

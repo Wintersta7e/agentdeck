@@ -8,49 +8,73 @@
   background: var(--bg0);
 }
 
-/* ── Toolbar ── */
+/* ── Toolbar (B1 header row) ──
+ *
+ * The mockup reads as "WORKFLOW · NIGHTLY REVIEW" — an uppercase label
+ * word, a middot separator, then the workflow's name in Space Grotesk.
+ * We replicate it with a pseudo-element on .wf-name so there's no TSX
+ * change: the label renders automatically in front of the name.
+ */
 
 .wf-toolbar {
-  height: 40px;
-  background: var(--bg1);
-  border-bottom: 1px solid var(--border);
+  height: 44px;
+  background: color-mix(in oklch, var(--bg0) 92%, var(--accent) 2%);
+  border-bottom: 1px solid color-mix(in oklch, var(--accent) 20%, transparent);
   display: flex;
   align-items: center;
   padding: 0 var(--sp-4);
-  gap: var(--sp-2);
+  gap: var(--sp-3);
   flex-shrink: 0;
+  font-family: var(--font-display);
 }
 
-.wf-name {
+.wf-name,
+.wf-name-input {
   font-family: var(--font-display);
-  font-size: var(--fs-base);
+  font-size: var(--fs-sm);
   font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--text0);
-  margin-right: var(--sp-2);
+  margin-right: var(--sp-1);
   cursor: default;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.wf-name::before {
+  content: 'Workflow ·';
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 400;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
 }
 
 .wf-name-input {
-  font-family: var(--font-display);
-  font-size: var(--fs-base);
-  font-weight: 700;
-  color: var(--text0);
   background: var(--bg0);
-  border: 1px solid var(--purple-border);
-  border-radius: var(--r);
+  border: 1px solid color-mix(in oklch, var(--accent) 40%, transparent);
   padding: 1px var(--sp-2);
-  margin-right: var(--sp-2);
   outline: none;
-  width: 180px;
+  width: 220px;
+  text-transform: none;
+}
+
+.wf-name-input:focus {
+  border-color: var(--accent);
 }
 
 .wf-name-badge {
-  font-size: var(--fs-xs);
-  background: var(--purple-dim);
-  color: var(--purple);
-  border: 1px solid var(--purple-border);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text3);
+  background: none;
+  border: 1px solid var(--border);
   padding: 1px var(--sp-2);
-  border-radius: 20px;
   font-weight: 500;
 }
 

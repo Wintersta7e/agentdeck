@@ -318,20 +318,3 @@
   background: var(--red);
   color: var(--bg0);
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .logo-mark,
-  .tab,
-  .tab-close,
-  .tab-add,
-  .titlebar-logo,
-  .titlebar-btn,
-  .window-btn,
-  .tab-dot {
-    transition: none;
-  }
-
-  .tab-dot--running {
-    animation: none;
-  }
-}

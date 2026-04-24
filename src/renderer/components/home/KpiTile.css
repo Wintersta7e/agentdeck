@@ -1,0 +1,83 @@
+.kpi-tile {
+  position: relative;
+  padding: var(--sp-3) var(--sp-3);
+  background: color-mix(in oklch, var(--bg1) 65%, transparent);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.kpi-tile__label {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+
+.kpi-tile__value {
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  line-height: 1.05;
+  margin-top: 2px;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-tile__sub {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  color: var(--text3);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kpi-tile__bar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 3px;
+  height: 100%;
+  opacity: 0.35;
+  background: var(--accent);
+}
+
+/* Tone variants */
+.kpi-tile--accent .kpi-tile__value,
+.kpi-tile--accent .kpi-tile__bar {
+  color: var(--accent);
+}
+.kpi-tile--accent .kpi-tile__bar {
+  background: var(--accent);
+}
+
+.kpi-tile--green .kpi-tile__value {
+  color: var(--green);
+}
+.kpi-tile--green .kpi-tile__bar {
+  background: var(--green);
+}
+
+.kpi-tile--red .kpi-tile__value {
+  color: var(--red);
+}
+.kpi-tile--red .kpi-tile__bar {
+  background: var(--red);
+}
+
+.kpi-tile--blue .kpi-tile__value {
+  color: var(--blue);
+}
+.kpi-tile--blue .kpi-tile__bar {
+  background: var(--blue);
+}
+
+.kpi-tile--purple .kpi-tile__value {
+  color: var(--purple);
+}
+.kpi-tile--purple .kpi-tile__bar {
+  background: var(--purple);
+}

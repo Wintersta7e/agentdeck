@@ -87,7 +87,7 @@ describe('ipc-window', () => {
         () => null,
         store as unknown as Parameters<typeof registerWindowHandlers>[1],
       )
-      expect(call('theme:set', 'cyan')).toBe('cyan')
+      expect(call('theme:set', 'phosphor')).toBe('phosphor')
     })
   })
 

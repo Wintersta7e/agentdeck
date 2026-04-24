@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { X, Minus, Square, ArrowLeft, Plus } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import type { Session } from '../../../shared/types'
+import { TitlebarBrand } from './TitlebarBrand'
 import './Titlebar.css'
 
 interface TitlebarProps {
@@ -75,7 +76,6 @@ export function Titlebar({
   const setActiveSession = useAppStore((s) => s.setActiveSession)
   const setCurrentView = useAppStore((s) => s.setCurrentView)
   const closeWizard = useAppStore((s) => s.closeWizard)
-  const settingsProjectId = useAppStore((s) => s.settingsProjectId)
   const closeSettings = useAppStore((s) => s.closeSettings)
   const previousView = useAppStore((s) =>
     s.viewStack.length > 0 ? s.viewStack[s.viewStack.length - 1] : 'home',
@@ -144,15 +144,7 @@ export function Titlebar({
         </div>
       </div>
 
-      {currentView === 'home' && <div className="titlebar-center">Home</div>}
-      {currentView === 'wizard' && <div className="titlebar-center">New Project</div>}
-      {currentView === 'settings' && (
-        <div className="titlebar-center">
-          Project Settings —{' '}
-          {settingsProjectId ? (projectNameMap.get(settingsProjectId) ?? '') : ''}
-        </div>
-      )}
-      {currentView === 'template-editor' && <div className="titlebar-center">Templates</div>}
+      <TitlebarBrand />
       {(sessionList.length > 0 || openWorkflowIds.length > 0) && (
         <div className="tab-bar" role="tablist">
           {sessionList.map((s) => (

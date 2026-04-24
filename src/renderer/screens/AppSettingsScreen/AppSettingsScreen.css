@@ -1,0 +1,160 @@
+.app-settings-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  border: 1px solid var(--border);
+  background: color-mix(in oklch, var(--bg1) 50%, transparent);
+}
+
+.app-settings-block__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding-bottom: var(--sp-2);
+  border-bottom: 1px dotted var(--border-bright);
+}
+
+.app-settings-block__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  color: var(--text0);
+  margin: 0;
+}
+
+.app-settings-block__sub {
+  font-family: var(--font-ui);
+  font-size: var(--fs-sm);
+  color: var(--text2);
+  margin: 0;
+}
+
+/* ─── Theme group ─── */
+.app-settings-theme-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.app-settings-theme-group__label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.app-settings-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--sp-2);
+}
+
+.app-settings-theme-card {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--bg0);
+  border: 1px solid var(--border);
+  color: var(--text1);
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  min-height: 40px;
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+
+.app-settings-theme-card:hover {
+  border-color: var(--accent-border);
+}
+
+.app-settings-theme-card:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.app-settings-theme-card.is-active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-glow2);
+}
+
+.app-settings-theme-card__swatch {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+}
+
+.app-settings-theme-card__label {
+  letter-spacing: 0.02em;
+}
+
+.app-settings-theme-card__check {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+}
+
+/* ─── Row with action ─── */
+.app-settings-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  justify-content: space-between;
+  padding: var(--sp-2) 0;
+}
+
+.app-settings-row__label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+
+.app-settings-row__value {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--text0);
+  font-variant-numeric: tabular-nums;
+}
+
+.app-settings-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--sp-2) var(--sp-4);
+  background: transparent;
+  border: 1px solid var(--border-bright);
+  color: var(--text1);
+  font-family: var(--font-display);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  min-height: 32px;
+}
+
+.app-settings-btn:hover:not(:disabled) {
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.app-settings-btn:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.app-settings-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

@@ -1,0 +1,129 @@
+.cr-b1 {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cr-b1__total {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--purple);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.005em;
+  line-height: 1;
+}
+
+.cr-b1__sub {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--text3);
+  text-transform: uppercase;
+}
+
+.cr-b1__spark-wrap {
+  margin-top: 8px;
+}
+
+.cr-b1__spark {
+  display: block;
+  overflow: visible;
+}
+
+.cr-b1__spark-area {
+  fill: color-mix(in oklch, var(--purple) 16%, transparent);
+  stroke: none;
+}
+
+.cr-b1__spark-line {
+  fill: none;
+  stroke: var(--purple);
+  stroke-width: 1.5;
+}
+
+.cr-b1__spark-dot {
+  fill: var(--purple);
+}
+
+.cr-b1__spark-now {
+  stroke: var(--purple);
+  stroke-opacity: 0.35;
+  stroke-dasharray: 2 3;
+}
+
+.cr-b1__spark-empty {
+  stroke: var(--border-bright);
+  stroke-dasharray: 4 4;
+}
+
+.cr-b1__weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  justify-items: center;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--text3);
+  margin-top: 4px;
+}
+
+.cr-b1__agents {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 10px;
+}
+
+.cr-b1__agents-empty {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text3);
+  padding: var(--sp-2) 0;
+  letter-spacing: 0.05em;
+}
+
+.cr-b1__agent-row {
+  display: grid;
+  grid-template-columns: 18px minmax(70px, 1fr) 2fr 52px;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+}
+
+.cr-b1__agent-glyph {
+  color: var(--agent-color, var(--accent));
+  font-size: 13px;
+  text-align: center;
+  line-height: 1;
+}
+
+.cr-b1__agent-name {
+  font-family: var(--font-mono);
+  color: var(--text1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.03em;
+}
+
+.cr-b1__agent-track {
+  height: 4px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.cr-b1__agent-fill {
+  display: block;
+  height: 100%;
+  background: var(--agent-color, var(--accent));
+  opacity: 0.75;
+}
+
+.cr-b1__agent-cost {
+  font-family: var(--font-mono);
+  color: var(--text1);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

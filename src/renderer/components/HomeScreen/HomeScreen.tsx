@@ -1,41 +1,56 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowRight, Plus, FolderOpen, Bot, Terminal } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import { useGitStatusBatch } from '../../hooks/useGitStatus'
-import { DailyDigest } from './DailyDigest'
-import { QuickActions } from './QuickActions'
-import { LiveSessionGrid } from './LiveSessionGrid'
-import { ProjectCardV2 } from './ProjectCardV2'
-import { SuggestionsPanel } from './SuggestionsPanel'
-import { ReviewQueue } from './ReviewQueue'
-import { RecentWorkflows } from './RecentWorkflows'
-import { SessionTimeline } from './SessionTimeline'
-import { CostDashboard } from './CostDashboard'
-import { AgentStrip } from './AgentStrip'
+import { useDailyDigest } from '../../hooks/useDailyDigest'
+import { ScopeViz } from '../home/ScopeViz'
+import { Panel } from '../home/Panel'
+import { KpiTile } from '../home/KpiTile'
+import { SessionTimelineB1 } from '../home/SessionTimelineB1'
+import { AgentChipStripB1 } from '../home/AgentChipB1'
+import { ProjectCardB1 } from '../home/ProjectCardB1'
+import { CostReadoutB1 } from '../home/CostReadoutB1'
+import { Mascot } from '../Mascot/Mascot'
 import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
 import { getProjectAgents } from '../../../shared/agent-helpers'
 import type { AgentConfig, Project } from '../../../shared/types'
 import './HomeScreen.css'
 
-// PERF-16: O(1) agent metadata lookup (replaces O(n) SHARED_AGENTS.find() in render)
 const AGENT_META_MAP = new Map<string, (typeof SHARED_AGENTS)[number]>(
   SHARED_AGENTS.map((a) => [a.id, a]),
 )
 
-function getGreeting(): string {
-  const h = new Date().getHours()
-  if (h < 12) return 'Good morning'
-  if (h < 18) return 'Good afternoon'
+function getGreeting(hour: number): string {
+  if (hour < 12) return 'Good morning'
+  if (hour < 18) return 'Good afternoon'
   return 'Good evening'
 }
 
-function formatDate(): string {
-  return new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
+function formatDateCaption(d: Date): string {
+  return d
+    .toLocaleDateString('en-US', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    })
+    .toUpperCase()
+}
+
+function formatClock(d: Date): string {
+  return d.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
   })
+}
+
+function formatTokens(n: number): string {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'k'
+  return String(n)
+}
+
+function formatCost(n: number): string {
+  return `$${n.toFixed(2)}`
 }
 
 interface HomeScreenProps {
@@ -53,16 +68,39 @@ export function HomeScreen({
   const openCommandPalette = useAppStore((s) => s.openCommandPalette)
   const setActiveSession = useAppStore((s) => s.setActiveSession)
   const setCurrentView = useAppStore((s) => s.setCurrentView)
+  const setTab = useAppStore((s) => s.setTab)
   const username = useAppStore((s) => s.wslUsername)
+  const mascotEnabled = useAppStore((s) => s.mascotEnabled)
 
-  // Granular session-derived selectors — return primitives so HomeScreen
-  // doesn't re-render unless the actual count changes.
   const runningCount = useAppStore(
     (s) => Object.values(s.sessions).filter((sess) => sess.status === 'running').length,
   )
   const errorCount = useAppStore(
     (s) => Object.values(s.sessions).filter((sess) => sess.status === 'error').length,
   )
+  const totalTokens = useAppStore((s) => {
+    let total = 0
+    for (const usage of Object.values(s.sessionUsage)) {
+      total += usage?.inputTokens ?? 0
+      total += usage?.outputTokens ?? 0
+    }
+    return total
+  })
+  const alertCount = useAppStore((s) => s.notifications.length)
+
+  const digest = useDailyDigest()
+  const cleanExitPct = digest.cleanExitRate !== null ? `${Math.round(digest.cleanExitRate)}%` : '—'
+
+  // Live clock — ticks every 15s, keeps "now" stable across children
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 15_000)
+    return () => window.clearInterval(id)
+  }, [])
+  const nowDate = useMemo(() => new Date(now), [now])
+  const greeting = getGreeting(nowDate.getHours())
+  const dateCaption = formatDateCaption(nowDate)
+  const clock = formatClock(nowDate)
 
   const [cardMenu, setCardMenu] = useState<{
     x: number
@@ -76,15 +114,6 @@ export function HomeScreen({
   useGitStatusBatch(pinnedIds)
   const hasProjects = projects.length > 0
 
-  // Ambient glow class based on session health
-  const glowClass =
-    errorCount > 0
-      ? 'home-glow-error'
-      : runningCount > 0
-        ? 'home-glow-healthy'
-        : 'home-glow-neutral'
-
-  // Click-outside handler for context menu
   useEffect(() => {
     if (!cardMenu) return
     function handleClick(e: MouseEvent): void {
@@ -103,12 +132,8 @@ export function HomeScreen({
     }
   }, [cardMenu])
 
-  // Read sessions on-invoke via getState() — no reactive subscription needed.
-  // HomeScreen only needs sessions to resume the last one; subscribing to the
-  // full sessions object would cause a full re-render on every session change.
   const handleResumeLast = useCallback(() => {
     const allSessions = Object.values(useAppStore.getState().sessions)
-    // H13: Only resume running sessions — skip exited/errored ones
     const running = allSessions.filter((s) => s.status === 'running')
     if (running.length === 0) return
     const newest = running.sort((a, b) => b.startedAt - a.startedAt)[0]
@@ -118,49 +143,139 @@ export function HomeScreen({
     }
   }, [setActiveSession, setCurrentView])
 
+  const summaryLine = useMemo(() => {
+    const parts: string[] = []
+    parts.push(`${runningCount} running`)
+    parts.push(`${projects.length} project${projects.length === 1 ? '' : 's'}`)
+    parts.push(`${templates.length} template${templates.length === 1 ? '' : 's'}`)
+    if (errorCount > 0) parts.push(`${errorCount} error${errorCount === 1 ? '' : 's'}`)
+    return parts.join(' · ')
+  }, [runningCount, projects.length, templates.length, errorCount])
+
   return (
-    <div className={`home-main ${glowClass}`}>
-      {/* TIER 1 — Critical, always visible */}
-      <div className="home-tier1">
-        <div className="home-greeting-row">
-          <div className="home-greeting-left">
-            <div className="home-date">{formatDate()}</div>
-            <h1 className="home-headline">
-              {getGreeting()}, <span>{username || 'operator'}</span>.
-            </h1>
-            <div className="home-sub">
-              {runningCount} running &middot; {projects.length} projects &middot; {templates.length}{' '}
-              templates
-            </div>
+    <div className="home-main home-main--redesign">
+      {/* ── Row 1 · Greeting ─────────────────────────────────── */}
+      <section className={`home-greeting${mascotEnabled ? ' home-greeting--mascot' : ''}`}>
+        {mascotEnabled && (
+          <div className="home-greeting__mascot" aria-hidden="true">
+            <Mascot size={130} />
           </div>
-          <DailyDigest />
+        )}
+        <div className="home-greeting__left">
+          <div className="home-date">{dateCaption}</div>
+          <h1 className="home-headline">
+            {greeting}, <span className="home-headline__accent">{username || 'operator'}</span>.
+          </h1>
+          <div className="home-sub">{summaryLine}</div>
+          <div className="home-cta-row">
+            <button
+              type="button"
+              className="home-cta home-cta--primary"
+              onClick={() => openCommandPalette(undefined, 'all')}
+            >
+              ▸ NEW SESSION
+            </button>
+            <button
+              type="button"
+              className="home-cta home-cta--ghost"
+              onClick={handleResumeLast}
+              disabled={runningCount === 0}
+            >
+              RESUME LAST
+            </button>
+            <button
+              type="button"
+              className="home-cta home-cta--ghost"
+              onClick={() => setTab('alerts')}
+            >
+              REVIEW ALERTS{alertCount > 0 ? ` · ${alertCount}` : ''}
+            </button>
+          </div>
         </div>
+        <div className="home-clock" aria-label="Current time">
+          <div className="home-clock__caption">{dateCaption}</div>
+          <div className="home-clock__digits">{clock}</div>
+          <div className="home-clock__meta">
+            {pinned.length} pinned project{pinned.length === 1 ? '' : 's'}
+          </div>
+        </div>
+      </section>
 
-        <QuickActions
-          onNewSession={() => openCommandPalette(undefined, 'all')}
-          onRunWorkflow={() => openCommandPalette(undefined, 'workflow')}
-          onFromTemplate={() => openCommandPalette(undefined, 'template')}
-          onResumeLast={handleResumeLast}
-          resumeDisabled={runningCount === 0}
-        />
+      {/* ── Row 2 · Hero (scope + KPI strip + timeline) ──────── */}
+      <section className="home-hero-row">
+        <Panel
+          title="OVERVIEW"
+          sub={`${runningCount} LIVE · ${projects.length} PROJECTS`}
+          className="home-hero-panel"
+        >
+          <div className="home-hero-panel__viz">
+            <ScopeViz size={300} />
+          </div>
+        </Panel>
 
-        <LiveSessionGrid />
-      </div>
+        <div className="home-hero-right">
+          <div className="home-kpi-row">
+            <KpiTile
+              label="SESSIONS"
+              value={String(digest.sessionsToday)}
+              sub={`${runningCount} live`}
+            />
+            <KpiTile
+              label="COST TODAY"
+              value={formatCost(digest.costToday)}
+              sub="today"
+              tone="purple"
+            />
+            <KpiTile label="TOKENS" value={formatTokens(totalTokens)} sub="input+output" />
+            <KpiTile label="EXIT RATE" value={cleanExitPct} sub="clean" tone="green" />
+            <KpiTile
+              label="ALERTS"
+              value={String(alertCount)}
+              sub={errorCount > 0 ? `${errorCount} errored` : 'all clear'}
+              tone={alertCount > 0 ? 'red' : 'green'}
+            />
+          </div>
+          <Panel title="ACTIVITY" sub="LAST 60 MIN" className="home-activity-panel">
+            <SessionTimelineB1 now={now} />
+          </Panel>
+        </div>
+      </section>
 
-      {/* TIER 2 — Operational */}
-      {hasProjects && (
-        <div className="home-tier2">
-          <div className="home-tier2-left">
-            <div className="home-sec-head">
-              <span className="home-sec-title">Projects</span>
-              <button className="home-sec-action" onClick={openWizard} type="button">
-                <Plus size={12} /> New
+      {/* ── Row 3 · Agents ───────────────────────────────────── */}
+      <Panel
+        title="AGENTS"
+        sub="7 AVAILABLE · CARDS DESIGNATE BINARY + CTX"
+        className="home-agents-panel"
+      >
+        <AgentChipStripB1 />
+      </Panel>
+
+      {/* ── Row 4 · Projects + Cost ─────────────────────────── */}
+      <section className="home-projects-row">
+        {hasProjects ? (
+          <Panel
+            title="PROJECTS"
+            sub={`${pinned.length} PINNED · ${projects.length} TOTAL`}
+            className="home-projects-panel"
+            action={
+              <button
+                type="button"
+                className="home-inline-btn"
+                onClick={openWizard}
+                title="New project (Ctrl+N)"
+              >
+                + NEW
               </button>
-            </div>
-            <div className="home-project-scroll">
+            }
+          >
+            {pinned.length === 0 ? (
+              <div className="home-projects-empty">
+                Pin a project for quick access. Right-click any card in the Projects tab.
+              </div>
+            ) : (
               <div className="home-project-grid">
                 {pinned.map((p) => (
-                  <ProjectCardV2
+                  <ProjectCardB1
                     key={p.id}
                     project={p}
                     onOpen={() => onOpenProject(p)}
@@ -170,58 +285,52 @@ export function HomeScreen({
                     }}
                   />
                 ))}
-                <button className="home-add-card" onClick={openWizard} type="button">
-                  <Plus size={16} />
-                  <span>New project</span>
-                </button>
               </div>
+            )}
+          </Panel>
+        ) : (
+          <Panel title="GET STARTED" sub="NEW TO AGENTDECK" className="home-projects-panel">
+            <div className="home-welcome">
+              <div className="home-welcome__step">
+                <div className="home-welcome__num">01</div>
+                <div>
+                  <div className="home-welcome__title">Pick a folder</div>
+                  <div className="home-welcome__desc">Point AgentDeck at a WSL project path</div>
+                </div>
+              </div>
+              <div className="home-welcome__step">
+                <div className="home-welcome__num">02</div>
+                <div>
+                  <div className="home-welcome__title">Choose an agent</div>
+                  <div className="home-welcome__desc">
+                    7 agents supported — install via the Agents tab
+                  </div>
+                </div>
+              </div>
+              <div className="home-welcome__step">
+                <div className="home-welcome__num">03</div>
+                <div>
+                  <div className="home-welcome__title">Launch a session</div>
+                  <div className="home-welcome__desc">Ctrl+K → New Session, or press ▸ above</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="home-cta home-cta--primary home-welcome__cta"
+                onClick={openWizard}
+              >
+                ▸ CREATE PROJECT
+              </button>
             </div>
-          </div>
-          <div className="home-tier2-right">
-            <SuggestionsPanel />
-            <ReviewQueue />
-            <RecentWorkflows />
-          </div>
-        </div>
-      )}
+          </Panel>
+        )}
 
-      {/* WELCOME STATE */}
-      {!hasProjects && (
-        <div className="home-welcome">
-          <h2 className="home-welcome-title">Get started</h2>
-          <div className="home-welcome-steps">
-            <div className="home-welcome-step">
-              <FolderOpen size={20} className="home-welcome-icon" />
-              <div className="home-welcome-step-num">1</div>
-              <div className="home-welcome-step-title">Pick a folder</div>
-              <div className="home-welcome-step-desc">Point AgentDeck at your project</div>
-            </div>
-            <div className="home-welcome-step">
-              <Bot size={20} className="home-welcome-icon" />
-              <div className="home-welcome-step-num">2</div>
-              <div className="home-welcome-step-title">Choose an agent</div>
-              <div className="home-welcome-step-desc">7 agents supported</div>
-            </div>
-            <div className="home-welcome-step">
-              <Terminal size={20} className="home-welcome-icon" />
-              <div className="home-welcome-step-num">3</div>
-              <div className="home-welcome-step-title">Start coding</div>
-              <div className="home-welcome-step-desc">Launch a session and go</div>
-            </div>
-          </div>
-          <button className="home-welcome-cta" onClick={openWizard} type="button">
-            Create Project <ArrowRight size={14} />
-          </button>
-          <div className="home-welcome-hint">or press Ctrl+N anytime</div>
-        </div>
-      )}
+        <Panel title="COST / WK" sub="7-DAY ROLLUP" className="home-cost-panel">
+          <CostReadoutB1 />
+        </Panel>
+      </section>
 
-      {/* TIER 3 — Collapsible detail */}
-      <SessionTimeline />
-      <CostDashboard />
-      <AgentStrip />
-
-      {/* CONTEXT MENU */}
+      {/* Context menu (Launch with …) */}
       {cardMenu &&
         (() => {
           const project = projects.find((pp) => pp.id === cardMenu.projectId)
@@ -232,23 +341,25 @@ export function HomeScreen({
               ref={cardMenuRef}
               className="home-context-menu"
               style={{
-                top: Math.min(cardMenu.y, window.innerHeight - 200),
-                left: Math.min(cardMenu.x, window.innerWidth - 180),
+                top: Math.min(cardMenu.y, window.innerHeight - 240),
+                left: Math.min(cardMenu.x, window.innerWidth - 220),
               }}
+              role="menu"
             >
-              <div className="home-context-header">Launch with...</div>
+              <div className="home-context-header">Launch with…</div>
               {projectAgents.map((ac) => {
                 const agentMeta = AGENT_META_MAP.get(ac.agent)
                 return (
                   <button
                     key={ac.agent}
+                    type="button"
                     className="home-context-item"
                     onClick={() => {
                       onOpenProjectWithAgent(project, ac)
                       setCardMenu(null)
                     }}
                   >
-                    <span className="home-ctx-agent-icon">{agentMeta?.icon ?? '\u25C8'}</span>
+                    <span className="home-ctx-agent-icon">{agentMeta?.icon ?? '◈'}</span>
                     <span className="home-ctx-agent-name">{agentMeta?.name ?? ac.agent}</span>
                     {ac.isDefault && <span className="home-ctx-agent-badge">DEFAULT</span>}
                   </button>

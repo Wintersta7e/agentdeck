@@ -197,21 +197,41 @@ export function registerPtyHandlers(
     },
   )
 
-  ipcMain.on('pty:write', (_, sessionId: string, data: string) => {
-    if (typeof sessionId !== 'string' || !SAFE_ID_RE.test(sessionId)) return
-    if (typeof data !== 'string') return
-    // Chunk oversized writes to avoid locking the PTY with a single huge buffer.
-    // Normal keystrokes and small pastes go through the fast path.
-    const mgr = getPtyManager()
-    if (!mgr) return
-    if (data.length <= MAX_CHUNK) {
-      mgr.write(sessionId, data)
-    } else {
-      for (let i = 0; i < data.length; i += MAX_CHUNK) {
-        mgr.write(sessionId, data.slice(i, i + MAX_CHUNK))
+  ipcMain.handle(
+    'pty:write',
+    (_, sessionId: string, data: string): { ok: boolean; error?: string } => {
+      if (typeof sessionId !== 'string' || !SAFE_ID_RE.test(sessionId)) {
+        return { ok: false, error: 'Invalid sessionId' }
       }
-    }
-  })
+      if (typeof data !== 'string') {
+        return { ok: false, error: 'Invalid data (expected string)' }
+      }
+      const mgr = getPtyManager()
+      if (!mgr) {
+        return { ok: false, error: 'PTY manager not initialised' }
+      }
+      if (!mgr.hasSession(sessionId)) {
+        return { ok: false, error: 'Session not found' }
+      }
+      try {
+        // Chunk oversized writes to avoid locking the PTY with a single huge buffer.
+        // Normal keystrokes and small pastes go through the fast path.
+        if (data.length <= MAX_CHUNK) {
+          mgr.write(sessionId, data)
+        } else {
+          for (let i = 0; i < data.length; i += MAX_CHUNK) {
+            mgr.write(sessionId, data.slice(i, i + MAX_CHUNK))
+          }
+        }
+        return { ok: true }
+      } catch (err) {
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        }
+      }
+    },
+  )
 
   // Note: resize rate-limiting is handled renderer-side (80ms debounced ResizeObserver).
   // No server-side guard — node-pty resize is cheap and idempotent.

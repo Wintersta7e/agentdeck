@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { getBezierPath, type EdgeProps, type Edge } from '@xyflow/react'
+import { type EdgeProps, type Edge } from '@xyflow/react'
 
 export interface WorkflowEdgeData {
   state: 'idle' | 'active' | 'done'
@@ -10,46 +10,53 @@ export interface WorkflowEdgeData {
 
 type WfEdge = Edge<WorkflowEdgeData, 'workflowEdge'>
 
+/**
+ * B1-style step-elbow edge: straight horizontal runs joined by a short
+ * 12px diagonal in the middle. Matches the variation-b1.jsx workflow
+ * mockup. Branch labels render as inline uppercase text (TRUE/FALSE)
+ * above the midpoint, no background pill.
+ */
+function computeStepPath(x1: number, y1: number, x2: number, y2: number): string {
+  const mx = (x1 + x2) / 2
+  return `M${x1},${y1} L${mx - 6},${y1} L${mx + 6},${y2} L${x2},${y2}`
+}
+
 function WorkflowEdgeComponent({
   id,
   sourceX,
   sourceY,
   targetX,
   targetY,
-  sourcePosition,
-  targetPosition,
   data,
   selected,
 }: EdgeProps<WfEdge>): React.JSX.Element {
-  const [edgePath, labelX, labelY] = getBezierPath({
-    sourceX,
-    sourceY,
-    targetX,
-    targetY,
-    sourcePosition,
-    targetPosition,
-  })
+  const edgePath = computeStepPath(sourceX, sourceY, targetX, targetY)
+  const labelX = (sourceX + targetX) / 2
+  const labelY = (sourceY + targetY) / 2
 
   const state = data?.state ?? 'idle'
   const branch = data?.branch
   const isLoop = data?.edgeType === 'loop'
 
-  // Branch coloring: true = green, false = red, otherwise state-based
+  // Branch colouring: true = green, false = red, loop = amber,
+  // otherwise state-based (running/done → green, idle → subdued)
   let strokeColor: string
   if (branch === 'true') {
     strokeColor = 'var(--green)'
   } else if (branch === 'false') {
     strokeColor = 'var(--red)'
+  } else if (isLoop) {
+    strokeColor = 'var(--accent)'
   } else if (state === 'active' || state === 'done') {
     strokeColor = 'var(--green)'
   } else {
-    strokeColor = 'var(--border-bright)'
+    strokeColor = 'color-mix(in oklch, var(--text2) 55%, transparent)'
   }
 
-  // Dash pattern: loop edges always dashed, active edges animated dash
+  // Dash pattern: loop edges stay dashed, active edges get animated dash
   let dashArray: string | undefined
   if (isLoop) {
-    dashArray = '8 4'
+    dashArray = '6 4'
   } else if (state === 'active') {
     dashArray = '6 4'
   }
@@ -63,6 +70,7 @@ function WorkflowEdgeComponent({
     .filter(Boolean)
     .join(' ')
 
+  // Bigger transparent hit target so the 1.25px path is still clickable
   return (
     <>
       <path
@@ -78,58 +86,41 @@ function WorkflowEdgeComponent({
         d={edgePath}
         fill="none"
         stroke={strokeColor}
-        strokeWidth={selected ? 2.5 : 1.5}
+        strokeWidth={selected ? 2 : 1.25}
         strokeDasharray={dashArray}
+        strokeLinecap="round"
+        strokeLinejoin="round"
         markerEnd={`url(#wf-arrowhead-${state})`}
+        opacity={0.9}
       />
-      {/* Branch label (T/F) shown near the source of condition edges */}
+      {/* Branch label — uppercase mono text above the midpoint */}
       {branch && (
-        <g transform={`translate(${labelX}, ${labelY})`}>
-          <rect
-            x={-9}
-            y={-9}
-            width={18}
-            height={18}
-            rx={4}
-            fill="var(--bg2)"
-            stroke={branch === 'true' ? 'var(--green)' : 'var(--red)'}
-            strokeWidth={1}
-          />
-          <text
-            textAnchor="middle"
-            dominantBaseline="central"
-            fill={branch === 'true' ? 'var(--green)' : 'var(--red)'}
-            fontSize={10}
-            fontWeight={700}
-            fontFamily="var(--font-mono)"
-          >
-            {branch === 'true' ? 'T' : 'F'}
-          </text>
-        </g>
+        <text
+          x={labelX}
+          y={labelY - 6}
+          textAnchor="middle"
+          fill={branch === 'true' ? 'var(--green)' : 'var(--red)'}
+          fontSize={9}
+          fontFamily="var(--font-mono)"
+          letterSpacing={1.5}
+          style={{ pointerEvents: 'none' }}
+        >
+          {branch.toUpperCase()}
+        </text>
       )}
-      {/* Loop indicator icon */}
+      {/* Loop indicator — recycle glyph, subdued */}
       {isLoop && !branch && (
-        <g transform={`translate(${labelX}, ${labelY})`}>
-          <rect
-            x={-10}
-            y={-9}
-            width={20}
-            height={18}
-            rx={4}
-            fill="var(--bg2)"
-            stroke="var(--border-bright)"
-            strokeWidth={1}
-          />
-          <text
-            textAnchor="middle"
-            dominantBaseline="central"
-            fill="var(--text2)"
-            fontSize={9}
-            fontFamily="var(--font-mono)"
-          >
-            {'\u21BA'}
-          </text>
-        </g>
+        <text
+          x={labelX}
+          y={labelY - 6}
+          textAnchor="middle"
+          fill="var(--accent)"
+          fontSize={10}
+          fontFamily="var(--font-mono)"
+          style={{ pointerEvents: 'none' }}
+        >
+          ↻ LOOP
+        </text>
       )}
       {state === 'active' && (
         <>

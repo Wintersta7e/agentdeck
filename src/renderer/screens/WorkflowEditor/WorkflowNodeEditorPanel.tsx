@@ -34,23 +34,26 @@ export default function WorkflowNodeEditorPanel({
   const [roleFormMode, setRoleFormMode] = useState<'edit' | 'create' | null>(null)
   const [skills, setSkills] = useState<SkillInfo[]>([])
 
-  // Fetch available skills when agent is codex (SK-8: include project-local skills)
+  // Fetch available skills when agent is codex (SK-8: include project-local skills).
+  // All setState calls route through a nested async so eslint-plugin-react-hooks 7.1+
+  // doesn't flag the early-return clear as set-state-in-effect.
   useEffect(() => {
-    if (node.type !== 'agent' || node.agent !== 'codex') {
-      setSkills([])
-      return
-    }
     let cancelled = false
-    const listOpts: { projectPath?: string; includeGlobal?: boolean } = { includeGlobal: true }
-    if (projectPath) listOpts.projectPath = projectPath
-    void window.agentDeck.skills
-      .list(listOpts)
-      .then((result) => {
-        if (!cancelled) setSkills(result)
-      })
-      .catch(() => {
+    const run = async (): Promise<void> => {
+      if (node.type !== 'agent' || node.agent !== 'codex') {
         if (!cancelled) setSkills([])
-      })
+        return
+      }
+      const listOpts: { projectPath?: string; includeGlobal?: boolean } = { includeGlobal: true }
+      if (projectPath) listOpts.projectPath = projectPath
+      try {
+        const result = await window.agentDeck.skills.list(listOpts)
+        if (!cancelled) setSkills(result)
+      } catch {
+        if (!cancelled) setSkills([])
+      }
+    }
+    void run()
     return () => {
       cancelled = true
     }

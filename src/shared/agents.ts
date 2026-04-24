@@ -3,6 +3,13 @@
  *
  * Import from here in both main and renderer processes.
  * When adding/removing agents, update ONLY this file.
+ *
+ * @field contextWindow
+ * Last-resort context window for this CLI when active-model detection fails.
+ * Prefer `getEffectiveContextWindow` (`src/shared/context-window.ts`) for
+ * display everywhere in the renderer. Values here are conservative fallbacks
+ * aligned with current provider minimums — NOT claims about any specific
+ * model being the CLI's default.
  */
 
 export const AGENTS = [
@@ -23,7 +30,7 @@ export const AGENTS = [
     icon: '◈',
     name: 'Codex',
     description: 'OpenAI CLI agent',
-    contextWindow: 100_000,
+    contextWindow: 400_000,
     versionArgs: ['--version'],
     installedCmd: 'npm list -g @openai/codex --json 2>/dev/null',
     latestCmd: 'npm view @openai/codex version 2>/dev/null',

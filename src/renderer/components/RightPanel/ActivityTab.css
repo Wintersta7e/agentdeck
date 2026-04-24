@@ -114,9 +114,3 @@
     opacity: 0.4;
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .activity-dot.active {
-    animation: none;
-  }
-}

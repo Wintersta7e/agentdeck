@@ -1,0 +1,68 @@
+.ri-diff {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+
+.ri-diff__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: var(--sp-1) 0;
+  border-bottom: 1px dotted var(--border);
+}
+
+.ri-diff__row:last-of-type {
+  border-bottom: none;
+}
+
+.ri-diff__label {
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+
+.ri-diff__value {
+  font-variant-numeric: tabular-nums;
+  color: var(--text0);
+}
+
+.ri-diff__value--green {
+  color: var(--green);
+}
+
+.ri-diff__value--red {
+  color: var(--red);
+}
+
+.ri-diff__cta {
+  margin-top: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  background: transparent;
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  min-height: 32px;
+}
+
+.ri-diff__cta:hover {
+  background: var(--accent);
+  color: var(--bg0);
+}
+
+.ri-tab__empty {
+  padding: var(--sp-5) var(--sp-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text3);
+  text-align: center;
+  line-height: 1.5;
+}

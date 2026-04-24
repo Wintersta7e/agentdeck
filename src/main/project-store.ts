@@ -62,6 +62,8 @@ export interface StoreSchema {
     zoomFactor: number
     zoomAutoDetected?: boolean | number
     theme?: string
+    /** Set once when the v5.x → v6.0.0 theme rename migration has run. */
+    themeMigrated?: boolean
     visibleAgents?: string[]
     seeded?: boolean
     seedVersion?: number
@@ -73,6 +75,8 @@ export interface StoreSchema {
     rolesSeedVersion?: number | undefined
     workflowSeedVersion?: number | undefined
     workflowLastRolesVersion?: number | undefined
+    agentContextOverrides?: Record<string, number>
+    modelContextOverrides?: Record<string, number>
   }
 }
 

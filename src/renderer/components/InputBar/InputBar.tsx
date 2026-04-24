@@ -1,5 +1,6 @@
 import { memo, useCallback, useMemo, useRef, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
+import { safeWrite } from '../../utils/pty-write'
 import './InputBar.css'
 
 interface InputBarProps {
@@ -34,7 +35,7 @@ export const InputBar = memo(function InputBar({
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'Enter' && value.trim() !== '') {
-        void window.agentDeck.pty.write(sessionId, value + '\n')
+        safeWrite(sessionId, value + '\n')
         setValue('')
       }
     },
@@ -45,7 +46,7 @@ export const InputBar = memo(function InputBar({
     (templateId: string) => {
       const template = templates.find((t) => t.id === templateId)
       if (template?.content) {
-        void window.agentDeck.pty.write(sessionId, template.content + '\n')
+        safeWrite(sessionId, template.content + '\n')
       }
     },
     [sessionId, templates],

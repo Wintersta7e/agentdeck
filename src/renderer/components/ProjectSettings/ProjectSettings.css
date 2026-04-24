@@ -741,13 +741,6 @@
   color: var(--text3);
   margin-top: 2px;
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .settings-tab-panel {
-    animation: none;
-  }
-}
-
 /* Responsive: stack form rows on narrow windows */
 @media (max-width: 900px) {
   .form-row {

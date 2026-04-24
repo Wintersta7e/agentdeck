@@ -65,15 +65,6 @@
     transform: translateX(250%);
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .agent-chip-progress::after {
-    animation: none;
-    width: 100%;
-    opacity: 0.5;
-  }
-}
-
 .agent-chip-v2:not(:disabled):hover {
   border-color: rgba(var(--accent-rgb), 0.15);
   cursor: pointer;

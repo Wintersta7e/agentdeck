@@ -2,10 +2,10 @@ import { describe, it, expect } from 'vitest'
 import { getXtermTheme, BASE_XTERM_THEME, XTERM_THEME_OVERRIDES } from '../terminal-utils'
 
 describe('getXtermTheme', () => {
-  it('returns base theme for empty string themeId', () => {
+  it('applies the tungsten default overrides for empty themeId', () => {
     const theme = getXtermTheme('')
-    expect(theme.background).toBe(BASE_XTERM_THEME.background)
-    expect(theme.foreground).toBe(BASE_XTERM_THEME.foreground)
+    expect(theme.background).toBe(XTERM_THEME_OVERRIDES['']?.background)
+    expect(theme.foreground).toBe(XTERM_THEME_OVERRIDES['']?.foreground)
   })
 
   it('returns base theme for unknown themeId', () => {
@@ -14,42 +14,30 @@ describe('getXtermTheme', () => {
     expect(theme.foreground).toBe(BASE_XTERM_THEME.foreground)
   })
 
-  it('applies cyan overrides', () => {
-    const theme = getXtermTheme('cyan')
-    expect(theme.background).toBe(XTERM_THEME_OVERRIDES['cyan']?.background)
-    expect(theme.foreground).toBe(XTERM_THEME_OVERRIDES['cyan']?.foreground)
+  it('applies phosphor overrides', () => {
+    const theme = getXtermTheme('phosphor')
+    expect(theme.background).toBe(XTERM_THEME_OVERRIDES['phosphor']?.background)
+    expect(theme.foreground).toBe(XTERM_THEME_OVERRIDES['phosphor']?.foreground)
   })
 
-  it('applies violet overrides', () => {
-    const theme = getXtermTheme('violet')
-    expect(theme.background).toBe(XTERM_THEME_OVERRIDES['violet']?.background)
-    expect(theme.foreground).toBe(XTERM_THEME_OVERRIDES['violet']?.foreground)
-  })
-
-  it('applies ice overrides', () => {
-    const theme = getXtermTheme('ice')
-    expect(theme.background).toBe(XTERM_THEME_OVERRIDES['ice']?.background)
-    expect(theme.foreground).toBe(XTERM_THEME_OVERRIDES['ice']?.foreground)
-  })
-
-  it('applies parchment (light theme) overrides', () => {
-    const theme = getXtermTheme('parchment')
-    expect(theme.background).toBe(XTERM_THEME_OVERRIDES['parchment']?.background)
-    expect(theme.foreground).toBe(XTERM_THEME_OVERRIDES['parchment']?.foreground)
+  it('applies dusk overrides', () => {
+    const theme = getXtermTheme('dusk')
+    expect(theme.background).toBe(XTERM_THEME_OVERRIDES['dusk']?.background)
+    expect(theme.foreground).toBe(XTERM_THEME_OVERRIDES['dusk']?.foreground)
   })
 
   it('does not mutate BASE_XTERM_THEME', () => {
     const bgBefore = BASE_XTERM_THEME.background
     const fgBefore = BASE_XTERM_THEME.foreground
-    getXtermTheme('cyan')
-    getXtermTheme('violet')
+    getXtermTheme('phosphor')
+    getXtermTheme('dusk')
     expect(BASE_XTERM_THEME.background).toBe(bgBefore)
     expect(BASE_XTERM_THEME.foreground).toBe(fgBefore)
   })
 
   it('returns a new object on each call', () => {
-    const a = getXtermTheme('cyan')
-    const b = getXtermTheme('cyan')
+    const a = getXtermTheme('phosphor')
+    const b = getXtermTheme('phosphor')
     expect(a).not.toBe(b)
     expect(a).toEqual(b)
   })

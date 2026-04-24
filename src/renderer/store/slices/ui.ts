@@ -7,6 +7,15 @@ export interface UiSlice {
   currentView: ViewType
   setCurrentView: (view: ViewType) => void
 
+  /**
+   * Parameters for the active tab view (e.g. { sessionId }, { projectId }, { workflowId }).
+   * Reset when a new top-level tab is selected via setTab().
+   */
+  tabParams: Record<string, unknown>
+  setTabParams: (params: Record<string, unknown>) => void
+  /** Switch to a top-level tab and reset tabParams atomically. */
+  setTab: (view: ViewType, params?: Record<string, unknown>) => void
+
   settingsProjectId: string | null
   viewStack: ViewType[]
 
@@ -65,11 +74,26 @@ export interface UiSlice {
   // Theme
   theme: string
   setTheme: (name: string) => void
+
+  // Mascot (Phase 4) — gated off by default
+  mascotEnabled: boolean
+  setMascotEnabled: (enabled: boolean) => void
 }
 
 export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get) => ({
   currentView: 'home',
   setCurrentView: (view) => set({ currentView: view }),
+
+  tabParams: {},
+  setTabParams: (params) => set({ tabParams: params }),
+  // Top-level tab navigation resets tabParams but does NOT push to
+  // viewStack. The stack is reserved for sub-view modals (wizard,
+  // settings, template-editor) so switching tabs isn't unbounded memory.
+  setTab: (view, params) =>
+    set({
+      currentView: view,
+      tabParams: params ?? {},
+    }),
 
   settingsProjectId: null,
   viewStack: [] as ViewType[],
@@ -237,5 +261,19 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
       window.agentDeck.log.send('warn', 'ui', 'Theme persist failed', { err: String(err) })
     })
     set({ theme: name })
+  },
+
+  // Mascot — on by default; persisted via localStorage (only '0' disables)
+  mascotEnabled:
+    typeof localStorage !== 'undefined' ? localStorage.getItem('mascot.enabled') !== '0' : true,
+  setMascotEnabled: (enabled) => {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('mascot.enabled', enabled ? '1' : '0')
+      }
+    } catch {
+      // Storage unavailable (private mode, quota) — silently ignore
+    }
+    set({ mascotEnabled: enabled })
   },
 })

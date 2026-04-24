@@ -11,6 +11,7 @@ import type {
   Template,
   TokenUsage,
 } from '../shared/types'
+import type { ContextResult, SetContextOverrideArgs } from '../shared/context-types'
 
 declare global {
   interface Window {
@@ -31,7 +32,7 @@ declare global {
           agent?: string,
           agentFlags?: string,
         ) => Promise<void>
-        write: (sessionId: string, data: string) => void
+        write: (sessionId: string, data: string) => Promise<{ ok: boolean; error?: string }>
         resize: (sessionId: string, cols: number, rows: number) => void
         kill: (sessionId: string) => Promise<void>
         onData: (sessionId: string, cb: (data: string) => void) => () => void
@@ -51,6 +52,7 @@ declare global {
       theme: {
         get: () => Promise<string>
         set: (name: string) => Promise<string>
+        popMigration: () => Promise<{ from: string; to: string } | null>
       }
       layout: {
         get: () => Promise<{
@@ -100,6 +102,21 @@ declare global {
             updateAvailable: boolean
           }) => void,
         ) => () => void
+        getEffectiveContext: (agentId: string) => Promise<ContextResult | { error: string }>
+        getEffectiveContextForLaunch: (
+          agentId: string,
+        ) => Promise<ContextResult | { error: string }>
+        getEffectiveContextForModel: (
+          agentId: string,
+          modelId: string,
+        ) => Promise<ContextResult | { error: string }>
+        setContextOverride: (
+          args: SetContextOverrideArgs,
+        ) => Promise<{ ok: true } | { ok: false; error: string }>
+        getOverrides: () => Promise<{
+          agent: Record<string, number>
+          model: Record<string, number>
+        }>
       }
       projects: {
         detectStack: (path: string, distro?: string) => Promise<DetectedStack | null>

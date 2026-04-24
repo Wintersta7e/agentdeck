@@ -1,0 +1,230 @@
+.sessions-screen__new-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  background: var(--accent);
+  color: var(--bg0);
+  border: 1px solid var(--accent);
+  font-family: var(--font-display);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  cursor: pointer;
+  min-height: 32px;
+}
+
+.sessions-screen__new-btn:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.sessions-screen__new-btn:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.sessions-screen__filter-spacer {
+  flex: 1;
+  min-width: var(--sp-3);
+}
+
+.sessions-screen__search {
+  flex: 0 1 280px;
+  min-width: 180px;
+  padding: var(--sp-1) var(--sp-3);
+  background: color-mix(in oklch, var(--bg1) 60%, transparent);
+  border: 1px solid var(--border);
+  color: var(--text0);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.05em;
+  min-height: 26px;
+}
+
+.sessions-screen__search:focus {
+  outline: none;
+  border-color: var(--accent-border);
+}
+
+.sessions-screen__search::placeholder {
+  color: var(--text3);
+  letter-spacing: 0.05em;
+}
+
+/* ─── Table ─── */
+.sessions-table {
+  border: 1px solid var(--border);
+  background: color-mix(in oklch, var(--bg1) 40%, transparent);
+}
+
+.sessions-table__head {
+  display: grid;
+  grid-template-columns: 90px 160px 1.2fr 1.8fr 90px 80px 60px;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-4);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-display);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+
+.sessions-table__head .sessions-table__num,
+.sessions-row__num {
+  text-align: right;
+}
+
+.sessions-table__empty {
+  padding: var(--sp-6) var(--sp-4);
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--text2);
+  letter-spacing: 0.05em;
+}
+
+.sessions-table__row {
+  display: grid;
+  grid-template-columns: 90px 160px 1.2fr 1.8fr 90px 80px 60px;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: var(--sp-3) var(--sp-4);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text0);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.sessions-table__row:last-child {
+  border-bottom: none;
+}
+
+.sessions-table__row:hover,
+.sessions-table__row:focus-visible {
+  background: var(--accent-glow2);
+  outline: none;
+}
+
+.sessions-table__row:focus-visible {
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+/* ─── State cell ─── */
+.sessions-row__state {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-family: var(--font-display);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.sessions-row__pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  display: inline-block;
+}
+
+.sessions-row--running .sessions-row__state,
+.sessions-row--running .sessions-row__pulse {
+  color: var(--green);
+}
+
+.sessions-row--error .sessions-row__state {
+  color: var(--red);
+}
+
+.sessions-row--done .sessions-row__state {
+  color: var(--text2);
+}
+
+.sessions-row--starting .sessions-row__state {
+  color: var(--accent);
+}
+
+/* ─── Agent cell ─── */
+.sessions-row__agent {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.sessions-row__agent-glyph {
+  color: var(--accent);
+  font-size: var(--fs-md);
+  line-height: 1;
+}
+
+.sessions-row__agent-name {
+  color: var(--text0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ─── Project cell ─── */
+.sessions-row__project {
+  min-width: 0;
+}
+
+.sessions-row__project-name {
+  color: var(--text1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+/* ─── Activity cell ─── */
+.sessions-row__activity {
+  color: var(--text1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* ─── Numeric cells ─── */
+.sessions-row__num {
+  color: var(--text1);
+  font-variant-numeric: tabular-nums;
+}
+
+.sessions-row__cost {
+  color: var(--purple);
+}
+
+.sessions-row__ago {
+  color: var(--text3);
+}
+
+/* Responsive: collapse the narrower columns first */
+@media (max-width: 900px) {
+  .sessions-table__head,
+  .sessions-table__row {
+    grid-template-columns: 80px 140px 1fr 80px 60px;
+    gap: var(--sp-2);
+  }
+  .sessions-table__head span:nth-child(4),
+  .sessions-row__activity,
+  .sessions-row__cost,
+  .sessions-table__head span:nth-child(6) {
+    display: none;
+  }
+}

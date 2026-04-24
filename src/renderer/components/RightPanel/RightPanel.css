@@ -23,29 +23,49 @@
 
 .panel-tabs {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.panel-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .panel-tab {
   position: relative;
   flex: 1;
-  padding: var(--sp-2) var(--sp-3);
-  text-align: center;
-  font-size: var(--fs-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--sp-1);
+  min-width: 0;
+  padding: var(--sp-2) var(--sp-2);
+  font-family: var(--font-display);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--text2);
   cursor: pointer;
   border: none;
   background: none;
   border-bottom: 2px solid transparent;
   transition: color var(--duration-base);
-  letter-spacing: 0.04em;
-  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.panel-tab__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 320px) {
+  .panel-tab__label {
+    display: none;
+  }
 }
 
 .panel-tab.active {
@@ -180,10 +200,4 @@
   font-size: var(--fs-xs);
   line-height: 1.4;
   max-width: 90%;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .panel-tab {
-    transition: none;
-  }
 }
