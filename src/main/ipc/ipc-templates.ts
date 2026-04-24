@@ -1,5 +1,11 @@
 import { ipcMain, type BrowserWindow } from 'electron'
-import type { Template, TemplateDraft, TemplateFile, TemplateScope } from '../../shared/types'
+import type {
+  Template,
+  TemplateCategory,
+  TemplateDraft,
+  TemplateFile,
+  TemplateScope,
+} from '../../shared/types'
 import type { TemplateStore, TemplateChangeEvent } from '../template-store'
 import type { LegacyStoreAdapter } from '../template-legacy-store'
 import { SAFE_ID_RE } from '../validation'
@@ -8,7 +14,19 @@ import { createLogger } from '../logger'
 const log = createLogger('ipc-templates')
 
 const SCOPES: TemplateScope[] = ['user', 'project']
+const CATEGORIES = new Set<TemplateCategory>([
+  'Orient',
+  'Review',
+  'Fix',
+  'Test',
+  'Refactor',
+  'Debug',
+  'Docs',
+  'Git',
+])
 
+const MAX_ID_LEN = 128
+const MAX_PROJECT_ID_LEN = 128
 const MAX_NAME_LEN = 256
 const MAX_DESC_LEN = 1024
 const MAX_CONTENT_LEN = 100_000
@@ -40,6 +58,9 @@ function validateDraft(input: unknown): asserts input is TemplateDraft {
   if (raw.id !== undefined && (typeof raw.id !== 'string' || !SAFE_ID_RE.test(raw.id))) {
     throw new Error('draft.id must be a valid identifier')
   }
+  if (raw.id !== undefined && typeof raw.id === 'string' && raw.id.length > MAX_ID_LEN) {
+    throw new Error(`draft.id too long (max ${String(MAX_ID_LEN)})`)
+  }
   if (typeof raw.name !== 'string' || raw.name.length === 0) {
     throw new Error('draft.name is required')
   }
@@ -58,8 +79,13 @@ function validateDraft(input: unknown): asserts input is TemplateDraft {
   if (raw.content.length > MAX_CONTENT_LEN) {
     throw new Error(`draft.content too long (max ${String(MAX_CONTENT_LEN)})`)
   }
-  if (raw.category !== undefined && typeof raw.category !== 'string') {
-    throw new Error('draft.category must be a string')
+  if (raw.category !== undefined) {
+    if (typeof raw.category !== 'string') {
+      throw new Error('draft.category must be a string')
+    }
+    if (!CATEGORIES.has(raw.category as TemplateCategory)) {
+      throw new Error('draft.category is not a valid TemplateCategory')
+    }
   }
 }
 
@@ -75,6 +101,9 @@ function validateScopeAndProject(
     if (typeof projectId !== 'string' || !SAFE_ID_RE.test(projectId)) {
       throw new Error('projectId required for project scope')
     }
+    if (projectId.length > MAX_PROJECT_ID_LEN) {
+      throw new Error(`projectId too long (max ${String(MAX_PROJECT_ID_LEN)})`)
+    }
     if (!ctx.getProjectExists(projectId)) {
       throw new Error('unknown projectId')
     }
@@ -88,6 +117,9 @@ function validateRef(input: unknown, ctx: TemplateHandlerContext): TemplateRef {
   const raw = input
   if (typeof raw.id !== 'string' || !SAFE_ID_RE.test(raw.id)) {
     throw new Error('ref.id must be a valid identifier')
+  }
+  if (raw.id.length > MAX_ID_LEN) {
+    throw new Error(`ref.id too long (max ${String(MAX_ID_LEN)})`)
   }
   const scope = raw.scope
   const projectId = (raw.projectId ?? null) as string | null
@@ -122,9 +154,8 @@ export function registerTemplateIpc(ctx: TemplateHandlerContext): void {
   ipcMain.handle(
     'templates:listAll',
     async (_event, input?: { projectId?: string } | undefined): Promise<Template[]> => {
-      if (!ctx.migrationComplete()) {
-        return ctx.legacy.listAll()
-      }
+      // Validate input BEFORE the migration-complete branch so malformed
+      // payloads are rejected uniformly regardless of current migration state.
       if (input !== undefined && !isPlainObject(input)) {
         throw new Error('templates:listAll input must be an object or undefined')
       }
@@ -133,6 +164,14 @@ export function registerTemplateIpc(ctx: TemplateHandlerContext): void {
         if (typeof projectId !== 'string' || !SAFE_ID_RE.test(projectId)) {
           throw new Error('templates:listAll — projectId must be a valid identifier')
         }
+        if (projectId.length > MAX_PROJECT_ID_LEN) {
+          throw new Error(
+            `templates:listAll — projectId too long (max ${String(MAX_PROJECT_ID_LEN)})`,
+          )
+        }
+      }
+      if (!ctx.migrationComplete()) {
+        return ctx.legacy.listAll()
       }
       return ctx.store.listAll(projectId !== undefined ? { projectId } : undefined)
     },
@@ -143,6 +182,11 @@ export function registerTemplateIpc(ctx: TemplateHandlerContext): void {
     async (_event, projectId: unknown): Promise<Template[]> => {
       if (typeof projectId !== 'string' || !SAFE_ID_RE.test(projectId)) {
         throw new Error('templates:activateProject — projectId must be a valid identifier')
+      }
+      if (projectId.length > MAX_PROJECT_ID_LEN) {
+        throw new Error(
+          `templates:activateProject — projectId too long (max ${String(MAX_PROJECT_ID_LEN)})`,
+        )
       }
       if (!ctx.getProjectExists(projectId)) {
         throw new Error('unknown projectId')
@@ -166,8 +210,17 @@ export function registerTemplateIpc(ctx: TemplateHandlerContext): void {
     ): Promise<Template> => {
       validateDraft(draft)
       validateScopeAndProject(scope, projectId, ctx)
-      if (baseMtime !== undefined && typeof baseMtime !== 'number') {
-        throw new Error('baseMtime must be a number')
+      if (baseMtime !== undefined) {
+        if (typeof baseMtime !== 'number') {
+          throw new Error('baseMtime must be a number')
+        }
+        // Reject NaN, Infinity, negatives, and impossibly large values. The
+        // prior check only blocked non-number types, so NaN/Infinity slipped
+        // through and would corrupt the stale-write comparison in
+        // writeTemplateUnlocked.
+        if (!Number.isFinite(baseMtime) || baseMtime < 0 || baseMtime > Number.MAX_SAFE_INTEGER) {
+          throw new Error('baseMtime must be a finite non-negative number')
+        }
       }
       const normalizedProjectId = scope === 'project' ? (projectId as string) : null
 

@@ -101,4 +101,43 @@ describe('closeSession orchestrator', () => {
     const { closeSession } = await import('../session-close')
     await expect(closeSession('nope')).resolves.toBeUndefined()
   })
+
+  it('in-flight guard: concurrent close(s1) calls -> only one orchestration runs', async () => {
+    const { closeSession, __resetCloseSessionGuardForTest } = await import('../session-close')
+    __resetCloseSessionGuardForTest()
+
+    type Inspection = { hasChanges: boolean; hasUnmerged: boolean; branch: string }
+    // Slow the first worktree.inspect so the second closeSession call lands
+    // while the first is still in orchestration. Resolver is exposed via the
+    // closure so the test can unblock the first inspect deterministically.
+    const gate: { resolve: (v: Inspection) => void } = { resolve: () => {} }
+    ;(window.agentDeck.worktree.inspect as ReturnType<typeof vi.fn>).mockImplementationOnce(
+      () =>
+        new Promise<Inspection>((resolve) => {
+          invocations.push('inspect')
+          gate.resolve = resolve
+        }),
+    )
+
+    const first = closeSession('s1')
+    // Second call fires while first is mid-inspect; should early-return via the guard.
+    const second = closeSession('s1')
+    // Let the microtask queue settle so the second call runs its early return.
+    await Promise.resolve()
+
+    // Second has already resolved (guard early return) even though first hasn't resolved yet.
+    await expect(Promise.race([second, Promise.resolve('pending')])).resolves.toBeUndefined()
+
+    // Only one inspect call has been pushed at this point.
+    expect(invocations.filter((x) => x === 'inspect')).toHaveLength(1)
+
+    // Resolve the first inspect so the first orchestration completes.
+    gate.resolve({ hasChanges: false, hasUnmerged: false, branch: 'main' })
+    await first
+
+    // Post-orchestration: exactly ONE pty.kill call, not two.
+    expect(invocations.filter((x) => x === 'pty.kill')).toHaveLength(1)
+    // Also exactly one releasePrimary — the second call never reached it.
+    expect(invocations.filter((x) => x === 'releasePrimary')).toHaveLength(1)
+  })
 })

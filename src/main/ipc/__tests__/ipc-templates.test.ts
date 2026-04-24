@@ -179,6 +179,69 @@ describe('ipc-templates', () => {
       await call('templates:save', validDraft, 'project', 'proj-1')
       expect(store.save).toHaveBeenCalledWith(validDraft, 'project', 'proj-1', undefined)
     })
+
+    it('rejects id too long (>128)', async () => {
+      register({ migrationComplete: true })
+      // Start from a SAFE_ID_RE-valid prefix, then stretch past the 128-char
+      // cap with legal identifier characters so the pattern check passes and
+      // the length cap is exercised.
+      const draft: TemplateDraft = { ...validDraft, id: 'a'.repeat(129) }
+      await expect(call('templates:save', draft, 'user', null)).rejects.toThrow(/id too long/)
+    })
+
+    it('rejects projectId too long (>128)', async () => {
+      const longProjectId = 'p'.repeat(129)
+      register({
+        migrationComplete: true,
+        existingProjects: new Set([longProjectId]),
+      })
+      await expect(call('templates:save', validDraft, 'project', longProjectId)).rejects.toThrow(
+        /projectId too long/,
+      )
+    })
+
+    it('rejects category not in TemplateCategory enum', async () => {
+      register({ migrationComplete: true })
+      const draft = { ...validDraft, category: 'Bogus' } as unknown as TemplateDraft
+      await expect(call('templates:save', draft, 'user', null)).rejects.toThrow(
+        /valid TemplateCategory/,
+      )
+    })
+
+    it('accepts a valid TemplateCategory', async () => {
+      const { store } = register({ migrationComplete: true })
+      const draft: TemplateDraft = { ...validDraft, category: 'Orient' }
+      await call('templates:save', draft, 'user', null)
+      expect(store.save).toHaveBeenCalledTimes(1)
+    })
+
+    it('rejects baseMtime=NaN', async () => {
+      register({ migrationComplete: true })
+      await expect(call('templates:save', validDraft, 'user', null, Number.NaN)).rejects.toThrow(
+        /finite non-negative/,
+      )
+    })
+
+    it('rejects baseMtime=Infinity', async () => {
+      register({ migrationComplete: true })
+      await expect(
+        call('templates:save', validDraft, 'user', null, Number.POSITIVE_INFINITY),
+      ).rejects.toThrow(/finite non-negative/)
+    })
+
+    it('rejects baseMtime negative', async () => {
+      register({ migrationComplete: true })
+      await expect(call('templates:save', validDraft, 'user', null, -1)).rejects.toThrow(
+        /finite non-negative/,
+      )
+    })
+
+    it('rejects baseMtime > MAX_SAFE_INTEGER', async () => {
+      register({ migrationComplete: true })
+      await expect(
+        call('templates:save', validDraft, 'user', null, Number.MAX_SAFE_INTEGER + 2),
+      ).rejects.toThrow(/finite non-negative/)
+    })
   })
 
   describe('templates:delete', () => {
