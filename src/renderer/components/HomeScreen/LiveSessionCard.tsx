@@ -73,9 +73,12 @@ export function LiveSessionCard({ sessionId }: LiveSessionCardProps): React.JSX.
   const snapshotValue = session?.resolvedContextWindow
   const snapshotSource = session?.resolvedContextSource ?? null
 
-  // Fallbacks — hooks called unconditionally per React rules
-  const byModel = useEffectiveContextForModel(agentId, session?.model ?? '')
-  const byAgent = useEffectiveContext(agentId)
+  // Fallbacks — only fetched when no immutable launch snapshot is present
+  const snapshotMissing = snapshotValue === undefined
+  const byModel = useEffectiveContextForModel(agentId, session?.model ?? '', {
+    enabled: snapshotMissing && Boolean(session?.model),
+  })
+  const byAgent = useEffectiveContext(agentId, { enabled: snapshotMissing })
 
   // Resolve display value + source with priority
   const { contextWindow, ctxSource, stale } = (() => {

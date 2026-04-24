@@ -10,8 +10,20 @@ interface HookState {
   unknownModelHint: string | undefined
 }
 
+interface HookOpts {
+  enabled?: boolean
+}
+
 const INITIAL: HookState = {
   loading: true,
+  value: null,
+  source: null,
+  modelId: null,
+  unknownModelHint: undefined,
+}
+
+const DISABLED: HookState = {
+  loading: false,
   value: null,
   source: null,
   modelId: null,
@@ -38,15 +50,21 @@ export function badgeLabelFor(
 /**
  * Primary hook: auto-detects the active model for an agent and returns the
  * resolver's verdict (value + source + modelId).
+ *
+ * Pass `{ enabled: false }` to skip the IPC call entirely (e.g. when a stored
+ * launch snapshot is already available). The hook still respects Rules of Hooks
+ * — the effect runs unconditionally but exits early without calling setState.
  */
-export function useEffectiveContext(agentId: string): HookState {
-  const [state, setState] = useState<HookState>(INITIAL)
+export function useEffectiveContext(agentId: string, opts: HookOpts = {}): HookState {
+  const { enabled = true } = opts
+  const [asyncState, setAsyncState] = useState<HookState | null>(null)
   useEffect(() => {
+    if (!enabled) return
     let cancelled = false
     window.agentDeck.agents.getEffectiveContext(agentId).then((r) => {
       if (cancelled) return
       if ('error' in r) {
-        setState({
+        setAsyncState({
           loading: false,
           value: null,
           source: null,
@@ -55,7 +73,7 @@ export function useEffectiveContext(agentId: string): HookState {
         })
         return
       }
-      setState({
+      setAsyncState({
         loading: false,
         value: r.value,
         source: r.source,
@@ -66,8 +84,11 @@ export function useEffectiveContext(agentId: string): HookState {
     return () => {
       cancelled = true
     }
-  }, [agentId])
-  return state
+  }, [agentId, enabled])
+  // When disabled, always return the DISABLED shape regardless of any stale async state.
+  if (!enabled) return DISABLED
+  // When enabled but no result yet, return INITIAL (loading).
+  return asyncState ?? INITIAL
 }
 
 /**
@@ -75,15 +96,23 @@ export function useEffectiveContext(agentId: string): HookState {
  * snapshot but still carry a `model` field. Runs no detector — skips the
  * detector/cache path entirely. Calls the IPC that passes the explicit
  * modelId directly to the resolver.
+ *
+ * Pass `{ enabled: false }` to skip the IPC call entirely.
  */
-export function useEffectiveContextForModel(agentId: string, modelId: string): HookState {
-  const [state, setState] = useState<HookState>(INITIAL)
+export function useEffectiveContextForModel(
+  agentId: string,
+  modelId: string,
+  opts: HookOpts = {},
+): HookState {
+  const { enabled = true } = opts
+  const [asyncState, setAsyncState] = useState<HookState | null>(null)
   useEffect(() => {
+    if (!enabled) return
     let cancelled = false
     window.agentDeck.agents.getEffectiveContextForModel(agentId, modelId).then((r) => {
       if (cancelled) return
       if ('error' in r) {
-        setState({
+        setAsyncState({
           loading: false,
           value: null,
           source: null,
@@ -92,7 +121,7 @@ export function useEffectiveContextForModel(agentId: string, modelId: string): H
         })
         return
       }
-      setState({
+      setAsyncState({
         loading: false,
         value: r.value,
         source: r.source,
@@ -103,6 +132,7 @@ export function useEffectiveContextForModel(agentId: string, modelId: string): H
     return () => {
       cancelled = true
     }
-  }, [agentId, modelId])
-  return state
+  }, [agentId, modelId, enabled])
+  if (!enabled) return DISABLED
+  return asyncState ?? INITIAL
 }
