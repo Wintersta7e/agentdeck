@@ -1,5 +1,6 @@
 import { memo, useCallback, useMemo, useRef, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
+import { useTemplates } from '../../hooks/useTemplates'
 import { safeWrite } from '../../utils/pty-write'
 import './InputBar.css'
 
@@ -22,7 +23,7 @@ export const InputBar = memo(function InputBar({
     (s) =>
       (projectId ? s.projects.find((p) => p.id === projectId)?.attachedTemplates : undefined) ?? [],
   )
-  const templates = useAppStore((s) => s.templates)
+  const templates = useTemplates()
 
   const attachedTemplates = useMemo(
     () =>

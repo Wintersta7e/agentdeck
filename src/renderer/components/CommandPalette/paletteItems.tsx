@@ -10,7 +10,7 @@ import {
   ClipboardList,
 } from 'lucide-react'
 import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
-import type { Project, LegacyTemplate as Template } from '../../../shared/types'
+import type { Project, Template } from '../../../shared/types'
 
 export type ScopeTab = 'projects' | 'templates' | 'sessions' | 'tools'
 

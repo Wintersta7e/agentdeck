@@ -6,7 +6,7 @@ import {
   groupBySections,
   type PaletteItem,
 } from '../paletteItems'
-import type { Project, LegacyTemplate as Template } from '../../../../shared/types'
+import type { Project, Template } from '../../../../shared/types'
 
 // ── Factories ──
 
@@ -27,11 +27,16 @@ function makeTemplate(overrides: Partial<Template> = {}): Template {
     id: 't1',
     name: 'Code Review',
     description: 'Review code for bugs',
-    category: 'review',
     content: 'Review this code',
-    isBuiltin: true,
+    usageCount: 0,
+    lastUsedAt: 0,
+    pinned: false,
+    scope: 'user',
+    projectId: null,
+    path: '/tmp/t1.json',
+    mtimeMs: 0,
     ...overrides,
-  } as Template
+  }
 }
 
 // ── parseSessionSnapshot ──

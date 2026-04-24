@@ -24,6 +24,7 @@ import { NotificationToast } from './components/NotificationToast/NotificationTo
 import { PlaceholderScreen } from './components/PlaceholderScreen/PlaceholderScreen'
 import { useAppStore } from './store/appStore'
 import { useProjects } from './hooks/useProjects'
+import { getActiveProjectId } from './selectors/active-project'
 import type { ActivityEvent, AgentConfig, Project, ViewType, WorkflowEvent } from '../shared/types'
 import './App.css'
 
@@ -216,6 +217,14 @@ export function App(): React.JSX.Element {
         })
       })
   }, [])
+
+  // Activate project-scope templates when the active project changes. The
+  // slice is idempotent — repeated calls for the same projectId are a no-op.
+  const activeProjectId = useAppStore(getActiveProjectId)
+  const activateProjectTemplates = useAppStore((s) => s.activateProjectTemplates)
+  useEffect(() => {
+    void activateProjectTemplates(activeProjectId)
+  }, [activeProjectId, activateProjectTemplates])
 
   // Load saved zoom level on mount
   useEffect(() => {
