@@ -73,7 +73,7 @@ describe('createProjectStore', () => {
     expect(ipcMain.handle).toHaveBeenCalledWith('store:getProjects', expect.any(Function))
     expect(ipcMain.handle).toHaveBeenCalledWith('store:saveProject', expect.any(Function))
     expect(ipcMain.handle).toHaveBeenCalledWith('store:deleteProject', expect.any(Function))
-    expect(ipcMain.handle).toHaveBeenCalledWith('store:getTemplates', expect.any(Function))
+    // store:getTemplates is registered by ipc-templates.ts (PREREQ B5) — not here.
     expect(ipcMain.handle).toHaveBeenCalledWith('store:saveTemplate', expect.any(Function))
     expect(ipcMain.handle).toHaveBeenCalledWith('store:deleteTemplate', expect.any(Function))
     expect(ipcMain.handle).toHaveBeenCalledWith('store:getRoles', expect.any(Function))

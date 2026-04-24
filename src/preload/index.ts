@@ -2,6 +2,9 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type {
   ActivityEvent,
   Role,
+  Template,
+  TemplateDraft,
+  TemplateScope,
   Workflow,
   WorkflowExport,
   WorkflowMeta,
@@ -334,5 +337,54 @@ contextBridge.exposeInMainWorld('agentDeck', {
       ipcRenderer.on(ch, handler)
       return () => ipcRenderer.removeListener(ch, handler)
     },
+  },
+  templates: {
+    listAll: (input?: { projectId?: string }): Promise<Template[]> =>
+      ipcRenderer.invoke('templates:listAll', input) as Promise<Template[]>,
+    activateProject: (projectId: string): Promise<Template[]> =>
+      ipcRenderer.invoke('templates:activateProject', projectId) as Promise<Template[]>,
+    save: (
+      draft: TemplateDraft,
+      scope: TemplateScope,
+      projectId: string | null,
+      baseMtime?: number,
+    ): Promise<Template> =>
+      ipcRenderer.invoke('templates:save', draft, scope, projectId, baseMtime) as Promise<Template>,
+    delete: (ref: { id: string; scope: TemplateScope; projectId: string | null }): Promise<void> =>
+      ipcRenderer.invoke('templates:delete', ref) as Promise<void>,
+    incrementUsage: (ref: {
+      id: string
+      scope: TemplateScope
+      projectId: string | null
+    }): Promise<void> => ipcRenderer.invoke('templates:incrementUsage', ref) as Promise<void>,
+    setPinned: (
+      ref: { id: string; scope: TemplateScope; projectId: string | null },
+      pinned: boolean,
+    ): Promise<void> => ipcRenderer.invoke('templates:setPinned', ref, pinned) as Promise<void>,
+    onChange: (cb: (e: unknown) => void): (() => void) => {
+      const handler = (_: Electron.IpcRendererEvent, e: unknown): void => cb(e)
+      ipcRenderer.on('templates:change', handler)
+      return () => ipcRenderer.removeListener('templates:change', handler)
+    },
+    onParseError: (cb: (e: { path: string; error: string }) => void): (() => void) => {
+      const handler = (_: Electron.IpcRendererEvent, e: { path: string; error: string }): void =>
+        cb(e)
+      ipcRenderer.on('templates:parseError', handler)
+      return () => ipcRenderer.removeListener('templates:parseError', handler)
+    },
+  },
+  env: {
+    getAgentPaths: (): Promise<{
+      claudeConfigDir: string | null
+      codexHome: string | null
+      agentdeckRoot: string
+      templateUserRoot: string
+    }> =>
+      ipcRenderer.invoke('env:getAgentPaths') as Promise<{
+        claudeConfigDir: string | null
+        codexHome: string | null
+        agentdeckRoot: string
+        templateUserRoot: string
+      }>,
   },
 })

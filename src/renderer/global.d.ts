@@ -9,6 +9,9 @@ import type {
   Role,
   SkillInfo,
   LegacyTemplate as Template,
+  Template as FileTemplate,
+  TemplateDraft,
+  TemplateScope,
   TokenUsage,
 } from '../shared/types'
 import type { ContextResult, SetContextOverrideArgs } from '../shared/context-types'
@@ -189,6 +192,40 @@ declare global {
           workflowId: string,
           cb: (event: import('../shared/types').WorkflowEvent) => void,
         ): () => void
+      }
+      templates: {
+        listAll: (input?: { projectId?: string }) => Promise<FileTemplate[]>
+        activateProject: (projectId: string) => Promise<FileTemplate[]>
+        save: (
+          draft: TemplateDraft,
+          scope: TemplateScope,
+          projectId: string | null,
+          baseMtime?: number,
+        ) => Promise<FileTemplate>
+        delete: (ref: {
+          id: string
+          scope: TemplateScope
+          projectId: string | null
+        }) => Promise<void>
+        incrementUsage: (ref: {
+          id: string
+          scope: TemplateScope
+          projectId: string | null
+        }) => Promise<void>
+        setPinned: (
+          ref: { id: string; scope: TemplateScope; projectId: string | null },
+          pinned: boolean,
+        ) => Promise<void>
+        onChange: (cb: (e: unknown) => void) => () => void
+        onParseError: (cb: (e: { path: string; error: string }) => void) => () => void
+      }
+      env: {
+        getAgentPaths: () => Promise<{
+          claudeConfigDir: string | null
+          codexHome: string | null
+          agentdeckRoot: string
+          templateUserRoot: string
+        }>
       }
     }
   }

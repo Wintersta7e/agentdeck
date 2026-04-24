@@ -7,6 +7,7 @@ import type { EnvVar, Project, Role, LegacyTemplate as Template } from '../share
 import { migrateProjectAgents } from '../shared/agent-helpers'
 import { createLogger } from './logger'
 import { SAFE_ID_RE } from './validation'
+import { toWslPath } from './wsl-utils'
 
 const log = createLogger('project-store')
 
@@ -64,6 +65,10 @@ export interface StoreSchema {
     theme?: string
     /** Set once when the v5.x → v6.0.0 theme rename migration has run. */
     themeMigrated?: boolean
+    /** Set once when project.path values have been normalised to WSL form (v6.1.0 PREREQ H8). */
+    pathsNormalized?: boolean
+    /** Set once when the legacy flat `templates` key has been migrated to on-disk files. */
+    templatesMigrated?: boolean
     visibleAgents?: string[]
     seeded?: boolean
     seedVersion?: number
@@ -78,6 +83,36 @@ export interface StoreSchema {
 }
 
 export type AppStore = Store<StoreSchema>
+
+/**
+ * PREREQ H8: one-shot normalisation of legacy `project.path` values so every
+ * project ends up with a WSL-style path (e.g. `/home/user/proj`, `/mnt/c/foo`).
+ * Guarded by `appPrefs.pathsNormalized`. On failure the flag stays false so
+ * the next boot retries.
+ */
+function normalizeProjectPaths(store: AppStore): void {
+  const prefs = store.get('appPrefs') ?? ({} as StoreSchema['appPrefs'])
+  if (prefs.pathsNormalized === true) return
+  try {
+    const projects = store.get('projects') ?? []
+    let changed = 0
+    const next = projects.map((p) => {
+      const normalized = toWslPath(p.path)
+      if (normalized !== p.path) {
+        changed += 1
+        return { ...p, path: normalized }
+      }
+      return p
+    })
+    if (changed > 0) {
+      store.set('projects', next)
+      log.info('normalized project.path values', { count: changed })
+    }
+    store.set('appPrefs', { ...prefs, pathsNormalized: true })
+  } catch (err) {
+    log.warn('project path normalization failed; will retry', { err: String(err) })
+  }
+}
 
 export function createProjectStore(): Store<StoreSchema> {
   const defaults: StoreSchema = {
@@ -118,6 +153,12 @@ export function createProjectStore(): Store<StoreSchema> {
     store.set('projects', migrationProjects)
     log.info('Ran project name migration')
   }
+
+  // PREREQ H8: one-shot normalisation of legacy Windows-style project.path
+  // values to WSL form. Idempotent via `appPrefs.pathsNormalized` — runs
+  // exactly once per install. On failure, the flag is NOT set so the next
+  // boot retries.
+  normalizeProjectPaths(store)
 
   ipcMain.handle('store:getProjects', () => {
     const projects = store.get('projects')
@@ -192,9 +233,10 @@ export function createProjectStore(): Store<StoreSchema> {
     })
   })
 
-  ipcMain.handle('store:getTemplates', () => {
-    return store.get('templates')
-  })
+  // PREREQ B5: `store:getTemplates` is registered in `ipc-templates.ts` only,
+  // via `registerLegacyTemplateIpc`, as a compat shim that routes to the new
+  // template store while migration is in progress. Do NOT re-register it here —
+  // ipcMain.handle throws on duplicate channel registration.
 
   ipcMain.handle('store:saveTemplate', (_, template: unknown) => {
     if (!template || typeof template !== 'object') {

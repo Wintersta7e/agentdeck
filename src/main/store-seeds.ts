@@ -83,6 +83,19 @@ const SEED_ROLES: Omit<Role, 'id'>[] = [
   },
 ]
 
+/**
+ * Pure seed data — shape-compatible with `TemplateFile` (minus derived fields).
+ * Exported for use by `runTemplateMigration` on fresh installs. Each entry has
+ * a stable `id` so upgrades can detect and refresh the same seed entries.
+ */
+export interface SeedTemplateDatum {
+  id: string
+  name: string
+  description: string
+  content: string
+  category?: TemplateCategory
+}
+
 const SEED_TEMPLATES: Omit<Template, 'id'>[] = [
   // ── Orient ──
   {
@@ -212,6 +225,22 @@ const SEED_TEMPLATES: Omit<Template, 'id'>[] = [
       'Write a pull request description for the changes in this branch.\n\nInclude:\n- **Problem**: what was broken, missing, or needed — and who it affects\n- **Solution**: what you changed and why this approach over alternatives\n- **Key files**: the main files a reviewer should focus on\n- **Testing**: what was tested and how (commands, manual steps)\n- **Risks**: what could go wrong in production\n\nKeep it skimmable. Bullet points over paragraphs.',
   },
 ]
+
+/**
+ * Pure seed data for the file-based template store. Passed to
+ * `runTemplateMigration` on fresh installs. Ids are stable across builds so
+ * fresh installs of the same app version end up with the same seed files.
+ */
+export const seedTemplateData: SeedTemplateDatum[] = SEED_TEMPLATES.map((t, idx) => ({
+  id: `seed-${String(idx + 1).padStart(3, '0')}-${t.name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')}`,
+  name: t.name,
+  description: t.description,
+  content: t.content ?? '',
+  ...(t.category !== undefined ? { category: t.category } : {}),
+}))
 
 export function seedTemplates(store: AppStore): void {
   const prefs = store.get('appPrefs')

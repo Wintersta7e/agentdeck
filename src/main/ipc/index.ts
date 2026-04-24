@@ -16,3 +16,9 @@ export { registerSkillHandlers } from './ipc-skills'
 export { registerWorktreeHandlers } from './ipc-worktree'
 export { registerHomeHandlers, reviewTracker } from './ipc-home'
 export { registerCostHandlers } from './ipc-cost'
+export {
+  registerTemplateIpc,
+  registerLegacyTemplateIpc,
+  wireTemplateWindowEvents,
+} from './ipc-templates'
+export { registerEnvIpc } from './ipc-env'
