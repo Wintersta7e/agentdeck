@@ -45,6 +45,7 @@ export function NewSessionScreen(): React.JSX.Element {
   const templates = useAppStore((s) => s.templates)
   const setCurrentView = useAppStore((s) => s.setCurrentView)
   const addSession = useAppStore((s) => s.addSession)
+  const captureSessionSnapshot = useAppStore((s) => s.captureSessionSnapshot)
   const setActiveSession = useAppStore((s) => s.setActiveSession)
   const openWizard = useAppStore((s) => s.openWizard)
 
@@ -109,6 +110,7 @@ export function NewSessionScreen(): React.JSX.Element {
     }
     const sessionId = `session-${project.id}-${Date.now()}`
     addSession(sessionId, project.id, overrides)
+    void captureSessionSnapshot(sessionId, agentId)
     setActiveSession(sessionId)
     setCurrentView('session')
   }, [
@@ -121,6 +123,7 @@ export function NewSessionScreen(): React.JSX.Element {
     mode,
     approve,
     addSession,
+    captureSessionSnapshot,
     setActiveSession,
     setCurrentView,
   ])
