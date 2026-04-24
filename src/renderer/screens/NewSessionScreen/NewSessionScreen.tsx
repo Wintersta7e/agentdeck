@@ -113,7 +113,7 @@ export function NewSessionScreen(): React.JSX.Element {
     addSession(sessionId, project.id, overrides)
     void captureSessionSnapshot(sessionId, agentId)
     setActiveSession(sessionId)
-    setCurrentView('session')
+    setCurrentView('sessions')
   }, [
     project,
     agentId,

@@ -222,7 +222,7 @@ function PaletteInner({
           // Switch to the existing session
           const sessionId = item.id.replace('session-', '')
           useAppStore.getState().setActiveSession(sessionId)
-          useAppStore.getState().setCurrentView('session')
+          useAppStore.getState().setCurrentView('sessions')
           break
         }
         case 'project': {

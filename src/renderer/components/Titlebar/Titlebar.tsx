@@ -132,7 +132,7 @@ export function Titlebar({ onCloseWorkflowTab, onAddTab }: TitlebarProps): React
       )}
 
       <div className="titlebar-right">
-        {currentView === 'session' && (
+        {currentView === 'sessions' && (
           <>
             <button className="titlebar-btn" onClick={cyclePaneLayout}>
               Split{paneLayout > 1 ? ` (${String(paneLayout)})` : ''}

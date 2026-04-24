@@ -110,7 +110,7 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
           [sessionId]: session,
         },
         activeSessionId: sessionId,
-        currentView: 'session' as const,
+        currentView: 'sessions' as const,
         paneSessions,
         openSessionIds,
       }
@@ -212,7 +212,7 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
         // PREREQ B8: singular 'session' until Phase 8 Task 8.1 renames the
         // ViewType atomically. Using 'sessions' here would route to the
         // Sessions list screen instead of the live terminal.
-        currentView: 'session' as const,
+        currentView: 'sessions' as const,
       }
     })
     return id
@@ -249,7 +249,7 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
         }
         paneSessions[targetPane] = sessionId
       }
-      return { activeSessionId: sessionId, currentView: 'session' as const, paneSessions }
+      return { activeSessionId: sessionId, currentView: 'sessions' as const, paneSessions }
     }),
 
   removeSession: (sessionId) =>

@@ -15,7 +15,7 @@ describe('Session lifecycle', () => {
     expect(state.sessions['s1']?.projectId).toBe('proj-1')
     expect(state.sessions['s1']?.status).toBe('starting')
     expect(state.activeSessionId).toBe('s1')
-    expect(state.currentView).toBe('session')
+    expect(state.currentView).toBe('sessions')
   })
 
   it('removes a session and falls back to home', () => {
@@ -161,7 +161,7 @@ describe('Workflow tabs', () => {
     useAppStore.getState().addSession('s1', 'proj-1')
     useAppStore.getState().openWorkflow('wf-1')
     useAppStore.getState().closeWorkflow('wf-1')
-    expect(useAppStore.getState().currentView).toBe('session')
+    expect(useAppStore.getState().currentView).toBe('sessions')
   })
 })
 

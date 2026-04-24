@@ -188,7 +188,6 @@ export interface OpenSessionSeed extends SessionLaunchConfig {
 
 export type ViewType =
   | 'home'
-  | 'session'
   | 'wizard'
   | 'settings'
   | 'template-editor'

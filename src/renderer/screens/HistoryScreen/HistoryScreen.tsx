@@ -88,7 +88,7 @@ export function HistoryScreen(): React.JSX.Element {
 
   const handleOpenSession = (session: Session): void => {
     setActiveSession(session.id)
-    setCurrentView('session')
+    setCurrentView('sessions')
   }
 
   return (

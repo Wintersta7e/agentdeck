@@ -47,6 +47,7 @@ const TemplateEditor = lazy(() =>
 
 export function App(): React.JSX.Element {
   const currentView = useAppStore((s) => s.currentView)
+  const activeSessionId = useAppStore((s) => s.activeSessionId)
   const addSession = useAppStore((s) => s.addSession)
   const captureSessionSnapshot = useAppStore((s) => s.captureSessionSnapshot)
   const activeWorkflowId = useAppStore((s) => s.activeWorkflowId)
@@ -142,7 +143,7 @@ export function App(): React.JSX.Element {
   useEffect(() => {
     const unsub = window.agentDeck.onFileDrop((wslPaths: string[]) => {
       const state = useAppStore.getState()
-      if (state.currentView !== 'session') return
+      if (state.currentView !== 'sessions') return
       const sid = state.paneSessions[state.focusedPane]
       if (!sid) return
       const escaped = wslPaths.map((p) => `'${p.replace(/'/g, "'\\''")}'`).join(' ')
@@ -469,7 +470,7 @@ export function App(): React.JSX.Element {
               onOpenProjectWithAgent={handleOpenProjectWithAgent}
             />
           )}
-          {currentView === 'sessions' && <SessionsScreen />}
+          {currentView === 'sessions' && !activeSessionId && <SessionsScreen />}
           {currentView === 'projects' && (
             <ProjectsScreen
               onOpenProject={handleOpenProject}
@@ -500,7 +501,7 @@ export function App(): React.JSX.Element {
               )}
           </Suspense>
           <div
-            className={`view-panel ${currentView === 'session' ? 'view-panel--visible' : 'view-panel--hidden'}`}
+            className={`view-panel ${currentView === 'sessions' && activeSessionId ? 'view-panel--visible' : 'view-panel--hidden'}`}
           >
             <SessionHero>
               <SplitView />

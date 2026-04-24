@@ -44,7 +44,7 @@ function viewToTab(view: ViewType): TabId {
   switch (view) {
     case 'home':
       return 'home'
-    case 'session':
+    case 'sessions':
     case 'sessions':
     case 'new-session':
     case 'diff':

@@ -140,7 +140,7 @@ export function HomeScreen({
     const newest = running.sort((a, b) => b.startedAt - a.startedAt)[0]
     if (newest) {
       setActiveSession(newest.id)
-      setCurrentView('session')
+      setCurrentView('sessions')
     }
   }, [setActiveSession, setCurrentView])
 
