@@ -19,14 +19,6 @@ interface TemplateRef {
 }
 
 export interface TemplatesSlice {
-  /**
-   * Derived: merge of `userTemplates` + active project pool from
-   * `projectTemplates`. Kept for backward-compat with legacy consumers until
-   * they migrate to `useTemplates()`. Do NOT set directly — use
-   * `bootstrapTemplates` / `activateProjectTemplates` or the mutator actions.
-   */
-  templates: Template[]
-
   userTemplates: Template[]
   projectTemplates: Record<string, Template[]>
   activeProjectTemplatesLoaded: string | null
@@ -46,39 +38,8 @@ export interface TemplatesSlice {
   incrementUsage: (ref: TemplateRef) => Promise<void>
   setPinned: (ref: TemplateRef, pinned: boolean) => Promise<void>
 
-  /**
-   * Legacy compat — remains as a plain setter so any straggling caller keeps
-   * working. The new slice's own mutation actions do NOT use this; removed
-   * in the follow-up task that migrates consumers.
-   */
-  setTemplates: (templates: Template[]) => void
-
   roles: Role[]
   setRoles: (roles: Role[]) => void
-}
-
-/**
- * Merge user-scope + active-project-scope templates into a single list with
- * the same dedup + sort policy used by `getTemplatesForActiveProject`. Kept
- * here (exported) so slice mutators can re-derive the legacy `templates`
- * field in one place.
- *
- * Sort order: pinned first, then lastUsedAt desc, then name asc.
- */
-export function mergeUserAndProject(
-  userTemplates: Template[],
-  projectTemplates: Record<string, Template[]>,
-  activeProjectId: string | null,
-): Template[] {
-  const projectPool = activeProjectId ? (projectTemplates[activeProjectId] ?? []) : []
-  const byId = new Map<string, Template>()
-  for (const t of userTemplates) byId.set(t.id, t)
-  for (const t of projectPool) byId.set(t.id, t) // project wins on collision
-  return Array.from(byId.values()).sort((a, b) => {
-    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
-    if (a.lastUsedAt !== b.lastUsedAt) return b.lastUsedAt - a.lastUsedAt
-    return a.name.localeCompare(b.name)
-  })
 }
 
 // ── Module-level subscription handles ──────────────────────────────
@@ -89,13 +50,6 @@ let templatesUnsub: (() => void) | null = null
 let templatesParseErrorUnsub: (() => void) | null = null
 
 export const createTemplatesSlice: StateCreator<AppState, [], [], TemplatesSlice> = (set, get) => {
-  const recompute = (): void => {
-    const { userTemplates, projectTemplates, activeProjectTemplatesLoaded } = get()
-    set({
-      templates: mergeUserAndProject(userTemplates, projectTemplates, activeProjectTemplatesLoaded),
-    })
-  }
-
   const applyChangeEvent = (event: TemplateChangeEvent): void => {
     const { userTemplates, projectTemplates } = get()
     if (event.scope === 'user') {
@@ -124,11 +78,9 @@ export const createTemplatesSlice: StateCreator<AppState, [], [], TemplatesSlice
       }
       set({ projectTemplates: { ...projectTemplates, [projectId]: nextPool } })
     }
-    recompute()
   }
 
   return {
-    templates: [],
     userTemplates: [],
     projectTemplates: {},
     activeProjectTemplatesLoaded: null,
@@ -155,7 +107,6 @@ export const createTemplatesSlice: StateCreator<AppState, [], [], TemplatesSlice
           projectTemplates: {},
           activeProjectTemplatesLoaded: null,
         })
-        recompute()
       } catch (err) {
         window.agentDeck.log.send('warn', 'templates', 'bootstrap listAll failed', {
           err: String(err),
@@ -183,7 +134,6 @@ export const createTemplatesSlice: StateCreator<AppState, [], [], TemplatesSlice
     activateProjectTemplates: async (projectId) => {
       if (projectId === null) {
         set({ activeProjectTemplatesLoaded: null })
-        recompute()
         return
       }
       if (get().activeProjectTemplatesLoaded === projectId) {
@@ -195,7 +145,6 @@ export const createTemplatesSlice: StateCreator<AppState, [], [], TemplatesSlice
           projectTemplates: { ...get().projectTemplates, [projectId]: pool },
           activeProjectTemplatesLoaded: projectId,
         })
-        recompute()
       } catch (err) {
         window.agentDeck.log.send('warn', 'templates', 'activateProject failed', {
           projectId,
@@ -221,8 +170,6 @@ export const createTemplatesSlice: StateCreator<AppState, [], [], TemplatesSlice
     setPinned: async (ref, pinned) => {
       await window.agentDeck.templates.setPinned(ref, pinned)
     },
-
-    setTemplates: (templates) => set({ templates }),
 
     roles: [],
     setRoles: (roles) => set({ roles }),
