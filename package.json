@@ -1,6 +1,6 @@
 {
   "name": "agentdeck",
-  "version": "6.0.0",
+  "version": "6.0.1",
   "description": "Electron desktop app for managing WSL agent sessions",
   "main": "./out/main/index.js",
   "license": "Elastic-2.0",
@@ -44,6 +44,7 @@
     "test:main": "node node_modules/vitest/vitest.mjs run --project main",
     "test:renderer": "node node_modules/vitest/vitest.mjs run --project renderer",
     "typecheck": "node node_modules/typescript/bin/tsc -p tsconfig.node.json --noEmit && node node_modules/typescript/bin/tsc -p tsconfig.web.json --noEmit",
+    "debug:context-resolution": "npx vite-node scripts/debug-context-resolution.ts",
     "prepare": "node node_modules/husky/bin.js"
   },
   "lint-staged": {
@@ -69,11 +70,14 @@
     "@xterm/xterm": "^5.5.0",
     "@xyflow/react": "^12.10.2",
     "electron-store": "^11.0.2",
+    "jsonc-parser": "^3.3.1",
     "lucide-react": "^1.8.0",
     "node-pty": "^1.0.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.5",
     "react-window": "^2.2.7",
+    "smol-toml": "^1.6.1",
+    "yaml": "^2.8.3",
     "zustand": "^5.0.12"
   },
   "devDependencies": {

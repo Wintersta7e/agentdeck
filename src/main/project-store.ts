@@ -75,6 +75,8 @@ export interface StoreSchema {
     rolesSeedVersion?: number | undefined
     workflowSeedVersion?: number | undefined
     workflowLastRolesVersion?: number | undefined
+    agentContextOverrides?: Record<string, number>
+    modelContextOverrides?: Record<string, number>
   }
 }
 

@@ -3,20 +3,25 @@ import type { BrowserWindow } from 'electron'
 import type { AppStore } from '../project-store'
 import { detectAgents } from '../agent-detector'
 import { checkAllUpdates, updateAgent } from '../agent-updater'
-import { KNOWN_AGENT_IDS } from '../../shared/agents'
+import { AGENTS, KNOWN_AGENT_IDS } from '../../shared/agents'
+import { getEffectiveContextWindow } from '../../shared/context-window'
+import { resolveActiveModel, invalidateAll as invalidateModelCache } from '../active-model-cache'
+import { isValidContextOverride } from '../validation'
 import { createLogger } from '../logger'
+import type { AgentType } from '../../shared/types'
 
 const log = createLogger('ipc-agents')
 
-/**
- * Agent IPC handlers: detection, visibility, version checks, updates, WSL username.
- */
+/** Agent IPC handlers: detection, visibility, version checks, updates, WSL username, context resolution. */
 export function registerAgentHandlers(
   getWindow: () => BrowserWindow | null,
   store: AppStore,
 ): void {
   /* ── Agent detection (async, non-blocking) ──────────────────────── */
-  ipcMain.handle('agents:check', () => detectAgents(log))
+  ipcMain.handle('agents:check', () => {
+    invalidateModelCache()
+    return detectAgents(log)
+  })
 
   /* ── Agent visibility ─────────────────────────────────────────── */
   ipcMain.handle('agents:getVisible', () => {
@@ -42,6 +47,119 @@ export function registerAgentHandlers(
       return { agentId, success: false, newVersion: null, message: 'Unknown agent' }
     }
     return updateAgent(agentId)
+  })
+
+  /* ── Effective context (auto-detect) ───────────────────────────── */
+  ipcMain.handle('agents:getEffectiveContext', async (_, agentId: unknown) => {
+    if (typeof agentId !== 'string' || !KNOWN_AGENT_IDS.has(agentId)) {
+      return { error: 'invalid agentId' }
+    }
+    const detector = await resolveActiveModel(agentId as AgentType)
+    const prefs = store.get('appPrefs')
+    const defaults = Object.fromEntries(AGENTS.map((a) => [a.id, a.contextWindow]))
+    return getEffectiveContextWindow({
+      agentId,
+      activeModel: detector.modelId,
+      ...(detector.cliContextOverride !== undefined
+        ? { cliContextOverride: detector.cliContextOverride }
+        : {}),
+      overrides: {
+        agent: prefs.agentContextOverrides ?? {},
+        model: prefs.modelContextOverrides ?? {},
+      },
+      agentDefaults: defaults,
+    })
+  })
+
+  /* ── Effective context for launch snapshot (force-refresh + frozen prefs) ── */
+  ipcMain.handle('agents:getEffectiveContextForLaunch', async (_, agentId: unknown) => {
+    if (typeof agentId !== 'string' || !KNOWN_AGENT_IDS.has(agentId)) {
+      return { error: 'invalid agentId' }
+    }
+    // Freeze appPrefs BEFORE the detector I/O so a save during the read can't leak in.
+    const prefs = store.get('appPrefs')
+    const agentOverrides = prefs.agentContextOverrides ?? {}
+    const modelOverrides = prefs.modelContextOverrides ?? {}
+    const typed = agentId as AgentType
+    const detector = await resolveActiveModel(typed, { forceRefresh: true })
+    const defaults = Object.fromEntries(AGENTS.map((a) => [a.id, a.contextWindow]))
+    return getEffectiveContextWindow({
+      agentId,
+      activeModel: detector.modelId,
+      ...(detector.cliContextOverride !== undefined
+        ? { cliContextOverride: detector.cliContextOverride }
+        : {}),
+      overrides: { agent: agentOverrides, model: modelOverrides },
+      agentDefaults: defaults,
+    })
+  })
+
+  /* ── Effective context for an explicit model (fallback-only) ────── */
+  ipcMain.handle(
+    'agents:getEffectiveContextForModel',
+    async (_, agentId: unknown, modelId: unknown) => {
+      if (typeof agentId !== 'string' || !KNOWN_AGENT_IDS.has(agentId)) {
+        return { error: 'invalid agentId' }
+      }
+      if (typeof modelId !== 'string' || modelId.length === 0) {
+        return { error: 'invalid modelId' }
+      }
+      const prefs = store.get('appPrefs')
+      const defaults = Object.fromEntries(AGENTS.map((a) => [a.id, a.contextWindow]))
+      return getEffectiveContextWindow({
+        agentId,
+        activeModel: modelId,
+        overrides: {
+          agent: prefs.agentContextOverrides ?? {},
+          model: prefs.modelContextOverrides ?? {},
+        },
+        agentDefaults: defaults,
+      })
+    },
+  )
+
+  /* ── Set / clear a context override ────────────────────────────── */
+  ipcMain.handle('agents:setContextOverride', (_, args: unknown) => {
+    if (!args || typeof args !== 'object') return { ok: false, error: 'invalid payload' }
+    const { kind, value } = args as { kind?: string; value?: unknown }
+    if (kind !== 'agent' && kind !== 'model') return { ok: false, error: 'invalid kind' }
+    if (value !== undefined && !isValidContextOverride(value)) {
+      return { ok: false, error: 'value must be an integer in [1000, 10000000] or undefined' }
+    }
+    const prefs = store.get('appPrefs')
+    if (kind === 'agent') {
+      const { agentId } = args as { agentId?: unknown }
+      if (typeof agentId !== 'string' || !KNOWN_AGENT_IDS.has(agentId)) {
+        return { ok: false, error: 'invalid agentId' }
+      }
+      const prev = prefs.agentContextOverrides ?? {}
+      const map =
+        value === undefined
+          ? Object.fromEntries(Object.entries(prev).filter(([k]) => k !== agentId))
+          : { ...prev, [agentId]: value as number }
+      store.set('appPrefs', { ...prefs, agentContextOverrides: map })
+      return { ok: true }
+    }
+    const { modelId } = args as { modelId?: unknown }
+    if (typeof modelId !== 'string' || modelId.length === 0) {
+      return { ok: false, error: 'invalid modelId' }
+    }
+    const prev = prefs.modelContextOverrides ?? {}
+    const map =
+      value === undefined
+        ? Object.fromEntries(Object.entries(prev).filter(([k]) => k !== modelId))
+        : { ...prev, [modelId]: value as number }
+    store.set('appPrefs', { ...prefs, modelContextOverrides: map })
+    return { ok: true }
+  })
+
+  /* ── Read both override maps ────────────────────────────────────── */
+  ipcMain.handle('agents:getOverrides', () => {
+    const prefs = store.get('appPrefs')
+    return {
+      agent: prefs.agentContextOverrides ?? {},
+      model: prefs.modelContextOverrides ?? {},
+    }
   })
 
   /* ── WSL username ─────────────────────────────────────────────── */

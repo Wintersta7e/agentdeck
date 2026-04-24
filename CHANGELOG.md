@@ -5,6 +5,38 @@ All notable changes to AgentDeck will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.0.1] - 2026-04-24
+
+Context window detection and per-model overrides. Agents screen, New Session
+composer, Home live-session card, and AppSettings now resolve the correct context
+window per each CLI's configured model instead of hardcoding a single value.
+Includes model registry covering Anthropic, OpenAI, Google, DeepSeek with
+pattern-match heuristics to handle unregistered future models gracefully.
+Immutable launch-time snapshot (`Session.model`, `Session.resolvedContextWindow`,
+`Session.resolvedContextSource`) on every session so the displayed number never
+drifts mid-run.
+
+### Added
+
+- Model registry covering Anthropic Claude 4.x (including `[1m]` variants), OpenAI GPT-5.x + o-series, Google Gemini 1.5/2.5, DeepSeek, with pattern-match family rules and suffix-heuristic parsing so unregistered future models don't fall back to a wrong number.
+- Per-CLI and per-model context-window overrides under AppSettings → Context overrides, keyed by raw detected model id.
+- Immutable launch-time context snapshot on every session (`Session.model`, `Session.resolvedContextWindow`, `Session.resolvedContextSource`) so the displayed number never drifts mid-session.
+- Active-model detection for all 7 supported CLIs — Claude Code / Codex / Aider / Goose / Gemini CLI / OpenCode (file-based) + Amazon Q (best-effort `q settings chat.defaultModel` subprocess read).
+- `npm run debug:context-resolution` — manual sanity script that prints a 7-row table of each agent's resolved context + source on the dev box.
+
+### Changed
+
+- `AGENTS[agentId].contextWindow` is now a last-resort fallback, not the display value. Direct reads replaced by `getEffectiveContextWindow` throughout the renderer (enforced by a regression-guard test).
+- Codex last-resort default bumped from 100K → 400K (conservative fallback aligned with current OpenAI context-window minimums).
+
+### Fixed
+
+- Agents screen, New Session composer, Home live-session card, and AppSettings now show the correct context window based on each CLI's actually-configured model. Previously the app hardcoded one value per CLI, which lied for any non-default model — the 200K-vs-actual-1M bug for Claude Code users running the `claude-opus-4-7[1m]` variant.
+
+### Dependencies
+
+- Added runtime: `smol-toml`, `yaml`, `jsonc-parser` for parsing each CLI's config format.
+
 ## [6.0.0] - 2026-04-23
 
 Full UI redesign with a new top tab bar, 8 first-class tabs, three new dark

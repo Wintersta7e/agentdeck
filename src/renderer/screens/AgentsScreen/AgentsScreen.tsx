@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { AGENTS } from '../../../shared/agents'
+import { useEffectiveContext, badgeLabelFor } from '../../hooks/useEffectiveContext'
 import { ScreenShell, FilterChip } from '../../components/shared/ScreenShell'
 import './AgentsScreen.css'
 
@@ -36,6 +37,10 @@ function AgentTile({
   updating,
   onUpdate,
 }: AgentTileProps): React.JSX.Element {
+  const ctx = useEffectiveContext(agent.id)
+  const displayValue = ctx.value ?? agent.contextWindow
+  const badge = badgeLabelFor(ctx.source, ctx.modelId)
+
   const current = version?.current ?? null
   const latest = version?.latest ?? null
   const updateAvailable = Boolean(version?.updateAvailable)
@@ -71,7 +76,10 @@ function AgentTile({
       <dl className="agent-tile__meta">
         <div>
           <dt>Context</dt>
-          <dd>{formatContextWindow(agent.contextWindow)}</dd>
+          <dd>
+            {formatContextWindow(displayValue)}
+            {badge !== null && <span className="agent-tile__ctx-badge">{badge}</span>}
+          </dd>
         </div>
         <div>
           <dt>Version</dt>
