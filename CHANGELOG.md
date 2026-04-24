@@ -5,6 +5,49 @@ All notable changes to AgentDeck will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.1.0] - 2026-04-25
+
+Session-UI rework. Strips the left sidebar and retired right-panel tabs,
+introduces a browser-style session tab strip and single-row session header,
+adds a file-based template store with user + project scopes, and layers an
+approval lifecycle (idle → review → kept | discarded) on top of session status.
+TerminalPane no longer auto-removes exited sessions after 800ms — they persist
+until the user KEEPs / DISCARDs them or closes the tab via the × control.
+
+### Added
+
+- Browser-style session tab strip (SessionTabs) above the Sessions view with per-tab agent icon, project name, branch label, status dot, and hover-× close control.
+- Single-row session header (SessionHeader) with agent + project + live branch + dirty-count from gitStatuses, state word, and context-appropriate action buttons (KEEP / DISCARD on review; RERUN on kept/discarded).
+- Prompts inspector in the right panel (replaces retired tabs) with search, pin, usage count, per-template `◆ IN USE` marker, preview pane, and Inject → pty.write that routes through incrementUsage + setSeedTemplateId.
+- Env tab in the right panel surfacing CLAUDE_CONFIG_DIR, CODEX_HOME, agentdeckRoot, templateUserRoot, WSL distro/home, agent versions, and the active project's .agentdeck config + templates + worktrees paths.
+- File-based template store at `~/.agentdeck/templates/` and `<project>/.agentdeck/templates/` with per-template mutex, atomic writes (randomBytes tmp-rename), 200ms-debounced fs.watch (10s poll fallback), global ID uniqueness enforcement (`E_TEMPLATE_ID_EXISTS`), and stale-save detection (`E_TEMPLATE_STALE`).
+- One-shot staging-dir migration from electron-store `templates` key to files (`appPrefs.templatesMigrated` gate) with fresh-install seeding path.
+- Approval lifecycle on sessions: `running → exited` via pty-exit auto-flips `idle → review`; user's KEEP / DISCARD transitions to `kept` / `discarded`; RERUN spawns a new session with fresh context-window snapshot.
+- `openSessionIds` ordered tab list on the sessions slice; `openSession(seed)` creates sessions through one entry point; `pruneSessionFromTabs(id)` handles tab removal with pane backfill.
+- `closeSession` orchestrator at `src/renderer/utils/session-close.ts` — inspect worktree → prompt on dirty → applySessionStatus(user-kill) → pty.kill → conditional re-inspect → worktree commit/keep/discard → releasePrimary → clearWorktreePath → prune.
+- One-shot `project.path` normalization in project-store (gated by `appPrefs.pathsNormalized`).
+
+### Changed
+
+- Right inspector reduced from 7 tabs to 5: Files / Diff / Prompts / Env / Config (default: Files).
+- Close-session flow now inspects worktree safety, prompts on dirty changes with Keep-branch / Discard / Cancel options, and commits worktree state after pty kill.
+- `addNotification` extended with a discriminated union: existing basic toasts keep their shape under `kind: 'basic'`; new `kind: 'confirm'` notifications carry `options[]` + a `resolve()` promise for actionable prompts.
+- `ViewType` narrowed to drop the singular `'session'` — the plural `'sessions'` tab renders the list when no session is active and the terminal when one is.
+
+### Removed
+
+- Left Sidebar (Pinned / Templates / Workflows) and its state (`sidebarOpen`, `sidebarWidth`, `sidebarSections`, `toggleSidebar`, `setSidebarWidth`, `toggleSidebarSection`, Ctrl+B).
+- Per-pane PaneTopbar — each pane is just the xterm host now.
+- StepsRail — terminal reclaims the column.
+- Titlebar's inline session-tab row — SessionTabs owns that UX now.
+- Retired right-panel tabs: Activity, Memory, Cost, Context.
+- TerminalPane's 800ms auto-remove of exited sessions.
+- `LegacyTemplate` alias from the renderer pipeline (kept in main-process legacy-store fallback; retired in v6.2.0).
+
+### Dependencies
+
+- No runtime dependency changes — uses existing `electron-store`, `node:fs` (fs.watch), `node:crypto` (randomBytes).
+
 ## [6.0.1] - 2026-04-24
 
 Context window detection and per-model overrides. Agents screen, New Session

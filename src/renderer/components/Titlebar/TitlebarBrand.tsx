@@ -3,7 +3,7 @@ import { Search } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import './TitlebarBrand.css'
 
-const APP_VERSION = '6.0.1'
+const APP_VERSION = '6.1.0'
 
 function formatClock(d: Date): string {
   return d.toLocaleTimeString('en-US', {
@@ -22,7 +22,7 @@ function formatDayOfWeek(d: Date): string {
  *
  * Search pill (click → Ctrl+K command palette), live indicator that
  * reflects the session mix (running / error / idle), clock ticking every
- * 30 s, READY status word, and a "UBUNTU · WSL · v6.0.1" trailing chip.
+ * 30 s, READY status word, and a "UBUNTU · WSL · v6.1.0" trailing chip.
  * Every element reads from the store so it reflects real state.
  */
 export function TitlebarBrand(): React.JSX.Element {
