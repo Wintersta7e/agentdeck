@@ -176,7 +176,7 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
 
   // Right Panel
   rightPanelOpen: false,
-  rightPanelTab: 'context',
+  rightPanelTab: 'files',
   toggleRightPanel: () => set((state) => ({ rightPanelOpen: !state.rightPanelOpen })),
   setRightPanelTab: (tab) => set({ rightPanelTab: tab }),
 
