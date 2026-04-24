@@ -3,7 +3,7 @@ import { promises as fs } from 'node:fs'
 import { mkdtemp, writeFile, readdir, stat, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { createTemplateStore } from './template-store'
+import { createTemplateStore, type TemplateChangeEvent } from './template-store'
 
 describe('template-store — user scope', () => {
   let dir: string
@@ -97,4 +97,42 @@ describe('template-store — user scope', () => {
     expect(errors[0]?.path).toContain('bad.json')
     await rm(projectDir, { recursive: true, force: true })
   })
+})
+
+describe('template-store — watcher', () => {
+  it('emits add event when a file is written out-of-band', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'tmpl-watch-'))
+    const store = await createTemplateStore({ userRoot: dir, getProjectPath: () => null })
+    const events: TemplateChangeEvent[] = []
+    store.onChange((e) => events.push(e))
+
+    // Allow the watcher to settle on the empty dir before first write.
+    await new Promise((r) => setTimeout(r, 50))
+
+    const path = join(dir, 'ext.json')
+    await writeFile(
+      path,
+      JSON.stringify({
+        id: 'ext',
+        name: 'E',
+        description: '',
+        content: '',
+        usageCount: 0,
+        lastUsedAt: 0,
+        pinned: false,
+      }),
+    )
+
+    // Debounce is 200ms + scan time. Poll up to 3s for the event.
+    const deadline = Date.now() + 3000
+    while (Date.now() < deadline) {
+      if (events.some((e) => e.kind === 'add' && e.template.id === 'ext')) break
+      await new Promise((r) => setTimeout(r, 50))
+    }
+
+    expect(events.some((e) => e.kind === 'add' && e.template.id === 'ext')).toBe(true)
+
+    store.dispose()
+    await rm(dir, { recursive: true, force: true })
+  }, 10_000)
 })

@@ -1,7 +1,10 @@
-import { promises as fs } from 'node:fs'
+import { promises as fs, watch } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { randomBytes } from 'node:crypto'
 import type { Template, TemplateFile, TemplateDraft, TemplateScope } from '../shared/types'
+import { createLogger } from './logger'
+
+const log = createLogger('template-store')
 
 export interface TemplateStore {
   listAll: (input?: { projectId?: string }) => Promise<Template[]>
@@ -183,6 +186,76 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
     return serialize(file.id, () => writeTemplateUnlocked(file, scope, projectId, baseMtime))
   }
 
+  function diffAndEmit(
+    prev: Template[],
+    next: Template[],
+    scope: TemplateScope,
+    projectId: string | null,
+  ): void {
+    const prevMap = new Map(prev.map((t) => [t.id, t]))
+    const nextMap = new Map(next.map((t) => [t.id, t]))
+    for (const [id, t] of nextMap) {
+      const old = prevMap.get(id)
+      if (!old) {
+        emitChange({ kind: 'add', scope, projectId, template: t })
+      } else if (old.mtimeMs !== t.mtimeMs) {
+        emitChange({ kind: 'update', scope, projectId, template: t })
+      }
+    }
+    for (const [id] of prevMap) {
+      if (!nextMap.has(id)) {
+        emitChange({ kind: 'delete', scope, projectId, id })
+      }
+    }
+  }
+
+  function setupWatcher(dir: string, rescan: () => Promise<void>): () => void {
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null
+    const trigger = (): void => {
+      if (debounceTimer) clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(() => {
+        void rescan()
+      }, 200)
+    }
+    try {
+      const w = watch(dir, { persistent: false }, () => {
+        trigger()
+      })
+      w.on('error', (err) => {
+        log.warn('template-store watch emitted error', { dir, err: String(err) })
+      })
+      return () => {
+        try {
+          w.close()
+        } catch {
+          /* noop */
+        }
+        if (debounceTimer) clearTimeout(debounceTimer)
+      }
+    } catch (err) {
+      log.warn('fs.watch failed for template dir; falling back to 10s poll', {
+        dir,
+        err: String(err),
+      })
+      const id = setInterval(() => {
+        void rescan()
+      }, 10_000)
+      return () => {
+        clearInterval(id)
+        if (debounceTimer) clearTimeout(debounceTimer)
+      }
+    }
+  }
+
+  const rescanUser = async (): Promise<void> => {
+    const next = await scanDir(userRoot, 'user', null, emitParseError)
+    diffAndEmit(userPool, next, 'user', null)
+    userPool = next
+  }
+
+  const userWatcherOff = setupWatcher(userRoot, rescanUser)
+  const projectWatchers = new Map<string, () => void>()
+
   return {
     listAll: async (input) => {
       const merged: Template[] = [...userPool]
@@ -196,9 +269,22 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
     activateProject: async (projectId) => {
       const pPath = opts.getProjectPath(projectId)
       if (!pPath) return []
+
+      // Teardown existing watcher for this projectId before re-scanning.
+      const existingOff = projectWatchers.get(projectId)
+      if (existingOff) existingOff()
+
       const dir = join(pPath, '.agentdeck', 'templates')
       const pool = await scanDir(dir, 'project', projectId, emitParseError)
       projectPools.set(projectId, pool)
+
+      const rescan = async (): Promise<void> => {
+        const next = await scanDir(dir, 'project', projectId, emitParseError)
+        diffAndEmit(projectPools.get(projectId) ?? [], next, 'project', projectId)
+        projectPools.set(projectId, next)
+      }
+      projectWatchers.set(projectId, setupWatcher(dir, rescan))
+
       return pool
     },
 
@@ -298,6 +384,9 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
     },
 
     dispose: () => {
+      userWatcherOff()
+      for (const off of projectWatchers.values()) off()
+      projectWatchers.clear()
       changeListeners.clear()
       parseErrorListeners.clear()
     },
