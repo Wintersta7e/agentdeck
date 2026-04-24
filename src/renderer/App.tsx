@@ -12,7 +12,6 @@ import { AppSettingsScreen } from './screens/AppSettingsScreen/AppSettingsScreen
 import { WorkflowsScreen } from './screens/WorkflowsScreen/WorkflowsScreen'
 import { ProjectsScreen } from './screens/ProjectsScreen/ProjectsScreen'
 import { HistoryScreen } from './screens/HistoryScreen/HistoryScreen'
-import { Sidebar } from './components/Sidebar/Sidebar'
 import { StatusBar } from './components/StatusBar/StatusBar'
 import { HomeScreen } from './components/HomeScreen/HomeScreen'
 import { SplitView } from './components/SplitView/SplitView'
@@ -28,25 +27,6 @@ import { useAppStore } from './store/appStore'
 import { useProjects } from './hooks/useProjects'
 import type { ActivityEvent, AgentConfig, Project, ViewType, WorkflowEvent } from '../shared/types'
 import './App.css'
-
-/**
- * Sidebar is contextual in Option B — only surfaces inside Sessions and
- * Projects list tabs. Everywhere else, the top tab bar + in-screen content
- * carry the nav.
- */
-const SIDEBAR_HIDDEN_VIEWS: readonly ViewType[] = [
-  'home',
-  'agents',
-  'workflows',
-  'workflow',
-  'history',
-  'alerts',
-  'app-settings',
-  'new-session',
-  'diff',
-  'template-editor',
-  'wizard',
-]
 
 const WorkflowEditor = lazy(() => import('./screens/WorkflowEditor/WorkflowEditor'))
 const ProjectSettings = lazy(() =>
@@ -74,20 +54,11 @@ export function App(): React.JSX.Element {
   const activeWorkflowId = useAppStore((s) => s.activeWorkflowId)
   const settingsProjectId = useAppStore((s) => s.settingsProjectId)
 
-  const sidebarOpen = useAppStore((s) => s.sidebarOpen)
-  const sidebarWidth = useAppStore((s) => s.sidebarWidth)
-  const setSidebarWidth = useAppStore((s) => s.setSidebarWidth)
   const rightPanelOpen = useAppStore((s) => s.rightPanelOpen)
   const rightPanelWidth = useAppStore((s) => s.rightPanelWidth)
   const setRightPanelWidth = useAppStore((s) => s.setRightPanelWidth)
-  const sidebarRef = useRef<HTMLDivElement>(null)
   const rightPanelRef = useRef<HTMLDivElement>(null)
 
-  // Memoize dynamic panel styles to avoid new objects every render
-  const sidebarStyle = useMemo<React.CSSProperties>(
-    () => (sidebarOpen ? { width: sidebarWidth, flexShrink: 0 } : { width: 0, flexShrink: 0 }),
-    [sidebarOpen, sidebarWidth],
-  )
   const rightPanelStyle = useMemo<React.CSSProperties>(
     () => ({ width: rightPanelWidth, flexShrink: 0 }),
     [rightPanelWidth],
@@ -449,11 +420,6 @@ export function App(): React.JSX.Element {
         handleNewTerminal()
         return
       }
-      if (e.ctrlKey && e.key === 'b') {
-        e.preventDefault()
-        useAppStore.getState().toggleSidebar()
-        return
-      }
       if (e.ctrlKey && e.key === '/') {
         e.preventDefault()
         setShortcutsOpen((prev) => !prev)
@@ -613,8 +579,6 @@ export function App(): React.JSX.Element {
     }
   }, [openWorkflowIdList])
 
-  const sidebarHidden = SIDEBAR_HIDDEN_VIEWS.includes(currentView)
-
   return (
     <div className="app">
       <Titlebar
@@ -628,29 +592,6 @@ export function App(): React.JSX.Element {
           <div className="wsl-warning-banner" role="alert">
             WSL not detected — check that your distribution is running
           </div>
-        )}
-        {!sidebarHidden && (
-          <>
-            <div
-              ref={sidebarRef}
-              className={`sidebar-wrapper${sidebarOpen ? '' : ' collapsed'}`}
-              style={sidebarStyle}
-            >
-              <Sidebar
-                onOpenProject={handleOpenProject}
-                onOpenProjectWithAgent={handleOpenProjectWithAgent}
-              />
-            </div>
-            {sidebarOpen && (
-              <PanelDivider
-                side="left"
-                panelRef={sidebarRef}
-                minWidth={160}
-                maxWidth={400}
-                onResizeEnd={setSidebarWidth}
-              />
-            )}
-          </>
         )}
         <div className="app-main">
           {currentView === 'home' && (

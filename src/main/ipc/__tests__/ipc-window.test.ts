@@ -22,9 +22,6 @@ function call(channel: string, ...args: unknown[]): unknown {
 interface MiniPrefs {
   zoomFactor?: number
   theme?: string
-  sidebarOpen?: boolean
-  sidebarWidth?: number
-  sidebarSections?: Record<string, boolean>
   rightPanelWidth?: number
   wfLogPanelWidth?: number
 }
@@ -93,28 +90,28 @@ describe('ipc-window', () => {
 
   describe('layout:set', () => {
     it('ignores unknown keys', () => {
-      const store = makeStore({ sidebarOpen: true })
+      const store = makeStore({ rightPanelWidth: 240 })
       registerWindowHandlers(
         () => null,
         store as unknown as Parameters<typeof registerWindowHandlers>[1],
       )
-      call('layout:set', { arbitraryKey: 123, sidebarOpen: false })
-      expect(store._prefs).toMatchObject({ sidebarOpen: false })
+      call('layout:set', { arbitraryKey: 123, rightPanelWidth: 300 })
+      expect(store._prefs).toMatchObject({ rightPanelWidth: 300 })
       expect('arbitraryKey' in store._prefs).toBe(false)
     })
 
-    it('rejects sidebarWidth outside [0, 5000]', () => {
-      const store = makeStore({ sidebarWidth: 200 })
+    it('rejects rightPanelWidth outside [0, 5000]', () => {
+      const store = makeStore({ rightPanelWidth: 200 })
       registerWindowHandlers(
         () => null,
         store as unknown as Parameters<typeof registerWindowHandlers>[1],
       )
-      call('layout:set', { sidebarWidth: -10 })
-      expect(store._prefs.sidebarWidth).toBe(200)
-      call('layout:set', { sidebarWidth: 6000 })
-      expect(store._prefs.sidebarWidth).toBe(200)
-      call('layout:set', { sidebarWidth: 300 })
-      expect(store._prefs.sidebarWidth).toBe(300)
+      call('layout:set', { rightPanelWidth: -10 })
+      expect(store._prefs.rightPanelWidth).toBe(200)
+      call('layout:set', { rightPanelWidth: 6000 })
+      expect(store._prefs.rightPanelWidth).toBe(200)
+      call('layout:set', { rightPanelWidth: 300 })
+      expect(store._prefs.rightPanelWidth).toBe(300)
     })
   })
 })

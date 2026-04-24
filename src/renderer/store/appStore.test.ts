@@ -184,25 +184,11 @@ describe('Pane layout', () => {
   })
 })
 
-describe('Sidebar & Right Panel', () => {
-  it('toggles sidebar', () => {
-    expect(useAppStore.getState().sidebarOpen).toBe(true)
-    useAppStore.getState().toggleSidebar()
-    expect(useAppStore.getState().sidebarOpen).toBe(false)
-    useAppStore.getState().toggleSidebar()
-    expect(useAppStore.getState().sidebarOpen).toBe(true)
-  })
-
+describe('Right Panel', () => {
   it('toggles right panel', () => {
     expect(useAppStore.getState().rightPanelOpen).toBe(false)
     useAppStore.getState().toggleRightPanel()
     expect(useAppStore.getState().rightPanelOpen).toBe(true)
-  })
-
-  it('toggles sidebar section', () => {
-    expect(useAppStore.getState().sidebarSections.pinned).toBe(true)
-    useAppStore.getState().toggleSidebarSection('pinned')
-    expect(useAppStore.getState().sidebarSections.pinned).toBe(false)
   })
 })
 

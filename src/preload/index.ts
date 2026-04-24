@@ -97,17 +97,11 @@ contextBridge.exposeInMainWorld('agentDeck', {
   layout: {
     get: () =>
       ipcRenderer.invoke('layout:get') as Promise<{
-        sidebarOpen?: boolean
-        sidebarWidth?: number
-        sidebarSections?: { pinned?: boolean; templates?: boolean; workflows?: boolean }
         rightPanelWidth?: number
         wfLogPanelWidth?: number
       }>,
     set: (
       patch: Partial<{
-        sidebarOpen: boolean
-        sidebarWidth: number
-        sidebarSections: { pinned?: boolean; templates?: boolean; workflows?: boolean }
         rightPanelWidth: number
         wfLogPanelWidth: number
       }>,

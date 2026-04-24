@@ -56,17 +56,11 @@ declare global {
       }
       layout: {
         get: () => Promise<{
-          sidebarOpen?: boolean
-          sidebarWidth?: number
-          sidebarSections?: { pinned?: boolean; templates?: boolean; workflows?: boolean }
           rightPanelWidth?: number
           wfLogPanelWidth?: number
         }>
         set: (
           patch: Partial<{
-            sidebarOpen: boolean
-            sidebarWidth: number
-            sidebarSections: { pinned?: boolean; templates?: boolean; workflows?: boolean }
             rightPanelWidth: number
             wfLogPanelWidth: number
           }>,
