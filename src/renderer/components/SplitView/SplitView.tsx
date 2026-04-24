@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { getDefaultAgent } from '../../../shared/agent-helpers'
 import { MAX_PANE_COUNT } from '../../../shared/constants'
-import { PaneTopbar } from './PaneTopbar'
 import { TerminalPane } from '../Terminal/TerminalPane'
 import type { PaneLayout } from '../../../shared/types'
 import './SplitView.css'
@@ -250,21 +249,18 @@ export function SplitView(): React.JSX.Element {
             >
               <div className="split-pane-inner">
                 {session ? (
-                  <>
-                    <PaneTopbar sessionId={sessionId} focused={isFocused} />
-                    <TerminalPane
-                      key={sessionId}
-                      sessionId={sessionId}
-                      focused={isFocused}
-                      visible={isVisible}
-                      projectPath={project?.path}
-                      startupCommands={project ? startupCommandsMap[project.id] : undefined}
-                      env={project ? envMap[project.id] : undefined}
-                      agent={session.agentOverride ?? defaultAgent?.agent}
-                      agentFlags={session.agentFlagsOverride ?? defaultAgent?.agentFlags}
-                      scrollback={project?.scrollbackLines}
-                    />
-                  </>
+                  <TerminalPane
+                    key={sessionId}
+                    sessionId={sessionId}
+                    focused={isFocused}
+                    visible={isVisible}
+                    projectPath={project?.path}
+                    startupCommands={project ? startupCommandsMap[project.id] : undefined}
+                    env={project ? envMap[project.id] : undefined}
+                    agent={session.agentOverride ?? defaultAgent?.agent}
+                    agentFlags={session.agentFlagsOverride ?? defaultAgent?.agentFlags}
+                    scrollback={project?.scrollbackLines}
+                  />
                 ) : (
                   <div className="split-pane-placeholder">
                     No session &mdash; open a project to start
