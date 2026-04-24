@@ -26,7 +26,8 @@ interface NewProjectWizardProps {
 }
 
 export function NewProjectWizard({ onCreateProject }: NewProjectWizardProps): React.JSX.Element {
-  const { addProject, updateProject, templates } = useProjects()
+  const { addProject, updateProject } = useProjects()
+  const templates = useAppStore((s) => s.templates)
   const closeWizard = useAppStore((s) => s.closeWizard)
 
   const [currentStep, setCurrentStep] = useState(0)
