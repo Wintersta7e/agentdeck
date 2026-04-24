@@ -71,6 +71,29 @@ export function registerAgentHandlers(
     })
   })
 
+  /* ── Effective context for launch snapshot (force-refresh + frozen prefs) ── */
+  ipcMain.handle('agents:getEffectiveContextForLaunch', async (_, agentId: unknown) => {
+    if (typeof agentId !== 'string' || !KNOWN_AGENT_IDS.has(agentId)) {
+      return { error: 'invalid agentId' }
+    }
+    // Freeze appPrefs BEFORE the detector I/O so a save during the read can't leak in.
+    const prefs = store.get('appPrefs')
+    const agentOverrides = prefs.agentContextOverrides ?? {}
+    const modelOverrides = prefs.modelContextOverrides ?? {}
+    const typed = agentId as AgentType
+    const detector = await resolveActiveModel(typed, { forceRefresh: true })
+    const defaults = Object.fromEntries(AGENTS.map((a) => [a.id, a.contextWindow]))
+    return getEffectiveContextWindow({
+      agentId,
+      activeModel: detector.modelId,
+      ...(detector.cliContextOverride !== undefined
+        ? { cliContextOverride: detector.cliContextOverride }
+        : {}),
+      overrides: { agent: agentOverrides, model: modelOverrides },
+      agentDefaults: defaults,
+    })
+  })
+
   /* ── Effective context for an explicit model (fallback-only) ────── */
   ipcMain.handle(
     'agents:getEffectiveContextForModel',

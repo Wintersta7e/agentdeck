@@ -162,6 +162,10 @@ contextBridge.exposeInMainWorld('agentDeck', {
       ipcRenderer.invoke('agents:getEffectiveContext', agentId) as Promise<
         ContextResult | { error: string }
       >,
+    getEffectiveContextForLaunch: (agentId: string) =>
+      ipcRenderer.invoke('agents:getEffectiveContextForLaunch', agentId) as Promise<
+        ContextResult | { error: string }
+      >,
     getEffectiveContextForModel: (agentId: string, modelId: string) =>
       ipcRenderer.invoke('agents:getEffectiveContextForModel', agentId, modelId) as Promise<
         ContextResult | { error: string }

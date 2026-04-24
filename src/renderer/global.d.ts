@@ -103,6 +103,9 @@ declare global {
           }) => void,
         ) => () => void
         getEffectiveContext: (agentId: string) => Promise<ContextResult | { error: string }>
+        getEffectiveContextForLaunch: (
+          agentId: string,
+        ) => Promise<ContextResult | { error: string }>
         getEffectiveContextForModel: (
           agentId: string,
           modelId: string,

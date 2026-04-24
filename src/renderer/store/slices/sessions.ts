@@ -86,7 +86,7 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
 
   captureSessionSnapshot: async (sessionId, agentId) => {
     try {
-      const result = await window.agentDeck.agents.getEffectiveContext(agentId)
+      const result = await window.agentDeck.agents.getEffectiveContextForLaunch(agentId)
       if ('error' in result) return
       set((state) => {
         const existing = state.sessions[sessionId]

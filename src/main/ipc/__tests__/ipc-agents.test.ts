@@ -121,6 +121,29 @@ describe('agents:getEffectiveContext', () => {
   })
 })
 
+describe('agents:getEffectiveContextForLaunch', () => {
+  let store: MiniStore
+
+  beforeEach(() => {
+    handlers.clear()
+    store = makeStore()
+    registerAgentHandlers(
+      () => null,
+      store as unknown as Parameters<typeof registerAgentHandlers>[1],
+    )
+  })
+
+  it('registers the handler', () => {
+    expect(handlers.has('agents:getEffectiveContextForLaunch')).toBe(true)
+  })
+
+  it('validates agentId', async () => {
+    const fn = handlers.get('agents:getEffectiveContextForLaunch')!
+    const r = await fn({}, 'not-a-real-agent')
+    expect(r).toEqual({ error: 'invalid agentId' })
+  })
+})
+
 describe('agents:getEffectiveContextForModel', () => {
   let store: MiniStore
 
