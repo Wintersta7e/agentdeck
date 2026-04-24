@@ -1,21 +1,15 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { X, Minus, Square, ArrowLeft, Plus } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
-import type { Session } from '../../../shared/types'
 import { TitlebarBrand } from './TitlebarBrand'
 import './Titlebar.css'
 
 interface TitlebarProps {
-  onCloseTab: (sessionId: string) => void
   onCloseWorkflowTab: (workflowId: string) => void
   onAddTab: () => void
 }
 
-export function Titlebar({
-  onCloseTab,
-  onCloseWorkflowTab,
-  onAddTab,
-}: TitlebarProps): React.JSX.Element {
+export function Titlebar({ onCloseWorkflowTab, onAddTab }: TitlebarProps): React.JSX.Element {
   const [closingTabs, setClosingTabs] = useState<Set<string>>(() => new Set())
   const closeTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
@@ -25,23 +19,6 @@ export function Titlebar({
       closeTimersRef.current.clear()
     },
     [],
-  )
-
-  const animateCloseSession = useCallback(
-    (sessionId: string) => {
-      setClosingTabs((prev) => new Set(prev).add(sessionId))
-      const timer = setTimeout(() => {
-        closeTimersRef.current.delete(sessionId)
-        setClosingTabs((prev) => {
-          const next = new Set(prev)
-          next.delete(sessionId)
-          return next
-        })
-        onCloseTab(sessionId)
-      }, 250)
-      closeTimersRef.current.set(sessionId, timer)
-    },
-    [onCloseTab],
   )
 
   const animateCloseWorkflow = useCallback(
@@ -61,19 +38,6 @@ export function Titlebar({
     [onCloseWorkflowTab],
   )
   const currentView = useAppStore((s) => s.currentView)
-  // PERF-10: Narrow session selector — only extract id/projectId/status to prevent
-  // re-renders on every PTY data event (setSessionStatus creates a new sessions object)
-  // Only include sessions that are still in a pane slot (excludes closed-but-preserved sessions)
-  const sessionDataStr = useAppStore((s) => {
-    const paneSet = new Set(s.paneSessions.filter(Boolean))
-    return Object.values(s.sessions)
-      .filter((sess) => sess.status !== 'exited' || paneSet.has(sess.id))
-      .map((sess) => `${sess.id}|${sess.projectId}|${sess.status}`)
-      .join(',')
-  })
-  const activeSessionId = useAppStore((s) => s.activeSessionId)
-  const projects = useAppStore((s) => s.projects)
-  const setActiveSession = useAppStore((s) => s.setActiveSession)
   const setCurrentView = useAppStore((s) => s.setCurrentView)
   const closeWizard = useAppStore((s) => s.closeWizard)
   const closeSettings = useAppStore((s) => s.closeSettings)
@@ -89,39 +53,12 @@ export function Titlebar({
   const openWorkflow = useAppStore((s) => s.openWorkflow)
   const workflows = useAppStore((s) => s.workflows)
 
-  // Memoize project name lookup map — avoids O(n) find per tab on every render
-  const projectNameMap = useMemo(() => {
-    const map = new Map<string, string>()
-    for (const p of projects) map.set(p.id, p.name)
-    return map
-  }, [projects])
-
   // Memoize workflow name lookup map
   const workflowNameMap = useMemo(() => {
     const map = new Map<string, string>()
     for (const w of workflows) map.set(w.id, w.name)
     return map
   }, [workflows])
-
-  const getProjectName = useCallback(
-    (session: Pick<Session, 'id' | 'projectId'>): string => {
-      if (!session.projectId) return 'Terminal'
-      return projectNameMap.get(session.projectId) ?? session.id
-    },
-    [projectNameMap],
-  )
-
-  const sessionList = useMemo(() => {
-    if (!sessionDataStr) return []
-    return sessionDataStr.split(',').map((entry) => {
-      const [id, projectId, status] = entry.split('|')
-      return {
-        id: id ?? '',
-        projectId: projectId ?? '',
-        status: (status ?? '') as Session['status'],
-      }
-    })
-  }, [sessionDataStr])
 
   return (
     <div className="titlebar">
@@ -145,43 +82,8 @@ export function Titlebar({
       </div>
 
       <TitlebarBrand />
-      {(sessionList.length > 0 || openWorkflowIds.length > 0) && (
+      {openWorkflowIds.length > 0 && (
         <div className="tab-bar" role="tablist">
-          {sessionList.map((s) => (
-            <div
-              key={s.id}
-              className={`tab${s.id === activeSessionId && currentView === 'session' ? ' active' : ''}${closingTabs.has(s.id) ? ' closing' : ''}`}
-              onClick={() => {
-                setActiveSession(s.id)
-                setCurrentView('session')
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault()
-                  setActiveSession(s.id)
-                  setCurrentView('session')
-                }
-              }}
-              role="tab"
-              tabIndex={0}
-              aria-selected={s.id === activeSessionId && currentView === 'session'}
-            >
-              <div
-                className={`tab-dot tab-dot--${s.status === 'running' ? 'running' : s.status === 'error' ? 'error' : 'idle'}`}
-              />
-              {getProjectName(s)}
-              <button
-                className="tab-close"
-                aria-label="Close session tab"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  animateCloseSession(s.id)
-                }}
-              >
-                <X size={12} />
-              </button>
-            </div>
-          ))}
           {openWorkflowIds.map((wfId) => (
             <div
               key={wfId}
@@ -230,7 +132,7 @@ export function Titlebar({
       )}
 
       <div className="titlebar-right">
-        {currentView === 'session' && sessionList.length > 0 && (
+        {currentView === 'session' && (
           <>
             <button className="titlebar-btn" onClick={cyclePaneLayout}>
               Split{paneLayout > 1 ? ` (${String(paneLayout)})` : ''}
