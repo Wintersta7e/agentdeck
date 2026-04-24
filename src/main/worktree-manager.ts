@@ -1,5 +1,6 @@
 import * as fs from 'fs'
 import * as path from 'path'
+import { randomBytes } from 'node:crypto'
 import type { GitPort } from './git-port'
 import { makeBranchName } from './git-port'
 import { createLogger } from './logger'
@@ -95,7 +96,7 @@ async function saveRegistry(registryDir: string, entries: WorktreeEntry[]): Prom
 
   const data: RegistryData = { entries }
   const json = JSON.stringify(data, null, 2)
-  const tmpFile = file + '.tmp'
+  const tmpFile = `${file}.${randomBytes(6).toString('hex')}.tmp`
   await fs.promises.writeFile(tmpFile, json, 'utf-8')
   await fs.promises.rename(tmpFile, file)
 }
