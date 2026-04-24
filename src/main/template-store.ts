@@ -176,16 +176,6 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
     return loaded
   }
 
-  // PREREQ B4: Locking wrapper — public save path uses this.
-  async function writeTemplate(
-    file: TemplateFile,
-    scope: TemplateScope,
-    projectId: string | null,
-    baseMtime?: number,
-  ): Promise<Template> {
-    return serialize(file.id, () => writeTemplateUnlocked(file, scope, projectId, baseMtime))
-  }
-
   function diffAndEmit(
     prev: Template[],
     next: Template[],
@@ -209,6 +199,16 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
     }
   }
 
+  // KNOWN LIMITATION (v6.1.1 deferred — Section 4 of v6.1.0 codex review):
+  // There is a scan-before-watch window: files written to `dir` between the
+  // initial scan (in activateProject / bootstrap) and the watch subscription
+  // being fully armed are silently missed. Additionally, the catch-branch
+  // below swaps fs.watch for a 10s polling interval — the watcher's own
+  // runtime 'error' event (logged above) does NOT fall back to polling, so a
+  // watcher that fails mid-life will stop emitting change events until the
+  // renderer triggers a manual rescan (activateProject / bootstrap).
+  // Proper fix requires an event-replay queue during the scan and a
+  // runtime-error fallback to polling — scoped too large for v6.1.0.
   function setupWatcher(dir: string, rescan: () => Promise<void>): () => void {
     let debounceTimer: ReturnType<typeof setTimeout> | null = null
     const trigger = (): void => {
@@ -290,28 +290,31 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
 
     save: async (draft, scope, projectId, baseMtime) => {
       const id = draft.id ?? `tmpl-${randomBytes(6).toString('hex')}`
-      const existing = findById(id)
-
-      // PREREQ H6: cross-scope collision
-      if (existing && (existing.scope !== scope || existing.projectId !== projectId)) {
-        const err = new Error(
-          `template id ${id} already exists in ${existing.scope} scope`,
-        ) as Error & { code: string }
-        err.code = 'E_TEMPLATE_ID_EXISTS'
-        throw err
-      }
-
-      const file: TemplateFile = {
-        id,
-        name: draft.name,
-        description: draft.description,
-        content: draft.content,
-        ...(draft.category !== undefined ? { category: draft.category } : {}),
-        usageCount: existing?.template.usageCount ?? 0,
-        lastUsedAt: existing?.template.lastUsedAt ?? 0,
-        pinned: existing?.template.pinned ?? false,
-      }
-      return writeTemplate(file, scope, projectId, baseMtime)
+      // PREREQ H6 (refined): cross-scope collision check runs INSIDE the
+      // per-id serialize so two concurrent same-id cross-scope saves can't
+      // both pass the findById check and race to write. The lookup, the
+      // file-build, and the atomic write all share the same critical section.
+      return serialize(id, async () => {
+        const existing = findById(id)
+        if (existing && (existing.scope !== scope || existing.projectId !== projectId)) {
+          const err = new Error(
+            `template id ${id} already exists in ${existing.scope} scope`,
+          ) as Error & { code: string }
+          err.code = 'E_TEMPLATE_ID_EXISTS'
+          throw err
+        }
+        const file: TemplateFile = {
+          id,
+          name: draft.name,
+          description: draft.description,
+          content: draft.content,
+          ...(draft.category !== undefined ? { category: draft.category } : {}),
+          usageCount: existing?.template.usageCount ?? 0,
+          lastUsedAt: existing?.template.lastUsedAt ?? 0,
+          pinned: existing?.template.pinned ?? false,
+        }
+        return writeTemplateUnlocked(file, scope, projectId, baseMtime)
+      })
     },
 
     delete: async (ref) => {

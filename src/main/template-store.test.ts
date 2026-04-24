@@ -81,6 +81,34 @@ describe('template-store — user scope', () => {
     ).rejects.toMatchObject({ code: 'E_TEMPLATE_ID_EXISTS' })
   })
 
+  it('concurrent same-id cross-scope saves: exactly one wins, other rejects', async () => {
+    const projectDir = await mkdtemp(join(tmpdir(), 'proj-'))
+    const store = await createTemplateStore({
+      userRoot: dir,
+      getProjectPath: () => projectDir,
+    })
+    // Fire both saves concurrently — without the in-serialize collision
+    // check, both could pass findById and race to write. With the fix, the
+    // serialize mutex guarantees the second save observes the first's write.
+    const results = await Promise.allSettled([
+      store.save({ id: 'race', name: 'user-side', description: '', content: '' }, 'user', null),
+      store.save(
+        { id: 'race', name: 'project-side', description: '', content: '' },
+        'project',
+        'p1',
+      ),
+    ])
+    const fulfilled = results.filter((r) => r.status === 'fulfilled')
+    const rejected = results.filter((r) => r.status === 'rejected')
+    expect(fulfilled).toHaveLength(1)
+    expect(rejected).toHaveLength(1)
+    const rej = rejected[0]
+    if (rej?.status === 'rejected') {
+      expect((rej.reason as { code?: string }).code).toBe('E_TEMPLATE_ID_EXISTS')
+    }
+    await rm(projectDir, { recursive: true, force: true })
+  })
+
   it('parseErrorListeners fires on malformed file during activateProject', async () => {
     const projectDir = await mkdtemp(join(tmpdir(), 'proj-'))
     await fs.mkdir(join(projectDir, '.agentdeck', 'templates'), { recursive: true })
