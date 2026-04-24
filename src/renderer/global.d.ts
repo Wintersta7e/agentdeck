@@ -8,8 +8,8 @@ import type {
   ReviewItem,
   Role,
   SkillInfo,
-  LegacyTemplate as Template,
-  Template as FileTemplate,
+  Template,
+  TemplateCategory,
   TemplateDraft,
   TemplateScope,
   TokenUsage,
@@ -73,8 +73,32 @@ declare global {
         getProjects: () => Promise<Project[]>
         saveProject: (project: Partial<Project>) => Promise<Project>
         deleteProject: (id: string) => Promise<void>
-        getTemplates: () => Promise<Template[]>
-        saveTemplate: (template: Partial<Template>) => Promise<Template>
+        // Legacy template store channels (pre-file-backed template IPC).
+        // Narrow shape inlined here so the renderer has no dependency on
+        // the deprecated LegacyTemplate type. Zero renderer callers today;
+        // kept for backwards-compat with main-side migration paths.
+        getTemplates: () => Promise<
+          Array<{
+            id: string
+            name: string
+            description: string
+            content?: string | undefined
+            category?: TemplateCategory | undefined
+          }>
+        >
+        saveTemplate: (template: {
+          id?: string
+          name: string
+          description: string
+          content?: string | undefined
+          category?: TemplateCategory | undefined
+        }) => Promise<{
+          id: string
+          name: string
+          description: string
+          content?: string | undefined
+          category?: TemplateCategory | undefined
+        }>
         deleteTemplate: (id: string) => Promise<void>
         getRoles: () => Promise<Role[]>
         saveRole: (role: Partial<Role>) => Promise<Role>
@@ -194,14 +218,14 @@ declare global {
         ): () => void
       }
       templates: {
-        listAll: (input?: { projectId?: string }) => Promise<FileTemplate[]>
-        activateProject: (projectId: string) => Promise<FileTemplate[]>
+        listAll: (input?: { projectId?: string }) => Promise<Template[]>
+        activateProject: (projectId: string) => Promise<Template[]>
         save: (
           draft: TemplateDraft,
           scope: TemplateScope,
           projectId: string | null,
           baseMtime?: number,
-        ) => Promise<FileTemplate>
+        ) => Promise<Template>
         delete: (ref: {
           id: string
           scope: TemplateScope
