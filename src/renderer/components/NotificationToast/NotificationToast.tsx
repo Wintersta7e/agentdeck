@@ -16,7 +16,9 @@ export function NotificationToast(): React.JSX.Element | null {
   // list remains available in the Alerts tab.
   const active = useMemo(() => {
     const silenced = new Set(silencedToastIds)
-    return notifications.filter((n) => !silenced.has(n.id))
+    return notifications.filter(
+      (n): n is Extract<typeof n, { kind: 'basic' }> => n.kind === 'basic' && !silenced.has(n.id),
+    )
   }, [notifications, silencedToastIds])
 
   // Auto-silence (not delete) after 5 s — skip error toasts (sticky). The

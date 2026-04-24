@@ -86,7 +86,7 @@ export function HomeScreen({
     }
     return total
   })
-  const alertCount = useAppStore((s) => s.notifications.length)
+  const alertCount = useAppStore((s) => s.notifications.filter((n) => n.kind === 'basic').length)
 
   const digest = useDailyDigest()
   const cleanExitPct = digest.cleanExitRate !== null ? `${Math.round(digest.cleanExitRate)}%` : '—'

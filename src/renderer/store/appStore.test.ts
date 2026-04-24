@@ -196,7 +196,11 @@ describe('Notifications', () => {
   it('adds a notification', () => {
     useAppStore.getState().addNotification('info', 'Hello')
     expect(useAppStore.getState().notifications).toHaveLength(1)
-    expect(useAppStore.getState().notifications[0]?.message).toBe('Hello')
+    const first = useAppStore.getState().notifications[0]
+    expect(first?.kind).toBe('basic')
+    if (first?.kind === 'basic') {
+      expect(first.message).toBe('Hello')
+    }
   })
 
   it('caps notifications at 50', () => {
