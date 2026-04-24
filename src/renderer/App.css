@@ -41,19 +41,6 @@
   gap: var(--sp-1);
 }
 
-.sidebar-wrapper {
-  display: flex;
-  overflow: hidden;
-  border-right: none;
-  transition: width var(--duration-slow) cubic-bezier(0.4, 0, 0.2, 1);
-  min-width: 0;
-  will-change: width;
-}
-
-.sidebar-wrapper.collapsed {
-  /* No border to clear */
-}
-
 /* ─── Suspense fallback spinner ─── */
 .suspense-spinner {
   width: 24px;
