@@ -1,5 +1,5 @@
 import type { Project } from '../../../shared/types'
-import { useAppStore } from '../../store/appStore'
+import { useTemplates } from '../../hooks/useTemplates'
 
 interface TabProps {
   draft: Project
@@ -7,7 +7,7 @@ interface TabProps {
 }
 
 export function TemplatesTab({ draft, onChange }: TabProps): React.JSX.Element {
-  const templates = useAppStore((s) => s.templates)
+  const templates = useTemplates()
   const attached = draft.attachedTemplates ?? []
 
   function removeTemplate(templateId: string): void {

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import type { Project, StartupCommand, EnvVar, DetectedStack } from '../../../shared/types'
 import { useProjects } from '../../hooks/useProjects'
 import { useAppStore } from '../../store/appStore'
+import { useTemplates } from '../../hooks/useTemplates'
 import { groupTemplates } from '../../utils/templateUtils'
 import { PathInput } from '../shared/PathInput'
 import { Toggle } from '../shared/Toggle'
@@ -27,7 +28,7 @@ interface NewProjectWizardProps {
 
 export function NewProjectWizard({ onCreateProject }: NewProjectWizardProps): React.JSX.Element {
   const { addProject, updateProject } = useProjects()
-  const templates = useAppStore((s) => s.templates)
+  const templates = useTemplates()
   const closeWizard = useAppStore((s) => s.closeWizard)
 
   const [currentStep, setCurrentStep] = useState(0)

@@ -1,22 +1,13 @@
 import { useCallback, useEffect } from 'react'
 import { useAppStore } from '../store/appStore'
 import { handleIpcError } from '../utils/ipcErrorHandler'
-import type { Project, Role, LegacyTemplate as Template } from '../../shared/types'
+import type { Project, Role } from '../../shared/types'
 
 interface UseProjectsReturn {
   projects: Project[]
   addProject: (project: Partial<Project>) => Promise<Project>
   updateProject: (project: Partial<Project>) => Promise<void>
   deleteProject: (id: string) => Promise<void>
-  /**
-   * Legacy template mutators — go through the flat electron-store IPC and do
-   * NOT emit onChange events into the new templates slice. Kept so existing
-   * consumers compile; Task 6.7 rewires them to the new
-   * `useAppStore.saveTemplate` / `deleteTemplate` actions.
-   */
-  addTemplate: (template: Partial<Template>) => Promise<Template>
-  updateTemplate: (template: Partial<Template>) => Promise<void>
-  deleteTemplate: (id: string) => Promise<void>
   roles: Role[]
   addRole: (role: Partial<Role>) => Promise<Role>
   updateRole: (role: Partial<Role>) => Promise<void>
@@ -110,36 +101,6 @@ export function useProjects(): UseProjectsReturn {
     [setProjects],
   )
 
-  // Legacy template mutators — the slice owns template state via the new
-  // onChange pipeline, so these do not update local store state. Task 6.7
-  // replaces these call sites with the new slice actions.
-  const addTemplate = useCallback(async (template: Partial<Template>): Promise<Template> => {
-    try {
-      return (await window.agentDeck.store.saveTemplate(template)) as Template
-    } catch (err) {
-      handleIpcError(err, 'Failed to add template')
-      throw err
-    }
-  }, [])
-
-  const updateTemplate = useCallback(async (template: Partial<Template>): Promise<void> => {
-    try {
-      await window.agentDeck.store.saveTemplate(template)
-    } catch (err) {
-      handleIpcError(err, 'Failed to update template')
-      throw err
-    }
-  }, [])
-
-  const deleteTemplate = useCallback(async (id: string): Promise<void> => {
-    try {
-      await window.agentDeck.store.deleteTemplate(id)
-    } catch (err) {
-      handleIpcError(err, 'Failed to delete template')
-      throw err
-    }
-  }, [])
-
   const addRole = useCallback(
     async (role: Partial<Role>): Promise<Role> => {
       try {
@@ -190,9 +151,6 @@ export function useProjects(): UseProjectsReturn {
     addProject,
     updateProject,
     deleteProject,
-    addTemplate,
-    updateTemplate,
-    deleteTemplate,
     roles,
     addRole,
     updateRole,
