@@ -54,12 +54,6 @@ const terminalCache = new Map<string, CachedTerminal>()
 // mutate useMemo results). The Map is populated in useEffect and read in JSX.
 const searchAddonMap = new Map<string, SearchAddon>()
 
-// Module-level exit timer map keyed by sessionId — allows a new mount to cancel
-// the previous instance's 800ms exit timer (exitTimeoutRef is per-instance and
-// cannot be accessed cross-mount). Prevents a stale timer from disposing a
-// terminal that was reclaimed by a new TerminalPane.
-const exitTimerMap = new Map<string, ReturnType<typeof setTimeout>>()
-
 interface TerminalPaneProps {
   sessionId: string
   focused?: boolean | undefined
@@ -91,7 +85,6 @@ export function TerminalPane({
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
-  const exitTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const projectPathRef = useRef(projectPath)
   const startupRef = useRef(startupCommands)
   const envRef = useRef(env)
@@ -109,8 +102,7 @@ export function TerminalPane({
   const copyFlashTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const writeBufferRef = useRef<string[]>([])
   const writeRafRef = useRef(0)
-  const setSessionStatus = useAppStore((s) => s.setSessionStatus)
-  const removeSession = useAppStore((s) => s.removeSession)
+  const applySessionStatus = useAppStore((s) => s.applySessionStatus)
   const setWorktreePath = useAppStore((s) => s.setWorktreePath)
   const clearWorktreePath = useAppStore((s) => s.clearWorktreePath)
   // Look up projectId from session (stable per sessionId lifetime)
@@ -149,10 +141,6 @@ export function TerminalPane({
   useEffect(() => {
     if (!containerRef.current) return
 
-    // Clear any orphaned exit timer from a previous mount cycle
-    clearTimeout(exitTimeoutRef.current)
-    exitTimeoutRef.current = undefined
-
     let term: Terminal
     let fit: FitAddon
     let webglAddon: WebglAddon | null = null
@@ -173,15 +161,6 @@ export function TerminalPane({
     visibleRef.current = false
 
     // ── Try to reclaim a cached terminal (tab switch back) ──
-    // Cancel any pending exit timer from a previous mount cycle for this session.
-    // Without this, the stale timer could call removeSession and dispose the terminal
-    // we're about to reclaim.
-    const prevExitTimer = exitTimerMap.get(sessionId)
-    if (prevExitTimer) {
-      clearTimeout(prevExitTimer)
-      exitTimerMap.delete(sessionId)
-    }
-
     const cached = terminalCache.get(sessionId)
     if (cached) {
       terminalCache.delete(sessionId)
@@ -474,7 +453,7 @@ export function TerminalPane({
             .catch(() => {
               /* cost tracking is best-effort */
             })
-          setSessionStatus(sessionId, 'running')
+          applySessionStatus(sessionId, 'running')
 
           // Pipe the launch prompt into the agent's stdin after a short grace
           // period so the agent has time to print its greeting. Only runs once
@@ -496,7 +475,7 @@ export function TerminalPane({
           } catch {
             /* terminal disposed */
           }
-          setSessionStatus(sessionId, 'exited')
+          applySessionStatus(sessionId, 'error', 'spawn-failure')
         }
       }
       doSpawn().catch((err: unknown) => {
@@ -561,35 +540,27 @@ export function TerminalPane({
         }
       }
 
-      setSessionStatus(sessionId, 'exited')
+      applySessionStatus(sessionId, 'exited', 'pty-exit')
 
-      // Do NOT auto-close on spawn failure — let the user see the error and close manually
-      if (isSpawnFailure) return
-
-      const timer = setTimeout(() => {
-        exitTimerMap.delete(sessionId)
-        removeSession(sessionId)
-        // Evict from cache if the PTY exited while the terminal was hidden
-        // (unmounted and cached for reattachment). Without this, the cached
-        // Terminal + WebGL context leak indefinitely.
-        const stale = terminalCache.get(sessionId)
-        if (stale) {
-          terminalCache.delete(sessionId)
-          searchAddonMap.delete(sessionId) // TERM-19: also evict search addon
-          try {
-            stale.webgl?.dispose()
-          } catch {
-            /* WebGL context already lost */
-          }
-          try {
-            stale.term.dispose()
-          } catch {
-            /* host element already detached */
-          }
+      // Evict from cache if the PTY exited while the terminal was hidden
+      // (unmounted and cached for reattachment). Without this, the cached
+      // Terminal + WebGL context leak indefinitely. The session itself
+      // persists in the store so the user can review before closing the tab.
+      const stale = terminalCache.get(sessionId)
+      if (stale) {
+        terminalCache.delete(sessionId)
+        searchAddonMap.delete(sessionId)
+        try {
+          stale.webgl?.dispose()
+        } catch {
+          /* WebGL context already lost */
         }
-      }, 800)
-      exitTimeoutRef.current = timer
-      exitTimerMap.set(sessionId, timer)
+        try {
+          stale.term.dispose()
+        } catch {
+          /* host element already detached */
+        }
+      }
     })
 
     let resizeTimeout: ReturnType<typeof setTimeout> | undefined
@@ -624,7 +595,6 @@ export function TerminalPane({
     return () => {
       cancelled = true
       unsubTheme()
-      clearTimeout(exitTimeoutRef.current)
       clearTimeout(resizeTimeout)
       unsubData()
       unsubExit()
@@ -731,7 +701,7 @@ export function TerminalPane({
         })
       }
     }
-  }, [sessionId, setSessionStatus, removeSession, scheduleFit, setWorktreePath, clearWorktreePath])
+  }, [sessionId, applySessionStatus, scheduleFit, setWorktreePath, clearWorktreePath])
 
   // Clear search decorations when search is dismissed via Ctrl+Shift+F toggle
   // (Escape already clears in the TerminalSearchBar component)
