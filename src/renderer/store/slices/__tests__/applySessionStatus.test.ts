@@ -45,4 +45,25 @@ describe('applySessionStatus — reason taxonomy', () => {
       useAppStore.getState().applySessionStatus('nope', 'exited', 'pty-exit'),
     ).not.toThrow()
   })
+
+  it("pty:exit -1 marker routed via 'spawn-failure' yields error+idle (not exited+review)", () => {
+    // Simulates the TerminalPane onExit handler: exitCode === -1 is the spawn
+    // failure marker emitted by pty-manager.ts. The handler must branch on
+    // that marker and pass reason='spawn-failure' rather than 'pty-exit', so
+    // the session lands as status='error' + approvalState='idle' instead of
+    // the default 'pty-exit' transition (exited + review).
+    const exitCode: number = -1
+    const reason: 'spawn-failure' | 'pty-exit' = exitCode === -1 ? 'spawn-failure' : 'pty-exit'
+    useAppStore.getState().applySessionStatus('s1', 'exited', reason)
+    expect(useAppStore.getState().sessions['s1']?.status).toBe('error')
+    expect(useAppStore.getState().sessions['s1']?.approvalState).toBe('idle')
+  })
+
+  it('pty:exit non-negative marker routes via pty-exit (running -> review)', () => {
+    const exitCode: number = 0
+    const reason: 'spawn-failure' | 'pty-exit' = exitCode === -1 ? 'spawn-failure' : 'pty-exit'
+    useAppStore.getState().applySessionStatus('s1', 'exited', reason)
+    expect(useAppStore.getState().sessions['s1']?.status).toBe('exited')
+    expect(useAppStore.getState().sessions['s1']?.approvalState).toBe('review')
+  })
 })

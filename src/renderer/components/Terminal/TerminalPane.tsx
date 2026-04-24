@@ -528,6 +528,12 @@ export function TerminalPane({
 
     const QUICK_EXIT_MS = 2000
     const unsubExit = window.agentDeck.pty.onExit(sessionId, (exitCode) => {
+      // PTY spawn failures are emitted from main as pty:exit with exitCode=-1
+      // (see pty-manager.ts:143-156 catch block), not as spawn-promise
+      // rejections. Route those through the 'spawn-failure' reason so
+      // applySessionStatus normalizes to status='error' + approvalState='idle'
+      // instead of the default 'pty-exit' path that would leave the session
+      // as 'exited' + approvalState='review'.
       const isSpawnFailure = exitCode === -1
       const isQuickExit = spawnTimestamp > 0 && Date.now() - spawnTimestamp < QUICK_EXIT_MS
 
@@ -540,7 +546,8 @@ export function TerminalPane({
         }
       }
 
-      applySessionStatus(sessionId, 'exited', 'pty-exit')
+      const reason = isSpawnFailure ? 'spawn-failure' : 'pty-exit'
+      applySessionStatus(sessionId, 'exited', reason)
 
       // Evict from cache if the PTY exited while the terminal was hidden
       // (unmounted and cached for reattachment). Without this, the cached
