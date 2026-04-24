@@ -45,7 +45,7 @@ describe('v6.1.0 type additions', () => {
       pinned: false,
       scope: 'user',
       projectId: null,
-      path: '/home/rooty/.agentdeck/templates/abc.json',
+      path: '/tmp/tmpl/abc.json',
       mtimeMs: 0,
     }
     expect(t.scope).toBe('user')
