@@ -23,6 +23,7 @@ export interface UiSlice {
   closeWizard: () => void
   openSettings: (projectId: string) => void
   closeSettings: () => void
+  openNewSessionComposer: () => void
 
   // Split View
   paneLayout: PaneLayout
@@ -115,6 +116,11 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set) => (
       const prev = stack.pop() ?? 'home'
       return { currentView: prev, settingsProjectId: null, viewStack: stack }
     }),
+  openNewSessionComposer: () =>
+    set((state) => ({
+      currentView: 'new-session' as const,
+      viewStack: [...state.viewStack, state.currentView],
+    })),
 
   // Split View
   paneLayout: 1,
