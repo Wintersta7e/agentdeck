@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { Project, LegacyTemplate as Template, Role, EnvVar } from '../shared/types'
+import type { Project, LegacyTemplate, Role, EnvVar } from '../shared/types'
 import type { StoreSchema, AppStore } from './project-store'
 
 // Mock electron
@@ -201,7 +201,7 @@ describe('createProjectStore', () => {
 
 describe('seedTemplates', () => {
   function makeMockStore(
-    templates: Template[] = [],
+    templates: LegacyTemplate[] = [],
     prefs: Partial<StoreSchema['appPrefs']> = {},
   ): { store: AppStore; setSpy: ReturnType<typeof vi.fn<(key: string, val: unknown) => void>> } {
     const data = new Map<string, unknown>()
@@ -223,18 +223,18 @@ describe('seedTemplates', () => {
 
     const setCall = setSpy.mock.calls.find((c) => c[0] === 'templates')
     expect(setCall).toBeDefined()
-    const templates = setCall?.[1] as Template[]
+    const templates = setCall?.[1] as LegacyTemplate[]
     expect(templates).toHaveLength(16)
     expect(templates.every((t) => t.id.startsWith('seed-'))).toBe(true)
   })
 
   it('preserves user templates on upgrade', () => {
-    const userTemplate: Template = {
+    const userTemplate: LegacyTemplate = {
       id: 'user-custom-1',
       name: 'My Template',
       description: 'Custom',
     }
-    const seedTemplate: Template = {
+    const seedTemplate: LegacyTemplate = {
       id: 'seed-old-1',
       name: 'Old Seed',
       description: 'Outdated',
@@ -243,7 +243,7 @@ describe('seedTemplates', () => {
     seedTemplates(store)
 
     const setCall = setSpy.mock.calls.find((c) => c[0] === 'templates')
-    const templates = setCall?.[1] as Template[]
+    const templates = setCall?.[1] as LegacyTemplate[]
     // Should have 16 new seeds + 1 user template
     expect(templates).toHaveLength(17)
     expect(templates.some((t) => t.id === 'user-custom-1')).toBe(true)

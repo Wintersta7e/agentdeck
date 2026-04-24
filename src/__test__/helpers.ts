@@ -3,7 +3,7 @@
  */
 import type {
   Project,
-  LegacyTemplate as Template,
+  Template,
   Role,
   Workflow,
   WorkflowNode,
@@ -37,6 +37,14 @@ export function makeTemplate(overrides: Partial<Template> = {}): Template {
     id: nextId('tmpl'),
     name: 'Test Template',
     description: 'A test template',
+    content: '',
+    usageCount: 0,
+    lastUsedAt: 0,
+    pinned: false,
+    scope: 'user',
+    projectId: null,
+    path: '/tmp/tpl.json',
+    mtimeMs: 0,
     ...overrides,
   }
 }

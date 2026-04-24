@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto'
-import type { Role, LegacyTemplate as Template, TemplateCategory } from '../shared/types'
+import type { Role, LegacyTemplate, TemplateCategory } from '../shared/types'
 import type { AppStore } from './project-store'
 import { createLogger } from './logger'
 
@@ -96,7 +96,7 @@ export interface SeedTemplateDatum {
   category?: TemplateCategory
 }
 
-const SEED_TEMPLATES: Omit<Template, 'id'>[] = [
+const SEED_TEMPLATES: Omit<LegacyTemplate, 'id'>[] = [
   // ── Orient ──
   {
     name: 'Codebase tour',
@@ -252,7 +252,7 @@ export function seedTemplates(store: AppStore): void {
 
   // Fresh install — no existing templates
   if (existing.length === 0) {
-    const seeded: Template[] = SEED_TEMPLATES.map((t) => ({
+    const seeded: LegacyTemplate[] = SEED_TEMPLATES.map((t) => ({
       ...t,
       id: `seed-${randomUUID()}`,
     }))
@@ -264,7 +264,7 @@ export function seedTemplates(store: AppStore): void {
 
   // Upgrade — replace old seed templates, preserve user-created ones
   const userTemplates = existing.filter((t) => !t.id.startsWith('seed-'))
-  const freshSeeds: Template[] = SEED_TEMPLATES.map((t) => ({
+  const freshSeeds: LegacyTemplate[] = SEED_TEMPLATES.map((t) => ({
     ...t,
     id: `seed-${randomUUID()}`,
   }))

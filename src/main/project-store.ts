@@ -3,7 +3,7 @@ import { app, ipcMain, safeStorage } from 'electron'
 import * as fs from 'fs'
 import * as path from 'path'
 import { randomUUID } from 'crypto'
-import type { EnvVar, Project, Role, LegacyTemplate as Template } from '../shared/types'
+import type { EnvVar, Project, Role, LegacyTemplate } from '../shared/types'
 import { migrateProjectAgents } from '../shared/agent-helpers'
 import { createLogger } from './logger'
 import { SAFE_ID_RE } from './validation'
@@ -57,7 +57,7 @@ function decryptEnvVars(envVars: EnvVar[] | undefined): EnvVar[] | undefined {
 
 export interface StoreSchema {
   projects: Project[]
-  templates: Template[]
+  templates: LegacyTemplate[]
   roles: Role[]
   appPrefs: {
     zoomFactor: number
@@ -254,10 +254,10 @@ export function createProjectStore(): Store<StoreSchema> {
     if (typeof rawT.content === 'string' && rawT.content.length > 65536)
       throw new Error('store:saveTemplate — content too long (max 64KB)')
     return serialized(() => {
-      const t = template as Partial<Template>
+      const t = template as Partial<LegacyTemplate>
       const templates = store.get('templates')
       const id = t.id ?? randomUUID()
-      const withId = { ...t, id } as Template
+      const withId = { ...t, id } as LegacyTemplate
       const idx = templates.findIndex((existing) => existing.id === id)
       const existingTpl = idx >= 0 ? templates[idx] : undefined
       if (existingTpl !== undefined) {
