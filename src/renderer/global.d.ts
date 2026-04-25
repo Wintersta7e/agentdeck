@@ -1,5 +1,6 @@
 import type {
   ActivityEvent,
+  AgentEnvSnapshot,
   DailyCostEntry,
   DetectedStack,
   GitStatus,
@@ -250,6 +251,11 @@ declare global {
           agentdeckRoot: string
           templateUserRoot: string
         }>
+        getAgentSnapshot: (opts: {
+          agentId: string
+          projectId?: string
+          force?: boolean
+        }) => Promise<AgentEnvSnapshot>
       }
       files: {
         listDir: (opts: { path: string; projectPath: string }) => Promise<{

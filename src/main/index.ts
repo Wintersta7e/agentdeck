@@ -348,6 +348,7 @@ app
       codexHome: process.env['CODEX_HOME'] ?? null,
       agentdeckRoot,
       templateUserRoot,
+      getProjectPath: (id) => appStore?.get('projects').find((p) => p.id === id)?.path ?? null,
     })
 
     registerFilesIpc()

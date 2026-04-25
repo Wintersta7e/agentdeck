@@ -467,3 +467,57 @@ export interface Suggestion {
   actionLabel: string
   dismissKey: string
 }
+
+// ── Agent environment snapshot (EnvTab) ────────────────────────────
+
+export type AgentSupportLevel = 'full' | 'minimal' | 'future'
+
+export interface HookEntry {
+  event: string
+  scope: 'user' | 'project'
+  command: string
+  matchers?: string[]
+}
+
+export interface SkillEntry {
+  name: string
+  scope: 'user' | 'project'
+  path: string
+}
+
+export interface McpServerEntry {
+  name: string
+  type: 'stdio' | 'sse' | 'http'
+  scope: 'user' | 'project'
+  command?: string
+  url?: string
+  status?: 'configured' | 'running' | 'errored'
+}
+
+export interface ConfigEntry {
+  key: string
+  value: string
+  scope: 'user' | 'project'
+}
+
+export interface AgentEnvPaths {
+  userConfigDir: string | null
+  projectConfigDir: string | null
+  agentdeckRoot: string | null
+  templateUserRoot: string | null
+  wslDistro: string | null
+  wslHome: string | null
+  projectAgentdeckDir: string | null
+}
+
+export interface AgentEnvSnapshot {
+  agentId: string
+  agentName: string
+  agentVersion: string | null
+  supportLevel: AgentSupportLevel
+  hooks: HookEntry[]
+  skills: SkillEntry[]
+  mcpServers: McpServerEntry[]
+  config: ConfigEntry[]
+  paths: AgentEnvPaths
+}

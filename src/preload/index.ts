@@ -386,6 +386,10 @@ contextBridge.exposeInMainWorld('agentDeck', {
         agentdeckRoot: string
         templateUserRoot: string
       }>,
+    getAgentSnapshot: (opts: { agentId: string; projectId?: string; force?: boolean }) =>
+      ipcRenderer.invoke('env:getAgentSnapshot', opts) as Promise<
+        import('../shared/types').AgentEnvSnapshot
+      >,
   },
   files: {
     listDir: (opts: {
