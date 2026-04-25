@@ -60,6 +60,7 @@ import {
   registerEnvIpc,
   reviewTracker,
 } from './ipc'
+import { registerFilesIpc } from './ipc/ipc-files'
 
 const log = createLogger('app')
 
@@ -348,6 +349,8 @@ app
       agentdeckRoot,
       templateUserRoot,
     })
+
+    registerFilesIpc()
 
     registerIpcHandlers(appStore)
 

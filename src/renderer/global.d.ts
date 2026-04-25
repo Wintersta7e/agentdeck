@@ -251,6 +251,13 @@ declare global {
           templateUserRoot: string
         }>
       }
+      files: {
+        listDir: (opts: { path: string; projectPath: string }) => Promise<{
+          entries: Array<{ name: string; isDir: boolean; size?: number; mtime?: number }>
+          gitignored: string[]
+        }>
+        openExternal: (opts: { path: string; projectPath: string }) => Promise<void>
+      }
     }
   }
 }

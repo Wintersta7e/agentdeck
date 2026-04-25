@@ -387,4 +387,19 @@ contextBridge.exposeInMainWorld('agentDeck', {
         templateUserRoot: string
       }>,
   },
+  files: {
+    listDir: (opts: {
+      path: string
+      projectPath: string
+    }): Promise<{
+      entries: Array<{ name: string; isDir: boolean; size?: number; mtime?: number }>
+      gitignored: string[]
+    }> =>
+      ipcRenderer.invoke('files:listDir', opts) as Promise<{
+        entries: Array<{ name: string; isDir: boolean; size?: number; mtime?: number }>
+        gitignored: string[]
+      }>,
+    openExternal: (opts: { path: string; projectPath: string }): Promise<void> =>
+      ipcRenderer.invoke('files:openExternal', opts) as Promise<void>,
+  },
 })
