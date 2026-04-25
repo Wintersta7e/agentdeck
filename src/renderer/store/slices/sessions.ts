@@ -40,6 +40,11 @@ export interface SessionsSlice {
   /** In-memory prune: remove from openSessionIds + pane slots, shift active. */
   pruneSessionFromTabs: (id: string) => void
   setActiveSession: (sessionId: string) => void
+  /** Clear the active selection without touching the open-session list. Used
+   * by SessionTabs to route back to the SessionsScreen overview while
+   * keeping all open sessions in the strip.
+   */
+  clearActiveSession: () => void
   removeSession: (sessionId: string) => void
   restartSession: (oldSessionId: string) => string | null
   getSessionForProject: (projectId: string) => Session | undefined
@@ -251,6 +256,8 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
       }
       return { activeSessionId: sessionId, currentView: 'sessions' as const, paneSessions }
     }),
+
+  clearActiveSession: () => set({ activeSessionId: null }),
 
   removeSession: (sessionId) =>
     set((state) => {

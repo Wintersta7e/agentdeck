@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { Plus, X } from 'lucide-react'
+import { LayoutGrid, Plus, X } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import { closeSession } from '../../utils/session-close'
 import type { Session, Project } from '../../../shared/types'
@@ -26,12 +26,22 @@ export const SessionTabs = memo(function SessionTabs(): React.JSX.Element {
   const activeSessionId = useAppStore((s) => s.activeSessionId)
   const projects = useAppStore((s) => s.projects)
   const setActiveSession = useAppStore((s) => s.setActiveSession)
+  const clearActiveSession = useAppStore((s) => s.clearActiveSession)
   const openNewSessionComposer = useAppStore((s) => s.openNewSessionComposer)
 
   const projectById = new Map<string, Project>(projects.map((p) => [p.id, p]))
 
   return (
     <div className="session-tabs" role="tablist">
+      <button
+        type="button"
+        className="session-tabs__overview"
+        aria-label="Back to sessions overview"
+        title="Sessions overview"
+        onClick={() => clearActiveSession()}
+      >
+        <LayoutGrid size={12} aria-hidden="true" />
+      </button>
       {openSessionIds.map((id) => {
         const session = sessions[id]
         if (!session) return null

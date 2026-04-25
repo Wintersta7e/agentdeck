@@ -123,6 +123,25 @@
   background: var(--bg2);
   color: var(--text0);
 }
+
+.session-tabs__overview {
+  margin-right: var(--sp-2);
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  color: var(--text2);
+  border-radius: 2px;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.session-tabs__overview:hover {
+  background: var(--bg2);
+  color: var(--text0);
+}
 .session-tabs__spacer {
   flex: 1;
 }
