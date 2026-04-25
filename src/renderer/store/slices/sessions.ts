@@ -194,7 +194,10 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
     }),
 
   openSession: (seed) => {
-    const id = `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    // Cryptographically-random suffix — Math.random() is flagged by CodeQL
+    // for ID generation since session IDs are used to route IPC and key
+    // store entries.
+    const id = `session-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`
     set((state) => {
       const session: Session = {
         ...seed,
