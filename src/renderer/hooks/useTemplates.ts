@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow'
 import type { Template } from '../../shared/types'
 import { useAppStore } from '../store/appStore'
 import { getTemplatesForActiveProject } from '../selectors/templates'
@@ -8,9 +9,10 @@ import { getTemplatesForActiveProject } from '../selectors/templates'
  * project winning on collision, sorted by pinned then lastUsedAt desc then
  * name asc).
  *
- * Each render produces a fresh array reference. Wrap in `useShallow` if this
- * becomes a re-render hotspot.
+ * Wrapped in `useShallow` because the selector returns a fresh array on every
+ * call. Without shallow equality, every store update would re-fire consumers
+ * and trigger Maximum-update-depth-exceeded loops in React 19 / zustand 5.
  */
 export function useTemplates(): Template[] {
-  return useAppStore((s) => getTemplatesForActiveProject(s))
+  return useAppStore(useShallow((s) => getTemplatesForActiveProject(s)))
 }
