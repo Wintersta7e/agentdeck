@@ -5,7 +5,7 @@ import { DiffTab } from './DiffTab'
 import { FilesTab } from './FilesTab'
 import { ConfigTab } from './ConfigTab'
 import { PromptsInspector } from './PromptsInspector'
-import { EnvTab } from './EnvTab'
+import { EnvTab } from './EnvTab/EnvTab'
 import type { RightPanelTab } from '../../../shared/types'
 import './RightPanel.css'
 

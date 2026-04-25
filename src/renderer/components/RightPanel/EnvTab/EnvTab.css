@@ -1,0 +1,510 @@
+/* EnvTab — orchestrator + section chrome for the per-agent env snapshot.
+ * All values come from design tokens in tokens.css. */
+
+.env-tab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-2) 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--text1);
+  height: 100%;
+  overflow-y: auto;
+}
+
+.env-tab__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--bg2);
+  flex: 0 0 auto;
+}
+
+.env-tab__title-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+}
+
+.env-tab__agent-name {
+  font-family: var(--font-display, inherit);
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--text0);
+}
+
+.env-tab__version {
+  font-size: var(--fs-xs);
+  color: var(--text3);
+}
+
+.env-tab__subtitle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.env-tab__subtitle {
+  font-size: var(--fs-xs);
+  color: var(--text3);
+  letter-spacing: 0.04em;
+}
+
+.env-tab__refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r);
+  color: var(--text2);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.env-tab__refresh:hover {
+  background: var(--bg2);
+  color: var(--text0);
+}
+
+.env-tab__refresh:focus-visible {
+  border-color: var(--accent-glow);
+}
+
+.env-tab__refresh:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Section chrome (shared across Hooks / Skills / MCP / Config / Paths) */
+
+.env-tab__section {
+  padding: var(--sp-2) var(--sp-3);
+}
+
+.env-tab__section-title {
+  margin: 0 0 var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text3);
+  text-transform: uppercase;
+}
+
+.env-tab__list {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.env-tab__row {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--sp-2);
+  padding: 2px 0;
+  font-size: var(--fs-sm);
+}
+
+.env-tab__row dt {
+  color: var(--text3);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.env-tab__row dd {
+  margin: 0;
+  color: var(--text1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.env-tab__loading,
+.env-tab__error,
+.env-tab__placeholder,
+.env-tab__empty-hint {
+  padding: var(--sp-3);
+  font-size: var(--fs-sm);
+  color: var(--text3);
+}
+
+.env-tab__error {
+  color: var(--red);
+}
+
+.env-tab__empty-hint {
+  padding: var(--sp-2) 0;
+  font-style: italic;
+}
+
+.env-tab__placeholder {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.env-tab__placeholder p {
+  margin: 0;
+}
+
+.env-tab__placeholder-hint {
+  font-size: var(--fs-xs);
+}
+
+/* Scope badges (user/project) — shared across Hooks / Skills / MCP / Config */
+
+.env-tab__scope-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--sp-1);
+  border: 1px solid var(--bg3);
+  border-radius: var(--r);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  background: var(--bg1);
+  color: var(--text2);
+}
+
+.env-tab__scope-badge--user {
+  color: var(--text2);
+}
+
+.env-tab__scope-badge--project {
+  color: var(--accent);
+  border-color: var(--accent-glow);
+}
+
+/* Hooks */
+
+.env-tab__hooks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.env-tab__hooks-event {
+  display: flex;
+  flex-direction: column;
+}
+
+.env-tab__hooks-event-row {
+  display: grid;
+  grid-template-columns: 14px 1fr max-content max-content;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) 0;
+  cursor: pointer;
+  border-radius: var(--r);
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.env-tab__hooks-event-row:hover {
+  background: var(--bg2);
+}
+
+.env-tab__hooks-event-row:focus-visible {
+  outline: 1px solid var(--accent-glow);
+  outline-offset: 2px;
+}
+
+.env-tab__hooks-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text3);
+}
+
+.env-tab__hooks-event-name {
+  color: var(--text1);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.env-tab__hooks-count {
+  color: var(--text3);
+  font-size: var(--fs-xs);
+}
+
+.env-tab__hooks-scopes {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.env-tab__hooks-detail {
+  list-style: none;
+  margin: var(--sp-1) 0 var(--sp-2);
+  padding: 0 0 0 var(--sp-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  border-left: 1px dotted var(--bg3);
+}
+
+.env-tab__hooks-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.env-tab__hooks-entry-line {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.env-tab__hooks-cmd {
+  flex: 1 1 auto;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.env-tab__hooks-matchers {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-xs);
+  color: var(--text3);
+  padding-left: var(--sp-3);
+}
+
+.env-tab__hooks-matcher-label {
+  letter-spacing: 0.04em;
+}
+
+.env-tab__hooks-matcher {
+  font-family: var(--font-mono);
+  color: var(--text2);
+  padding: 0 4px;
+  background: var(--bg2);
+  border-radius: var(--r);
+}
+
+/* Skills */
+
+.env-tab__skills {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.env-tab__skills-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.env-tab__skills-group-header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.env-tab__skills-count {
+  color: var(--text3);
+  font-size: var(--fs-xs);
+}
+
+.env-tab__skills-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 var(--sp-3);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-left: 1px dotted var(--bg3);
+}
+
+.env-tab__skills-item {
+  color: var(--text1);
+  font-size: var(--fs-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.env-tab__skills-toggle {
+  align-self: flex-start;
+  margin-left: var(--sp-3);
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+
+.env-tab__skills-toggle:hover {
+  text-decoration: underline;
+}
+
+.env-tab__skills-toggle:focus-visible {
+  outline: 1px solid var(--accent-glow);
+  outline-offset: 2px;
+}
+
+/* MCP */
+
+.env-tab__mcp {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.env-tab__mcp-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--sp-1) 0;
+  border-bottom: 1px dotted var(--bg2);
+}
+
+.env-tab__mcp-row:last-child {
+  border-bottom: none;
+}
+
+.env-tab__mcp-line {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.env-tab__mcp-status {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text3);
+  flex: 0 0 auto;
+}
+
+.env-tab__mcp-status--running {
+  background: var(--green);
+}
+
+.env-tab__mcp-status--errored {
+  background: var(--red);
+}
+
+.env-tab__mcp-status--configured {
+  background: var(--text3);
+}
+
+.env-tab__mcp-name {
+  color: var(--text1);
+  font-weight: 500;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.env-tab__mcp-type-badge {
+  display: inline-flex;
+  padding: 0 var(--sp-1);
+  background: var(--bg2);
+  color: var(--text2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  border-radius: var(--r);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.env-tab__mcp-summary {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text3);
+  padding-left: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Config */
+
+.env-tab__config {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.env-tab__config-row {
+  display: grid;
+  grid-template-columns: max-content max-content 1fr 32px;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) 0;
+  border-bottom: 1px dotted var(--bg2);
+}
+
+.env-tab__config-row:last-child {
+  border-bottom: none;
+}
+
+.env-tab__config-key {
+  color: var(--text2);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 12rem;
+}
+
+.env-tab__config-value {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.env-tab__config-copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r);
+  color: var(--text3);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.env-tab__config-copy:hover {
+  background: var(--bg2);
+  color: var(--text1);
+}
+
+.env-tab__config-copy:focus-visible {
+  border-color: var(--accent-glow);
+}
