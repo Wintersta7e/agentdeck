@@ -6,7 +6,7 @@ A desktop terminal manager for WSL AI coding agents. Launch, manage, and orchest
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript)
 ![License: Elastic-2.0](https://img.shields.io/badge/License-Elastic--2.0-blue.svg)
-![Tests](https://img.shields.io/badge/Tests-781_passing-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-1113_passing-brightgreen)
 ![CI](https://github.com/Wintersta7e/agentdeck/actions/workflows/ci.yml/badge.svg?branch=main)
 
 ## Why AgentDeck?
@@ -72,7 +72,7 @@ AgentDeck provides a unified desktop environment for working with AI coding agen
 
 - **16 Seed Templates** - Ready-to-use templates across 8 categories
 - **Template Editor** - Create and edit templates with live preview
-- **Template Attach** - Attach templates to sessions from the Context tab
+- **Template Attach** - Inject template content into the active session from the Prompts tab in the right panel
 - **Categories** - Code Review, Debugging, Documentation, Planning, Refactoring, Security, Testing, General
 
 ### Agentic Workflows
@@ -102,7 +102,7 @@ AgentDeck provides a unified desktop environment for working with AI coding agen
 
 ### Cost/Token Tracking
 
-- **Live Cost Badge** - Per-session USD cost and token count in the pane topbar
+- **Live Cost Badge** - Per-session USD cost and token count in the session header
 - **Claude Code Support** - Parses JSONL session logs with cache-aware pricing (write 1.25x, read 0.1x)
 - **Codex CLI Support** - Parses JSONL rollout logs with per-model pricing maps
 - **Tooltip Breakdown** - Hover for input, output, cache read, and cache write token counts
@@ -111,7 +111,7 @@ AgentDeck provides a unified desktop environment for working with AI coding agen
 ### Git Worktree Isolation
 
 - **Per-Session Branches** - Each agent session gets its own git worktree and branch
-- **Branch Badge** - Active branch shown in pane topbar
+- **Branch Badge** - Active branch shown in the session header
 - **Review Flow** - Inspect changes on close, then Keep (merge) / Discard / Cancel
 - **Automatic Cleanup** - Orphaned worktrees pruned on startup
 
@@ -170,7 +170,7 @@ npm run dev
 # Build for production (validates TypeScript)
 npm run build
 
-# Run tests (781 tests)
+# Run tests (1113 tests)
 npm test
 
 # Lint code (zero-warning policy)
@@ -187,7 +187,7 @@ npm run format
 npm run dist
 ```
 
-Output: `dist/AgentDeck-{version}-portable.exe` (~89 MB)
+Output: `dist/AgentDeck-{version}-portable.exe` (~97 MB)
 
 ## Project Structure
 
@@ -195,7 +195,8 @@ Output: `dist/AgentDeck-{version}-portable.exe` (~89 MB)
 src/
 ├── main/                    # Electron main process
 │   ├── index.ts             # App lifecycle, IPC handler registration
-│   ├── ipc/                 # 8 IPC modules (pty, window, agents, projects, workflows, skills, worktree, utils)
+│   ├── ipc/                 # IPC modules (pty, window, agents, projects, workflows,
+│   │                        # skills, worktree, cost, home, templates, env, files, utils)
 │   ├── pty-manager.ts       # node-pty: spawn, resize, kill, activity parsing
 │   ├── workflow-engine.ts   # Edge-activation scheduler DAG execution
 │   ├── edge-scheduler.ts    # Pure scheduler: ready queue, branching, skip, loop reset
@@ -236,7 +237,7 @@ src/
 | [node-pty](https://github.com/microsoft/node-pty) | Pseudo-terminal (WSL sessions) |
 | [Zustand](https://zustand-demo.pmnd.rs) | State management |
 | [React Flow](https://reactflow.dev) | Visual workflow node editor |
-| [Vitest 4](https://vitest.dev) | Testing framework (781 tests) |
+| [Vitest 4](https://vitest.dev) | Testing framework (1113 tests) |
 | [ESLint 9](https://eslint.org) | Linting (flat config, zero-warning policy) |
 
 ## Documentation
