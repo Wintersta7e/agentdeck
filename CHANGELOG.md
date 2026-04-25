@@ -14,25 +14,37 @@ approval lifecycle (idle → review → kept | discarded) on top of session stat
 TerminalPane no longer auto-removes exited sessions after 800ms — they persist
 until the user KEEPs / DISCARDs them or closes the tab via the × control.
 
+The Files and Env right-panel tabs are also reworked: Files is now a recursive,
+gitignore-aware filesystem tree rooted at the active session's project (or its
+isolated worktree), and Env shows a per-agent snapshot of hooks, skills, MCP
+servers, and config — resolved from `session.agentOverride ?? project.agent`
+and refreshable on demand.
+
 ### Added
 
 - Browser-style session tab strip (SessionTabs) above the Sessions view with per-tab agent icon, project name, branch label, status dot, and hover-× close control.
 - Single-row session header (SessionHeader) with agent + project + live branch + dirty-count from gitStatuses, state word, and context-appropriate action buttons (KEEP / DISCARD on review; RERUN on kept/discarded).
+- Sessions-overview button on the SessionTabs strip — clears the active selection without touching `openSessionIds`, so users can return to the SessionsScreen overview while keeping every open session in the strip.
 - Prompts inspector in the right panel (replaces retired tabs) with search, pin, usage count, per-template `◆ IN USE` marker, preview pane, and Inject → pty.write that routes through incrementUsage + setSeedTemplateId.
-- Env tab in the right panel surfacing CLAUDE_CONFIG_DIR, CODEX_HOME, agentdeckRoot, templateUserRoot, WSL distro/home, agent versions, and the active project's .agentdeck config + templates + worktrees paths.
+- Files tab in the right panel as a recursive, lazy-loaded filesystem tree rooted at the active session's project path (or its isolated worktree). Gitignored entries are filtered server-side via `git check-ignore --stdin` over `wsl.exe`. Tree is keyboard-navigable (Arrow keys / Home / End / Enter); manual refresh button hard-remounts the tree. New IPCs `files:listDir({path,projectPath})` and `files:openExternal({path,projectPath})` enforce a lexical project-scope check so the renderer can't enumerate arbitrary WSL paths.
+- Env tab in the right panel as a per-agent snapshot — Hooks (per-event count + scope badge, expandable), Skills (count + first 5 + show-all), MCP servers (name/type/command/status), Config (flat key/value with copy), Paths (debug footer with agentdeckRoot, templateUserRoot, WSL distro/home, project `.agentdeck`). Future-tier agents (gemini-cli, amazon-q, opencode) render a "not yet supported" placeholder above the paths footer. New main-process modules `wsl-paths` (resolves WSL `$HOME` / `$CLAUDE_CONFIG_DIR` / `$CODEX_HOME` via `wsl.exe`, reads files through `wslPathToWindows` + UNC fallback) and `agent-env-resolver` dispatch to per-agent readers (`agent-env-claude`, `agent-env-codex`, `agent-env-other`). New IPC `env:getAgentSnapshot({agentId, projectId?, force?})` with 30s TTL cache, in-flight dedup, and `SAFE_ID_RE`-validated `projectId` lookup against the project store.
 - File-based template store at `~/.agentdeck/templates/` and `<project>/.agentdeck/templates/` with per-template mutex, atomic writes (randomBytes tmp-rename), 200ms-debounced fs.watch (10s poll fallback), global ID uniqueness enforcement (`E_TEMPLATE_ID_EXISTS`), and stale-save detection (`E_TEMPLATE_STALE`).
 - One-shot staging-dir migration from electron-store `templates` key to files (`appPrefs.templatesMigrated` gate) with fresh-install seeding path.
 - Approval lifecycle on sessions: `running → exited` via pty-exit auto-flips `idle → review`; user's KEEP / DISCARD transitions to `kept` / `discarded`; RERUN spawns a new session with fresh context-window snapshot.
-- `openSessionIds` ordered tab list on the sessions slice; `openSession(seed)` creates sessions through one entry point; `pruneSessionFromTabs(id)` handles tab removal with pane backfill.
+- `openSessionIds` ordered tab list on the sessions slice; `openSession(seed)` creates sessions through one entry point; `pruneSessionFromTabs(id)` handles tab removal with pane backfill; `clearActiveSession()` deselects without closing.
 - `closeSession` orchestrator at `src/renderer/utils/session-close.ts` — inspect worktree → prompt on dirty → applySessionStatus(user-kill) → pty.kill → conditional re-inspect → worktree commit/keep/discard → releasePrimary → clearWorktreePath → prune.
 - One-shot `project.path` normalization in project-store (gated by `appPrefs.pathsNormalized`).
 
 ### Changed
 
 - Right inspector reduced from 7 tabs to 5: Files / Diff / Prompts / Env / Config (default: Files).
+- Files tab content: was activity-feed-derived list of read/written paths; now a project-rooted filesystem tree. Activity-feed events are still tracked internally for cost/timeline/digest but no longer surface as a panel.
+- Env tab content: was a flat dump of `CLAUDE_CONFIG_DIR` / `CODEX_HOME` / `agentdeckRoot` / `templateUserRoot` / WSL distro+home / agent versions / project `.agentdeck` paths; now a per-agent snapshot. The legacy paths still appear in the Paths footer at the bottom of the new view.
 - Close-session flow now inspects worktree safety, prompts on dirty changes with Keep-branch / Discard / Cancel options, and commits worktree state after pty kill.
 - `addNotification` extended with a discriminated union: existing basic toasts keep their shape under `kind: 'basic'`; new `kind: 'confirm'` notifications carry `options[]` + a `resolve()` promise for actionable prompts.
 - `ViewType` narrowed to drop the singular `'session'` — the plural `'sessions'` tab renders the list when no session is active and the terminal when one is.
+- Resolver dispatch and per-agent summary logs (`hooks/skills/mcp/config` counts) emit at info level so production traces are visible without `AGENTDECK_DEBUG`.
+- Test layout: 63 unit tests relocated from `__tests__/` directories to sit next to their source files; integration / multi-module / structural tests stay in `__tests__/`.
 
 ### Removed
 
@@ -46,7 +58,7 @@ until the user KEEPs / DISCARDs them or closes the tab via the × control.
 
 ### Dependencies
 
-- No runtime dependency changes — uses existing `electron-store`, `node:fs` (fs.watch), `node:crypto` (randomBytes).
+- No runtime dependency changes — uses existing `smol-toml`, `yaml`, `jsonc-parser`, `electron-store`, `node:fs` (fs.watch), `node:crypto` (randomBytes).
 
 ## [6.0.1] - 2026-04-24
 
