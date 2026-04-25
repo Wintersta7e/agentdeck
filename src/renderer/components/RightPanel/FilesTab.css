@@ -1,55 +1,65 @@
-.ri-files {
-  list-style: none;
-  margin: 0;
-  padding: var(--sp-2) 0;
-  overflow-y: auto;
-  max-height: 100%;
+/* FilesTab — header chrome (label, path, refresh) wrapping the FileTree. */
+
+.files-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
 }
 
-.ri-files__item {
-  display: grid;
-  grid-template-columns: 20px 1fr auto;
+.files-tab__header {
+  display: flex;
   align-items: center;
   gap: var(--sp-2);
-  padding: var(--sp-1) var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--bg2);
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
-  color: var(--text1);
+  flex: 0 0 auto;
 }
 
-.ri-files__item:hover {
-  background: var(--accent-glow2);
-}
-
-.ri-files__glyph {
-  text-align: center;
+.files-tab__label {
   color: var(--text3);
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  flex: 0 0 auto;
 }
 
-.ri-files__item--write .ri-files__glyph {
-  color: var(--green);
-}
-
-.ri-files__item--read .ri-files__glyph {
-  color: var(--blue);
-}
-
-.ri-files__path {
+.files-tab__path {
+  color: var(--text2);
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  flex: 1 1 auto;
 }
 
-.ri-files__action {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.2em;
-  color: var(--text3);
+.files-tab__refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r);
+  color: var(--text2);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+  flex: 0 0 auto;
 }
 
-.ri-files__item--write .ri-files__action {
-  color: var(--green);
+.files-tab__refresh:hover {
+  background: var(--bg2);
+  color: var(--text0);
 }
-.ri-files__item--read .ri-files__action {
-  color: var(--blue);
+
+.files-tab__refresh:focus-visible {
+  border-color: var(--accent-glow);
+}
+
+.files-tab > .file-tree {
+  flex: 1 1 auto;
+  overflow-y: auto;
 }

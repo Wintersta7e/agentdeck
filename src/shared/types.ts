@@ -77,13 +77,57 @@ export type TemplateCategory =
   | 'Docs'
   | 'Git'
 
-export interface Template {
+/**
+ * Legacy flat Template shape — persisted in electron-store under the `templates`
+ * key. Consumers will be rewired to the new three-tier Template shape
+ * (TemplateFile / Template / TemplateDraft) in a later phase of the v6.1.0
+ * session-UI rework. Kept here so existing code compiles during the migration.
+ *
+ * @deprecated Use `TemplateFile` (persisted) / `Template` (loaded) / `TemplateDraft` (input).
+ */
+export interface LegacyTemplate {
   id: string
   name: string
   description: string
   content?: string | undefined
   category?: TemplateCategory | undefined
 }
+
+// ── Template types (v6.1.0 file-based) ─────────────────────────────
+export type TemplateScope = 'user' | 'project'
+
+/** Persisted JSON on disk. Derived fields are NOT in the file. */
+export interface TemplateFile {
+  id: string
+  name: string
+  description: string
+  content: string
+  category?: TemplateCategory | undefined
+  usageCount: number
+  lastUsedAt: number
+  pinned: boolean
+}
+
+/** Renderer-facing shape — TemplateFile + fields derived at load time. */
+export interface Template extends TemplateFile {
+  scope: TemplateScope
+  projectId: string | null
+  path: string
+  mtimeMs: number
+}
+
+/** Input to save operations. No path/scope-derived fields. */
+export interface TemplateDraft {
+  id?: string | undefined
+  name: string
+  description: string
+  content: string
+  category?: TemplateCategory | undefined
+}
+
+// ── Approval lifecycle (v6.1.0) ─────────────────────────────────────
+// Orthogonal to SessionStatus.
+export type ApprovalState = 'idle' | 'review' | 'kept' | 'discarded'
 
 export interface Role {
   id: string
@@ -126,11 +170,24 @@ export interface Session extends SessionLaunchConfig {
   projectId: string
   status: SessionStatus
   startedAt: number
+  /** Orthogonal review lifecycle. 'idle' means no pending changes. */
+  approvalState: ApprovalState
+  /** Template that seeded this session's initial prompt, if any. */
+  seedTemplateId: string | null
+}
+
+/**
+ * Input shape for opening a new session. Carries everything needed to launch
+ * the PTY plus the seed template that produced `initialPrompt` (or `null` when
+ * no template was used). Required-nullable — callers always know the value.
+ */
+export interface OpenSessionSeed extends SessionLaunchConfig {
+  projectId: string
+  seedTemplateId: string | null
 }
 
 export type ViewType =
   | 'home'
-  | 'session'
   | 'wizard'
   | 'settings'
   | 'template-editor'
@@ -158,7 +215,7 @@ export interface ActivityEvent {
   timestamp: number
 }
 
-export type RightPanelTab = 'context' | 'activity' | 'memory' | 'diff' | 'files' | 'cost' | 'config'
+export type RightPanelTab = 'files' | 'diff' | 'prompts' | 'env' | 'config'
 
 export interface DetectedStack {
   badge: StackBadge
@@ -409,4 +466,58 @@ export interface Suggestion {
   text: string
   actionLabel: string
   dismissKey: string
+}
+
+// ── Agent environment snapshot (EnvTab) ────────────────────────────
+
+export type AgentSupportLevel = 'full' | 'minimal' | 'future'
+
+export interface HookEntry {
+  event: string
+  scope: 'user' | 'project'
+  command: string
+  matchers?: string[]
+}
+
+export interface SkillEntry {
+  name: string
+  scope: 'user' | 'project'
+  path: string
+}
+
+export interface McpServerEntry {
+  name: string
+  type: 'stdio' | 'sse' | 'http'
+  scope: 'user' | 'project'
+  command?: string
+  url?: string
+  status?: 'configured' | 'running' | 'errored'
+}
+
+export interface ConfigEntry {
+  key: string
+  value: string
+  scope: 'user' | 'project'
+}
+
+export interface AgentEnvPaths {
+  userConfigDir: string | null
+  projectConfigDir: string | null
+  agentdeckRoot: string | null
+  templateUserRoot: string | null
+  wslDistro: string | null
+  wslHome: string | null
+  projectAgentdeckDir: string | null
+}
+
+export interface AgentEnvSnapshot {
+  agentId: string
+  agentName: string
+  agentVersion: string | null
+  supportLevel: AgentSupportLevel
+  hooks: HookEntry[]
+  skills: SkillEntry[]
+  mcpServers: McpServerEntry[]
+  config: ConfigEntry[]
+  paths: AgentEnvPaths
 }

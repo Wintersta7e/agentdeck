@@ -24,7 +24,7 @@ export function Mascot({ size = 140, onClick }: MascotProps): React.JSX.Element 
   const errorCount = useAppStore(
     (s) =>
       Object.values(s.sessions).filter((sess) => sess.status === 'error').length +
-      s.notifications.filter((n) => n.type === 'error').length,
+      s.notifications.filter((n) => n.kind === 'basic' && n.type === 'error').length,
   )
 
   const [hovering, setHovering] = useState(false)

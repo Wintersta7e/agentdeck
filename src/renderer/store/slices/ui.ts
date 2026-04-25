@@ -23,6 +23,7 @@ export interface UiSlice {
   closeWizard: () => void
   openSettings: (projectId: string) => void
   closeSettings: () => void
+  openNewSessionComposer: () => void
 
   // Split View
   paneLayout: PaneLayout
@@ -51,15 +52,9 @@ export interface UiSlice {
   openTemplateEditor: (templateId?: string) => void
   closeTemplateEditor: () => void
 
-  // Layout (sidebar + panels)
-  sidebarOpen: boolean
-  sidebarWidth: number
-  sidebarSections: { pinned: boolean; templates: boolean; workflows: boolean }
+  // Layout (panels)
   rightPanelWidth: number
   wfLogPanelWidth: number
-  toggleSidebar: () => void
-  setSidebarWidth: (w: number) => void
-  toggleSidebarSection: (key: 'pinned' | 'templates' | 'workflows') => void
   setRightPanelWidth: (w: number) => void
   setWfLogPanelWidth: (w: number) => void
 
@@ -80,7 +75,7 @@ export interface UiSlice {
   setMascotEnabled: (enabled: boolean) => void
 }
 
-export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get) => ({
+export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set) => ({
   currentView: 'home',
   setCurrentView: (view) => set({ currentView: view }),
 
@@ -121,6 +116,11 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
       const prev = stack.pop() ?? 'home'
       return { currentView: prev, settingsProjectId: null, viewStack: stack }
     }),
+  openNewSessionComposer: () =>
+    set((state) => ({
+      currentView: 'new-session' as const,
+      viewStack: [...state.viewStack, state.currentView],
+    })),
 
   // Split View
   paneLayout: 1,
@@ -176,7 +176,7 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
 
   // Right Panel
   rightPanelOpen: false,
-  rightPanelTab: 'context',
+  rightPanelTab: 'files',
   toggleRightPanel: () => set((state) => ({ rightPanelOpen: !state.rightPanelOpen })),
   setRightPanelTab: (tab) => set({ rightPanelTab: tab }),
 
@@ -197,37 +197,9 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
       return { currentView: prev, editingTemplateId: null, viewStack: stack }
     }),
 
-  // Layout (sidebar + panels)
-  sidebarOpen: true,
-  sidebarWidth: 220,
-  sidebarSections: { pinned: true, templates: true, workflows: true },
+  // Layout (panels)
   rightPanelWidth: 240,
   wfLogPanelWidth: 320,
-
-  toggleSidebar: () => {
-    set((state) => ({ sidebarOpen: !state.sidebarOpen }))
-    const next = get().sidebarOpen
-    window.agentDeck.layout.set({ sidebarOpen: next }).catch((err: unknown) => {
-      window.agentDeck.log.send('debug', 'layout', 'Layout persist failed', { err: String(err) })
-    })
-  },
-
-  setSidebarWidth: (w) => {
-    set({ sidebarWidth: w })
-    window.agentDeck.layout.set({ sidebarWidth: w }).catch((err: unknown) => {
-      window.agentDeck.log.send('debug', 'layout', 'Layout persist failed', { err: String(err) })
-    })
-  },
-
-  toggleSidebarSection: (key) => {
-    set((state) => ({
-      sidebarSections: { ...state.sidebarSections, [key]: !state.sidebarSections[key] },
-    }))
-    const sections = get().sidebarSections
-    window.agentDeck.layout.set({ sidebarSections: sections }).catch((err: unknown) => {
-      window.agentDeck.log.send('debug', 'layout', 'Layout persist failed', { err: String(err) })
-    })
-  },
 
   setRightPanelWidth: (w) => {
     set({ rightPanelWidth: w })

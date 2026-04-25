@@ -2,6 +2,8 @@ import type { StateCreator } from 'zustand'
 import type { AppState } from '../appStore'
 import type {
   AgentType,
+  ApprovalState,
+  OpenSessionSeed,
   Session,
   SessionLaunchConfig,
   SessionStatus,
@@ -9,14 +11,40 @@ import type {
   TokenUsage,
 } from '../../../shared/types'
 import { ACTIVITY_FEED_CAP, MAX_EXITED_SESSIONS, MAX_PANE_COUNT } from '../../../shared/constants'
+import { nextApprovalState } from '../../../shared/approval-transitions'
 
 export interface SessionsSlice {
   sessions: Record<string, Session>
   activeSessionId: string | null
+  /** Ordered list of session ids currently open in the tab bar (v6.1.0 §7.1). */
+  openSessionIds: string[]
   addSession: (sessionId: string, projectId: string, overrides?: SessionLaunchConfig) => void
   captureSessionSnapshot: (sessionId: string, agentId: AgentType) => Promise<void>
   setSessionStatus: (sessionId: string, status: SessionStatus) => void
+  /**
+   * Unified status mutator that routes through the approval transition rules.
+   * - reason='spawn-failure' normalizes `next` to 'error' and leaves approval alone.
+   * - reason='user-kill' applies `next` as-is but skips approval transition.
+   * - reason='pty-exit' (or undefined) runs `nextApprovalState` — the
+   *   running -> exited + idle -> review auto-transition fires here.
+   */
+  applySessionStatus: (
+    id: string,
+    next: SessionStatus,
+    reason?: 'spawn-failure' | 'pty-exit' | 'user-kill',
+  ) => void
+  setApprovalState: (id: string, next: ApprovalState) => void
+  setSeedTemplateId: (id: string, templateId: string | null) => void
+  /** Store-only session creation (§7.1). TerminalPane still owns pty.spawn. */
+  openSession: (seed: OpenSessionSeed) => string
+  /** In-memory prune: remove from openSessionIds + pane slots, shift active. */
+  pruneSessionFromTabs: (id: string) => void
   setActiveSession: (sessionId: string) => void
+  /** Clear the active selection without touching the open-session list. Used
+   * by SessionTabs to route back to the SessionsScreen overview while
+   * keeping all open sessions in the strip.
+   */
+  clearActiveSession: () => void
   removeSession: (sessionId: string) => void
   restartSession: (oldSessionId: string) => string | null
   getSessionForProject: (projectId: string) => Session | undefined
@@ -46,6 +74,7 @@ export interface SessionsSlice {
 export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> = (set, get) => ({
   sessions: {},
   activeSessionId: null,
+  openSessionIds: [],
   sessionUsage: {},
 
   addSession: (sessionId, projectId, overrides) =>
@@ -64,6 +93,8 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
         projectId,
         status: 'starting',
         startedAt: Date.now(),
+        approvalState: 'idle',
+        seedTemplateId: null,
         agentOverride: overrides?.agentOverride,
         agentFlagsOverride: overrides?.agentFlagsOverride,
         initialPrompt: overrides?.initialPrompt,
@@ -73,14 +104,20 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
         runMode: overrides?.runMode,
         approve: overrides?.approve,
       }
+      // PREREQ H1: legacy addSession must also append to openSessionIds so
+      // SessionTabs (Phase 4) sees every session regardless of launch path.
+      const openSessionIds = state.openSessionIds.includes(sessionId)
+        ? state.openSessionIds
+        : [...state.openSessionIds, sessionId]
       return {
         sessions: {
           ...state.sessions,
           [sessionId]: session,
         },
         activeSessionId: sessionId,
-        currentView: 'session' as const,
+        currentView: 'sessions' as const,
         paneSessions,
+        openSessionIds,
       }
     }),
 
@@ -123,6 +160,91 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
       }
     }),
 
+  applySessionStatus: (id, next, reason) =>
+    set((state) => {
+      const sess = state.sessions[id]
+      if (!sess) return {}
+      const effectiveNext: SessionStatus = reason === 'spawn-failure' ? 'error' : next
+      const skipApproval = reason === 'user-kill' || reason === 'spawn-failure'
+      const updated: Session = {
+        ...sess,
+        status: effectiveNext,
+        approvalState: skipApproval
+          ? sess.approvalState
+          : nextApprovalState(
+              { status: sess.status, approvalState: sess.approvalState },
+              { status: effectiveNext },
+            ),
+      }
+      return { sessions: { ...state.sessions, [id]: updated } }
+    }),
+
+  setApprovalState: (id, nextState) =>
+    set((state) => {
+      const sess = state.sessions[id]
+      if (!sess) return {}
+      return { sessions: { ...state.sessions, [id]: { ...sess, approvalState: nextState } } }
+    }),
+
+  setSeedTemplateId: (id, templateId) =>
+    set((state) => {
+      const sess = state.sessions[id]
+      if (!sess) return {}
+      return { sessions: { ...state.sessions, [id]: { ...sess, seedTemplateId: templateId } } }
+    }),
+
+  openSession: (seed) => {
+    // Cryptographically-random suffix — Math.random() is flagged by CodeQL
+    // for ID generation since session IDs are used to route IPC and key
+    // store entries.
+    const id = `session-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`
+    set((state) => {
+      const session: Session = {
+        ...seed,
+        id,
+        status: 'starting',
+        startedAt: Date.now(),
+        approvalState: 'idle',
+        seedTemplateId: seed.seedTemplateId ?? null,
+      }
+      const openSessionIds = [...state.openSessionIds, id]
+      const paneSessions = [...state.paneSessions]
+      while (paneSessions.length <= state.focusedPane) paneSessions.push('')
+      paneSessions[state.focusedPane] = id
+      paneSessions.length = Math.min(paneSessions.length, MAX_PANE_COUNT)
+      return {
+        sessions: { ...state.sessions, [id]: session },
+        openSessionIds,
+        paneSessions,
+        activeSessionId: id,
+        // PREREQ B8: singular 'session' until Phase 8 Task 8.1 renames the
+        // ViewType atomically. Using 'sessions' here would route to the
+        // Sessions list screen instead of the live terminal.
+        currentView: 'sessions' as const,
+      }
+    })
+    return id
+  },
+
+  pruneSessionFromTabs: (id) =>
+    set((state) => {
+      if (!state.sessions[id]) return {}
+      const openSessionIds = state.openSessionIds.filter((x) => x !== id)
+      const wasActive = state.activeSessionId === id
+      let nextActive: string | null = state.activeSessionId
+      if (wasActive) {
+        const idx = state.openSessionIds.indexOf(id)
+        nextActive = openSessionIds[idx] ?? openSessionIds[idx - 1] ?? null
+      }
+      const paneSessions = state.paneSessions.map((p) => (p === id ? '' : p))
+      if (wasActive && nextActive && !paneSessions.includes(nextActive)) {
+        const emptyIdx = paneSessions.indexOf('')
+        if (emptyIdx >= 0) paneSessions[emptyIdx] = nextActive
+      }
+      const { [id]: _removed, ...sessions } = state.sessions
+      return { sessions, openSessionIds, paneSessions, activeSessionId: nextActive }
+    }),
+
   setActiveSession: (sessionId) =>
     set((state) => {
       const paneSessions = [...state.paneSessions]
@@ -135,8 +257,10 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
         }
         paneSessions[targetPane] = sessionId
       }
-      return { activeSessionId: sessionId, currentView: 'session' as const, paneSessions }
+      return { activeSessionId: sessionId, currentView: 'sessions' as const, paneSessions }
     }),
+
+  clearActiveSession: () => set({ activeSessionId: null }),
 
   removeSession: (sessionId) =>
     set((state) => {
@@ -150,6 +274,7 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
       let sessionUsage = state.sessionUsage
       let writeCountBySession = state.writeCountBySession
       let worktreePaths = state.worktreePaths
+      let openSessionIds = state.openSessionIds
       // Evict the oldest exited sessions so per-session maps don't grow forever
       const exitedByAge = Object.entries(sessions)
         .filter(([, s]) => s.status === 'exited')
@@ -182,6 +307,8 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
           if (!evictIds.has(id)) nextWorktrees[id] = wt
         }
         worktreePaths = nextWorktrees
+        // Evicted ids would be dangling tab refs otherwise.
+        openSessionIds = openSessionIds.filter((id) => !evictIds.has(id))
       }
       // Count sessions still visible in the UI (not closed/exited) for view logic
       const openIds = Object.entries(sessions)
@@ -204,6 +331,7 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
         sessionUsage,
         writeCountBySession,
         worktreePaths,
+        openSessionIds,
         activeSessionId: state.activeSessionId === sessionId ? newActive : state.activeSessionId,
         currentView:
           openIds.length === 0
@@ -246,6 +374,13 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
         paneSessions[s.focusedPane] = freshId
       }
 
+      // Swap the old id for the fresh one at the same index so the tab keeps its
+      // position; append if the old id wasn't tracked for some reason.
+      const hadOldTab = s.openSessionIds.includes(oldSessionId)
+      const openSessionIds = hadOldTab
+        ? s.openSessionIds.map((x) => (x === oldSessionId ? freshId : x))
+        : [...s.openSessionIds, freshId]
+
       return {
         sessions: {
           ...rest,
@@ -254,6 +389,8 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
             projectId,
             status: 'starting' as const,
             startedAt: Date.now(),
+            approvalState: 'idle' as const,
+            seedTemplateId: null,
             agentOverride: oldSession.agentOverride,
             agentFlagsOverride: oldSession.agentFlagsOverride,
           },
@@ -263,6 +400,7 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
         writeCountBySession: remainingWrites,
         activeSessionId: freshId,
         paneSessions,
+        openSessionIds,
       }
     })
 

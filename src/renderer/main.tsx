@@ -23,18 +23,14 @@ async function initAndRender(): Promise<void> {
   // Load persisted layout prefs
   const layout = await window.agentDeck.layout.get()
   useAppStore.setState({
-    ...(layout.sidebarOpen !== undefined && { sidebarOpen: layout.sidebarOpen }),
-    ...(layout.sidebarWidth !== undefined && { sidebarWidth: layout.sidebarWidth }),
-    ...(layout.sidebarSections !== undefined && {
-      sidebarSections: {
-        pinned: layout.sidebarSections.pinned ?? true,
-        templates: layout.sidebarSections.templates ?? true,
-        workflows: layout.sidebarSections.workflows ?? true,
-      },
-    }),
     ...(layout.rightPanelWidth !== undefined && { rightPanelWidth: layout.rightPanelWidth }),
     ...(layout.wfLogPanelWidth !== undefined && { wfLogPanelWidth: layout.wfLogPanelWidth }),
   })
+
+  // Bootstrap user-scope templates + subscribe to main-process change events
+  // BEFORE first render so initial UI renders with authoritative template data.
+  // Project-scope templates are activated on demand in a later task.
+  await useAppStore.getState().bootstrapTemplates()
 
   const root = document.getElementById('root')
   if (!root) throw new Error('Root element #root not found')

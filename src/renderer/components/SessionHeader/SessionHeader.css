@@ -1,0 +1,121 @@
+.session-header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: 34px;
+  padding: 7px var(--sp-4);
+  border-bottom: 1px solid var(--bg3);
+  background: var(--bg1);
+  font: var(--fs-sm) / 1 var(--font-mono);
+}
+
+.session-header__glyph {
+  color: var(--agent-accent, var(--text2));
+  font-size: 14px;
+}
+
+.session-header__agent {
+  color: var(--text0);
+  font-weight: 600;
+}
+
+.session-header__divider {
+  width: 1px;
+  height: 14px;
+  background: var(--bg3);
+}
+
+.session-header__project {
+  color: var(--agent-accent, var(--text1));
+  font-weight: 600;
+}
+
+.session-header__path {
+  color: var(--text3);
+  font-size: var(--fs-xs);
+}
+
+.session-header__branch {
+  color: var(--text2);
+  font-size: var(--fs-xs);
+}
+
+.session-header__dirty {
+  color: var(--accent-dim);
+}
+
+.session-header__spacer {
+  flex: 1;
+}
+
+.session-header__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text3);
+}
+
+.session-header__dot--running {
+  background: var(--green);
+  animation: session-header-pulse 1.2s ease-in-out infinite;
+}
+
+.session-header__dot--error {
+  background: var(--red);
+}
+
+.session-header__dot--starting {
+  background: var(--accent-dim);
+}
+
+.session-header__state {
+  color: var(--text2);
+  letter-spacing: 1px;
+  font-size: var(--fs-xs);
+}
+
+.session-header__actions {
+  display: inline-flex;
+  gap: var(--sp-2);
+}
+
+.session-header__btn {
+  padding: 4px 10px;
+  background: var(--bg0);
+  border: 1px solid var(--bg3);
+  color: var(--text0);
+  font: var(--fs-xs) / 1 var(--font-mono);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.session-header__btn--success {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+.session-header__btn--danger {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.session-header__btn--primary {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+@keyframes session-header-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .session-header__dot--running {
+    animation: none;
+  }
+}
