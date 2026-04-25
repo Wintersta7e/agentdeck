@@ -47,7 +47,7 @@ AgentDeck provides a unified desktop environment for working with AI coding agen
 - **Terminal Caching** - Sessions persist across tab switches without re-rendering
 - **Terminal Search** - Find text in terminal output (Ctrl+Shift+F) with regex and case-sensitive modes
 - **Activity Tracking** - Real-time parsing of agent tool use (file reads, writes, commands)
-- **Right Panel** - 7 tabs per session: Context, Activity, Memory, Diff, Files, Cost, Config
+- **Right Panel** - 5 tabs per session: Files (project / worktree filesystem tree), Diff (staged-vs-working with Keep / Discard), Prompts (template inspector with Inject →), Env (per-agent hooks / skills / MCP / config snapshot), Config (session settings)
 - **New Session Composer** - Dedicated screen to pick agent, drop in a prompt, set branch mode, and launch — the prompt is piped into the agent's stdin after spawn
 
 ### Home Screen Dashboard
@@ -139,7 +139,6 @@ All themes use CSS custom properties from `tokens.css`. Per-agent accent tokens 
 | Escape | Command Palette (from session) |
 | Ctrl+N | New Project |
 | Ctrl+T | New Terminal |
-| Ctrl+B | Toggle Sidebar |
 | Ctrl+\\ | Toggle Right Panel |
 | Ctrl+/ | Keyboard Shortcuts |
 | Ctrl+1/2/3 | Pane Layout |
@@ -211,8 +210,9 @@ src/
 ├── preload/
 │   └── index.ts             # contextBridge: safe IPC surface (window.agentDeck)
 ├── renderer/                # React app (Vite)
-│   ├── components/          # Titlebar, Sidebar, SplitView, CommandPalette,
-│   │                        # HomeScreen, StatusBar, Terminal, RightPanel, etc.
+│   ├── components/          # Titlebar, SessionTabs, SessionHeader, SplitView,
+│   │                        # CommandPalette, HomeScreen, StatusBar, Terminal,
+│   │                        # RightPanel, etc.
 │   ├── screens/             # WorkflowEditor, ProjectSettings, TemplateEditor
 │   ├── store/               # Zustand store (7 slices: sessions, ui, projects, workflows, templates, notifications, home)
 │   ├── hooks/               # useProjects, usePty, useRolesMap, useMidnight, useSessionTimeline, useCostHistory
