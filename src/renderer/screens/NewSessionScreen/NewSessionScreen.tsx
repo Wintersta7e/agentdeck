@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
+import { useTemplates } from '../../hooks/useTemplates'
 import { AGENTS } from '../../../shared/agents'
 import { ScreenShell } from '../../components/shared/ScreenShell'
 import { AGENT_BY_ID, agentColorVar, agentShort } from '../../utils/agent-ui'
@@ -42,7 +43,7 @@ function Section({ eyebrow, title, sub, children }: ComposerSectionProps): React
 
 export function NewSessionScreen(): React.JSX.Element {
   const projects = useAppStore((s) => s.projects)
-  const templates = useAppStore((s) => s.templates)
+  const templates = useTemplates()
   const setCurrentView = useAppStore((s) => s.setCurrentView)
   const addSession = useAppStore((s) => s.addSession)
   const captureSessionSnapshot = useAppStore((s) => s.captureSessionSnapshot)
@@ -112,7 +113,7 @@ export function NewSessionScreen(): React.JSX.Element {
     addSession(sessionId, project.id, overrides)
     void captureSessionSnapshot(sessionId, agentId)
     setActiveSession(sessionId)
-    setCurrentView('session')
+    setCurrentView('sessions')
   }, [
     project,
     agentId,

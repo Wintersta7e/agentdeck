@@ -110,7 +110,7 @@ export function DiffReviewScreen(): React.JSX.Element {
         if (result.ok) {
           addNotification('info', 'Feedback sent to the agent.')
           setComment('')
-          setCurrentView('session')
+          setCurrentView('sessions')
         } else {
           addNotification('error', `Send failed: ${result.error ?? 'unknown error'}`)
         }
@@ -209,7 +209,7 @@ export function DiffReviewScreen(): React.JSX.Element {
                   <button
                     type="button"
                     className="dr-link"
-                    onClick={() => setCurrentView('session')}
+                    onClick={() => setCurrentView('sessions')}
                   >
                     Return to session →
                   </button>

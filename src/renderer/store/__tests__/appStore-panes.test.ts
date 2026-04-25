@@ -32,7 +32,7 @@ describe('setActiveSession', () => {
     useAppStore.getState().addSession('s1', 'proj-1')
     useAppStore.setState({ currentView: 'home' })
     useAppStore.getState().setActiveSession('s1')
-    expect(useAppStore.getState().currentView).toBe('session')
+    expect(useAppStore.getState().currentView).toBe('sessions')
   })
 })
 

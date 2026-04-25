@@ -1,6 +1,6 @@
 # AgentDeck User Guide
 
-> **Version**: 5.0.0
+> **Version**: 6.1.0
 
 AgentDeck is a desktop command center for managing AI coding agents through WSL2 terminals. This guide covers every feature from first launch to advanced workflow automation.
 
@@ -16,17 +16,16 @@ AgentDeck is a desktop command center for managing AI coding agents through WSL2
 6. [Split View](#split-view)
 7. [Terminal Search](#terminal-search)
 8. [Right Panel](#right-panel)
-9. [Sidebar](#sidebar)
-10. [Prompt Templates](#prompt-templates)
-11. [Agentic Workflows](#agentic-workflows) (conditions, loops, variables, import/export, history)
-12. [Workflow Roles](#workflow-roles)
-13. [Command Palette](#command-palette)
-14. [Cost/Token Tracking](#costtoken-tracking)
-15. [Git Worktree Isolation](#git-worktree-isolation)
-16. [Agent Updates](#agent-updates)
-17. [Themes](#themes)
-18. [Keyboard Shortcuts](#keyboard-shortcuts)
-19. [Troubleshooting](#troubleshooting)
+9. [Prompt Templates](#prompt-templates)
+10. [Agentic Workflows](#agentic-workflows) (conditions, loops, variables, import/export, history)
+11. [Workflow Roles](#workflow-roles)
+12. [Command Palette](#command-palette)
+13. [Cost/Token Tracking](#costtoken-tracking)
+14. [Git Worktree Isolation](#git-worktree-isolation)
+15. [Agent Updates](#agent-updates)
+16. [Themes](#themes)
+17. [Keyboard Shortcuts](#keyboard-shortcuts)
+18. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -131,13 +130,13 @@ Add shell commands that run automatically when you open a session for this proje
 
 ### Step 5: Confirm
 
-Review your settings and create the project. It appears in the sidebar under "Projects."
+Review your settings and create the project. It appears on the home screen under "Projects" and is openable from there.
 
 ---
 
 ## Terminal Sessions
 
-Click a pinned project on the home screen or sidebar to open a session. Each session:
+Click a pinned project on the home screen to open a session. Each session:
 
 - Opens a real WSL terminal (pseudo-terminal via node-pty)
 - Renders with GPU-accelerated WebGL (falls back to canvas 2D if unavailable)
@@ -149,12 +148,12 @@ Click a pinned project on the home screen or sidebar to open a session. Each ses
 
 Multiple ways to start:
 1. Click a project card on the home screen
-2. Click a pinned project in the sidebar
+2. Click "New Session" or pick a project from the Sessions tab
 3. Use the Command Palette (Esc > search project name)
 
 ### Session Tabs
 
-Each session appears as a tab in the title bar with a green dot indicator. Click tabs to switch between sessions. The active tab has an amber underline.
+Each session appears as a tab on the SessionTabs strip above the session view, with an agent icon, project name, branch label, and a status dot (running / awaiting / errored / idle). Click a tab to switch sessions; the leftmost LayoutGrid icon clears the active selection and returns to the SessionsScreen overview without closing any tabs.
 
 - **Close** — Click the X on a tab (session PTY is killed)
 - **Reorder** — Tabs appear in creation order (sessions left, workflows right)
@@ -180,7 +179,7 @@ Press **Ctrl+T** or select "New Terminal" from the Command Palette to open a pla
 - Quick file operations
 - Testing commands before configuring a project
 
-Bare terminals show "Terminal" in the tab bar and "shell" as the agent label in the pane topbar.
+Bare terminals show "Terminal" in the SessionTabs strip and "shell" as the agent label in the SessionHeader.
 
 ---
 
@@ -219,26 +218,36 @@ Match count and current position are displayed in the search bar.
 
 ## Right Panel
 
-The right panel appears alongside terminal sessions and contains three tabs:
+The right panel appears alongside terminal sessions and contains five tabs (default: **Files**):
 
-### Context Tab
+### Files
 
-Shows project configuration:
-- **Attached templates** — Click a template to send its content to the active terminal
-- **Project notes** and metadata
-- **Files in context** — CLAUDE.md, AGENTS.md if present in the project
+A recursive, lazy-loaded filesystem tree rooted at the active session's project path (or its isolated worktree path when present). Folders open on click; files open in the OS default editor via `shell.openPath`. Gitignored entries are filtered server-side via `git check-ignore --stdin`. The tree is keyboard-navigable (Arrow keys, Home / End, Enter / Space). The header carries a manual refresh button that hard-remounts the tree.
 
-### Activity Tab
+### Diff
 
-Real-time parsing of agent output:
-- File reads/writes
-- Tool use events
-- Command execution
-- Structured output from Claude Code and other agents
+Current session's staged-vs-working diff plus Keep / Discard actions when the session is in the review state. Operates against the worktree when one is attached, otherwise the project root.
 
-### Memory Tab
+### Prompts
 
-Displays the raw content of project configuration files (CLAUDE.md, AGENTS.md) from the project folder.
+Template inspector with search (`/` to focus), pin toggle, scope badges (USER / PROJECT), per-template usage count + "last used" delta, a `◆ IN USE` marker for the template that seeded the active session, a preview pane, and an Inject → button that sends the template body as the next message in the active session.
+
+### Env
+
+Per-agent snapshot of the active session's resolved agent (resolved via `session.agentOverride ?? project.agent ?? 'claude-code'`). Sections:
+
+- **Header** — agent name + version + a refresh button (force-refreshes the snapshot bypassing the 30s cache).
+- **Hooks** — per-event count and scope badge (USER / PROJECT). Click an event row to expand its command + matchers. (Claude Code only — Codex and other agents show "—".)
+- **Skills** — names from each scope (USER / PROJECT) with first-5-then-show-all UX.
+- **MCP servers** — name, transport type (stdio / sse / http), command summary, status. For Claude Code, sourced from `~/.claude.json` (top-level `mcpServers` plus per-project overrides under `projects[<path>].mcpServers`) and `<project>/.mcp.json` for committed configs. For Codex, sourced from `[mcp_servers.<name>]` blocks in `config.toml`.
+- **Config** — flat key/value of the active config snippet (Claude `model` / `env` / `statusLine.command` / `permissions.defaultMode`; Codex `model` / `model_reasoning_effort` / `personality` plus legacy `sandbox` / `approval_policy` / `reasoning_effort`). Each row has a copy button.
+- **Paths** — debug footer showing the user config dir, project config dir (if any), `agentdeckRoot`, `templateUserRoot`, the WSL distro/home, and the project's `.agentdeck` dir.
+
+Future-tier agents (gemini-cli, amazon-q, opencode) render a "not yet supported" placeholder block above the Paths footer.
+
+### Config
+
+Session-scoped settings: cost cap, auto-approve level, model override, retry policy.
 
 ### Resize
 
@@ -246,30 +255,6 @@ Drag the left edge of the right panel to resize it. Toggle visibility with **Ctr
 
 ---
 
-## Sidebar
-
-The sidebar (toggle with **Ctrl+B**) has collapsible sections:
-
-### Projects Section
-
-- Shows all pinned projects
-- **Right-click** a project to:
-  - **Attach Templates** — Opens an inline panel with category-grouped checkboxes to assign templates
-  - **Remove Project** — Unpins the project from the sidebar
-
-### Workflows Section
-
-- Lists all saved workflows
-- Click to open a workflow in a new tab
-- **Right-click** to delete a workflow (with confirmation)
-
-### Resize
-
-Drag the right edge of the sidebar to resize it. Width is persisted across sessions.
-
----
-
-## Prompt Templates
 
 AgentDeck ships with 16 built-in templates across 8 categories:
 
@@ -286,10 +271,9 @@ AgentDeck ships with 16 built-in templates across 8 categories:
 
 ### Using Templates
 
-1. **Sidebar** — Click a template to open it in the Template Editor
-2. **Context Tab** — Click an attached template to send its content to the terminal
-3. **Command Palette** — Search for a template by name
-4. **Input Bar** — Template chips appear below the terminal for quick access
+1. **Prompts tab** (right panel) — Click a template to preview it; click Inject → to send its content to the active session.
+2. **Command Palette** — Search for a template by name and inject it.
+3. **Input Bar** — Template chips appear below the terminal for quick access.
 
 ### Template Editor
 
@@ -306,7 +290,7 @@ In the Template Editor, click "New Template" to create your own. Custom template
 
 Two ways:
 1. **Project Settings** > Templates tab
-2. **Sidebar** > Right-click project > Attach Templates
+2. Right-click a project card on the home screen > Attach Templates
 
 ---
 
@@ -316,7 +300,7 @@ Workflows let you chain multiple agents, shell commands, conditions, and manual 
 
 ### Creating a Workflow
 
-1. Click "New Workflow" in the sidebar (or use the Command Palette)
+1. Click "New Workflow" via the Command Palette or the Workflows tab
 2. A blank canvas opens with a toolbar at the top
 
 ### Node Types
@@ -479,7 +463,7 @@ Click "Duplicate" in the toolbar to create a copy of the current workflow with a
 ### Managing Workflows
 
 - **Auto-save** — Changes save automatically after 500ms of inactivity
-- **Delete** — Right-click a workflow in the sidebar > Delete
+- **Delete** — Right-click a workflow in the Workflows tab > Delete
 - **Multiple open** — Workflows open as purple tabs alongside session tabs
 
 ---
@@ -570,7 +554,7 @@ When a session starts, AgentDeck discovers the agent's JSONL log file in WSL and
 
 ### The Cost Badge
 
-A **Zap icon** appears in the pane topbar showing:
+A **Zap icon** appears in the SessionHeader showing:
 - **USD cost** (e.g. `$0.18`) — computed from model pricing
 - **Total tokens** (e.g. `28.8k tokens`) — all tokens processed (input + cache + output)
 
@@ -602,7 +586,7 @@ When you open a session for a project that is a git repository, AgentDeck automa
 
 ### Branch Badge
 
-When a session has an isolated worktree, a **branch badge** appears in the pane topbar showing the branch name. The status bar also shows a worktree indicator.
+When a session has an isolated worktree, a **branch badge** appears in the SessionHeader showing the branch name. The status bar also shows a worktree indicator.
 
 ### Closing a Session
 
@@ -684,7 +668,6 @@ Press **Ctrl+/** to view the full shortcut reference overlay at any time.
 | **Esc** | Command Palette (from session) |
 | **Ctrl+N** | New Project |
 | **Ctrl+T** | New Terminal |
-| **Ctrl+B** | Toggle Sidebar |
 | **Ctrl+\\** | Toggle Right Panel |
 | **Ctrl+/** | Keyboard Shortcuts |
 | **Ctrl+1/2/3** | Pane Layout |

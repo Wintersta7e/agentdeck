@@ -10,13 +10,7 @@ const log = createLogger('ipc-window')
  */
 
 /** Allowed layout persistence keys. */
-const LAYOUT_KEYS = new Set([
-  'sidebarOpen',
-  'sidebarWidth',
-  'sidebarSections',
-  'rightPanelWidth',
-  'wfLogPanelWidth',
-])
+const LAYOUT_KEYS = new Set(['rightPanelWidth', 'wfLogPanelWidth'])
 
 const VALID_THEMES = new Set(['', 'phosphor', 'dusk'])
 
@@ -123,9 +117,6 @@ export function registerWindowHandlers(
   ipcMain.handle('layout:get', () => {
     const p = store.get('appPrefs')
     return {
-      sidebarOpen: p.sidebarOpen,
-      sidebarWidth: p.sidebarWidth,
-      sidebarSections: p.sidebarSections,
       rightPanelWidth: p.rightPanelWidth,
       wfLogPanelWidth: p.wfLogPanelWidth,
     }
@@ -135,15 +126,7 @@ export function registerWindowHandlers(
     const filtered: Record<string, unknown> = {}
     for (const [k, v] of Object.entries(patch)) {
       if (!LAYOUT_KEYS.has(k)) continue
-      if (k === 'sidebarOpen') {
-        if (typeof v !== 'boolean') continue
-      } else if (k === 'sidebarWidth' || k === 'rightPanelWidth' || k === 'wfLogPanelWidth') {
-        if (typeof v !== 'number' || !isFinite(v) || v < 0 || v > 5000) continue
-      } else if (k === 'sidebarSections') {
-        if (!v || typeof v !== 'object' || Array.isArray(v)) continue
-        if (!Object.values(v as Record<string, unknown>).every((val) => typeof val === 'boolean'))
-          continue
-      }
+      if (typeof v !== 'number' || !isFinite(v) || v < 0 || v > 5000) continue
       filtered[k] = v
     }
     store.set('appPrefs', { ...current, ...filtered })

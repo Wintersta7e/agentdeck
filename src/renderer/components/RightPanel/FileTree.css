@@ -1,0 +1,70 @@
+/* FileTree — recursive project filesystem tree (RightPanel/FilesTab). */
+
+.file-tree {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--text1);
+  padding: var(--sp-2) 0;
+  user-select: none;
+  outline: none;
+}
+
+.file-tree:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--accent-glow);
+}
+
+.file-tree__row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: 2px var(--sp-2);
+  cursor: pointer;
+  border-radius: var(--r);
+  transition: background-color var(--duration-fast) var(--ease-out);
+  min-height: 22px;
+}
+
+.file-tree__row:hover {
+  background: var(--bg2);
+}
+
+.file-tree__row.is-active {
+  background: var(--bg3);
+  color: var(--text0);
+}
+
+.file-tree__chevron {
+  display: inline-flex;
+  width: 12px;
+  height: 12px;
+  color: var(--text3);
+  flex: 0 0 auto;
+}
+
+.file-tree__icon {
+  display: inline-flex;
+  width: 14px;
+  height: 14px;
+  color: var(--text2);
+  flex: 0 0 auto;
+}
+
+.file-tree__name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-tree__loading,
+.file-tree__error,
+.file-tree__empty {
+  padding: var(--sp-3) var(--sp-2);
+  font-size: var(--fs-xs);
+  color: var(--text3);
+}
+
+.file-tree__error {
+  color: var(--red);
+}

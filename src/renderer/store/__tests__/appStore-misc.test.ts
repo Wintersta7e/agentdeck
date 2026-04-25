@@ -13,11 +13,11 @@ describe('simple setters', () => {
   })
 
   it('setRightPanelTab changes the active tab', () => {
-    expect(useAppStore.getState().rightPanelTab).toBe('context')
-    useAppStore.getState().setRightPanelTab('activity')
-    expect(useAppStore.getState().rightPanelTab).toBe('activity')
-    useAppStore.getState().setRightPanelTab('memory')
-    expect(useAppStore.getState().rightPanelTab).toBe('memory')
+    expect(useAppStore.getState().rightPanelTab).toBe('files')
+    useAppStore.getState().setRightPanelTab('diff')
+    expect(useAppStore.getState().rightPanelTab).toBe('diff')
+    useAppStore.getState().setRightPanelTab('config')
+    expect(useAppStore.getState().rightPanelTab).toBe('config')
   })
 
   it('setZoomFactor stores value and defaults to 1.0', () => {

@@ -49,3 +49,6 @@ CLAUDE.md
 docs/
 !docs/USER-GUIDE.md
 agentdeck-*-prompt.md
+
+# TypeScript incremental build cache
+tsconfig.tsbuildinfo

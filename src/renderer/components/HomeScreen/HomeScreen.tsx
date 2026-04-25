@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
+import { useTemplates } from '../../hooks/useTemplates'
 import { useGitStatusBatch } from '../../hooks/useGitStatus'
 import { useDailyDigest } from '../../hooks/useDailyDigest'
 import { ScopeViz } from '../home/ScopeViz'
@@ -63,7 +64,7 @@ export function HomeScreen({
   onOpenProjectWithAgent,
 }: HomeScreenProps): React.JSX.Element {
   const projects = useAppStore((s) => s.projects)
-  const templates = useAppStore((s) => s.templates)
+  const templates = useTemplates()
   const openWizard = useAppStore((s) => s.openWizard)
   const openCommandPalette = useAppStore((s) => s.openCommandPalette)
   const setActiveSession = useAppStore((s) => s.setActiveSession)
@@ -86,7 +87,7 @@ export function HomeScreen({
     }
     return total
   })
-  const alertCount = useAppStore((s) => s.notifications.length)
+  const alertCount = useAppStore((s) => s.notifications.filter((n) => n.kind === 'basic').length)
 
   const digest = useDailyDigest()
   const cleanExitPct = digest.cleanExitRate !== null ? `${Math.round(digest.cleanExitRate)}%` : '—'
@@ -139,7 +140,7 @@ export function HomeScreen({
     const newest = running.sort((a, b) => b.startedAt - a.startedAt)[0]
     if (newest) {
       setActiveSession(newest.id)
-      setCurrentView('session')
+      setCurrentView('sessions')
     }
   }, [setActiveSession, setCurrentView])
 

@@ -1,10 +1,34 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { TemplateCategory } from '../../../shared/types'
+import type {
+  Template,
+  TemplateCategory,
+  TemplateDraft,
+  TemplateScope,
+} from '../../../shared/types'
 import { useAppStore } from '../../store/appStore'
-import { useProjects } from '../../hooks/useProjects'
+import { useTemplates } from '../../hooks/useTemplates'
 import { groupTemplates, CATEGORY_ORDER } from '../../utils/templateUtils'
 import { Plus, ClipboardList } from 'lucide-react'
 import './TemplateEditor.css'
+
+/** Derive the save target (scope + projectId) for a template id. */
+function saveRefFor(
+  id: string | null,
+  templates: Template[],
+): { scope: TemplateScope; projectId: string | null; baseMtime?: number } {
+  if (id) {
+    const existing = templates.find((t) => t.id === id)
+    if (existing) {
+      return {
+        scope: existing.scope,
+        projectId: existing.projectId,
+        baseMtime: existing.mtimeMs,
+      }
+    }
+  }
+  // Fall back to user scope for new templates.
+  return { scope: 'user', projectId: null }
+}
 
 /** Badge colour for a project's stack badge. */
 function badgeClass(badge: string | undefined): string {
@@ -18,26 +42,22 @@ function badgeClass(badge: string | undefined): string {
 
 /** Look up a template by id from the templates array. */
 function findTemplate(
-  templates: {
-    id: string
-    name: string
-    content?: string | undefined
-    category?: TemplateCategory | undefined
-  }[],
+  templates: Template[],
   id: string | null,
 ): { name: string; content: string; category: TemplateCategory | undefined } | null {
   if (!id) return null
   const t = templates.find((tpl) => tpl.id === id)
   if (!t) return null
-  return { name: t.name, content: t.content ?? '', category: t.category }
+  return { name: t.name, content: t.content, category: t.category }
 }
 
 export function TemplateEditor(): React.JSX.Element {
   const editingTemplateId = useAppStore((s) => s.editingTemplateId)
-  const templates = useAppStore((s) => s.templates)
+  const templates = useTemplates()
   const projects = useAppStore((s) => s.projects)
-
-  const { addTemplate, updateTemplate, deleteTemplate: removeTemplate } = useProjects()
+  const saveTemplate = useAppStore((s) => s.saveTemplate)
+  const deleteTemplate = useAppStore((s) => s.deleteTemplate)
+  const addNotification = useAppStore((s) => s.addNotification)
 
   // Currently selected template ID in the left panel.
   // Initialized from store's editingTemplateId.
@@ -78,7 +98,7 @@ export function TemplateEditor(): React.JSX.Element {
     const first = templates[0]
     setSelectedId(first.id)
     setEditingName(first.name)
-    setEditingContent(first.content ?? '')
+    setEditingContent(first.content)
     setEditingCategory(first.category)
   }
 
@@ -101,7 +121,7 @@ export function TemplateEditor(): React.JSX.Element {
     if (!savedTemplate) return editingName.length > 0 || editingContent.length > 0
     return (
       editingName !== savedTemplate.name ||
-      editingContent !== (savedTemplate.content ?? '') ||
+      editingContent !== savedTemplate.content ||
       editingCategory !== savedTemplate.category
     )
   }, [savedTemplate, editingName, editingContent, editingCategory])
@@ -125,6 +145,20 @@ export function TemplateEditor(): React.JSX.Element {
     }
   }, [])
 
+  // Handle save failures — show a notification and surface stale conflicts.
+  const handleSaveError = useCallback(
+    (err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err)
+      if (msg.includes('E_TEMPLATE_STALE')) {
+        addNotification('warning', 'Template changed on disk — refresh and retry')
+      } else {
+        addNotification('error', `Failed to save template: ${msg}`)
+      }
+      window.agentDeck.log.send('warn', 'template-editor', 'save failed', { err: msg })
+    },
+    [addNotification],
+  )
+
   // Select a template — auto-saves dirty changes, then switches
   const handleSelect = useCallback(
     (id: string) => {
@@ -132,20 +166,18 @@ export function TemplateEditor(): React.JSX.Element {
       if (selectedId) {
         const current = templates.find((t) => t.id === selectedId)
         const nameChanged = current && editingName !== current.name
-        const contentChanged = current && editingContent !== (current.content ?? '')
+        const contentChanged = current && editingContent !== current.content
         const categoryChanged = current && editingCategory !== current.category
         if (nameChanged || contentChanged || categoryChanged) {
-          void updateTemplate({
+          const draft: TemplateDraft = {
             id: selectedId,
             name: editingName,
             description: editingContent.split('\n')[0]?.slice(0, 60) ?? '',
             content: editingContent,
-            category: editingCategory,
-          }).catch((err: unknown) => {
-            window.agentDeck.log.send('warn', 'template-editor', 'Auto-save failed', {
-              err: String(err),
-            })
-          })
+            ...(editingCategory !== undefined ? { category: editingCategory } : {}),
+          }
+          const ref = saveRefFor(selectedId, templates)
+          void saveTemplate(draft, ref.scope, ref.projectId, ref.baseMtime).catch(handleSaveError)
         }
       }
       const tpl = findTemplate(templates, id)
@@ -154,54 +186,71 @@ export function TemplateEditor(): React.JSX.Element {
       setEditingContent(tpl?.content ?? '')
       setEditingCategory(tpl?.category)
     },
-    [templates, selectedId, editingName, editingContent, editingCategory, updateTemplate],
+    [
+      templates,
+      selectedId,
+      editingName,
+      editingContent,
+      editingCategory,
+      saveTemplate,
+      handleSaveError,
+    ],
   )
 
-  // Create new template
+  // Create new template — saves to user scope by default.
   const handleNew = useCallback(async () => {
     try {
-      const newId = `tpl-${Date.now()}`
-      const saved = await addTemplate({
-        id: newId,
+      const draft: TemplateDraft = {
         name: 'New template',
         description: '',
         content: '',
-      })
+      }
+      const saved = await saveTemplate(draft, 'user', null)
       setSelectedId(saved.id)
       setEditingName(saved.name)
-      setEditingContent(saved.content ?? '')
-      setEditingCategory(undefined)
+      setEditingContent(saved.content)
+      setEditingCategory(saved.category)
       // Focus the name input after creation
       requestAnimationFrame(() => {
         nameInputRef.current?.focus()
         nameInputRef.current?.select()
       })
-    } catch {
-      // Notification already dispatched by useProjects
+    } catch (err) {
+      handleSaveError(err)
     }
-  }, [addTemplate])
+  }, [saveTemplate, handleSaveError])
 
   // Save template
   const handleSave = useCallback(async () => {
     if (!selectedId) return
-    try {
-      await updateTemplate({
-        id: selectedId,
-        name: editingName,
-        description: editingContent.split('\n')[0]?.slice(0, 60) ?? '',
-        content: editingContent,
-        category: editingCategory,
-      })
-    } catch {
-      // Notification already dispatched by useProjects
+    const ref = saveRefFor(selectedId, templates)
+    const draft: TemplateDraft = {
+      id: selectedId,
+      name: editingName,
+      description: editingContent.split('\n')[0]?.slice(0, 60) ?? '',
+      content: editingContent,
+      ...(editingCategory !== undefined ? { category: editingCategory } : {}),
     }
-  }, [selectedId, editingName, editingContent, editingCategory, updateTemplate])
+    try {
+      await saveTemplate(draft, ref.scope, ref.projectId, ref.baseMtime)
+    } catch (err) {
+      handleSaveError(err)
+    }
+  }, [
+    selectedId,
+    templates,
+    editingName,
+    editingContent,
+    editingCategory,
+    saveTemplate,
+    handleSaveError,
+  ])
 
   // Discard changes
   const handleDiscard = useCallback(() => {
     if (savedTemplate) {
       setEditingName(savedTemplate.name)
-      setEditingContent(savedTemplate.content ?? '')
+      setEditingContent(savedTemplate.content)
       setEditingCategory(savedTemplate.category)
     }
   }, [savedTemplate])
@@ -209,15 +258,22 @@ export function TemplateEditor(): React.JSX.Element {
   // Delete template
   const handleDelete = useCallback(async () => {
     if (!selectedId) return
+    const current = templates.find((t) => t.id === selectedId)
+    if (!current) return
     try {
-      await removeTemplate(selectedId)
-      // Read fresh state after deletion to avoid stale closure
-      const freshTemplates = useAppStore.getState().templates
+      await deleteTemplate({
+        id: current.id,
+        scope: current.scope,
+        projectId: current.projectId,
+      })
+      // Read fresh merged list from the selector after the onChange event lands.
+      const state = useAppStore.getState()
+      const freshTemplates = state.userTemplates
       const first = freshTemplates[0]
       if (first) {
         setSelectedId(first.id)
         setEditingName(first.name)
-        setEditingContent(first.content ?? '')
+        setEditingContent(first.content)
         setEditingCategory(first.category)
       } else {
         setSelectedId(null)
@@ -225,10 +281,12 @@ export function TemplateEditor(): React.JSX.Element {
         setEditingContent('')
         setEditingCategory(undefined)
       }
-    } catch {
-      // Notification already dispatched by useProjects
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      addNotification('error', `Failed to delete template: ${msg}`)
+      window.agentDeck.log.send('warn', 'template-editor', 'delete failed', { err: msg })
     }
-  }, [selectedId, removeTemplate])
+  }, [selectedId, templates, deleteTemplate, addNotification])
 
   // Keyboard shortcuts: Ctrl+S to save, Delete to delete
   useEffect(() => {

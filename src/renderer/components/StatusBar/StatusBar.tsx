@@ -14,7 +14,7 @@ export function StatusBar({ onAboutClick, onShortcutsClick }: StatusBarProps): R
     (s) => Object.values(s.sessions).filter((sess) => sess.status === 'running').length,
   )
   const activeProjectName = useAppStore((s) => {
-    if (s.currentView !== 'session' || !s.activeSessionId) return null
+    if (s.currentView !== 'sessions' || !s.activeSessionId) return null
     const session = s.sessions[s.activeSessionId]
     if (!session) return null
     if (!session.projectId) return 'Terminal'
@@ -85,7 +85,7 @@ export function StatusBar({ onAboutClick, onShortcutsClick }: StatusBarProps): R
           <div className="status-item amber">{activeProjectName}</div>
         </>
       )}
-      {currentView === 'session' && (
+      {currentView === 'sessions' && (
         <>
           <span className="status-sep">|</span>
           <div className="status-item">{layoutLabel}</div>

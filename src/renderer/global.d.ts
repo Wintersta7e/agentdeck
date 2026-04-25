@@ -1,5 +1,6 @@
 import type {
   ActivityEvent,
+  AgentEnvSnapshot,
   DailyCostEntry,
   DetectedStack,
   GitStatus,
@@ -9,6 +10,9 @@ import type {
   Role,
   SkillInfo,
   Template,
+  TemplateCategory,
+  TemplateDraft,
+  TemplateScope,
   TokenUsage,
 } from '../shared/types'
 import type { ContextResult, SetContextOverrideArgs } from '../shared/context-types'
@@ -56,17 +60,11 @@ declare global {
       }
       layout: {
         get: () => Promise<{
-          sidebarOpen?: boolean
-          sidebarWidth?: number
-          sidebarSections?: { pinned?: boolean; templates?: boolean; workflows?: boolean }
           rightPanelWidth?: number
           wfLogPanelWidth?: number
         }>
         set: (
           patch: Partial<{
-            sidebarOpen: boolean
-            sidebarWidth: number
-            sidebarSections: { pinned?: boolean; templates?: boolean; workflows?: boolean }
             rightPanelWidth: number
             wfLogPanelWidth: number
           }>,
@@ -76,8 +74,32 @@ declare global {
         getProjects: () => Promise<Project[]>
         saveProject: (project: Partial<Project>) => Promise<Project>
         deleteProject: (id: string) => Promise<void>
-        getTemplates: () => Promise<Template[]>
-        saveTemplate: (template: Partial<Template>) => Promise<Template>
+        // Legacy template store channels (pre-file-backed template IPC).
+        // Narrow shape inlined here so the renderer has no dependency on
+        // the deprecated LegacyTemplate type. Zero renderer callers today;
+        // kept for backwards-compat with main-side migration paths.
+        getTemplates: () => Promise<
+          Array<{
+            id: string
+            name: string
+            description: string
+            content?: string | undefined
+            category?: TemplateCategory | undefined
+          }>
+        >
+        saveTemplate: (template: {
+          id?: string
+          name: string
+          description: string
+          content?: string | undefined
+          category?: TemplateCategory | undefined
+        }) => Promise<{
+          id: string
+          name: string
+          description: string
+          content?: string | undefined
+          category?: TemplateCategory | undefined
+        }>
         deleteTemplate: (id: string) => Promise<void>
         getRoles: () => Promise<Role[]>
         saveRole: (role: Partial<Role>) => Promise<Role>
@@ -195,6 +217,52 @@ declare global {
           workflowId: string,
           cb: (event: import('../shared/types').WorkflowEvent) => void,
         ): () => void
+      }
+      templates: {
+        listAll: (input?: { projectId?: string }) => Promise<Template[]>
+        activateProject: (projectId: string) => Promise<Template[]>
+        save: (
+          draft: TemplateDraft,
+          scope: TemplateScope,
+          projectId: string | null,
+          baseMtime?: number,
+        ) => Promise<Template>
+        delete: (ref: {
+          id: string
+          scope: TemplateScope
+          projectId: string | null
+        }) => Promise<void>
+        incrementUsage: (ref: {
+          id: string
+          scope: TemplateScope
+          projectId: string | null
+        }) => Promise<void>
+        setPinned: (
+          ref: { id: string; scope: TemplateScope; projectId: string | null },
+          pinned: boolean,
+        ) => Promise<void>
+        onChange: (cb: (e: unknown) => void) => () => void
+        onParseError: (cb: (e: { path: string; error: string }) => void) => () => void
+      }
+      env: {
+        getAgentPaths: () => Promise<{
+          claudeConfigDir: string | null
+          codexHome: string | null
+          agentdeckRoot: string
+          templateUserRoot: string
+        }>
+        getAgentSnapshot: (opts: {
+          agentId: string
+          projectId?: string
+          force?: boolean
+        }) => Promise<AgentEnvSnapshot>
+      }
+      files: {
+        listDir: (opts: { path: string; projectPath: string }) => Promise<{
+          entries: Array<{ name: string; isDir: boolean; size?: number; mtime?: number }>
+          gitignored: string[]
+        }>
+        openExternal: (opts: { path: string; projectPath: string }) => Promise<void>
       }
     }
   }

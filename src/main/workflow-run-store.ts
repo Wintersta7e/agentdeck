@@ -1,5 +1,6 @@
 import * as fs from 'fs'
 import * as path from 'path'
+import { randomBytes } from 'node:crypto'
 import { app } from 'electron'
 import { createLogger } from './logger'
 import type { WorkflowRun } from '../shared/types'
@@ -53,7 +54,7 @@ export async function saveRun(run: WorkflowRun): Promise<void> {
       const dir = getRunsDir()
       const filename = runFilename(run.workflowId, run.startedAt, run.id)
       const file = path.join(dir, filename)
-      const tmpFile = file + '.tmp'
+      const tmpFile = `${file}.${randomBytes(6).toString('hex')}.tmp`
 
       // Atomic write: write to .tmp, then rename
       await fs.promises.writeFile(tmpFile, JSON.stringify(run, null, 2), 'utf-8')

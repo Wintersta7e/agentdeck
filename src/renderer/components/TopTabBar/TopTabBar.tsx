@@ -44,7 +44,7 @@ function viewToTab(view: ViewType): TabId {
   switch (view) {
     case 'home':
       return 'home'
-    case 'session':
+    case 'sessions':
     case 'sessions':
     case 'new-session':
     case 'diff':
@@ -74,7 +74,7 @@ function viewToTab(view: ViewType): TabId {
 export function TopTabBar(): React.JSX.Element {
   const currentView = useAppStore((s) => s.currentView)
   const setTab = useAppStore((s) => s.setTab)
-  const alertCount = useAppStore((s) => s.notifications.length)
+  const alertCount = useAppStore((s) => s.notifications.filter((n) => n.kind === 'basic').length)
 
   const activeTab = useMemo<TabId>(() => viewToTab(currentView), [currentView])
 

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Search, ArrowUp, ArrowDown, CornerDownLeft } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
+import { useTemplates } from '../../hooks/useTemplates'
 import type { Project } from '../../../shared/types'
 import { createBlankWorkflow } from '../../utils/workflowUtils'
 import { ThemeSubmenu } from './ThemeSubmenu'
@@ -71,7 +72,7 @@ function PaletteInner({
 }: CommandPaletteProps): React.JSX.Element {
   const closePalette = useAppStore((s) => s.closeCommandPalette)
   const projects = useAppStore((s) => s.projects)
-  const templates = useAppStore((s) => s.templates)
+  const templates = useTemplates()
 
   const theme = useAppStore((s) => s.theme)
   const setTheme = useAppStore((s) => s.setTheme)
@@ -221,7 +222,7 @@ function PaletteInner({
           // Switch to the existing session
           const sessionId = item.id.replace('session-', '')
           useAppStore.getState().setActiveSession(sessionId)
-          useAppStore.getState().setCurrentView('session')
+          useAppStore.getState().setCurrentView('sessions')
           break
         }
         case 'project': {

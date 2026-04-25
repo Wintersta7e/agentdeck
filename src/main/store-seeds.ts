@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto'
-import type { Role, Template, TemplateCategory } from '../shared/types'
+import type { Role, LegacyTemplate, TemplateCategory } from '../shared/types'
 import type { AppStore } from './project-store'
 import { createLogger } from './logger'
 
@@ -83,7 +83,20 @@ const SEED_ROLES: Omit<Role, 'id'>[] = [
   },
 ]
 
-const SEED_TEMPLATES: Omit<Template, 'id'>[] = [
+/**
+ * Pure seed data — shape-compatible with `TemplateFile` (minus derived fields).
+ * Exported for use by `runTemplateMigration` on fresh installs. Each entry has
+ * a stable `id` so upgrades can detect and refresh the same seed entries.
+ */
+export interface SeedTemplateDatum {
+  id: string
+  name: string
+  description: string
+  content: string
+  category?: TemplateCategory
+}
+
+const SEED_TEMPLATES: Omit<LegacyTemplate, 'id'>[] = [
   // ── Orient ──
   {
     name: 'Codebase tour',
@@ -213,6 +226,22 @@ const SEED_TEMPLATES: Omit<Template, 'id'>[] = [
   },
 ]
 
+/**
+ * Pure seed data for the file-based template store. Passed to
+ * `runTemplateMigration` on fresh installs. Ids are stable across builds so
+ * fresh installs of the same app version end up with the same seed files.
+ */
+export const seedTemplateData: SeedTemplateDatum[] = SEED_TEMPLATES.map((t, idx) => ({
+  id: `seed-${String(idx + 1).padStart(3, '0')}-${t.name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')}`,
+  name: t.name,
+  description: t.description,
+  content: t.content ?? '',
+  ...(t.category !== undefined ? { category: t.category } : {}),
+}))
+
 export function seedTemplates(store: AppStore): void {
   const prefs = store.get('appPrefs')
   const currentVersion = prefs.seedVersion ?? (prefs.seeded ? 1 : 0)
@@ -223,7 +252,7 @@ export function seedTemplates(store: AppStore): void {
 
   // Fresh install — no existing templates
   if (existing.length === 0) {
-    const seeded: Template[] = SEED_TEMPLATES.map((t) => ({
+    const seeded: LegacyTemplate[] = SEED_TEMPLATES.map((t) => ({
       ...t,
       id: `seed-${randomUUID()}`,
     }))
@@ -235,7 +264,7 @@ export function seedTemplates(store: AppStore): void {
 
   // Upgrade — replace old seed templates, preserve user-created ones
   const userTemplates = existing.filter((t) => !t.id.startsWith('seed-'))
-  const freshSeeds: Template[] = SEED_TEMPLATES.map((t) => ({
+  const freshSeeds: LegacyTemplate[] = SEED_TEMPLATES.map((t) => ({
     ...t,
     id: `seed-${randomUUID()}`,
   }))

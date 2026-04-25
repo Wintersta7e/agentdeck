@@ -1,13 +1,32 @@
 import type { StateCreator } from 'zustand'
 import type { AppState } from '../appStore'
 
+export interface ConfirmOption {
+  id: string
+  label: string
+  tone?: 'primary' | 'danger' | 'neutral'
+}
+
+export interface BasicNotification {
+  id: string
+  kind: 'basic'
+  type: 'error' | 'warning' | 'info'
+  message: string
+  timestamp: number
+}
+
+export interface ConfirmNotification {
+  id: string
+  kind: 'confirm'
+  title: string
+  options: ConfirmOption[]
+  resolve: (value: string) => void
+}
+
+export type Notification = BasicNotification | ConfirmNotification
+
 export interface NotificationsSlice {
-  notifications: Array<{
-    id: string
-    type: 'error' | 'warning' | 'info'
-    message: string
-    timestamp: number
-  }>
+  notifications: Notification[]
   /**
    * IDs of notifications the toast rail has already shown and auto-dismissed.
    * Alerts tab ignores this; toast rail filters by it so the same alert
@@ -15,6 +34,7 @@ export interface NotificationsSlice {
    */
   silencedToastIds: string[]
   addNotification: (type: 'error' | 'warning' | 'info', message: string) => void
+  addConfirmNotification: (payload: { title: string; options: ConfirmOption[] }) => Promise<string>
   dismissNotification: (id: string) => void
   silenceToast: (id: string) => void
 }
@@ -28,17 +48,35 @@ export const createNotificationsSlice: StateCreator<AppState, [], [], Notificati
   silencedToastIds: [],
 
   addNotification: (type, message) =>
-    set((state) => ({
-      notifications: [
-        ...state.notifications,
-        {
-          id: `n-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-          type,
-          message,
-          timestamp: Date.now(),
+    set((state) => {
+      const next: BasicNotification = {
+        id: `n-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        kind: 'basic',
+        type,
+        message,
+        timestamp: Date.now(),
+      }
+      return {
+        notifications: [...state.notifications, next].slice(-MAX_NOTIFICATIONS),
+      }
+    }),
+
+  addConfirmNotification: (payload) => {
+    return new Promise((resolve) => {
+      const id = `n-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      const notification: ConfirmNotification = {
+        id,
+        kind: 'confirm',
+        title: payload.title,
+        options: payload.options,
+        resolve: (value) => {
+          set((s) => ({ notifications: s.notifications.filter((n) => n.id !== id) }))
+          resolve(value)
         },
-      ].slice(-MAX_NOTIFICATIONS),
-    })),
+      }
+      set((s) => ({ notifications: [...s.notifications, notification] }))
+    })
+  },
 
   dismissNotification: (id) =>
     set((state) => ({

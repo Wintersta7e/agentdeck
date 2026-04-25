@@ -30,10 +30,20 @@ function formatAgo(ts: number): string {
 }
 
 export function AlertsScreen(): React.JSX.Element {
-  const notifications = useAppStore((s) => s.notifications)
+  const allNotifications = useAppStore((s) => s.notifications)
   const dismissNotification = useAppStore((s) => s.dismissNotification)
 
   const [filter, setFilter] = useState<FilterId>('all')
+
+  // Alerts tab only surfaces "basic" notifications. Confirm notifications
+  // are ephemeral user prompts rendered elsewhere (Phase 4 Task 4.3).
+  const notifications: Notification[] = useMemo(
+    () =>
+      allNotifications
+        .filter((n) => n.kind === 'basic')
+        .map((n) => ({ id: n.id, type: n.type, message: n.message, timestamp: n.timestamp })),
+    [allNotifications],
+  )
 
   const counts = useMemo(() => {
     const c: Record<'all' | AlertType, number> = { all: 0, error: 0, warning: 0, info: 0 }

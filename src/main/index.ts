@@ -3,8 +3,11 @@ import { join } from 'path'
 import { readFileSync } from 'fs'
 import { createPtyManager, type PtyManager } from './pty-manager'
 import { createProjectStore, type AppStore } from './project-store'
-import { seedTemplates, seedRoles } from './store-seeds'
+import { seedTemplates, seedRoles, seedTemplateData } from './store-seeds'
 import { toWslPath } from './wsl-utils'
+import { createTemplateStore, type TemplateStore } from './template-store'
+import { createLegacyStoreAdapter } from './template-legacy-store'
+import { runTemplateMigration } from './template-migration'
 import { initGitStatusCache } from './git-status'
 import { initLogger, createLogger, closeLogger } from './logger'
 import { seedWorkflows } from './workflow-seeds'
@@ -51,8 +54,13 @@ import {
   registerWorktreeHandlers,
   registerHomeHandlers,
   registerCostHandlers,
+  registerTemplateIpc,
+  registerLegacyTemplateIpc,
+  wireTemplateWindowEvents,
+  registerEnvIpc,
   reviewTracker,
 } from './ipc'
+import { registerFilesIpc } from './ipc/ipc-files'
 
 const log = createLogger('app')
 
@@ -62,6 +70,9 @@ let workflowEngine: WorkflowEngine | null = null
 let appStore: AppStore | null = null
 let worktreeManager: WorktreeManager | null = null
 let costTracker: CostTracker | null = null
+let templateStore: TemplateStore | null = null
+let templateMigrationComplete = false
+let templateEventsOff: (() => void) | null = null
 
 // --- Crash cleanup handlers (REL-4) ---
 process.on('uncaughtException', (err) => {
@@ -259,10 +270,97 @@ app
       log.warn('Worktree manager not created — WSL $HOME unknown')
     }
 
+    // PREREQ H9: `agentdeckRoot` is the parent dir; `templateUserRoot` lives
+    // underneath it. Falls back to app userData when WSL $HOME is unavailable.
+    const agentdeckRoot = wslHome ? `${wslHome}/.agentdeck` : app.getPath('userData')
+    const templateUserRoot = `${agentdeckRoot}/templates`
+
+    // One-shot legacy-templates migration (flat electron-store → on-disk JSON files).
+    // On failure we still create the templateStore so the legacy-fallback path
+    // in `ipc-templates.ts` keeps the UI functional.
+    try {
+      const migrationResult = await runTemplateMigration({
+        store: appStore as unknown as {
+          has: (k: string) => boolean
+          get: <T>(k: string) => T
+          set: (k: string, v: unknown) => void
+          delete: (k: string) => void
+        },
+        userRoot: templateUserRoot,
+        seeds: seedTemplateData,
+      })
+      templateMigrationComplete = migrationResult.status !== 'failed'
+      log.info('template migration', {
+        status: migrationResult.status,
+        count: migrationResult.count,
+      })
+    } catch (err) {
+      log.error('template migration threw — falling back to legacy store', {
+        err: String(err),
+      })
+      templateMigrationComplete = false
+    }
+
+    try {
+      templateStore = await createTemplateStore({
+        userRoot: templateUserRoot,
+        getProjectPath: (projectId) => {
+          const projects = appStore?.get('projects') ?? []
+          return projects.find((p) => p.id === projectId)?.path ?? null
+        },
+      })
+    } catch (err) {
+      log.error('createTemplateStore failed — legacy-only template access', {
+        err: String(err),
+      })
+      templateStore = null
+    }
+
+    const legacyTemplateAdapter = createLegacyStoreAdapter(
+      appStore as unknown as {
+        get: <T>(k: string) => T
+        set: <T>(k: string, v: T) => void
+        has: (k: string) => boolean
+      },
+    )
+
+    if (templateStore) {
+      const store = templateStore
+      const templateCtx = {
+        store,
+        legacy: legacyTemplateAdapter,
+        migrationComplete: (): boolean => templateMigrationComplete,
+        getProjectExists: (projectId: string): boolean => {
+          const projects = appStore?.get('projects') ?? []
+          return projects.some((p) => p.id === projectId)
+        },
+      }
+      registerTemplateIpc(templateCtx)
+      registerLegacyTemplateIpc({
+        store,
+        legacy: legacyTemplateAdapter,
+        migrationComplete: templateCtx.migrationComplete,
+      })
+    }
+
+    registerEnvIpc({
+      claudeConfigDir: process.env['CLAUDE_CONFIG_DIR'] ?? null,
+      codexHome: process.env['CODEX_HOME'] ?? null,
+      agentdeckRoot,
+      templateUserRoot,
+      getProjectPath: (id) => appStore?.get('projects').find((p) => p.id === id)?.path ?? null,
+    })
+
+    registerFilesIpc()
+
     registerIpcHandlers(appStore)
 
     createWindow()
     log.info('Window created')
+
+    if (templateStore) {
+      templateEventsOff = wireTemplateWindowEvents(templateStore, () => mainWindow)
+    }
 
     if (mainWindow) {
       costTracker = createCostTracker(
@@ -313,6 +411,8 @@ app.on('before-quit', () => {
   costTracker?.destroy()
   workflowEngine?.stopAll()
   ptyManager?.killAll()
+  templateEventsOff?.()
+  templateStore?.dispose()
   closeLogger()
 })
 

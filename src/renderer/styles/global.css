@@ -190,9 +190,7 @@ button:not([disabled]) {
 /* ─── Button press scale ─── */
 button:active,
 .tab:active,
-.sidebar-item:active,
-.new-project-btn:active,
-.sidebar-new-wf:active {
+.new-project-btn:active {
   transform: scale(0.95);
   transition: transform var(--duration-fast) var(--ease-default);
 }

@@ -12,7 +12,6 @@ import { AppSettingsScreen } from './screens/AppSettingsScreen/AppSettingsScreen
 import { WorkflowsScreen } from './screens/WorkflowsScreen/WorkflowsScreen'
 import { ProjectsScreen } from './screens/ProjectsScreen/ProjectsScreen'
 import { HistoryScreen } from './screens/HistoryScreen/HistoryScreen'
-import { Sidebar } from './components/Sidebar/Sidebar'
 import { StatusBar } from './components/StatusBar/StatusBar'
 import { HomeScreen } from './components/HomeScreen/HomeScreen'
 import { SplitView } from './components/SplitView/SplitView'
@@ -22,31 +21,12 @@ import { CommandPalette } from './components/CommandPalette/CommandPalette'
 import { AboutDialog } from './components/AboutDialog/AboutDialog'
 import { ShortcutsDialog } from './components/ShortcutsDialog/ShortcutsDialog'
 import { NotificationToast } from './components/NotificationToast/NotificationToast'
-import { ConfirmDialog } from './components/shared/ConfirmDialog'
 import { PlaceholderScreen } from './components/PlaceholderScreen/PlaceholderScreen'
 import { useAppStore } from './store/appStore'
 import { useProjects } from './hooks/useProjects'
+import { getActiveProjectId } from './selectors/active-project'
 import type { ActivityEvent, AgentConfig, Project, ViewType, WorkflowEvent } from '../shared/types'
 import './App.css'
-
-/**
- * Sidebar is contextual in Option B — only surfaces inside Sessions and
- * Projects list tabs. Everywhere else, the top tab bar + in-screen content
- * carry the nav.
- */
-const SIDEBAR_HIDDEN_VIEWS: readonly ViewType[] = [
-  'home',
-  'agents',
-  'workflows',
-  'workflow',
-  'history',
-  'alerts',
-  'app-settings',
-  'new-session',
-  'diff',
-  'template-editor',
-  'wizard',
-]
 
 const WorkflowEditor = lazy(() => import('./screens/WorkflowEditor/WorkflowEditor'))
 const ProjectSettings = lazy(() =>
@@ -67,27 +47,17 @@ const TemplateEditor = lazy(() =>
 
 export function App(): React.JSX.Element {
   const currentView = useAppStore((s) => s.currentView)
+  const activeSessionId = useAppStore((s) => s.activeSessionId)
   const addSession = useAppStore((s) => s.addSession)
   const captureSessionSnapshot = useAppStore((s) => s.captureSessionSnapshot)
-  const removeSession = useAppStore((s) => s.removeSession)
-
   const activeWorkflowId = useAppStore((s) => s.activeWorkflowId)
   const settingsProjectId = useAppStore((s) => s.settingsProjectId)
 
-  const sidebarOpen = useAppStore((s) => s.sidebarOpen)
-  const sidebarWidth = useAppStore((s) => s.sidebarWidth)
-  const setSidebarWidth = useAppStore((s) => s.setSidebarWidth)
   const rightPanelOpen = useAppStore((s) => s.rightPanelOpen)
   const rightPanelWidth = useAppStore((s) => s.rightPanelWidth)
   const setRightPanelWidth = useAppStore((s) => s.setRightPanelWidth)
-  const sidebarRef = useRef<HTMLDivElement>(null)
   const rightPanelRef = useRef<HTMLDivElement>(null)
 
-  // Memoize dynamic panel styles to avoid new objects every render
-  const sidebarStyle = useMemo<React.CSSProperties>(
-    () => (sidebarOpen ? { width: sidebarWidth, flexShrink: 0 } : { width: 0, flexShrink: 0 }),
-    [sidebarOpen, sidebarWidth],
-  )
   const rightPanelStyle = useMemo<React.CSSProperties>(
     () => ({ width: rightPanelWidth, flexShrink: 0 }),
     [rightPanelWidth],
@@ -115,12 +85,6 @@ export function App(): React.JSX.Element {
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const openShortcuts = useCallback(() => setShortcutsOpen(true), [])
   const closeShortcuts = useCallback(() => setShortcutsOpen(false), [])
-
-  const [worktreeCloseDialog, setWorktreeCloseDialog] = useState<{
-    sessionId: string
-    branch: string
-    message: string
-  } | null>(null)
 
   const handleNewTerminal = useCallback(() => {
     const sessionId = `terminal-${Date.now()}`
@@ -165,133 +129,6 @@ export function App(): React.JSX.Element {
     [addSession, captureSessionSnapshot, updateProject],
   )
 
-  /** Kill PTY + remove session (non-worktree path, or after worktree cleanup). */
-  const closeSessionImmediate = useCallback(
-    (sessionId: string) => {
-      window.agentDeck.pty.kill(sessionId).catch((err: unknown) => {
-        window.agentDeck.log.send('debug', 'pty', 'Kill failed', { err: String(err) })
-      })
-      window.agentDeck.cost.unbind(sessionId).catch((err: unknown) => {
-        window.agentDeck.log.send('debug', 'cost', 'unbind failed', { sessionId, err: String(err) })
-      })
-      removeSession(sessionId)
-    },
-    [removeSession],
-  )
-
-  const handleCloseTab = useCallback(
-    (sessionId: string) => {
-      // Read worktree state fresh from store to avoid stale closure
-      const wt = useAppStore.getState().worktreePaths[sessionId]
-      // Non-worktree session — release primary slot and close immediately.
-      if (!wt?.isolated) {
-        const projectId = useAppStore.getState().sessions[sessionId]?.projectId
-        if (projectId) {
-          window.agentDeck.worktree.releasePrimary(projectId, sessionId).catch((err: unknown) => {
-            window.agentDeck.log.send('debug', 'worktree', 'releasePrimary failed', {
-              err: String(err),
-            })
-          })
-        }
-        closeSessionImmediate(sessionId)
-        return
-      }
-
-      // Worktree session — inspect before closing.
-      window.agentDeck.worktree
-        .inspect(sessionId)
-        .then((result) => {
-          if (result.hasChanges || result.hasUnmerged) {
-            // Dirty worktree — show confirmation dialog.
-            const parts: string[] = []
-            if (result.hasChanges) parts.push('uncommitted changes')
-            if (result.hasUnmerged) parts.push('unmerged commits')
-            setWorktreeCloseDialog({
-              sessionId,
-              branch: result.branch,
-              message: `Branch "${result.branch}" has ${parts.join(' and ')}.\nDiscard will delete the worktree and branch.`,
-            })
-          } else {
-            // Clean worktree — discard silently.
-            window.agentDeck.pty.kill(sessionId).catch((err: unknown) => {
-              window.agentDeck.log.send('debug', 'pty', 'Kill failed', { err: String(err) })
-            })
-            window.agentDeck.cost.unbind(sessionId).catch((err: unknown) => {
-              window.agentDeck.log.send('debug', 'cost', 'unbind failed', {
-                sessionId,
-                err: String(err),
-              })
-            })
-            window.agentDeck.worktree.discard(sessionId).catch((err: unknown) => {
-              useAppStore
-                .getState()
-                .addNotification(
-                  'warning',
-                  'Failed to clean up worktree — it may need manual removal',
-                )
-              window.agentDeck.log.send('warn', 'worktree', 'Discard failed', {
-                err: String(err),
-              })
-            })
-            useAppStore.getState().clearWorktreePath(sessionId)
-            removeSession(sessionId)
-          }
-        })
-        .catch((err: unknown) => {
-          // Inspect failed — fall back to normal close to avoid blocking.
-          window.agentDeck.log.send('warn', 'worktree', 'Inspect failed, closing anyway', {
-            err: String(err),
-          })
-          closeSessionImmediate(sessionId)
-        })
-    },
-    [removeSession, closeSessionImmediate],
-  )
-
-  /** Worktree dialog: "Discard" — delete branch + worktree. */
-  const handleWorktreeDiscard = useCallback(() => {
-    if (!worktreeCloseDialog) return
-    const { sessionId } = worktreeCloseDialog
-    window.agentDeck.pty.kill(sessionId).catch((err: unknown) => {
-      window.agentDeck.log.send('debug', 'pty', 'Kill failed', { err: String(err) })
-    })
-    window.agentDeck.cost.unbind(sessionId).catch((err: unknown) => {
-      window.agentDeck.log.send('debug', 'cost', 'unbind failed', { sessionId, err: String(err) })
-    })
-    window.agentDeck.worktree.discard(sessionId).catch((err: unknown) => {
-      useAppStore
-        .getState()
-        .addNotification('warning', 'Failed to clean up worktree — it may need manual removal')
-      window.agentDeck.log.send('warn', 'worktree', 'Discard failed', { err: String(err) })
-    })
-    useAppStore.getState().clearWorktreePath(sessionId)
-    removeSession(sessionId)
-    setWorktreeCloseDialog(null)
-  }, [worktreeCloseDialog, removeSession])
-
-  /** Worktree dialog: "Keep Branch" — preserve branch, remove worktree. */
-  const handleWorktreeKeep = useCallback(() => {
-    if (!worktreeCloseDialog) return
-    const { sessionId } = worktreeCloseDialog
-    window.agentDeck.pty.kill(sessionId).catch((err: unknown) => {
-      window.agentDeck.log.send('debug', 'pty', 'Kill failed', { err: String(err) })
-    })
-    window.agentDeck.cost.unbind(sessionId).catch((err: unknown) => {
-      window.agentDeck.log.send('debug', 'cost', 'unbind failed', { sessionId, err: String(err) })
-    })
-    window.agentDeck.worktree.keep(sessionId).catch((err: unknown) => {
-      window.agentDeck.log.send('warn', 'worktree', 'Keep failed', { err: String(err) })
-    })
-    useAppStore.getState().clearWorktreePath(sessionId)
-    removeSession(sessionId)
-    setWorktreeCloseDialog(null)
-  }, [worktreeCloseDialog, removeSession])
-
-  /** Worktree dialog: "Cancel" — abort close, keep session alive. */
-  const handleWorktreeCancel = useCallback(() => {
-    setWorktreeCloseDialog(null)
-  }, [])
-
   const handleAddTab = useCallback(() => {
     useAppStore.getState().openCommandPalette()
   }, [])
@@ -306,7 +143,7 @@ export function App(): React.JSX.Element {
   useEffect(() => {
     const unsub = window.agentDeck.onFileDrop((wslPaths: string[]) => {
       const state = useAppStore.getState()
-      if (state.currentView !== 'session') return
+      if (state.currentView !== 'sessions') return
       const sid = state.paneSessions[state.focusedPane]
       if (!sid) return
       const escaped = wslPaths.map((p) => `'${p.replace(/'/g, "'\\''")}'`).join(' ')
@@ -382,6 +219,14 @@ export function App(): React.JSX.Element {
       })
   }, [])
 
+  // Activate project-scope templates when the active project changes. The
+  // slice is idempotent — repeated calls for the same projectId are a no-op.
+  const activeProjectId = useAppStore(getActiveProjectId)
+  const activateProjectTemplates = useAppStore((s) => s.activateProjectTemplates)
+  useEffect(() => {
+    void activateProjectTemplates(activeProjectId)
+  }, [activeProjectId, activateProjectTemplates])
+
   // Load saved zoom level on mount
   useEffect(() => {
     window.agentDeck.zoom
@@ -447,11 +292,6 @@ export function App(): React.JSX.Element {
       if (e.ctrlKey && e.key === 't') {
         e.preventDefault()
         handleNewTerminal()
-        return
-      }
-      if (e.ctrlKey && e.key === 'b') {
-        e.preventDefault()
-        useAppStore.getState().toggleSidebar()
         return
       }
       if (e.ctrlKey && e.key === '/') {
@@ -613,44 +453,15 @@ export function App(): React.JSX.Element {
     }
   }, [openWorkflowIdList])
 
-  const sidebarHidden = SIDEBAR_HIDDEN_VIEWS.includes(currentView)
-
   return (
     <div className="app">
-      <Titlebar
-        onCloseTab={handleCloseTab}
-        onCloseWorkflowTab={handleCloseWorkflowTab}
-        onAddTab={handleAddTab}
-      />
+      <Titlebar onCloseWorkflowTab={handleCloseWorkflowTab} onAddTab={handleAddTab} />
       <TopTabBar />
       <div className="app-body">
         {wslAvailable === false && (
           <div className="wsl-warning-banner" role="alert">
             WSL not detected — check that your distribution is running
           </div>
-        )}
-        {!sidebarHidden && (
-          <>
-            <div
-              ref={sidebarRef}
-              className={`sidebar-wrapper${sidebarOpen ? '' : ' collapsed'}`}
-              style={sidebarStyle}
-            >
-              <Sidebar
-                onOpenProject={handleOpenProject}
-                onOpenProjectWithAgent={handleOpenProjectWithAgent}
-              />
-            </div>
-            {sidebarOpen && (
-              <PanelDivider
-                side="left"
-                panelRef={sidebarRef}
-                minWidth={160}
-                maxWidth={400}
-                onResizeEnd={setSidebarWidth}
-              />
-            )}
-          </>
         )}
         <div className="app-main">
           {currentView === 'home' && (
@@ -659,7 +470,7 @@ export function App(): React.JSX.Element {
               onOpenProjectWithAgent={handleOpenProjectWithAgent}
             />
           )}
-          {currentView === 'sessions' && <SessionsScreen />}
+          {currentView === 'sessions' && !activeSessionId && <SessionsScreen />}
           {currentView === 'projects' && (
             <ProjectsScreen
               onOpenProject={handleOpenProject}
@@ -690,7 +501,7 @@ export function App(): React.JSX.Element {
               )}
           </Suspense>
           <div
-            className={`view-panel ${currentView === 'session' ? 'view-panel--visible' : 'view-panel--hidden'}`}
+            className={`view-panel ${currentView === 'sessions' && activeSessionId ? 'view-panel--visible' : 'view-panel--hidden'}`}
           >
             <SessionHero>
               <SplitView />
@@ -721,15 +532,6 @@ export function App(): React.JSX.Element {
       />
       {aboutOpen && <AboutDialog onClose={closeAbout} />}
       {shortcutsOpen && <ShortcutsDialog onClose={closeShortcuts} />}
-      <ConfirmDialog
-        open={worktreeCloseDialog !== null}
-        title="Close Worktree Session"
-        message={worktreeCloseDialog?.message ?? ''}
-        confirmLabel="Discard"
-        onConfirm={handleWorktreeDiscard}
-        onCancel={handleWorktreeCancel}
-        extraAction={{ label: 'Keep Branch', onClick: handleWorktreeKeep }}
-      />
       <NotificationToast />
     </div>
   )

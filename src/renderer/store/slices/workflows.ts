@@ -88,7 +88,7 @@ export const createWorkflowsSlice: StateCreator<AppState, [], [], WorkflowsSlice
         return {
           openWorkflowIds: [],
           activeWorkflowId: null,
-          currentView: 'session' as const,
+          currentView: 'sessions' as const,
           activeSessionId: state.activeSessionId ?? liveSessionIds[0] ?? null,
           ...pruned,
         }

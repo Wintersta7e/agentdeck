@@ -130,8 +130,8 @@ export function SessionsScreen(): React.JSX.Element {
     (session: Session) => {
       setActiveSession(session.id)
       // Keep currentView synchronous so SplitView/RightPanel see session immediately
-      setCurrentView('session')
-      setTab('session', { sessionId: session.id })
+      setCurrentView('sessions')
+      setTab('sessions', { sessionId: session.id })
     },
     [setActiveSession, setCurrentView, setTab],
   )

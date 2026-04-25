@@ -1,5 +1,6 @@
 import * as fs from 'fs'
 import * as path from 'path'
+import { randomBytes } from 'node:crypto'
 import { app } from 'electron'
 import { createLogger } from './logger'
 import { validateWorkflow } from '../shared/workflow-utils'
@@ -96,7 +97,7 @@ export async function saveWorkflow(workflow: Workflow): Promise<Workflow> {
 
     // H5: Atomic write — write to .tmp then rename
     const file = path.join(getWorkflowsDir(), `${safeId(w.id)}.json`)
-    const tmpFile = file + '.tmp'
+    const tmpFile = `${file}.${randomBytes(6).toString('hex')}.tmp`
     await fs.promises.writeFile(tmpFile, JSON.stringify(w, null, 2), 'utf-8')
     await fs.promises.rename(tmpFile, file)
 
