@@ -7,9 +7,10 @@ import type {
   ConfigEntry,
 } from '../shared/types'
 import { getDefaultDistroAsync } from './wsl-utils'
-import { getClaudeConfigDir, getWslHome, readWslFileSafe } from './wsl-paths'
+import { getClaudeConfigDir, getWslHome } from './wsl-paths'
 import { scanSkillDirectory } from './skill-scanner'
 import { createLogger } from './logger'
+import { truncate, readWslParsed, type ReadOpts } from './agent-env-shared'
 
 const log = createLogger('agent-env-claude')
 
@@ -22,12 +23,6 @@ const HOOK_EVENTS = [
   'PreCompact',
   'Notification',
 ] as const
-
-const MAX_VALUE_LEN = 200
-
-interface ReadOpts {
-  projectPath?: string | undefined
-}
 
 export async function readClaudeSnapshot(opts: ReadOpts): Promise<AgentEnvSnapshot> {
   const userConfigDir = await getClaudeConfigDir()
@@ -79,16 +74,12 @@ export async function readClaudeSnapshot(opts: ReadOpts): Promise<AgentEnvSnapsh
   }
 }
 
-async function readJsonSafe(path: string): Promise<Record<string, unknown> | null> {
-  const text = await readWslFileSafe(path)
-  if (text === null) return null
-  try {
-    const parsed = parseJsonc(text) as Record<string, unknown> | undefined
-    return parsed ?? null
-  } catch (err) {
-    log.debug('json parse failed', { path, err: String(err) })
-    return null
-  }
+function readJsonSafe(path: string): Promise<Record<string, unknown> | null> {
+  return readWslParsed(
+    path,
+    (text) => (parseJsonc(text) as Record<string, unknown> | undefined) ?? null,
+    log,
+  )
 }
 
 function extractHooks(settings: Record<string, unknown>, scope: 'user' | 'project'): HookEntry[] {
@@ -251,8 +242,4 @@ function parseMcpJson(json: Record<string, unknown>, scope: 'user' | 'project'):
     out.push(entry)
   }
   return out
-}
-
-function truncate(s: string): string {
-  return s.length > MAX_VALUE_LEN ? s.slice(0, MAX_VALUE_LEN) + '…' : s
 }
