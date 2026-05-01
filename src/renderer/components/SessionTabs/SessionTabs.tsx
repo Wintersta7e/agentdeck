@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import { LayoutGrid, Plus, X } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import { closeSession } from '../../utils/session-close'
@@ -29,7 +29,10 @@ export const SessionTabs = memo(function SessionTabs(): React.JSX.Element {
   const clearActiveSession = useAppStore((s) => s.clearActiveSession)
   const openNewSessionComposer = useAppStore((s) => s.openNewSessionComposer)
 
-  const projectById = new Map<string, Project>(projects.map((p) => [p.id, p]))
+  const projectById = useMemo(
+    () => new Map<string, Project>(projects.map((p) => [p.id, p])),
+    [projects],
+  )
 
   return (
     <div className="session-tabs" role="tablist">
