@@ -10,6 +10,7 @@ import type { TemplateStore, TemplateChangeEvent } from '../template-store'
 import type { LegacyStoreAdapter } from '../template-legacy-store'
 import { SAFE_ID_RE } from '../validation'
 import { createLogger } from '../logger'
+import { generateTemplateId } from '../template-id'
 
 const log = createLogger('ipc-templates')
 
@@ -131,11 +132,6 @@ function validateRef(input: unknown, ctx: TemplateHandlerContext): TemplateRef {
   }
 }
 
-function genTemplateId(): string {
-  const suffix = Math.random().toString(36).slice(2, 8)
-  return `tmpl-${String(Date.now())}-${suffix}`
-}
-
 /**
  * Register the v6.1.0 template IPC surface:
  *
@@ -227,7 +223,7 @@ export function registerTemplateIpc(ctx: TemplateHandlerContext): void {
       if (!ctx.migrationComplete()) {
         const d = draft as TemplateDraft
         const file: TemplateFile = {
-          id: d.id ?? genTemplateId(),
+          id: d.id ?? generateTemplateId(),
           name: d.name,
           description: d.description,
           content: d.content,

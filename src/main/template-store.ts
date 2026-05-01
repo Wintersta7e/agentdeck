@@ -1,9 +1,9 @@
 import { promises as fs, watch } from 'node:fs'
 import { join, resolve } from 'node:path'
-import { randomBytes } from 'node:crypto'
 import type { Template, TemplateFile, TemplateDraft, TemplateScope } from '../shared/types'
 import { createLogger } from './logger'
 import { atomicWrite } from './fs-atomic'
+import { generateTemplateId } from './template-id'
 
 const log = createLogger('template-store')
 
@@ -282,7 +282,7 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
     },
 
     save: async (draft, scope, projectId, baseMtime) => {
-      const id = draft.id ?? `tmpl-${randomBytes(6).toString('hex')}`
+      const id = draft.id ?? generateTemplateId()
       // PREREQ H6 (refined): cross-scope collision check runs INSIDE the
       // per-id serialize so two concurrent same-id cross-scope saves can't
       // both pass the findById check and race to write. The lookup, the
