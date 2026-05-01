@@ -86,16 +86,19 @@ async function scanDir(
   } catch {
     return []
   }
-  const out: Template[] = []
-  for (const n of names) {
-    if (!n.endsWith('.json')) continue
-    const path = join(dir, n)
-    const file = await readTemplateFile(path, emitParseError)
-    if (!file) continue
-    const s = await fs.stat(path)
-    out.push({ ...file, scope, projectId, path, mtimeMs: s.mtimeMs })
-  }
-  return out
+  const jsonNames = names.filter((n) => n.endsWith('.json'))
+  const results = await Promise.all(
+    jsonNames.map(async (n): Promise<Template | null> => {
+      const path = join(dir, n)
+      const [file, stats] = await Promise.all([
+        readTemplateFile(path, emitParseError),
+        fs.stat(path).catch(() => null),
+      ])
+      if (!file || !stats) return null
+      return { ...file, scope, projectId, path, mtimeMs: stats.mtimeMs }
+    }),
+  )
+  return results.filter((t): t is Template => t !== null)
 }
 
 export async function createTemplateStore(opts: TemplateStoreOptions): Promise<TemplateStore> {
