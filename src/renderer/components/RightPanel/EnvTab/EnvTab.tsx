@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback, useRef, memo } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { useAppStore } from '../../../store/appStore'
-import type { AgentEnvSnapshot } from '../../../../shared/types'
-import { AGENTS } from '../../../../shared/agents'
+import type { AgentEnvSnapshot, AgentType } from '../../../../shared/types'
+import { AGENT_BY_ID } from '../../../utils/agent-ui'
 import { HooksSection } from './HooksSection'
 import { SkillsSection } from './SkillsSection'
 import { McpSection } from './McpSection'
@@ -28,7 +28,7 @@ export const EnvTab = memo(function EnvTab(): React.JSX.Element {
   const agentVersions = useAppStore((s) => s.agentVersions)
 
   const agentId = (session?.agentOverride ?? project?.agent ?? 'claude-code') as string
-  const agent = AGENTS.find((a) => a.id === agentId) ?? null
+  const agent = AGENT_BY_ID.get(agentId as AgentType) ?? null
   const projectId = project?.id
 
   const [snapshot, setSnapshot] = useState<AgentEnvSnapshot | null>(null)
