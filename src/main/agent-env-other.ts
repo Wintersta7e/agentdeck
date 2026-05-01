@@ -35,8 +35,10 @@ export async function readOtherAgentSnapshot(opts: ReadOpts): Promise<AgentEnvSn
 
 async function readAider(projectPath?: string): Promise<AgentEnvSnapshot> {
   const home = await getWslHome()
-  const userConf = home ? await readYamlSafe(`${home}/.aider.conf.yml`) : null
-  const projectConf = projectPath ? await readYamlSafe(`${projectPath}/.aider.conf.yml`) : null
+  const [userConf, projectConf] = await Promise.all([
+    home ? readYamlSafe(`${home}/.aider.conf.yml`) : Promise.resolve(null),
+    projectPath ? readYamlSafe(`${projectPath}/.aider.conf.yml`) : Promise.resolve(null),
+  ])
 
   const config: ConfigEntry[] = []
   if (userConf) config.push(...extractAiderConfig(userConf, 'user'))

@@ -9,12 +9,12 @@ import { truncate, readWslParsed, type ReadOpts } from './agent-env-shared'
 const log = createLogger('agent-env-codex')
 
 export async function readCodexSnapshot(_opts: ReadOpts): Promise<AgentEnvSnapshot> {
-  const codexHome = await getCodexHome()
+  const [distro, codexHome] = await Promise.all([getDefaultDistroAsync(), getCodexHome()])
   const configToml = codexHome ? await readTomlSafe(`${codexHome}/config.toml`) : null
 
   const config: ConfigEntry[] = configToml ? extractConfig(configToml) : []
   const mcpServers: McpServerEntry[] = configToml ? extractMcp(configToml) : []
-  const skills = await collectSkills(codexHome)
+  const skills = await collectSkills(codexHome, distro)
 
   log.info('codex snapshot resolved', {
     codexHome,
@@ -94,9 +94,8 @@ function extractMcp(toml: Record<string, unknown>): McpServerEntry[] {
   return out
 }
 
-async function collectSkills(codexHome: string | null): Promise<SkillEntry[]> {
+async function collectSkills(codexHome: string | null, distro: string): Promise<SkillEntry[]> {
   if (!codexHome) return []
-  const distro = await getDefaultDistroAsync()
   const result = await scanSkillDirectory(`${codexHome}/skills`, 'global', distro)
   return result.skills.map((s) => ({ name: s.name, scope: 'user' as const, path: s.path }))
 }

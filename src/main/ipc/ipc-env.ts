@@ -68,16 +68,11 @@ export function registerEnvIpc(ctx: EnvCtx): void {
     const forceVal = force === true
     log.debug('env:getAgentSnapshot', { agentId, projectId, force: forceVal })
 
-    const snapshot = await getAgentSnapshot({
-      agentId,
-      projectPath,
-      force: forceVal,
-    })
-
-    // Decorate with EnvCtx + runtime footer fields. Per-agent readers leave
-    // these null so the IPC can be the single source of truth here.
-    const wslDistro = await getDefaultDistroAsync().catch(() => null)
-    const wslHome = await getWslHome().catch(() => null)
+    const [snapshot, wslDistro, wslHome] = await Promise.all([
+      getAgentSnapshot({ agentId, projectPath, force: forceVal }),
+      getDefaultDistroAsync().catch(() => null),
+      getWslHome().catch(() => null),
+    ])
     return {
       ...snapshot,
       paths: {

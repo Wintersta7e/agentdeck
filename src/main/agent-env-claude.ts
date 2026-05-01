@@ -25,13 +25,17 @@ const HOOK_EVENTS = [
 ] as const
 
 export async function readClaudeSnapshot(opts: ReadOpts): Promise<AgentEnvSnapshot> {
-  const userConfigDir = await getClaudeConfigDir()
+  const [distro, home, userConfigDir] = await Promise.all([
+    getDefaultDistroAsync(),
+    getWslHome(),
+    getClaudeConfigDir(),
+  ])
   const projectConfigDir = opts.projectPath ? `${opts.projectPath}/.claude` : null
 
-  const userSettings = userConfigDir ? await readJsonSafe(`${userConfigDir}/settings.json`) : null
-  const projectSettings = projectConfigDir
-    ? await readJsonSafe(`${projectConfigDir}/settings.json`)
-    : null
+  const [userSettings, projectSettings] = await Promise.all([
+    userConfigDir ? readJsonSafe(`${userConfigDir}/settings.json`) : Promise.resolve(null),
+    projectConfigDir ? readJsonSafe(`${projectConfigDir}/settings.json`) : Promise.resolve(null),
+  ])
 
   const hooks: HookEntry[] = []
   if (userSettings) hooks.push(...extractHooks(userSettings, 'user'))
@@ -41,8 +45,10 @@ export async function readClaudeSnapshot(opts: ReadOpts): Promise<AgentEnvSnapsh
   if (userSettings) config.push(...extractConfig(userSettings, 'user'))
   if (projectSettings) config.push(...extractConfig(projectSettings, 'project'))
 
-  const skills = await collectSkills(userConfigDir, opts.projectPath)
-  const mcpServers = await collectMcpServers(userConfigDir, opts.projectPath)
+  const [skills, mcpServers] = await Promise.all([
+    collectSkills(userConfigDir, distro, opts.projectPath),
+    collectMcpServers(userConfigDir, home, opts.projectPath),
+  ])
 
   log.info('claude snapshot resolved', {
     projectPath: opts.projectPath ?? null,
@@ -144,9 +150,9 @@ function extractConfig(
 
 async function collectSkills(
   userConfigDir: string | null,
+  distro: string,
   projectPath?: string,
 ): Promise<SkillEntry[]> {
-  const distro = await getDefaultDistroAsync()
   const out: SkillEntry[] = []
 
   if (userConfigDir) {
@@ -187,11 +193,11 @@ async function collectSkills(
  */
 async function collectMcpServers(
   userConfigDir: string | null,
+  home: string | null,
   projectPath?: string,
 ): Promise<McpServerEntry[]> {
   const out: McpServerEntry[] = []
 
-  const home = await getWslHome()
   if (home) {
     const claudeJson = await readJsonSafe(`${home}/.claude.json`)
     if (claudeJson) {
