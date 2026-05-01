@@ -1,8 +1,8 @@
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
-import { randomBytes } from 'node:crypto'
 import type { TemplateFile } from '../shared/types'
 import { createLogger } from './logger'
+import { atomicWrite } from './fs-atomic'
 
 const log = createLogger('template-migration')
 
@@ -27,12 +27,6 @@ interface MigrationResult {
   status: 'migrated' | 'freshInstallSeeded' | 'skipped' | 'failed'
   count: number
   error?: string
-}
-
-async function writeAtomic(path: string, data: string): Promise<void> {
-  const tmp = `${path}.${randomBytes(6).toString('hex')}.tmp`
-  await fs.writeFile(tmp, data, 'utf-8')
-  await fs.rename(tmp, path)
 }
 
 function upgradeLegacyToFile(l: {
@@ -82,7 +76,7 @@ export async function runTemplateMigration(opts: MigrationOptions): Promise<Migr
     try {
       for (const seed of opts.seeds ?? []) {
         const file = upgradeLegacyToFile(seed)
-        await writeAtomic(join(opts.userRoot, `${file.id}.json`), JSON.stringify(file, null, 2))
+        await atomicWrite(join(opts.userRoot, `${file.id}.json`), JSON.stringify(file, null, 2))
       }
       opts.store.set('appPrefs', { ...prefs, templatesMigrated: true })
       return { status: 'freshInstallSeeded', count: opts.seeds?.length ?? 0 }
@@ -98,7 +92,7 @@ export async function runTemplateMigration(opts: MigrationOptions): Promise<Migr
     await fs.mkdir(staging, { recursive: true })
     for (const l of legacyRaw) {
       const file = upgradeLegacyToFile(l)
-      await writeAtomic(join(staging, `${file.id}.json`), JSON.stringify(file, null, 2))
+      await atomicWrite(join(staging, `${file.id}.json`), JSON.stringify(file, null, 2))
     }
     // Atomic-ish dir swap: back up existing contents (if any), then replace with staging.
     const existing = await fs.readdir(opts.userRoot).catch(() => [])

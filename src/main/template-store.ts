@@ -3,6 +3,7 @@ import { join, resolve } from 'node:path'
 import { randomBytes } from 'node:crypto'
 import type { Template, TemplateFile, TemplateDraft, TemplateScope } from '../shared/types'
 import { createLogger } from './logger'
+import { atomicWrite } from './fs-atomic'
 
 const log = createLogger('template-store')
 
@@ -95,14 +96,6 @@ async function scanDir(
     out.push({ ...file, scope, projectId, path, mtimeMs: s.mtimeMs })
   }
   return out
-}
-
-async function atomicWrite(path: string, data: string): Promise<number> {
-  const tmp = `${path}.${randomBytes(6).toString('hex')}.tmp`
-  await fs.writeFile(tmp, data, 'utf-8')
-  await fs.rename(tmp, path)
-  const s = await fs.stat(path)
-  return s.mtimeMs
 }
 
 export async function createTemplateStore(opts: TemplateStoreOptions): Promise<TemplateStore> {
