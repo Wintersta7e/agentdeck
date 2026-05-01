@@ -8,7 +8,7 @@ import type {
 } from '../../shared/types'
 import type { TemplateStore, TemplateChangeEvent } from '../template-store'
 import type { LegacyStoreAdapter } from '../template-legacy-store'
-import { SAFE_ID_RE } from '../validation'
+import { SAFE_ID_RE, MAX_SAFE_ID_LEN } from '../validation'
 import { createLogger } from '../logger'
 import { generateTemplateId } from '../template-id'
 
@@ -26,8 +26,6 @@ const CATEGORIES = new Set<TemplateCategory>([
   'Git',
 ])
 
-const MAX_ID_LEN = 128
-const MAX_PROJECT_ID_LEN = 128
 const MAX_NAME_LEN = 256
 const MAX_DESC_LEN = 1024
 const MAX_CONTENT_LEN = 100_000
@@ -59,8 +57,8 @@ function validateDraft(input: unknown): asserts input is TemplateDraft {
   if (raw.id !== undefined && (typeof raw.id !== 'string' || !SAFE_ID_RE.test(raw.id))) {
     throw new Error('draft.id must be a valid identifier')
   }
-  if (raw.id !== undefined && typeof raw.id === 'string' && raw.id.length > MAX_ID_LEN) {
-    throw new Error(`draft.id too long (max ${String(MAX_ID_LEN)})`)
+  if (raw.id !== undefined && typeof raw.id === 'string' && raw.id.length > MAX_SAFE_ID_LEN) {
+    throw new Error(`draft.id too long (max ${String(MAX_SAFE_ID_LEN)})`)
   }
   if (typeof raw.name !== 'string' || raw.name.length === 0) {
     throw new Error('draft.name is required')
@@ -102,8 +100,8 @@ function validateScopeAndProject(
     if (typeof projectId !== 'string' || !SAFE_ID_RE.test(projectId)) {
       throw new Error('projectId required for project scope')
     }
-    if (projectId.length > MAX_PROJECT_ID_LEN) {
-      throw new Error(`projectId too long (max ${String(MAX_PROJECT_ID_LEN)})`)
+    if (projectId.length > MAX_SAFE_ID_LEN) {
+      throw new Error(`projectId too long (max ${String(MAX_SAFE_ID_LEN)})`)
     }
     if (!ctx.getProjectExists(projectId)) {
       throw new Error('unknown projectId')
@@ -119,8 +117,8 @@ function validateRef(input: unknown, ctx: TemplateHandlerContext): TemplateRef {
   if (typeof raw.id !== 'string' || !SAFE_ID_RE.test(raw.id)) {
     throw new Error('ref.id must be a valid identifier')
   }
-  if (raw.id.length > MAX_ID_LEN) {
-    throw new Error(`ref.id too long (max ${String(MAX_ID_LEN)})`)
+  if (raw.id.length > MAX_SAFE_ID_LEN) {
+    throw new Error(`ref.id too long (max ${String(MAX_SAFE_ID_LEN)})`)
   }
   const scope = raw.scope
   const projectId = (raw.projectId ?? null) as string | null
@@ -160,10 +158,8 @@ export function registerTemplateIpc(ctx: TemplateHandlerContext): void {
         if (typeof projectId !== 'string' || !SAFE_ID_RE.test(projectId)) {
           throw new Error('templates:listAll — projectId must be a valid identifier')
         }
-        if (projectId.length > MAX_PROJECT_ID_LEN) {
-          throw new Error(
-            `templates:listAll — projectId too long (max ${String(MAX_PROJECT_ID_LEN)})`,
-          )
+        if (projectId.length > MAX_SAFE_ID_LEN) {
+          throw new Error(`templates:listAll — projectId too long (max ${String(MAX_SAFE_ID_LEN)})`)
         }
       }
       if (!ctx.migrationComplete()) {
@@ -179,9 +175,9 @@ export function registerTemplateIpc(ctx: TemplateHandlerContext): void {
       if (typeof projectId !== 'string' || !SAFE_ID_RE.test(projectId)) {
         throw new Error('templates:activateProject — projectId must be a valid identifier')
       }
-      if (projectId.length > MAX_PROJECT_ID_LEN) {
+      if (projectId.length > MAX_SAFE_ID_LEN) {
         throw new Error(
-          `templates:activateProject — projectId too long (max ${String(MAX_PROJECT_ID_LEN)})`,
+          `templates:activateProject — projectId too long (max ${String(MAX_SAFE_ID_LEN)})`,
         )
       }
       if (!ctx.getProjectExists(projectId)) {
