@@ -21,6 +21,10 @@ interface FileTreeProps {
   rootPath: string
 }
 
+const INDENT_PX = 14
+const BASE_INDENT_PX = 6
+const indent = (depth: number): string => `${depth * INDENT_PX + BASE_INDENT_PX}px`
+
 interface VisibleNode {
   fullPath: string
   parentPath: string
@@ -147,25 +151,31 @@ export function FileTree({ projectPath, rootPath }: FileTreeProps): React.JSX.El
     return out
   }, [rootEntries, nodes, rootPath])
 
+  // O(1) path→index lookup for keyboard navigation; rebuilt only when the
+  // visible row list changes.
+  const visibleIndex = useMemo(() => {
+    const m = new Map<string, number>()
+    for (let i = 0; i < visible.length; i++) {
+      const node = visible[i]
+      if (node) m.set(node.fullPath, i)
+    }
+    return m
+  }, [visible])
+
   // Active-path reconciliation: when a parent folder is collapsed, the
   // previously-active descendant is no longer in `visible`. Snap the active
-  // row to the first visible row so keyboard nav stays anchored. This is a
-  // DEFENSIVE guard — it isn't reachable through the current keyboard / click
-  // handlers (folder click sets activePath to the clicked folder before it
-  // collapses; ArrowLeft on a file ascends rather than collapsing the parent).
-  // Cheap to keep and protects future state-change paths.
+  // row to the first visible row so keyboard nav stays anchored. Defensive —
+  // current click/keyboard handlers don't trigger this, but it protects
+  // future state-change paths. The cascade is bounded: after the snap, the
+  // next render finds activePath in visibleIndex and the effect bails out.
   useEffect(() => {
-    if (!activePath) return
-    if (visible.length === 0) return
-    const stillVisible = visible.some((v) => v.fullPath === activePath)
-    if (stillVisible) return
-    // Nested async so react-hooks/set-state-in-effect doesn't flag the snap.
-    const snap = async (): Promise<void> => {
-      const first = visible[0]
-      if (first) setActivePath(first.fullPath)
-    }
-    void snap()
-  }, [visible, activePath])
+    if (!activePath || visible.length === 0) return
+    if (visibleIndex.has(activePath)) return
+    const first = visible[0]
+    if (!first) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- bounded reconciliation, see comment above
+    setActivePath(first.fullPath)
+  }, [visible, visibleIndex, activePath])
 
   const onActivate = useCallback(
     (node: VisibleNode): void => {
@@ -181,7 +191,7 @@ export function FileTree({ projectPath, rootPath }: FileTreeProps): React.JSX.El
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>): void => {
       if (visible.length === 0) return
-      const idx = activePath ? visible.findIndex((v) => v.fullPath === activePath) : -1
+      const idx = activePath ? (visibleIndex.get(activePath) ?? -1) : -1
       const safeIdx = idx < 0 ? 0 : idx
       const cur = visible[safeIdx]
 
@@ -224,9 +234,8 @@ export function FileTree({ projectPath, rootPath }: FileTreeProps): React.JSX.El
           if (!cur) break
           e.preventDefault()
           if (cur.entry.isDir && cur.expanded) toggleFolder(cur.fullPath)
-          else {
-            const parent = visible.find((v) => v.fullPath === cur.parentPath)
-            if (parent) setActivePath(parent.fullPath)
+          else if (visibleIndex.has(cur.parentPath)) {
+            setActivePath(cur.parentPath)
           }
           break
         }
@@ -239,7 +248,7 @@ export function FileTree({ projectPath, rootPath }: FileTreeProps): React.JSX.El
         }
       }
     },
-    [visible, activePath, toggleFolder, onActivate],
+    [visible, visibleIndex, activePath, toggleFolder, onActivate],
   )
 
   if (rootError) return <div className="file-tree__error">Failed to load: {rootError}</div>
@@ -293,7 +302,7 @@ const FileTreeRow = memo(function FileTreeRow({
         data-active={isActive ? 'true' : 'false'}
         data-fullpath={node.fullPath}
         className={`file-tree__row${isActive ? ' is-active' : ''}`}
-        style={{ paddingLeft: `${depth * 14 + 6}px` }}
+        style={{ paddingLeft: indent(depth) }}
         onClick={onClick}
       >
         <span className="file-tree__chevron" aria-hidden="true">
@@ -305,12 +314,12 @@ const FileTreeRow = memo(function FileTreeRow({
         <span className="file-tree__name">{entry.name}</span>
       </div>
       {isLoading && (
-        <div className="file-tree__loading" style={{ paddingLeft: `${(depth + 1) * 14 + 6}px` }}>
+        <div className="file-tree__loading" style={{ paddingLeft: indent(depth + 1) }}>
           Loading…
         </div>
       )}
       {errorText && (
-        <div className="file-tree__error" style={{ paddingLeft: `${(depth + 1) * 14 + 6}px` }}>
+        <div className="file-tree__error" style={{ paddingLeft: indent(depth + 1) }}>
           {errorText}
         </div>
       )}
