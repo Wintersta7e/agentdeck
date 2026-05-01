@@ -259,7 +259,7 @@ declare global {
       }
       files: {
         listDir: (opts: { path: string; projectPath: string }) => Promise<{
-          entries: Array<{ name: string; isDir: boolean; size?: number; mtime?: number }>
+          entries: Array<{ name: string; isDir: boolean }>
           gitignored: string[]
         }>
         openExternal: (opts: { path: string; projectPath: string }) => Promise<void>

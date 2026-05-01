@@ -14,8 +14,6 @@ import './FileTree.css'
 interface DirEntry {
   name: string
   isDir: boolean
-  size?: number
-  mtime?: number
 }
 
 interface FileTreeProps {
