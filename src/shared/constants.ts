@@ -30,3 +30,6 @@ export const MS_PER_MINUTE = 60_000
 
 /** Cap on how many exited sessions we retain for home-screen history. */
 export const MAX_EXITED_SESSIONS = 20
+
+/** Agent-env snapshot cache TTL (ms) */
+export const SNAPSHOT_CACHE_TTL_MS = 30_000
