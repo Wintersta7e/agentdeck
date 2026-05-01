@@ -144,6 +144,8 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
     const path = resolvePath(scope, projectId, file.id)
     await fs.mkdir(join(path, '..'), { recursive: true })
 
+    const isNew = !findById(file.id)
+
     if (baseMtime !== undefined) {
       let currentMtime = 0
       try {
@@ -165,7 +167,7 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
       const pool = projectPools.get(projectId) ?? []
       projectPools.set(projectId, [loaded, ...pool.filter((t) => t.id !== file.id)])
     }
-    emitChange({ kind: 'update', scope, projectId, template: loaded })
+    emitChange({ kind: isNew ? 'add' : 'update', scope, projectId, template: loaded })
     return loaded
   }
 
