@@ -249,7 +249,13 @@ export function TerminalPane({
               // Permission denied or no text — fall through to file paths
             }
             if (text) {
-              safeWrite(sessionId, text)
+              // term.paste() wraps with bracketed-paste markers
+              // (\x1b[200~ ... \x1b[201~) when the agent has enabled mode
+              // 2004, otherwise sends raw. Using safeWrite directly bypassed
+              // this and made big pastes look "swallowed" — agents like
+              // Claude Code that expect bracketed paste would otherwise see
+              // the chars as fast-typed input and submit / drop mid-stream.
+              term.paste(text)
               return
             }
             // No text on clipboard — check for copied files
@@ -258,7 +264,7 @@ export function TerminalPane({
               // Single-quote escaping (POSIX safe) — prevents injection via
               // filenames containing ", $, `, \, or ! on shared filesystems.
               const escaped = paths.map((p) => `'${p.replace(/'/g, "'\\''")}'`).join(' ')
-              safeWrite(sessionId, escaped)
+              term.paste(escaped)
             }
           })().catch((err: unknown) => {
             window.agentDeck.log.send('warn', 'terminal', `Paste failed for ${sessionId}`, {
@@ -840,7 +846,7 @@ export function TerminalPane({
           navigator.clipboard
             .readText()
             .then((text) => {
-              if (text) safeWrite(sessionId, text)
+              if (text) term.paste(text)
             })
             .catch(() => {})
           break
