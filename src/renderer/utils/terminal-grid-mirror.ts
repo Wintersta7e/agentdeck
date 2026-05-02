@@ -36,6 +36,8 @@ interface CursorSnapshot {
   firstAbsRow: number
   cursorRow: number
   cursorCol: number
+  savedCursorRow: number
+  savedCursorCol: number
   viewportTopAbs: number
   scrollTopVp: number
   scrollBottomVp: number
@@ -641,12 +643,13 @@ export class TerminalGridMirror {
 
   private toggleAltBuffer(toAlt: boolean): void {
     if (toAlt && !this.isAlt) {
-      // Save main, reset to empty alt
       this.mainSnapshot = {
         rows: this.rows,
         firstAbsRow: this.firstAbsRow,
         cursorRow: this.cursorRow,
         cursorCol: this.cursorCol,
+        savedCursorRow: this.savedCursorRow,
+        savedCursorCol: this.savedCursorCol,
         viewportTopAbs: this.viewportTopAbs,
         scrollTopVp: this.scrollTopVp,
         scrollBottomVp: this.scrollBottomVp,
@@ -656,6 +659,8 @@ export class TerminalGridMirror {
       this.viewportTopAbs = 0
       this.cursorRow = 0
       this.cursorCol = 0
+      this.savedCursorRow = 0
+      this.savedCursorCol = 0
       this.scrollTopVp = 0
       this.scrollBottomVp = this.rowsCount - 1
       this.isAlt = true
@@ -664,6 +669,8 @@ export class TerminalGridMirror {
       this.firstAbsRow = this.mainSnapshot.firstAbsRow
       this.cursorRow = this.mainSnapshot.cursorRow
       this.cursorCol = this.mainSnapshot.cursorCol
+      this.savedCursorRow = this.mainSnapshot.savedCursorRow
+      this.savedCursorCol = this.mainSnapshot.savedCursorCol
       this.viewportTopAbs = this.mainSnapshot.viewportTopAbs
       this.scrollTopVp = this.mainSnapshot.scrollTopVp
       this.scrollBottomVp = this.mainSnapshot.scrollBottomVp

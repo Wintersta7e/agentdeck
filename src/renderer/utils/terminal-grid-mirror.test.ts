@@ -234,6 +234,19 @@ describe('TerminalGridMirror — alt buffer', () => {
     m.ingest(`${ESC}[?1049l`) // leave alt
     expect(m.getTabSpans(0)).toEqual([{ col: 1, width: 7 }]) // main restored
   })
+
+  it("DECSC inside alt buffer does not clobber main's saved cursor", () => {
+    const m = mk()
+    m.ingest(`${ESC}[6G`) // CHA col 6 (1-based) → col 5
+    m.ingest(`${ESC}7`) // DECSC: save (row 0, col 5) in main
+    m.ingest(`${ESC}[?1049h`) // enter alt
+    m.ingest(`${ESC}[10;20H`) // CUP to (10, 20) in alt
+    m.ingest(`${ESC}7`) // DECSC inside alt — must NOT touch main's saved register
+    m.ingest(`${ESC}[?1049l`) // leave alt — restores main's saved register
+    m.ingest(`${ESC}8`) // DECRC in main — should go back to (0, 5)
+    m.ingest('\t') // tab at col 5 → span [5, 3]
+    expect(m.getTabSpans(0)).toEqual([{ col: 5, width: 3 }])
+  })
 })
 
 describe('TerminalGridMirror — wide chars', () => {
