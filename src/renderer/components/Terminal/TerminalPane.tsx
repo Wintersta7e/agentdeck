@@ -233,7 +233,11 @@ export function TerminalPane({
         // Ctrl+Shift+C or Ctrl+C with selection → copy
         if (e.ctrlKey && e.key === 'c' && (e.shiftKey || term.hasSelection())) {
           navigator.clipboard
-            .writeText(getLogicalSelection(term, (y) => mirrorRef.current?.getTabSpans(y) ?? []))
+            .writeText(
+              getLogicalSelection(term, {
+                tabSpansForRow: (y) => mirrorRef.current?.getTabSpans(y) ?? [],
+              }),
+            )
             .then(() => {
               setCopyFlash(true)
               clearTimeout(copyFlashTimerRef.current)
@@ -854,7 +858,11 @@ export function TerminalPane({
         case 'copy':
           if (term.hasSelection()) {
             navigator.clipboard
-              .writeText(getLogicalSelection(term, (y) => mirrorRef.current?.getTabSpans(y) ?? []))
+              .writeText(
+                getLogicalSelection(term, {
+                  tabSpansForRow: (y) => mirrorRef.current?.getTabSpans(y) ?? [],
+                }),
+              )
               .then(() => {
                 setCopyFlash(true)
                 clearTimeout(copyFlashTimerRef.current)

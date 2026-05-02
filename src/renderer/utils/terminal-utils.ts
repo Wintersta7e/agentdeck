@@ -201,6 +201,12 @@ export interface TabSpan {
 /** Callback returning the tab spans recorded on the given xterm-buffer-y row. */
 export type RowTabSpansProvider = (yBuffer: number) => readonly TabSpan[]
 
+/** Optional behaviour switches for `getLogicalSelection`. */
+export interface LogicalSelectionOptions {
+  /** When provided, cell ranges that came from a `\t` byte are emitted as `\t`. */
+  tabSpansForRow?: RowTabSpansProvider
+}
+
 /**
  * Replace cell ranges that originated from a `\t` byte with literal `\t` in
  * the copied text. Only tab spans whose entire range is inside `[startCol,
@@ -242,16 +248,15 @@ function substituteTabs(
  *     space-padded cells for unset positions; copying them produces
  *     spurious right-margin spaces in the clipboard)
  *
- * With `tabSpansForRow`, cell ranges that originated from a `\t` byte are
- * substituted back as `\t` in the output. The provider returns the tab
- * spans recorded by `TerminalGridMirror` for the given xterm row. Spans
- * that don't fit entirely inside the per-row selection (partial-row
- * selections that cut a tab in half) are not substituted — those cells
- * stay as spaces, matching what the user sees.
+ * With `options.tabSpansForRow`, cell ranges that originated from a `\t`
+ * byte are substituted back as `\t` in the output. Spans that don't fit
+ * entirely inside the per-row selection (partial-row selections that cut
+ * a tab in half) are not substituted — those cells stay as spaces,
+ * matching what the user sees.
  */
 export function getLogicalSelection(
   term: SelectionTerminal,
-  tabSpansForRow?: RowTabSpansProvider,
+  options?: LogicalSelectionOptions,
 ): string {
   const sel = term.getSelectionPosition()
   if (!sel) return ''
@@ -260,6 +265,7 @@ export function getLogicalSelection(
   const endY = sel.end.y
   const startX = sel.start.x
   const endX = sel.end.x
+  const tabSpansForRow = options?.tabSpansForRow
 
   const out: string[] = []
   let logical = ''
@@ -279,8 +285,6 @@ export function getLogicalSelection(
 
     logical += cellText
 
-    // If the *next* row is a soft-wrap continuation of this one and is part
-    // of the selection, keep accumulating; otherwise this logical line ends.
     const next = y < endY ? buffer.getLine(y + 1) : undefined
     if (!next?.isWrapped) {
       out.push(logical.replace(/[ \t]+$/, ''))

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   getLogicalSelection,
-  type RowTabSpansProvider,
+  type LogicalSelectionOptions,
   type SelectionBufferLine,
   type TabSpan,
 } from './terminal-utils'
@@ -128,8 +128,8 @@ describe('getLogicalSelection', () => {
 
 describe('getLogicalSelection — tab span substitution via mirror provider', () => {
   /** Build a tab provider from a per-row map of spans. */
-  function provider(spansByRow: Record<number, TabSpan[]>): RowTabSpansProvider {
-    return (y) => spansByRow[y] ?? []
+  function provider(spansByRow: Record<number, TabSpan[]>): LogicalSelectionOptions {
+    return { tabSpansForRow: (y) => spansByRow[y] ?? [] }
   }
 
   it('substitutes \\t for a tab span fully inside the row selection', () => {
