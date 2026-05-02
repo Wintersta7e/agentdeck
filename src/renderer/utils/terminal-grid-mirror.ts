@@ -58,9 +58,19 @@ const enum S {
   StringSeq = 7, // DCS, APC, PM, SOS — all terminate with ST (ESC \)
 }
 
+/** Cap on collected CSI numeric parameters before further params are dropped. */
 const MAX_CSI_PARAMS = 16
+/** Cap on OSC payload bytes; longer payloads are truncated, not held in memory. */
 const MAX_OSC_LEN = 4096
-const MAX_TAB_SPANS_PER_ROW = 32 // safety against pathological inputs
+/** Cap on tab spans tracked per row before further `\t` writes stop recording. */
+const MAX_TAB_SPANS_PER_ROW = 32
+
+/** DEC private mode numbers used by the alt-buffer toggle. */
+const MODE_ALT_BUFFER = 47
+const MODE_SAVE_CURSOR = 1048
+const MODE_ALT_BUFFER_SAVE_RESTORE = 1049
+/** 1047 means "alt buffer + clear on entry"; for our purposes treat like 1049. */
+const MODE_ALT_BUFFER_CLEAR_ON_ENTRY = 1047
 
 export interface MirrorOptions {
   rows: number
@@ -247,30 +257,27 @@ export class TerminalGridMirror {
   }
 
   private feedGround(cp: number): void {
-    // C0 control codes
     if (cp < 0x20) {
       switch (cp) {
-        case 0x08: // BS
+        case 0x08: // BS — cursor back
           if (this.cursorCol > 0) this.cursorCol -= 1
           return
-        case 0x09: // HT (tab)
+        case 0x09: // HT
           this.handleTab()
           return
         case 0x0a: // LF
-        case 0x0b: // VT
-        case 0x0c: // FF
+        case 0x0b: // VT (treat like LF)
+        case 0x0c: // FF (treat like LF)
           this.handleLineFeed()
           return
         case 0x0d: // CR
           this.cursorCol = 0
           return
         default:
-          return // BEL, NUL, etc. — ignore
+          return // BEL, NUL, ENQ, etc. — no cursor effect
       }
     }
-    if (cp === 0x7f) return // DEL
-    if (cp >= 0x80 && cp < 0xa0) return // C1
-    // Printable
+    if (cp === 0x7f || (cp >= 0x80 && cp < 0xa0)) return // DEL + C1 controls
     this.handlePrintable(cp)
   }
 
@@ -525,9 +532,9 @@ export class TerminalGridMirror {
 
   private handleDecMode(params: number[], set: boolean): void {
     for (const code of params) {
-      if (code === 1047 || code === 1049) {
+      if (code === MODE_ALT_BUFFER_SAVE_RESTORE || code === MODE_ALT_BUFFER_CLEAR_ON_ENTRY) {
         if (set !== this.isAlt) this.toggleAltBuffer(set)
-      } else if (code === 1048) {
+      } else if (code === MODE_SAVE_CURSOR) {
         if (set) {
           this.savedCursorRow = this.cursorRow
           this.savedCursorCol = this.cursorCol
@@ -535,7 +542,7 @@ export class TerminalGridMirror {
           this.cursorRow = this.savedCursorRow
           this.cursorCol = this.savedCursorCol
         }
-      } else if (code === 47) {
+      } else if (code === MODE_ALT_BUFFER) {
         if (set !== this.isAlt) this.toggleAltBuffer(set)
       }
     }
@@ -553,7 +560,6 @@ export class TerminalGridMirror {
     const row = this.getOrCreateRow(this.cursorRow)
     if (row.tabs.length < MAX_TAB_SPANS_PER_ROW) {
       row.tabs.push({ col: startCol, width })
-      // Keep sorted (cheap — we almost always append in order)
       const n = row.tabs.length
       const last = row.tabs[n - 1]
       const prev = n > 1 ? row.tabs[n - 2] : undefined
