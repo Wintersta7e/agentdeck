@@ -18,7 +18,6 @@
  */
 
 import { wcwidth } from './wcwidth'
-import { ANSI_ESCAPES_RE } from '../../shared/ansi'
 
 export interface TabSpan {
   /** Cell column where the tab span starts (inclusive). */
@@ -673,6 +672,3 @@ export class TerminalGridMirror {
     }
   }
 }
-
-// Re-export so callers don't import from two paths for the parser regex
-export { ANSI_ESCAPES_RE }
