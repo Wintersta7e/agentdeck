@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebglAddon } from '@xterm/addon-webgl'
@@ -880,38 +881,40 @@ export function TerminalPane({
           onClose={() => setSearchOpen(false)}
         />
       )}
-      {ctxMenu && (
-        <div
-          ref={ctxMenuRef}
-          className="term-context-menu"
-          style={{ top: ctxMenu.y, left: ctxMenu.x }}
-        >
-          <button
-            className="term-ctx-item"
-            disabled={!ctxHasSelection}
-            onClick={() => handleCtxAction('copy')}
+      {ctxMenu &&
+        createPortal(
+          <div
+            ref={ctxMenuRef}
+            className="term-context-menu"
+            style={{ top: ctxMenu.y, left: ctxMenu.x }}
           >
-            Copy
-            <span className="term-ctx-hint">Ctrl+Shift+C</span>
-          </button>
-          <button className="term-ctx-item" onClick={() => handleCtxAction('paste')}>
-            Paste
-            <span className="term-ctx-hint">Ctrl+V</span>
-          </button>
-          <button className="term-ctx-item" onClick={() => handleCtxAction('selectAll')}>
-            Select All
-          </button>
-          <div className="term-ctx-sep" />
-          <button className="term-ctx-item" onClick={() => handleCtxAction('clear')}>
-            Clear Scrollback
-          </button>
-          <div className="term-ctx-sep" />
-          <button className="term-ctx-item" onClick={() => handleCtxAction('search')}>
-            Search
-            <span className="term-ctx-hint">Ctrl+Shift+F</span>
-          </button>
-        </div>
-      )}
+            <button
+              className="term-ctx-item"
+              disabled={!ctxHasSelection}
+              onClick={() => handleCtxAction('copy')}
+            >
+              Copy
+              <span className="term-ctx-hint">Ctrl+Shift+C</span>
+            </button>
+            <button className="term-ctx-item" onClick={() => handleCtxAction('paste')}>
+              Paste
+              <span className="term-ctx-hint">Ctrl+V</span>
+            </button>
+            <button className="term-ctx-item" onClick={() => handleCtxAction('selectAll')}>
+              Select All
+            </button>
+            <div className="term-ctx-sep" />
+            <button className="term-ctx-item" onClick={() => handleCtxAction('clear')}>
+              Clear Scrollback
+            </button>
+            <div className="term-ctx-sep" />
+            <button className="term-ctx-item" onClick={() => handleCtxAction('search')}>
+              Search
+              <span className="term-ctx-hint">Ctrl+Shift+F</span>
+            </button>
+          </div>,
+          document.body,
+        )}
     </div>
   )
 }
