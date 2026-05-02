@@ -20,6 +20,7 @@ import {
   validScrollback,
   writeWithScrollGuard,
   safeFitAndResize,
+  getLogicalSelection,
   OSC_RESPONSE_RE,
   type FitCallbacks,
   type ScrollGuardTerminal,
@@ -222,7 +223,7 @@ export function TerminalPane({
         // Ctrl+Shift+C or Ctrl+C with selection → copy
         if (e.ctrlKey && e.key === 'c' && (e.shiftKey || term.hasSelection())) {
           navigator.clipboard
-            .writeText(term.getSelection())
+            .writeText(getLogicalSelection(term))
             .then(() => {
               setCopyFlash(true)
               clearTimeout(copyFlashTimerRef.current)
@@ -826,7 +827,7 @@ export function TerminalPane({
         case 'copy':
           if (term.hasSelection()) {
             navigator.clipboard
-              .writeText(term.getSelection())
+              .writeText(getLogicalSelection(term))
               .then(() => {
                 setCopyFlash(true)
                 clearTimeout(copyFlashTimerRef.current)

@@ -172,3 +172,65 @@ export function safeFitAndResize(
     }
   }
 }
+
+// ─── Logical-line selection ──────────────────────────────────────────
+
+/** Minimal buffer-line shape we read for logical-selection extraction. */
+export interface SelectionBufferLine {
+  isWrapped: boolean
+  translateToString: (trimRight: boolean, startColumn?: number, endColumn?: number) => string
+}
+
+/** Minimal terminal shape for getLogicalSelection — read-only buffer view. */
+export interface SelectionTerminal {
+  getSelectionPosition: () =>
+    | { start: { x: number; y: number }; end: { x: number; y: number } }
+    | undefined
+  buffer: { active: { getLine: (y: number) => SelectionBufferLine | undefined } }
+}
+
+/**
+ * Like xterm's `term.getSelection()`, but reconstructs *logical* lines from
+ * the cell buffer:
+ *
+ *   - rows whose successor reports `isWrapped === true` are joined into a
+ *     single line (undoing soft-wraps that xterm inserted to fit width)
+ *   - trailing whitespace on each logical line is stripped (xterm leaves
+ *     space-padded cells for unset positions; copying them produces
+ *     spurious right-margin spaces in the clipboard)
+ *
+ * Tabs are still lost — xterm renders `\t` as N space cells and the original
+ * byte is gone from the buffer. Preserving tabs needs a parallel raw-stream
+ * buffer, not a buffer-walker.
+ */
+export function getLogicalSelection(term: SelectionTerminal): string {
+  const sel = term.getSelectionPosition()
+  if (!sel) return ''
+  const buffer = term.buffer.active
+  const startY = sel.start.y
+  const endY = sel.end.y
+  const startX = sel.start.x
+  const endX = sel.end.x
+
+  const out: string[] = []
+  let logical = ''
+
+  for (let y = startY; y <= endY; y++) {
+    const line = buffer.getLine(y)
+    if (!line) continue
+
+    const colStart = y === startY ? startX : 0
+    const colEnd = y === endY ? endX : undefined
+    logical += line.translateToString(false, colStart, colEnd)
+
+    // If the *next* row is a soft-wrap continuation of this one and is part
+    // of the selection, keep accumulating; otherwise this logical line ends.
+    const next = y < endY ? buffer.getLine(y + 1) : undefined
+    if (!next?.isWrapped) {
+      out.push(logical.replace(/[ \t]+$/, ''))
+      logical = ''
+    }
+  }
+
+  return out.join('\n')
+}
