@@ -118,10 +118,13 @@ export function getXtermTheme(themeId: string): ITheme {
   return base
 }
 
-/** Validate scrollback: enforce minimum of 1000, default to 5000 if unset/invalid. */
+/** Validate scrollback: enforce minimum of 1000, default to 25000 if unset/invalid.
+ * Default is generous because long agent transcripts (Claude Code multi-turn
+ * conversations, codex review runs) easily exceed 5000 rows, and "select all
+ * + copy" silently truncates when scrollback overflows.  */
 export function validScrollback(value: number | undefined): number {
-  if (value === undefined || value === null) return 5000
-  if (!Number.isFinite(value) || value < 1000) return 5000
+  if (value === undefined || value === null) return 25000
+  if (!Number.isFinite(value) || value < 1000) return 25000
   return value
 }
 
