@@ -100,9 +100,10 @@ function inRange(cp: number, ranges: ReadonlyArray<readonly [number, number]>): 
 
 /** Width in display cells for a single Unicode codepoint. */
 export function wcwidth(cp: number): 0 | 1 | 2 {
-  // Control codes and DEL: width 0 (we don't render them; cursor handling is separate)
-  if (cp < 0x20 || cp === 0x7f) return 0
-  if (cp >= 0x80 && cp < 0xa0) return 0
+  // ASCII fast-path — covers the bulk of terminal output without binary search.
+  if (cp < 0x80) return cp >= 0x20 && cp !== 0x7f ? 1 : 0
+  // C1 controls
+  if (cp < 0xa0) return 0
   if (inRange(cp, ZERO_WIDTH_RANGES)) return 0
   if (inRange(cp, WIDE_RANGES)) return 2
   return 1

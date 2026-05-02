@@ -263,6 +263,27 @@ describe('TerminalGridMirror — wide chars', () => {
   })
 })
 
+describe('TerminalGridMirror — ASCII run fast-path equivalence', () => {
+  it('produces the same result via run-coalescing as a per-char ingest', () => {
+    // A line with a tab + a long ASCII run after it. Both paths should
+    // record the tab span and end with cursor at the same column.
+    const input = 'col1\t' + 'x'.repeat(50)
+    const a = mk()
+    a.ingest(input)
+    const b = mk()
+    for (const ch of input) b.ingest(ch)
+    expect(a.getTabSpans(0)).toEqual(b.getTabSpans(0))
+  })
+
+  it('plain ASCII run that overlaps an existing tab span invalidates it', () => {
+    const m = mk()
+    m.ingest('\t') // tab span [0, 8]
+    m.ingest('\r') // cursor back to col 0
+    m.ingest('hello') // 5 chars overwriting cells [0, 5)
+    expect(m.getTabSpans(0)).toEqual([])
+  })
+})
+
 describe('TerminalGridMirror — totalRows & eviction', () => {
   it('totalRows tracks cursor row', () => {
     const m = mk()

@@ -133,11 +133,48 @@ export class TerminalGridMirror {
   }
 
   ingest(data: string): void {
-    for (let i = 0; i < data.length; ) {
+    const n = data.length
+    let i = 0
+    while (i < n) {
+      // Fast path for plain ASCII printable runs in Ground state. Most terminal
+      // output is ASCII text; avoiding a per-char codepoint dispatch + switch
+      // is the difference between O(chars) and O(runs) on the hot path.
+      if (this.parserState === S.Ground) {
+        const runLen = this.consumeAsciiPrintableRun(data, i)
+        if (runLen > 0) {
+          i += runLen
+          continue
+        }
+      }
       const cp = data.codePointAt(i) ?? 0
       this.feedCodePoint(cp)
       i += cp > 0xffff ? 2 : 1
     }
+  }
+
+  /**
+   * Consume a maximal run of ASCII printable bytes (0x20..0x7E excluding
+   * 0x7F) starting at `start`. Advances cursor + invalidates overlapping
+   * tab spans for the whole run in one shot. Returns the number of bytes
+   * consumed (0 means the run was empty / first byte was special).
+   */
+  private consumeAsciiPrintableRun(data: string, start: number): number {
+    let i = start
+    const n = data.length
+    while (i < n) {
+      const c = data.charCodeAt(i)
+      if (c < 0x20 || c >= 0x7f) break
+      i += 1
+    }
+    const runLen = i - start
+    if (runLen === 0) return 0
+    const startCol = this.cursorCol
+    if (startCol < this.colsCount) {
+      const endCol = Math.min(startCol + runLen, this.colsCount)
+      this.invalidateTabsInRange(this.cursorRow, startCol, endCol)
+      this.cursorCol = endCol
+    }
+    return runLen
   }
 
   /**
