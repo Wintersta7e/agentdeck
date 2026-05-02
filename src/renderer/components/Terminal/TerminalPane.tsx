@@ -25,6 +25,7 @@ import {
   type FitCallbacks,
   type ScrollGuardTerminal,
 } from '../../utils/terminal-utils'
+import { TerminalGridMirror } from '../../utils/terminal-grid-mirror'
 import { TerminalSearchBar } from './TerminalSearchBar'
 import './TerminalPane.css'
 
@@ -47,6 +48,7 @@ interface CachedTerminal {
   webgl: WebglAddon | null
   search: SearchAddon | null
   hiddenBuffer: string[]
+  mirror: TerminalGridMirror
 }
 const terminalCache = new Map<string, CachedTerminal>()
 
@@ -104,6 +106,7 @@ export function TerminalPane({
   const copyFlashTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const writeBufferRef = useRef<string[]>([])
   const writeRafRef = useRef(0)
+  const mirrorRef = useRef<TerminalGridMirror | null>(null)
   const applySessionStatus = useAppStore((s) => s.applySessionStatus)
   const setWorktreePath = useAppStore((s) => s.setWorktreePath)
   const clearWorktreePath = useAppStore((s) => s.clearWorktreePath)
@@ -175,6 +178,7 @@ export function TerminalPane({
       if (cached.hiddenBuffer.length > 0) {
         hiddenBufferRef.current = cached.hiddenBuffer
       }
+      mirrorRef.current = cached.mirror
       isReattached = true
       // Move the xterm DOM tree into the new container
       if (term.element) {
@@ -200,6 +204,7 @@ export function TerminalPane({
         })
     } else {
       // ── Create fresh terminal ──
+      const validatedScrollback = validScrollback(scrollbackRef.current)
       term = new Terminal({
         fontFamily: TERMINAL_FONT_FAMILY,
         fontSize: TERMINAL_DEFAULT_FONT_SIZE,
@@ -208,7 +213,12 @@ export function TerminalPane({
         cursorInactiveStyle: 'none',
         allowProposedApi: true,
         theme: getXtermTheme(document.documentElement.dataset.theme ?? ''),
-        scrollback: validScrollback(scrollbackRef.current),
+        scrollback: validatedScrollback,
+      })
+      mirrorRef.current = new TerminalGridMirror({
+        rows: term.rows,
+        cols: term.cols,
+        scrollback: validatedScrollback,
       })
 
       // Copy/paste: Ctrl+Shift+C/V or Ctrl+C (with selection) / Ctrl+V
@@ -223,7 +233,7 @@ export function TerminalPane({
         // Ctrl+Shift+C or Ctrl+C with selection → copy
         if (e.ctrlKey && e.key === 'c' && (e.shiftKey || term.hasSelection())) {
           navigator.clipboard
-            .writeText(getLogicalSelection(term))
+            .writeText(getLogicalSelection(term, (y) => mirrorRef.current?.getTabSpans(y) ?? []))
             .then(() => {
               setCopyFlash(true)
               clearTimeout(copyFlashTimerRef.current)
@@ -344,7 +354,10 @@ export function TerminalPane({
     // Build fit callbacks that close over this effect's `term` and `sessionId`
     const fitCallbacks: FitCallbacks = {
       syncViewport: () => syncViewport(term),
-      resizePty: (cols, rows) => window.agentDeck.pty.resize(sessionId, cols, rows),
+      resizePty: (cols, rows) => {
+        mirrorRef.current?.resize(rows, cols)
+        window.agentDeck.pty.resize(sessionId, cols, rows)
+      },
     }
     fitCallbacksRef.current = fitCallbacks
 
@@ -503,6 +516,10 @@ export function TerminalPane({
     // condition that causes viewport jumping during rapid agent output.
     const unsubData = window.agentDeck.pty.onData(sessionId, (data) => {
       setShowWatermark(false)
+      // Feed the cursor mirror unconditionally — it parses the same byte
+      // stream xterm sees, regardless of pane visibility, so its cell-grid
+      // model stays in lockstep across hidden→visible transitions.
+      mirrorRef.current?.ingest(data)
       if (visibleRef.current) {
         writeBufferRef.current.push(data)
         if (!writeRafRef.current) {
@@ -658,13 +675,17 @@ export function TerminalPane({
         if (term.element?.parentElement) {
           term.element.parentElement.removeChild(term.element)
         }
-        terminalCache.set(sessionId, {
-          term,
-          fit,
-          webgl: webglAddon,
-          search,
-          hiddenBuffer: hiddenBufferRef.current,
-        })
+        const cachedMirror = mirrorRef.current
+        if (cachedMirror) {
+          terminalCache.set(sessionId, {
+            term,
+            fit,
+            webgl: webglAddon,
+            search,
+            hiddenBuffer: hiddenBufferRef.current,
+            mirror: cachedMirror,
+          })
+        }
       } else {
         // Session removed → dispose everything
         // CDX-4/CDX-2: Clean up worktree resources for project sessions that exited
@@ -833,7 +854,7 @@ export function TerminalPane({
         case 'copy':
           if (term.hasSelection()) {
             navigator.clipboard
-              .writeText(getLogicalSelection(term))
+              .writeText(getLogicalSelection(term, (y) => mirrorRef.current?.getTabSpans(y) ?? []))
               .then(() => {
                 setCopyFlash(true)
                 clearTimeout(copyFlashTimerRef.current)
