@@ -78,13 +78,8 @@ export function forceKillTree(child: ChildProcess): void {
   })
 }
 
-/** Strip ANSI escape sequences and terminal control codes */
-const ANSI_STRIP_RE =
-  /\x1b\[[0-9;?]*[a-zA-Z~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[()#][A-Z0-9]|\x1b[=>NOMDEHc78]|\r/g
-
-export function stripAnsi(s: string): string {
-  return s.replace(ANSI_STRIP_RE, '')
-}
+import { stripAnsi } from '../shared/ansi'
+export { stripAnsi }
 
 /** Shell-safe single-quote escaping */
 export function shellQuote(s: string): string {
