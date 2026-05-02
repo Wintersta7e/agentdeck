@@ -192,6 +192,46 @@ export interface SelectionTerminal {
   buffer: { active: { getLine: (y: number) => SelectionBufferLine | undefined } }
 }
 
+/** A tab span: starting col (inclusive) and how many cells it fills. */
+export interface TabSpan {
+  col: number
+  width: number
+}
+
+/** Callback returning the tab spans recorded on the given xterm-buffer-y row. */
+export type RowTabSpansProvider = (yBuffer: number) => readonly TabSpan[]
+
+/**
+ * Replace cell ranges that originated from a `\t` byte with literal `\t` in
+ * the copied text. Only tab spans whose entire range is inside `[startCol,
+ * endCol)` are substituted — spans that cross either boundary stay as
+ * spaces (visual fidelity for partial-row selections).
+ */
+function substituteTabs(
+  cellText: string,
+  startCol: number,
+  endCol: number,
+  spans: readonly TabSpan[],
+): string {
+  if (spans.length === 0) return cellText
+  const fullSpans = spans.filter((s) => s.col >= startCol && s.col + s.width <= endCol)
+  if (fullSpans.length === 0) return cellText
+  let out = ''
+  let c = 0
+  while (c < cellText.length) {
+    const absCol = startCol + c
+    const span = fullSpans.find((s) => s.col === absCol)
+    if (span) {
+      out += '\t'
+      c += span.width
+    } else {
+      out += cellText[c] ?? ''
+      c += 1
+    }
+  }
+  return out
+}
+
 /**
  * Like xterm's `term.getSelection()`, but reconstructs *logical* lines from
  * the cell buffer:
@@ -202,11 +242,17 @@ export interface SelectionTerminal {
  *     space-padded cells for unset positions; copying them produces
  *     spurious right-margin spaces in the clipboard)
  *
- * Tabs are still lost — xterm renders `\t` as N space cells and the original
- * byte is gone from the buffer. Preserving tabs needs a parallel raw-stream
- * buffer, not a buffer-walker.
+ * With `tabSpansForRow`, cell ranges that originated from a `\t` byte are
+ * substituted back as `\t` in the output. The provider returns the tab
+ * spans recorded by `TerminalGridMirror` for the given xterm row. Spans
+ * that don't fit entirely inside the per-row selection (partial-row
+ * selections that cut a tab in half) are not substituted — those cells
+ * stay as spaces, matching what the user sees.
  */
-export function getLogicalSelection(term: SelectionTerminal): string {
+export function getLogicalSelection(
+  term: SelectionTerminal,
+  tabSpansForRow?: RowTabSpansProvider,
+): string {
   const sel = term.getSelectionPosition()
   if (!sel) return ''
   const buffer = term.buffer.active
@@ -224,7 +270,14 @@ export function getLogicalSelection(term: SelectionTerminal): string {
 
     const colStart = y === startY ? startX : 0
     const colEnd = y === endY ? endX : undefined
-    logical += line.translateToString(false, colStart, colEnd)
+    let cellText = line.translateToString(false, colStart, colEnd)
+
+    if (tabSpansForRow) {
+      const effectiveEndCol = colEnd ?? colStart + cellText.length
+      cellText = substituteTabs(cellText, colStart, effectiveEndCol, tabSpansForRow(y))
+    }
+
+    logical += cellText
 
     // If the *next* row is a soft-wrap continuation of this one and is part
     // of the selection, keep accumulating; otherwise this logical line ends.
