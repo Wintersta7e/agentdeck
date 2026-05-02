@@ -15,6 +15,10 @@
   position: relative;
   transition: border-color var(--duration-slow) var(--ease-default);
   border-radius: var(--r);
+  /* Belt-and-braces clipping for the WebGL terminal canvas inside — also
+     prevents one pane's renderer from painting into a sibling pane. */
+  isolation: isolate;
+  contain: paint;
 }
 
 .split-pane.focused {

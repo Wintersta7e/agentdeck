@@ -2,6 +2,13 @@
   position: relative;
   flex: 1;
   overflow: hidden;
+  /* WebGL canvases get promoted to GPU compositor layers and ignore ancestor
+     overflow: hidden unless the ancestor establishes its own stacking context
+     and paint containment. Without these, large pastes / fast scrolls can
+     visibly spill text past the pane bounds (over the status bar, sidebar,
+     or adjacent split panes). */
+  isolation: isolate;
+  contain: paint;
   background: var(--bg0);
   /* Ensure .xterm fills the full container height (xterm is content-sized by default) */
   display: flex;
