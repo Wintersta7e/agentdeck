@@ -107,7 +107,8 @@ export async function runTemplateMigration(opts: MigrationOptions): Promise<Migr
       await fs.rename(staging, opts.userRoot)
     }
     opts.store.set('appPrefs', { ...prefs, templatesMigrated: true })
-    // PREREQ B7: actually delete the legacy key (not set-to-undefined).
+    // Delete the legacy key (not set-to-undefined) so the migration is not
+    // re-run if the renderer reads the store before the prefs flush.
     if (opts.store.has('templates')) {
       opts.store.delete('templates')
     }

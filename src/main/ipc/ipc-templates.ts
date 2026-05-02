@@ -131,7 +131,7 @@ function validateRef(input: unknown, ctx: TemplateHandlerContext): TemplateRef {
 }
 
 /**
- * Register the v6.1.0 template IPC surface:
+ * Register the file-backed template IPC surface:
  *
  *   templates:listAll
  *   templates:activateProject
@@ -277,9 +277,8 @@ export function registerTemplateIpc(ctx: TemplateHandlerContext): void {
 }
 
 /**
- * PREREQ B5: compat shim for the legacy `store:getTemplates` channel, moved
- * out of `project-store.ts` to avoid double-registration at boot. Removed in
- * v6.2.0 alongside the legacy-fallback path.
+ * Compat shim for the legacy `store:getTemplates` channel, kept here (rather
+ * than in `project-store.ts`) to avoid double-registration at boot.
  */
 export function registerLegacyTemplateIpc(ctx: {
   store: TemplateStore

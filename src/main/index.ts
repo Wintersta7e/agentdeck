@@ -270,8 +270,8 @@ app
       log.warn('Worktree manager not created — WSL $HOME unknown')
     }
 
-    // PREREQ H9: `agentdeckRoot` is the parent dir; `templateUserRoot` lives
-    // underneath it. Falls back to app userData when WSL $HOME is unavailable.
+    // `agentdeckRoot` is the parent dir; `templateUserRoot` lives underneath
+    // it. Falls back to app userData when WSL $HOME is unavailable.
     const agentdeckRoot = wslHome ? `${wslHome}/.agentdeck` : app.getPath('userData')
     const templateUserRoot = `${agentdeckRoot}/templates`
 

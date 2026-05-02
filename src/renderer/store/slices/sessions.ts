@@ -16,7 +16,7 @@ import { nextApprovalState } from '../../../shared/approval-transitions'
 export interface SessionsSlice {
   sessions: Record<string, Session>
   activeSessionId: string | null
-  /** Ordered list of session ids currently open in the tab bar (v6.1.0 §7.1). */
+  /** Ordered list of session ids currently open in the tab bar. */
   openSessionIds: string[]
   addSession: (sessionId: string, projectId: string, overrides?: SessionLaunchConfig) => void
   captureSessionSnapshot: (sessionId: string, agentId: AgentType) => Promise<void>
@@ -104,8 +104,8 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
         runMode: overrides?.runMode,
         approve: overrides?.approve,
       }
-      // PREREQ H1: legacy addSession must also append to openSessionIds so
-      // SessionTabs (Phase 4) sees every session regardless of launch path.
+      // legacy addSession must also append to openSessionIds so SessionTabs
+      // sees every session regardless of launch path.
       const openSessionIds = state.openSessionIds.includes(sessionId)
         ? state.openSessionIds
         : [...state.openSessionIds, sessionId]
@@ -217,9 +217,6 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
         openSessionIds,
         paneSessions,
         activeSessionId: id,
-        // PREREQ B8: singular 'session' until Phase 8 Task 8.1 renames the
-        // ViewType atomically. Using 'sessions' here would route to the
-        // Sessions list screen instead of the live terminal.
         currentView: 'sessions' as const,
       }
     })

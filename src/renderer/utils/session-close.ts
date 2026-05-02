@@ -100,8 +100,8 @@ export async function closeSession(sessionId: string): Promise<void> {
         logWarn('worktree.releasePrimary failed', { err: String(err) })
       })
 
-    // PREREQ H3: clear worktreePaths before prune to prevent TerminalPane
-    // cleanup from re-triggering worktree ops on a dangling entry.
+    // Clear worktreePaths before prune to prevent TerminalPane cleanup from
+    // re-triggering worktree ops on a dangling entry.
     useAppStore.getState().clearWorktreePath(sessionId)
     useAppStore.getState().pruneSessionFromTabs(sessionId)
   } finally {

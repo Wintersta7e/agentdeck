@@ -65,7 +65,7 @@ export interface StoreSchema {
     theme?: string
     /** Set once when the v5.x → v6.0.0 theme rename migration has run. */
     themeMigrated?: boolean
-    /** Set once when project.path values have been normalised to WSL form (v6.1.0 PREREQ H8). */
+    /** Set once when legacy Windows-style `project.path` values have been normalised to WSL form. */
     pathsNormalized?: boolean
     /** Set once when the legacy flat `templates` key has been migrated to on-disk files. */
     templatesMigrated?: boolean
@@ -85,8 +85,8 @@ export interface StoreSchema {
 export type AppStore = Store<StoreSchema>
 
 /**
- * PREREQ H8: one-shot normalisation of legacy `project.path` values so every
- * project ends up with a WSL-style path (e.g. `/home/user/proj`, `/mnt/c/foo`).
+ * One-shot normalisation of legacy `project.path` values so every project
+ * ends up with a WSL-style path (e.g. `/home/user/proj`, `/mnt/c/foo`).
  * Guarded by `appPrefs.pathsNormalized`. On failure the flag stays false so
  * the next boot retries.
  */
@@ -154,10 +154,9 @@ export function createProjectStore(): Store<StoreSchema> {
     log.info('Ran project name migration')
   }
 
-  // PREREQ H8: one-shot normalisation of legacy Windows-style project.path
-  // values to WSL form. Idempotent via `appPrefs.pathsNormalized` — runs
-  // exactly once per install. On failure, the flag is NOT set so the next
-  // boot retries.
+  // One-shot normalisation of legacy Windows-style project.path values to WSL
+  // form. Idempotent via `appPrefs.pathsNormalized` — runs exactly once per
+  // install. On failure, the flag is NOT set so the next boot retries.
   normalizeProjectPaths(store)
 
   ipcMain.handle('store:getProjects', () => {
@@ -233,8 +232,8 @@ export function createProjectStore(): Store<StoreSchema> {
     })
   })
 
-  // PREREQ B5: `store:getTemplates` is registered in `ipc-templates.ts` only,
-  // via `registerLegacyTemplateIpc`, as a compat shim that routes to the new
+  // `store:getTemplates` is registered in `ipc-templates.ts` only, via
+  // `registerLegacyTemplateIpc`, as a compat shim that routes to the new
   // template store while migration is in progress. Do NOT re-register it here —
   // ipcMain.handle throws on duplicate channel registration.
 

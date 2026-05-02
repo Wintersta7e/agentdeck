@@ -137,7 +137,8 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
     return join(projectPath, '.agentdeck', 'templates', `${id}.json`)
   }
 
-  // PREREQ B4: Unlocked variant — callers that already hold the lock use this.
+  // In-process saves share the same mutex, so internal callers must use this
+  // unlocked variant to avoid deadlocking the per-id chain.
   async function writeTemplateUnlocked(
     file: TemplateFile,
     scope: TemplateScope,
@@ -197,16 +198,15 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
     }
   }
 
-  // KNOWN LIMITATION (v6.1.1 deferred — Section 4 of v6.1.0 codex review):
-  // There is a scan-before-watch window: files written to `dir` between the
-  // initial scan (in activateProject / bootstrap) and the watch subscription
-  // being fully armed are silently missed. Additionally, the catch-branch
-  // below swaps fs.watch for a 10s polling interval — the watcher's own
-  // runtime 'error' event (logged above) does NOT fall back to polling, so a
-  // watcher that fails mid-life will stop emitting change events until the
-  // renderer triggers a manual rescan (activateProject / bootstrap).
-  // Proper fix requires an event-replay queue during the scan and a
-  // runtime-error fallback to polling — scoped too large for v6.1.0.
+  // KNOWN LIMITATION: There is a scan-before-watch window — files written to
+  // `dir` between the initial scan (in activateProject / bootstrap) and the
+  // watch subscription being fully armed are silently missed. The catch-branch
+  // below also swaps fs.watch for a 10s polling interval; the watcher's own
+  // runtime 'error' event does NOT fall back to polling, so a watcher that
+  // fails mid-life stops emitting change events until the renderer triggers a
+  // manual rescan (activateProject / bootstrap). A proper fix needs an
+  // event-replay queue during the scan plus a runtime-error fallback to
+  // polling.
   function setupWatcher(dir: string, rescan: () => Promise<void>): () => void {
     let debounceTimer: ReturnType<typeof setTimeout> | null = null
     const trigger = (): void => {
@@ -288,10 +288,10 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
 
     save: async (draft, scope, projectId, baseMtime) => {
       const id = draft.id ?? generateTemplateId()
-      // PREREQ H6 (refined): cross-scope collision check runs INSIDE the
-      // per-id serialize so two concurrent same-id cross-scope saves can't
-      // both pass the findById check and race to write. The lookup, the
-      // file-build, and the atomic write all share the same critical section.
+      // Cross-scope collision check runs INSIDE the per-id serialize so two
+      // concurrent same-id cross-scope saves can't both pass the findById
+      // check and race to write — lookup, file-build, and write share the
+      // same critical section.
       return serialize(id, async () => {
         const existing = findById(id)
         if (existing && (existing.scope !== scope || existing.projectId !== projectId)) {
@@ -332,7 +332,6 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
       })
     },
 
-    // PREREQ B4: calls writeTemplateUnlocked from inside serialize.
     incrementUsage: async (ref) => {
       await serialize(ref.id, async () => {
         const hit = findById(ref.id)
@@ -351,7 +350,6 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
       })
     },
 
-    // PREREQ B4: calls writeTemplateUnlocked from inside serialize.
     setPinned: async (ref, pinned) => {
       await serialize(ref.id, async () => {
         const hit = findById(ref.id)
