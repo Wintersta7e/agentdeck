@@ -4,17 +4,13 @@ import { randomBytes } from 'node:crypto'
 import { app } from 'electron'
 import { createLogger } from './logger'
 import { validateWorkflow } from '../shared/workflow-utils'
+import { validateId } from '../shared/validation'
 import type { Workflow, WorkflowMeta } from '../shared/types'
 
 const log = createLogger('workflow-store')
 
 /** Validate id is safe for filesystem use — reject anything with non-alphanumeric chars */
-function safeId(id: string): string {
-  if (!id || !/^[a-zA-Z0-9_-]+$/.test(id)) {
-    throw new Error(`Invalid workflow id for filesystem use: ${id}`)
-  }
-  return id
-}
+const safeId = (id: string): string => validateId(id, 'workflow id')
 
 // M4: Cache workflows directory path
 let cachedWorkflowsDir: string | null = null

@@ -1,5 +1,6 @@
 import type { WorkflowNode, WorkflowNodeType, WorkflowEdge, ValidationResult } from './types'
 import { KNOWN_AGENT_IDS, SAFE_FLAGS_RE } from './agents'
+import { SAFE_ID_RE } from './validation'
 
 const VALID_NODE_TYPES = new Set<WorkflowNodeType>(['agent', 'shell', 'checkpoint', 'condition'])
 
@@ -10,7 +11,6 @@ const MAX_COMMAND = 10000
 const MAX_PROMPT = 10000
 const MAX_NODES = 100
 const MAX_EDGES = 500
-const SAFE_ID_RE = /^[a-zA-Z0-9_-]+$/
 const VARIABLE_NAME_RE = /^[A-Z_][A-Z0-9_]*$/
 
 /**

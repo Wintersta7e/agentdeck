@@ -4,18 +4,13 @@ import { randomBytes } from 'node:crypto'
 import { app } from 'electron'
 import { createLogger } from './logger'
 import type { WorkflowRun } from '../shared/types'
-import { SAFE_ID_RE } from './validation'
+import { validateId } from '../shared/validation'
 
 const log = createLogger('workflow-run-store')
 const MAX_RUNS_PER_WORKFLOW = 20
 
 /** Validate id is safe for filesystem use. */
-function safeId(id: string): string {
-  if (!id || !SAFE_ID_RE.test(id)) {
-    throw new Error(`Invalid id for filesystem use: ${id}`)
-  }
-  return id
-}
+const safeId = (id: string): string => validateId(id, 'workflow-run id')
 
 /** Cache the runs directory path after first creation. */
 let cachedRunsDir: string | null = null

@@ -184,15 +184,15 @@ describe('deleteRun', () => {
 
 describe('safeId validation', () => {
   it('rejects workflowId with path traversal in listRuns', async () => {
-    await expect(listRuns('../etc/passwd')).rejects.toThrow(/Invalid id/)
+    await expect(listRuns('../etc/passwd')).rejects.toThrow(/Invalid workflow-run id/)
   })
 
   it('rejects workflowId with path traversal in saveRun', async () => {
     const run = makeRun({ workflowId: '../evil' })
-    await expect(saveRun(run)).rejects.toThrow(/Invalid id/)
+    await expect(saveRun(run)).rejects.toThrow(/Invalid workflow-run id/)
   })
 
   it('rejects runId with path traversal in deleteRun', async () => {
-    await expect(deleteRun('../evil')).rejects.toThrow(/Invalid id/)
+    await expect(deleteRun('../evil')).rejects.toThrow(/Invalid workflow-run id/)
   })
 })
