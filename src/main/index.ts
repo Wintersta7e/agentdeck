@@ -32,8 +32,8 @@ function getStartupBg(): string {
     const configPath = join(app.getPath('userData'), 'config.json')
     const raw = readFileSync(configPath, 'utf-8')
     const data = JSON.parse(raw) as { appPrefs?: { theme?: string } }
-    const key = (data.appPrefs?.theme ?? '') as keyof typeof THEME_STARTUP_BG
-    return THEME_STARTUP_BG[key] ?? DEFAULT_STARTUP_BG
+    const theme = data.appPrefs?.theme ?? ''
+    return (THEME_STARTUP_BG as Record<string, string | undefined>)[theme] ?? DEFAULT_STARTUP_BG
   } catch {
     return DEFAULT_STARTUP_BG
   }
@@ -236,7 +236,7 @@ app
       wslHome = await new Promise<string>((resolve, reject) => {
         execFileCb(
           'wsl.exe',
-          // R5-02: Use '--' separator consistent with all other WSL calls
+          // Use '--' separator consistent with all other WSL calls
           ['--', 'bash', '-lc', 'echo $HOME'],
           { timeout: 5000, encoding: 'utf-8' },
           (err, stdout) => {
