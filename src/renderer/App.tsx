@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { safeWrite } from './utils/pty-write'
 import { Titlebar } from './components/Titlebar/Titlebar'
-import { TopTabBar } from './components/TopTabBar/TopTabBar'
+import { TopTabBar, TABS } from './components/TopTabBar/TopTabBar'
 import { SessionsScreen } from './screens/SessionsScreen/SessionsScreen'
 import { SessionHero } from './components/SessionHero/SessionHero'
 import { NewSessionScreen } from './screens/NewSessionScreen/NewSessionScreen'
@@ -25,7 +25,7 @@ import { PlaceholderScreen } from './components/PlaceholderScreen/PlaceholderScr
 import { useAppStore } from './store/appStore'
 import { useProjects } from './hooks/useProjects'
 import { getActiveProjectId } from './selectors/active-project'
-import type { ActivityEvent, AgentConfig, Project, ViewType, WorkflowEvent } from '../shared/types'
+import type { ActivityEvent, AgentConfig, Project, WorkflowEvent } from '../shared/types'
 import './App.css'
 
 const WorkflowEditor = lazy(() => import('./screens/WorkflowEditor/WorkflowEditor'))
@@ -309,19 +309,11 @@ export function App(): React.JSX.Element {
         useAppStore.getState().setPaneLayout(Number(e.key) as 1 | 2 | 3)
         return
       }
-      // Alt+1..8 — jump to top-level tab. Matches TopTabBar order exactly.
+      // Alt+1..N — jump to the nth top-level tab. Derived from TopTabBar's
+      // TABS list so the shortcut order tracks the tab order automatically.
       if (e.altKey && !e.ctrlKey && !e.shiftKey) {
-        const TAB_MAP: Record<string, ViewType> = {
-          '1': 'home',
-          '2': 'sessions',
-          '3': 'projects',
-          '4': 'agents',
-          '5': 'workflows',
-          '6': 'history',
-          '7': 'alerts',
-          '8': 'app-settings',
-        }
-        const target = TAB_MAP[e.key]
+        const idx = Number(e.key) - 1
+        const target = Number.isInteger(idx) && idx >= 0 ? TABS[idx]?.view : undefined
         if (target) {
           e.preventDefault()
           useAppStore.getState().setTab(target)

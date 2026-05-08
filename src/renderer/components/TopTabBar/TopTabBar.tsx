@@ -28,7 +28,7 @@ interface TabDef {
  * (session detail, project detail, diff review, wizard, etc.) render
  * under their owning tab via tabParams.
  */
-const TABS: readonly TabDef[] = [
+export const TABS: readonly TabDef[] = [
   { id: 'home', label: 'Home', view: 'home', shortcut: 'Alt+1' },
   { id: 'sessions', label: 'Sessions', view: 'sessions', shortcut: 'Alt+2' },
   { id: 'projects', label: 'Projects', view: 'projects', shortcut: 'Alt+3' },

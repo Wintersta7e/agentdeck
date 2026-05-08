@@ -1,5 +1,7 @@
+import { THEME_IDS, type ThemeId } from '../../../shared/themes'
+
 export interface ThemeOption {
-  id: string
+  id: ThemeId
   label: string
   accent: string
 }
@@ -9,14 +11,21 @@ export interface ThemeGroup {
   themes: ThemeOption[]
 }
 
+/**
+ * UI metadata for each theme. Keyed by ThemeId so adding a theme to
+ * THEME_IDS in shared/themes triggers a TypeScript error here until the
+ * label/accent pair is added.
+ */
+const THEME_METADATA: Record<ThemeId, { label: string; accent: string }> = {
+  '': { label: 'Tungsten', accent: '#f5a623' },
+  phosphor: { label: 'Phosphor', accent: '#4aff90' },
+  dusk: { label: 'Dusk', accent: '#c49cff' },
+}
+
 export const THEME_GROUPS: ThemeGroup[] = [
   {
     label: 'Themes',
-    themes: [
-      { id: '', label: 'Tungsten', accent: '#f5a623' },
-      { id: 'phosphor', label: 'Phosphor', accent: '#4aff90' },
-      { id: 'dusk', label: 'Dusk', accent: '#c49cff' },
-    ],
+    themes: THEME_IDS.map((id) => ({ id, ...THEME_METADATA[id] })),
   },
 ]
 
