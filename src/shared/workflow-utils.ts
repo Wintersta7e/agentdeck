@@ -1,8 +1,13 @@
 import type { WorkflowNode, WorkflowNodeType, WorkflowEdge, ValidationResult } from './types'
-import { KNOWN_AGENT_IDS, SAFE_FLAGS_RE } from './agents'
+import { AGENT_SUPPORTS_SKILLS_MAP, KNOWN_AGENT_IDS, SAFE_FLAGS_RE } from './agents'
 import { SAFE_ID_RE } from './validation'
 
 const VALID_NODE_TYPES = new Set<WorkflowNodeType>(['agent', 'shell', 'checkpoint', 'condition'])
+
+/** Node types that may carry retryCount / retryDelayMs. Adding a new node
+ *  type that supports retry needs to be added here too — the validator's
+ *  explicit allowlist surfaces the decision instead of inheriting it. */
+const RETRY_ALLOWED_TYPES = new Set<WorkflowNodeType>(['agent', 'shell'])
 
 /** Max field lengths for workflow validation */
 const MAX_NAME = 200
@@ -99,11 +104,10 @@ export function validateWorkflow(w: unknown): ValidationResult {
       errors.push('Node timeout must be between 1000ms and 86400000ms (24h)')
     }
 
-    // ── Retry validation (agent/shell only) ──────────────────
+    // ── Retry validation (allowlist over node types) ─────────
     if (n.retryCount !== undefined) {
-      const nodeType = n.type as string
-      if (nodeType === 'checkpoint' || nodeType === 'condition') {
-        errors.push(`retryCount not allowed on ${nodeType} node "${String(n.id)}"`)
+      if (!RETRY_ALLOWED_TYPES.has(n.type as WorkflowNodeType)) {
+        errors.push(`retryCount not allowed on ${String(n.type)} node "${String(n.id)}"`)
       } else if (
         typeof n.retryCount !== 'number' ||
         !Number.isInteger(n.retryCount) ||
@@ -124,13 +128,13 @@ export function validateWorkflow(w: unknown): ValidationResult {
       }
     }
 
-    // ── Skill validation (Codex-only) ─────────────────────────
+    // ── Skill validation (registry-driven supportsSkills check) ─
     if (n.skillId !== undefined && typeof n.skillId === 'string' && n.skillId.length > 0) {
       if (n.type !== 'agent') {
         warnings.push(`Node "${String(n.id)}": skillId is set but node is not an agent node`)
-      } else if (typeof n.agent === 'string' && n.agent !== 'codex') {
+      } else if (typeof n.agent === 'string' && !AGENT_SUPPORTS_SKILLS_MAP[n.agent]) {
         warnings.push(
-          `Node "${String(n.id)}": skillId is set but agent is not codex (agent="${String(n.agent)}")`,
+          `Node "${String(n.id)}": skillId is set but agent ${String(n.agent)} does not declare supportsSkills`,
         )
       }
     }

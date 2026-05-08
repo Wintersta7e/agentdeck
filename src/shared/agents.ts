@@ -67,6 +67,7 @@ export const AGENTS = [
     engineFlags: ['--skip-git-repo-check'],
     colorVar: '--agent-codex',
     short: 'CX',
+    supportsSkills: true,
   },
   {
     id: 'aider',
@@ -185,6 +186,17 @@ export const AGENT_COLOR_VAR_MAP: Readonly<Record<string, string>> = Object.free
 /** Agent ID → 2-letter mnemonic for compact UI tiles */
 export const AGENT_SHORT_MAP: Readonly<Record<string, string>> = Object.freeze(
   Object.fromEntries(AGENTS.map((a) => [a.id, a.short])),
+)
+
+/** Agent ID → whether the agent supports the Codex-style skill prefix mechanism */
+export const AGENT_SUPPORTS_SKILLS_MAP: Readonly<Record<string, boolean>> = Object.freeze(
+  Object.fromEntries(AGENTS.map((a) => [a.id, 'supportsSkills' in a && a.supportsSkills === true])),
+)
+
+/** O(1) lookup map keyed by agent id. Lives here (not in renderer utils) so
+ *  main-process code can use it without re-implementing AGENTS.find scans. */
+export const AGENT_BY_ID: ReadonlyMap<AgentId, (typeof AGENTS)[number]> = new Map(
+  AGENTS.map((a) => [a.id, a] as const),
 )
 
 /**

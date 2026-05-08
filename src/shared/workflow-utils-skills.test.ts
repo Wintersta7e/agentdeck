@@ -27,7 +27,11 @@ describe('validateWorkflow — skillId warnings', () => {
     const wf = makeMinimalWorkflow({ agent: 'claude-code', skillId: 'global:lint-fix' })
     const result = validateWorkflow(wf)
     expect(result.errors).toHaveLength(0)
-    expect(result.warnings.some((w) => w.includes('skillId') && w.includes('not codex'))).toBe(true)
+    expect(
+      result.warnings.some(
+        (w) => w.includes('skillId') && w.includes('does not declare supportsSkills'),
+      ),
+    ).toBe(true)
   })
 
   it('does not warn when skillId is set on codex agent node', () => {

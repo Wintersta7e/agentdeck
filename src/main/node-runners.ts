@@ -13,6 +13,8 @@ import {
   AGENT_PRINT_FLAGS_MAP,
   AGENT_CD_FLAG_MAP,
   AGENT_ENGINE_FLAGS_MAP,
+  AGENT_SUPPORTS_SKILLS_MAP,
+  KNOWN_AGENT_IDS,
   SAFE_FLAGS_RE,
 } from '../shared/agents'
 import {
@@ -60,11 +62,12 @@ import { shellQuote } from './wsl-exec'
 // ── Skill prefix extraction ──────────────────────────────────────────
 
 /**
- * Extract the Codex skill invocation prefix from a compound skillId.
- * Returns the prefix string (e.g. "$lint-fix ") or null if invalid/not applicable.
+ * Extract a skill invocation prefix from a compound skillId. Returns the
+ * prefix string (e.g. "$lint-fix ") or null if the skillId is missing,
+ * malformed, or the agent doesn't declare `supportsSkills` in the registry.
  */
 export function extractSkillPrefix(skillId: string | undefined, agentName: string): string | null {
-  if (!skillId || agentName !== 'codex') return null
+  if (!skillId || !AGENT_SUPPORTS_SKILLS_MAP[agentName]) return null
   const name = skillId.split(':').pop() ?? ''
   if (SAFE_SKILL_RE.test(name) && name.length > 0) return `$${name} `
   return null
@@ -114,12 +117,20 @@ export function runAgentNode(
     if (contextSummary) promptParts.push(`Context from previous steps:\n${contextSummary}`)
     let prompt = promptParts.join('\n\n')
 
-    // Prepend Codex skill invocation if skillId is set (codex-only feature)
     const agentName = node.agent ?? 'claude-code'
+    if (!KNOWN_AGENT_IDS.has(agentName)) {
+      // Loud-fail on unknown agents instead of falling through to '--print'
+      // and AGENT_BINARY_MAP[id] ?? id — that pair would silently invoke
+      // whatever string the renderer sent as a binary name.
+      settleReject(new Error(`Unknown agent: ${agentName}`))
+      return
+    }
+
+    // Prepend skill invocation prefix if the agent declares supportsSkills.
     const skillPrefix = extractSkillPrefix(node.skillId, agentName)
     if (skillPrefix) {
       prompt = skillPrefix + prompt
-    } else if (node.skillId && agentName === 'codex') {
+    } else if (node.skillId && AGENT_SUPPORTS_SKILLS_MAP[agentName]) {
       // Skill name failed validation
       deps.push({
         type: 'node:output',
