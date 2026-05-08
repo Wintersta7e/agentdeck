@@ -1,4 +1,3 @@
-import { execFile } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 import { getDefaultDistroAsync, wslPathToWindows, withUncFallback } from './wsl-utils'
 import { createLogger } from './logger'
@@ -11,23 +10,10 @@ const homeCache = new Map<string, string>()
 const claudeCfgCache = new Map<string, string>()
 const codexHomeCache = new Map<string, string>()
 
-function wslExec(cmd: string, distro: string): Promise<string | null> {
-  return new Promise((resolve) => {
-    execFile(
-      'wsl.exe',
-      ['-d', distro, '--', 'bash', '-lc', cmd],
-      { timeout: WSL_TIMEOUT_MS, encoding: 'utf-8' },
-      (err, stdout) => {
-        if (err) {
-          log.debug('wslExec failed', { cmd: cmd.slice(0, 80), err: String(err) })
-          resolve(null)
-          return
-        }
-        resolve(stdout)
-      },
-    )
-  })
-}
+import { wslTry } from './wsl-exec'
+
+const wslExec = (cmd: string, distro: string): Promise<string | null> =>
+  wslTry(cmd, { distro, timeout: WSL_TIMEOUT_MS, logLevelOnError: 'debug' })
 
 export async function getWslHome(): Promise<string | null> {
   const distro = await getDefaultDistroAsync()

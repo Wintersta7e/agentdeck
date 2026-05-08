@@ -1,9 +1,7 @@
-import { execFile } from 'child_process'
 import type { BrowserWindow } from 'electron'
 import { AGENTS, AGENT_BINARY_MAP } from '../shared/agents'
 import { createLogger } from './logger'
-import { NODE_INIT } from './wsl-utils'
-import { shellQuote } from './node-runners'
+import { wslRun, shellQuote } from './wsl-exec'
 
 const log = createLogger('agent-updater')
 
@@ -27,30 +25,12 @@ export interface UpdateResult {
 /**
  * Run a command inside WSL via bash login shell with nvm/fnm PATH init.
  * Returns stdout on success. Tolerates stderr noise (e.g. fnm warnings)
- * — only rejects if exit code is non-zero AND stdout is empty.
+ * — only rejects if exit code is non-zero AND stdout is empty. Trims
+ * stdout to match the previous helper's contract.
  */
-function runWslCmd(cmd: string, timeout = 15000): Promise<string> {
-  return new Promise((resolve, reject) => {
-    execFile(
-      'wsl.exe',
-      ['--', 'bash', '-lc', NODE_INIT + cmd],
-      { timeout },
-      (err, stdout, stderr) => {
-        const out = stdout?.trim() ?? ''
-        if (err) {
-          // If we got usable stdout despite a non-zero exit, return it
-          if (out) {
-            log.debug(`Command had stderr but produced output`, { cmd, stderr: stderr?.trim() })
-            resolve(out)
-            return
-          }
-          reject(new Error(stderr?.trim() || err.message))
-          return
-        }
-        resolve(out)
-      },
-    )
-  })
+async function runWslCmd(cmd: string, timeout = 15000): Promise<string> {
+  const out = await wslRun(cmd, { timeout, prefixNodeInit: true, fallbackStderrAsOutput: true })
+  return out.trim()
 }
 
 /**

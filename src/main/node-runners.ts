@@ -54,11 +54,8 @@ export function forceKillTree(child: ChildProcess): void {
 
 import { stripAnsi } from '../shared/ansi'
 export { stripAnsi }
-
-/** Shell-safe single-quote escaping */
-export function shellQuote(s: string): string {
-  return "'" + s.replace(/'/g, "'\\''") + "'"
-}
+export { shellQuote } from './wsl-exec'
+import { shellQuote } from './wsl-exec'
 
 // ── Skill prefix extraction ──────────────────────────────────────────
 

@@ -7,7 +7,6 @@
  * cumulative totals to the renderer over IPC.
  */
 import type { BrowserWindow } from 'electron'
-import { execFile } from 'child_process'
 import { toWslPath } from './wsl-utils'
 import { createLogger } from './logger'
 import type { AgentEnvContext, LogAdapter, TokenUsage } from './log-adapters'
@@ -69,24 +68,10 @@ export interface CostRecorder {
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
-/** Single-quote a path for safe use inside bash -lc commands. */
-function sq(s: string): string {
-  return "'" + s.replace(/'/g, "'\\''") + "'"
-}
+import { wslRun, shellQuote as sq } from './wsl-exec'
 
-/**
- * Run a command inside WSL bash and return stdout.
- * Resolves with stdout on success; rejects on error.
- */
-function wslExec(cmd: string): Promise<string> {
-  return new Promise<string>((resolve, reject) => {
-    // R2-20: Use '--' separator consistent with all other WSL exec calls in the codebase
-    execFile('wsl.exe', ['--', 'bash', '-lc', cmd], { timeout: WSL_TIMEOUT_MS }, (err, stdout) => {
-      if (err) reject(err)
-      else resolve(stdout)
-    })
-  })
-}
+/** Run a command inside WSL bash; rejects on error. */
+const wslExec = (cmd: string): Promise<string> => wslRun(cmd, { timeout: WSL_TIMEOUT_MS })
 
 // ── Factory ─────────────────────────────────────────────────────────
 
