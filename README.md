@@ -6,7 +6,7 @@ A desktop terminal manager for WSL AI coding agents. Launch, manage, and orchest
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript)
 ![License: Elastic-2.0](https://img.shields.io/badge/License-Elastic--2.0-blue.svg)
-![Tests](https://img.shields.io/badge/Tests-1113_passing-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-1181_passing-brightgreen)
 ![CI](https://github.com/Wintersta7e/agentdeck/actions/workflows/ci.yml/badge.svg?branch=main)
 
 ## Why AgentDeck?
@@ -170,7 +170,7 @@ npm run dev
 # Build for production (validates TypeScript)
 npm run build
 
-# Run tests (1113 tests)
+# Run tests (1181 tests)
 npm test
 
 # Lint code (zero-warning policy)
@@ -187,43 +187,89 @@ npm run format
 npm run dist
 ```
 
-Output: `dist/AgentDeck-{version}-portable.exe` (~97 MB)
+Output: `dist/AgentDeck-{version}-portable.exe` (~93 MB)
 
 ## Project Structure
 
 ```
 src/
-├── main/                    # Electron main process
-│   ├── index.ts             # App lifecycle, IPC handler registration
-│   ├── ipc/                 # IPC modules (pty, window, agents, projects, workflows,
-│   │                        # skills, worktree, cost, home, templates, env, files, utils)
-│   ├── pty-manager.ts       # node-pty: spawn, resize, kill, activity parsing
-│   ├── workflow-engine.ts   # Edge-activation scheduler DAG execution
-│   ├── edge-scheduler.ts    # Pure scheduler: ready queue, branching, skip, loop reset
-│   ├── variable-substitution.ts # {{VAR}} replacement in workflow nodes
-│   ├── workflow-run-store.ts # Execution history persistence
-│   ├── agent-updater.ts     # Agent version checking and updating via WSL
-│   ├── log-adapters.ts      # Claude + Codex JSONL cost/token parsing
-│   ├── cost-tracker.ts      # Log file discovery, tailing, and IPC push
-│   ├── git-port.ts          # Git command abstraction (WSL)
-│   ├── worktree-manager.ts  # Per-session git worktree lifecycle
-│   └── project-store.ts     # electron-store: CRUD + safeStorage for API keys
+├── main/                                  # Electron main process (Node.js)
+│   ├── index.ts                           # App lifecycle, BrowserWindow, IPC wiring
+│   ├── ipc/                               # 14 IPC modules: pty, window, agents,
+│   │                                      # projects, workflows, skills, worktree,
+│   │                                      # cost, home, templates, env, files, utils
+│   ├── pty-manager.ts / pty-bus.ts        # node-pty spawn/resize/kill + event routing
+│   ├── workflow-engine.ts                 # Edge-activation scheduler DAG execution
+│   ├── edge-scheduler.ts                  # Pure scheduler — ready queue, branching, loops
+│   ├── node-runners.ts                    # runAgentNode / runShellNode CLI invocation
+│   ├── variable-substitution.ts           # {{VAR}} replacement in workflow nodes
+│   ├── workflow-store.ts                  # Workflow CRUD with atomic writes
+│   ├── workflow-run-store.ts              # Per-run execution history
+│   ├── workflow-history.ts                # Run summaries + error tails
+│   ├── workflow-seeds.ts                  # Built-in workflow blueprints
+│   ├── project-store.ts                   # electron-store: projects + roles + appPrefs
+│   │                                      # (safeStorage for API keys; versioned migrations)
+│   ├── store-seeds.ts                     # Seed templates and roles
+│   ├── template-{store,legacy-store,
+│   │            migration,id}.ts          # Disk-backed template store + legacy compat shim
+│   ├── log-adapters.ts                    # Per-agent JSONL parsers (Claude + Codex)
+│   ├── cost-tracker.ts                    # Log discovery, tailing, IPC push
+│   ├── cost-history.ts                    # Daily cost rollups (versioned disk cache)
+│   ├── git-port.ts / git-status.ts        # Git over WSL + per-project state cache
+│   ├── worktree-manager.ts                # Per-session git worktree lifecycle
+│   ├── review-tracker.ts                  # Unreviewed commit tracking
+│   ├── agent-detector.ts                  # Agent binary discovery via WSL PATH
+│   ├── agent-updater.ts                   # Version check + npm update with rollback
+│   ├── agent-env-*.ts                     # Per-agent config-snapshot resolvers
+│   ├── active-model-detectors/            # Per-agent active-model detection (7 detectors)
+│   ├── skill-scanner.ts                   # Codex skill discovery
+│   ├── detect-stack.ts                    # Project stack detection
+│   ├── files-{lister,gitignore}.ts        # File-browser support for the Files tab
+│   ├── wsl-exec.ts                        # wslRun / wslTry — single helper for
+│   │                                      # `wsl.exe -- bash -lc <cmd>` invocations
+│   ├── wsl-paths.ts / wsl-utils.ts        # Path resolution, distro detection, UNC fallback
+│   ├── validation.ts                      # Re-exports SAFE_ID_RE / validateId from shared
+│   ├── fs-atomic.ts                       # Atomic write-then-rename
+│   └── logger.ts                          # Levelled file logger
 ├── preload/
-│   └── index.ts             # contextBridge: safe IPC surface (window.agentDeck)
-├── renderer/                # React app (Vite)
-│   ├── components/          # Titlebar, SessionTabs, SessionHeader, SplitView,
-│   │                        # CommandPalette, HomeScreen, StatusBar, Terminal,
-│   │                        # RightPanel, etc.
-│   ├── screens/             # WorkflowEditor, ProjectSettings, TemplateEditor
-│   ├── store/               # Zustand store (7 slices: sessions, ui, projects, workflows, templates, notifications, home)
-│   ├── hooks/               # useProjects, usePty, useRolesMap, useMidnight, useSessionTimeline, useCostHistory
-│   └── styles/              # tokens.css (design system), global.css
-└── shared/
-    ├── agents.ts            # Agent registry (7 agents with metadata)
-    ├── types.ts             # Shared TypeScript interfaces
-    ├── constants.ts         # Named constants (MAX_PANE_COUNT, etc.)
-    └── workflow-utils.ts    # Workflow validation + topological sort
+│   └── index.ts                           # contextBridge → window.agentDeck (~65 channels)
+├── renderer/                              # React app (electron-vite)
+│   ├── main.tsx / App.tsx                 # React root, view routing, global keymap
+│   ├── components/                        # Titlebar, TopTabBar, SessionTabs, SessionHeader,
+│   │                                      # SplitView, Terminal, RightPanel, HomeScreen,
+│   │                                      # CommandPalette, NotificationToast, ...
+│   ├── screens/                           # WorkflowEditor, NewSessionScreen,
+│   │                                      # DiffReviewScreen, plus per-tab screens
+│   │                                      # (Sessions/Projects/Agents/Workflows/...)
+│   ├── store/
+│   │   ├── appStore.ts                    # Zustand root composing 7 slices
+│   │   └── slices/                        # sessions, ui, projects, workflows,
+│   │                                      # templates, notifications, home
+│   ├── selectors/                         # Cross-slice computed selectors
+│   ├── hooks/                             # useProjects, usePty, useRolesMap,
+│   │                                      # useSessionTimeline, useCostHistory, ...
+│   ├── utils/                             # agent-ui, themeObserver, pty-write, ipcErrorHandler
+│   └── styles/                            # tokens.css (design system), global.css, themes
+└── shared/                                # Shared across main / preload / renderer
+    │                                      # (no Node-only or renderer-only deps)
+    ├── agents.ts                          # Canonical 7-agent registry — single source for
+    │                                      # CLI flags, color, mnemonic, supportsSkills,
+    │                                      # plus derived AGENT_*_MAP exports
+    ├── agent-helpers.ts                   # Agent utility functions
+    ├── types.ts                           # Domain types (Session, Workflow, Project, ...)
+    ├── workflow-utils.ts                  # validateWorkflow + topoSort
+    ├── validation.ts                      # SAFE_ID_RE + validateId
+    ├── themes.ts                          # THEME_IDS + THEME_STARTUP_BG (synced with tokens.css)
+    ├── constants.ts                       # Named constants (caps, intervals, timeouts)
+    ├── context-{types,window}.ts          # Effective-context resolution types + helpers
+    ├── models.ts / model-heuristic.ts /
+    │   model-id-normalize.ts              # Per-CLI model lists, context-window heuristics
+    ├── ansi.ts                            # ANSI escape stripping
+    ├── approval-transitions.ts            # Session approval-state machine
+    └── date-keys.ts                       # Local-time date keying for cost rollups
 ```
+
+`WorkflowNode` is a discriminated union — `AgentNode | ShellNode | CheckpointNode | ConditionNode` — so the engine dispatch and validator are exhaustive at compile time. Every IPC handler that accepts a caller-supplied identifier validates through `shared/validation.validateId`. New themes, agents, and workflow node types are added by extending their respective registries; consumers read derived maps and the type system surfaces missed updates.
 
 ## Tech Stack
 
@@ -237,7 +283,7 @@ src/
 | [node-pty](https://github.com/microsoft/node-pty) | Pseudo-terminal (WSL sessions) |
 | [Zustand](https://zustand-demo.pmnd.rs) | State management |
 | [React Flow](https://reactflow.dev) | Visual workflow node editor |
-| [Vitest 4](https://vitest.dev) | Testing framework (1113 tests) |
+| [Vitest 4](https://vitest.dev) | Testing framework (1181 tests) |
 | [ESLint 9](https://eslint.org) | Linting (flat config, zero-warning policy) |
 
 ## Documentation
