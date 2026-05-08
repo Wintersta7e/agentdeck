@@ -8,6 +8,7 @@ import { detectStack } from '../detect-stack'
 import { scanSkillDirectory, invalidateProjectCache } from '../skill-scanner'
 import { getDefaultDistroAsync, wslPathToWindows, withUncFallback } from '../wsl-utils'
 import { createLogger } from '../logger'
+import { SAFE_ID_RE } from '../validation'
 
 const log = createLogger('ipc-projects')
 
@@ -102,8 +103,7 @@ export function registerProjectHandlers(
 
   /* ── Project Metadata Refresh ──────────────────────────────────── */
   ipcMain.handle('projects:refreshMeta', async (_, projectId: string) => {
-    // R4-07: Validate with SAFE_ID_RE consistent with all other handlers
-    if (typeof projectId !== 'string' || !/^[a-zA-Z0-9_-]+$/.test(projectId)) {
+    if (typeof projectId !== 'string' || !SAFE_ID_RE.test(projectId)) {
       throw new Error('projects:refreshMeta requires a valid projectId')
     }
 
