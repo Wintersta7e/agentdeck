@@ -6,43 +6,44 @@ import { validateId } from '../validation'
  * Worktree IPC handlers: acquire, inspect, discard, keep, releasePrimary.
  *
  * Uses a getter for worktreeManager because the instance is created after module load.
- * IDs validated through the canonical validateId helper (length-bounded).
+ * IDs are validated through `validateId`, which returns the validated string —
+ * capture it and pass it on rather than using `as string` casts on the raw input.
  */
 export function registerWorktreeHandlers(getWorktreeManager: () => WorktreeManager | null): void {
   ipcMain.handle('worktree:acquire', async (_, projectId: unknown, sessionId: unknown) => {
-    validateId(projectId, 'projectId')
-    validateId(sessionId, 'sessionId')
+    const pid = validateId(projectId, 'projectId')
+    const sid = validateId(sessionId, 'sessionId')
     const mgr = getWorktreeManager()
     if (!mgr) throw new Error('WorktreeManager not initialized')
-    return mgr.acquire(projectId as string, sessionId as string)
+    return mgr.acquire(pid, sid)
   })
 
   ipcMain.handle('worktree:inspect', async (_, sessionId: unknown) => {
-    validateId(sessionId, 'sessionId')
+    const sid = validateId(sessionId, 'sessionId')
     const mgr = getWorktreeManager()
     if (!mgr) throw new Error('WorktreeManager not initialized')
-    return mgr.inspect(sessionId as string)
+    return mgr.inspect(sid)
   })
 
   ipcMain.handle('worktree:discard', async (_, sessionId: unknown) => {
-    validateId(sessionId, 'sessionId')
+    const sid = validateId(sessionId, 'sessionId')
     const mgr = getWorktreeManager()
     if (!mgr) throw new Error('WorktreeManager not initialized')
-    return mgr.discard(sessionId as string)
+    return mgr.discard(sid)
   })
 
   ipcMain.handle('worktree:keep', async (_, sessionId: unknown) => {
-    validateId(sessionId, 'sessionId')
+    const sid = validateId(sessionId, 'sessionId')
     const mgr = getWorktreeManager()
     if (!mgr) throw new Error('WorktreeManager not initialized')
-    return mgr.keep(sessionId as string)
+    return mgr.keep(sid)
   })
 
   ipcMain.handle('worktree:releasePrimary', async (_, projectId: unknown, sessionId: unknown) => {
-    validateId(projectId, 'projectId')
-    validateId(sessionId, 'sessionId')
+    const pid = validateId(projectId, 'projectId')
+    const sid = validateId(sessionId, 'sessionId')
     const mgr = getWorktreeManager()
     if (!mgr) throw new Error('WorktreeManager not initialized')
-    mgr.releasePrimary(projectId as string, sessionId as string)
+    mgr.releasePrimary(pid, sid)
   })
 }

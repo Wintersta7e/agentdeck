@@ -188,9 +188,12 @@ export const AGENT_SHORT_MAP: Readonly<Record<string, string>> = Object.freeze(
   Object.fromEntries(AGENTS.map((a) => [a.id, a.short])),
 )
 
-/** Agent ID → whether the agent supports the Codex-style skill prefix mechanism */
+/** Agent ID → whether the agent supports the Codex-style skill prefix
+ *  mechanism. Presence of the `supportsSkills` field implies `true`; the
+ *  field is never declared as `false`, so a future agent that needs to
+ *  *opt out* of an inherited default would need a different shape. */
 export const AGENT_SUPPORTS_SKILLS_MAP: Readonly<Record<string, boolean>> = Object.freeze(
-  Object.fromEntries(AGENTS.map((a) => [a.id, 'supportsSkills' in a && a.supportsSkills === true])),
+  Object.fromEntries(AGENTS.map((a) => [a.id, 'supportsSkills' in a])),
 )
 
 /** O(1) lookup map keyed by agent id. Lives here (not in renderer utils) so
