@@ -1,10 +1,10 @@
 /**
- * IPC handler barrel — 36 channels registered here via registerXxxHandlers().
+ * IPC handler barrel — channels registered here via registerXxxHandlers().
  *
- * NOTE: 9 additional channels (store:getProjects, store:saveProject, etc.)
- * are self-registered inside createProjectStore() in project-store.ts.
- * Do NOT re-register those channels here — ipcMain.handle throws on
- * duplicate channel registration.
+ * The `store:*` channels are registered separately by `registerStoreHandlers`
+ * exported from `project-store.ts`. createProjectStore is now pure data
+ * access — wire `registerStoreHandlers(store)` in main/index.ts after
+ * createProjectStore returns.
  */
 export { registerPtyHandlers } from './ipc-pty'
 export { registerWindowHandlers } from './ipc-window'

@@ -159,6 +159,18 @@ export function createProjectStore(): Store<StoreSchema> {
   // install. On failure, the flag is NOT set so the next boot retries.
   normalizeProjectPaths(store)
 
+  return store
+}
+
+/**
+ * Register store-related IPC handlers (`store:*`) on the global ipcMain.
+ *
+ * Split out from createProjectStore so the data-access layer is testable
+ * without triggering IPC side effects. Call this exactly once at startup
+ * after the BrowserWindow is constructed and createProjectStore has
+ * returned.
+ */
+export function registerStoreHandlers(store: AppStore): void {
   ipcMain.handle('store:getProjects', () => {
     const projects = store.get('projects')
 
@@ -285,8 +297,6 @@ export function createProjectStore(): Store<StoreSchema> {
       store.set('roles', roles)
     })
   })
-
-  return store
 }
 
 /** Read roles directly from the store (for use in main process only). */

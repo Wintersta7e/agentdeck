@@ -3,7 +3,7 @@ import { join } from 'path'
 import { readFileSync } from 'fs'
 import { THEME_STARTUP_BG, DEFAULT_STARTUP_BG } from '../shared/themes'
 import { createPtyManager, type PtyManager } from './pty-manager'
-import { createProjectStore, type AppStore } from './project-store'
+import { createProjectStore, registerStoreHandlers, type AppStore } from './project-store'
 import { seedTemplates, seedRoles, seedTemplateData } from './store-seeds'
 import { toWslPath } from './wsl-utils'
 import { createTemplateStore, type TemplateStore } from './template-store'
@@ -223,6 +223,7 @@ app
     log.info('App ready')
 
     appStore = createProjectStore()
+    registerStoreHandlers(appStore)
     seedTemplates(appStore)
     seedRoles(appStore)
     await seedWorkflows(appStore)

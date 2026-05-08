@@ -47,7 +47,15 @@ vi.mock('electron-store', () => {
   return { default: MockStore }
 })
 
-import { createProjectStore } from './project-store'
+import { createProjectStore, registerStoreHandlers } from './project-store'
+
+/** Test helper: createProjectStore + registerStoreHandlers in one call.
+ *  Mirrors the production wiring in main/index.ts. */
+function setupStore(): ReturnType<typeof createProjectStore> {
+  const s = createProjectStore()
+  registerStoreHandlers(s)
+  return s
+}
 import { seedTemplates, seedRoles } from './store-seeds'
 import { ipcMain, safeStorage } from 'electron'
 
@@ -69,7 +77,7 @@ beforeEach(() => {
 
 describe('createProjectStore', () => {
   it('registers IPC handlers', () => {
-    createProjectStore()
+    setupStore()
     expect(ipcMain.handle).toHaveBeenCalledWith('store:getProjects', expect.any(Function))
     expect(ipcMain.handle).toHaveBeenCalledWith('store:saveProject', expect.any(Function))
     expect(ipcMain.handle).toHaveBeenCalledWith('store:deleteProject', expect.any(Function))
@@ -82,13 +90,13 @@ describe('createProjectStore', () => {
   })
 
   it('returns empty projects list initially', async () => {
-    createProjectStore()
+    setupStore()
     const projects = await callHandler('store:getProjects')
     expect(projects).toEqual([])
   })
 
   it('saves and retrieves a project', async () => {
-    createProjectStore()
+    setupStore()
     const project: Partial<Project> = { name: 'Test', path: '/home/test' }
     const saved = (await callHandler('store:saveProject', project)) as Project
     expect(saved.id).toBeTruthy()
@@ -100,7 +108,7 @@ describe('createProjectStore', () => {
   })
 
   it('updates an existing project', async () => {
-    createProjectStore()
+    setupStore()
     const saved = (await callHandler('store:saveProject', {
       name: 'Original',
       path: '/home/test',
@@ -113,7 +121,7 @@ describe('createProjectStore', () => {
   })
 
   it('deletes a project', async () => {
-    createProjectStore()
+    setupStore()
     const saved = (await callHandler('store:saveProject', {
       name: 'ToDelete',
       path: '/tmp',
@@ -125,12 +133,12 @@ describe('createProjectStore', () => {
   })
 
   it('rejects null project on save', async () => {
-    createProjectStore()
+    setupStore()
     await expect(callHandler('store:saveProject', null)).rejects.toThrow('non-null object')
   })
 
   it('encrypts secret env vars on save', async () => {
-    createProjectStore()
+    setupStore()
     const envVars: EnvVar[] = [
       { id: 'e1', key: 'API_KEY', value: 'secret123', secret: true },
       { id: 'e2', key: 'DEBUG', value: 'true', secret: false },
@@ -141,7 +149,7 @@ describe('createProjectStore', () => {
   })
 
   it('decrypts secret env vars on read', async () => {
-    createProjectStore()
+    setupStore()
     const envVars: EnvVar[] = [{ id: 'e1', key: 'API_KEY', value: 'secret123', secret: true }]
     await callHandler('store:saveProject', { name: 'With Env', path: '/tmp', envVars })
 
@@ -155,7 +163,7 @@ describe('createProjectStore', () => {
 
   it('handles encryption unavailable gracefully', async () => {
     vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(false)
-    createProjectStore()
+    setupStore()
     const envVars: EnvVar[] = [{ id: 'e1', key: 'KEY', value: 'plain', secret: true }]
     await callHandler('store:saveProject', { name: 'No Enc', path: '/tmp', envVars })
 
@@ -164,7 +172,7 @@ describe('createProjectStore', () => {
   })
 
   it('auto-migrates legacy single-agent project to agents[] on load', async () => {
-    createProjectStore()
+    setupStore()
     // Save a project with legacy agent field (bypass migration by saving with agents undefined)
     const saved = (await callHandler('store:saveProject', {
       name: 'Legacy',
@@ -184,7 +192,7 @@ describe('createProjectStore', () => {
   })
 
   it('does not re-migrate projects that already have agents[]', async () => {
-    createProjectStore()
+    setupStore()
     const saved = (await callHandler('store:saveProject', {
       name: 'Modern',
       path: '/home/modern',
