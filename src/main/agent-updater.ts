@@ -79,14 +79,17 @@ export async function checkAgentVersion(agentId: string): Promise<VersionInfo> {
     log.debug(`Failed to get current version for ${agentId}`)
   }
 
-  // Get latest version
+  // Get latest version. Skip when latestCmd is empty (goose, amazon-q have
+  // no reliable remote version check) — symmetric with updateAgent's guard.
   let latest: string | null = null
-  try {
-    const raw = await runWslCmd(agent.latestCmd)
-    const match = SEMVER_RE.exec(raw)
-    latest = match?.[1] ?? null
-  } catch {
-    log.debug(`Failed to get latest version for ${agentId}`)
+  if (agent.latestCmd) {
+    try {
+      const raw = await runWslCmd(agent.latestCmd)
+      const match = SEMVER_RE.exec(raw)
+      latest = match?.[1] ?? null
+    } catch {
+      log.debug(`Failed to get latest version for ${agentId}`)
+    }
   }
 
   const updateAvailable = current !== null && latest !== null && current !== latest
