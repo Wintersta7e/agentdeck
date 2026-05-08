@@ -1,54 +1,48 @@
 import { ipcMain } from 'electron'
 import type { WorktreeManager } from '../worktree-manager'
-import { SAFE_ID_RE } from '../validation'
+import { validateId } from '../validation'
 
 /**
- * Worktree IPC handlers: acquire, inspect, discard, keep.
+ * Worktree IPC handlers: acquire, inspect, discard, keep, releasePrimary.
  *
  * Uses a getter for worktreeManager because the instance is created after module load.
+ * IDs validated through the canonical validateId helper (length-bounded).
  */
 export function registerWorktreeHandlers(getWorktreeManager: () => WorktreeManager | null): void {
   ipcMain.handle('worktree:acquire', async (_, projectId: unknown, sessionId: unknown) => {
-    if (typeof projectId !== 'string' || !SAFE_ID_RE.test(projectId))
-      throw new Error('Invalid projectId: must match /^[a-zA-Z0-9_-]+$/')
-    if (typeof sessionId !== 'string' || !SAFE_ID_RE.test(sessionId))
-      throw new Error('Invalid sessionId: must match /^[a-zA-Z0-9_-]+$/')
+    validateId(projectId, 'projectId')
+    validateId(sessionId, 'sessionId')
     const mgr = getWorktreeManager()
     if (!mgr) throw new Error('WorktreeManager not initialized')
-    return mgr.acquire(projectId, sessionId)
+    return mgr.acquire(projectId as string, sessionId as string)
   })
 
   ipcMain.handle('worktree:inspect', async (_, sessionId: unknown) => {
-    if (typeof sessionId !== 'string' || !SAFE_ID_RE.test(sessionId))
-      throw new Error('Invalid sessionId: must match /^[a-zA-Z0-9_-]+$/')
+    validateId(sessionId, 'sessionId')
     const mgr = getWorktreeManager()
     if (!mgr) throw new Error('WorktreeManager not initialized')
-    return mgr.inspect(sessionId)
+    return mgr.inspect(sessionId as string)
   })
 
   ipcMain.handle('worktree:discard', async (_, sessionId: unknown) => {
-    if (typeof sessionId !== 'string' || !SAFE_ID_RE.test(sessionId))
-      throw new Error('Invalid sessionId: must match /^[a-zA-Z0-9_-]+$/')
+    validateId(sessionId, 'sessionId')
     const mgr = getWorktreeManager()
     if (!mgr) throw new Error('WorktreeManager not initialized')
-    return mgr.discard(sessionId)
+    return mgr.discard(sessionId as string)
   })
 
   ipcMain.handle('worktree:keep', async (_, sessionId: unknown) => {
-    if (typeof sessionId !== 'string' || !SAFE_ID_RE.test(sessionId))
-      throw new Error('Invalid sessionId: must match /^[a-zA-Z0-9_-]+$/')
+    validateId(sessionId, 'sessionId')
     const mgr = getWorktreeManager()
     if (!mgr) throw new Error('WorktreeManager not initialized')
-    return mgr.keep(sessionId)
+    return mgr.keep(sessionId as string)
   })
 
   ipcMain.handle('worktree:releasePrimary', async (_, projectId: unknown, sessionId: unknown) => {
-    if (typeof projectId !== 'string' || !SAFE_ID_RE.test(projectId))
-      throw new Error('Invalid projectId: must match /^[a-zA-Z0-9_-]+$/')
-    if (typeof sessionId !== 'string' || !SAFE_ID_RE.test(sessionId))
-      throw new Error('Invalid sessionId: must match /^[a-zA-Z0-9_-]+$/')
+    validateId(projectId, 'projectId')
+    validateId(sessionId, 'sessionId')
     const mgr = getWorktreeManager()
     if (!mgr) throw new Error('WorktreeManager not initialized')
-    mgr.releasePrimary(projectId, sessionId)
+    mgr.releasePrimary(projectId as string, sessionId as string)
   })
 }

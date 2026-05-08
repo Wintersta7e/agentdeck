@@ -3,7 +3,7 @@ import type { BrowserWindow } from 'electron'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import type { PtyManager } from '../pty-manager'
-import { SAFE_ID_RE } from '../validation'
+import { SAFE_ID_RE, MAX_SAFE_ID_LEN, validateId } from '../validation'
 import { KNOWN_AGENT_IDS, SAFE_FLAGS_RE } from '../../shared/agents'
 import { ptyBus } from '../pty-bus'
 import { invalidateGitCache } from '../git-status'
@@ -96,7 +96,13 @@ export function registerPtyHandlers(
       agent?: string,
       agentFlags?: string,
     ) => {
-      // C1: Sanitise renderer-supplied env — block keys that could hijack the PTY process
+      // Validate primitive identifiers before processing compound inputs
+      // (env iteration, projectPath length check). Length-bound enforced by
+      // validateId — a 10K-char sessionId would otherwise propagate into
+      // ptyBus event names and channel keys.
+      validateId(sessionId, 'sessionId')
+
+      // Sanitise renderer-supplied env — block keys that could hijack the PTY process
       let safeEnv: Record<string, string> | undefined
       if (env && typeof env === 'object') {
         safeEnv = {}
@@ -106,10 +112,7 @@ export function registerPtyHandlers(
           }
         }
       }
-      if (typeof sessionId !== 'string' || !SAFE_ID_RE.test(sessionId)) {
-        throw new Error('Invalid sessionId')
-      }
-      // SEC-32: Validate projectPath, agent, and startupCommands types
+      // Validate projectPath, agent, and startupCommands types
       if (
         projectPath !== undefined &&
         (typeof projectPath !== 'string' || projectPath.length > 1024)
@@ -200,8 +203,10 @@ export function registerPtyHandlers(
   ipcMain.handle(
     'pty:write',
     (_, sessionId: string, data: string): { ok: boolean; error?: string } => {
-      if (typeof sessionId !== 'string' || !SAFE_ID_RE.test(sessionId)) {
-        return { ok: false, error: 'Invalid sessionId' }
+      try {
+        validateId(sessionId, 'sessionId')
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : 'Invalid sessionId' }
       }
       if (typeof data !== 'string') {
         return { ok: false, error: 'Invalid data (expected string)' }
@@ -236,14 +241,15 @@ export function registerPtyHandlers(
   // Note: resize rate-limiting is handled renderer-side (80ms debounced ResizeObserver).
   // No server-side guard — node-pty resize is cheap and idempotent.
   ipcMain.on('pty:resize', (_, sessionId: string, cols: number, rows: number) => {
+    // Fire-and-forget — silently drop invalid sessionId rather than throw
+    // (the renderer-side ResizeObserver fires on every layout shift).
     if (typeof sessionId !== 'string' || !SAFE_ID_RE.test(sessionId)) return
+    if (sessionId.length > MAX_SAFE_ID_LEN) return
     if (cols > 0 && rows > 0) getPtyManager()?.resize(sessionId, cols, rows)
   })
 
   ipcMain.handle('pty:kill', (_, sessionId: string) => {
-    if (typeof sessionId !== 'string' || !SAFE_ID_RE.test(sessionId)) {
-      throw new Error('Invalid sessionId')
-    }
+    validateId(sessionId, 'sessionId')
     getPtyManager()?.kill(sessionId)
   })
 }

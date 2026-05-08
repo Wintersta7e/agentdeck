@@ -8,7 +8,7 @@ import { detectStack } from '../detect-stack'
 import { scanSkillDirectory, invalidateProjectCache } from '../skill-scanner'
 import { getDefaultDistroAsync, wslPathToWindows, withUncFallback } from '../wsl-utils'
 import { createLogger } from '../logger'
-import { SAFE_ID_RE } from '../validation'
+import { validateId } from '../validation'
 
 const log = createLogger('ipc-projects')
 
@@ -103,9 +103,7 @@ export function registerProjectHandlers(
 
   /* ── Project Metadata Refresh ──────────────────────────────────── */
   ipcMain.handle('projects:refreshMeta', async (_, projectId: string) => {
-    if (typeof projectId !== 'string' || !SAFE_ID_RE.test(projectId)) {
-      throw new Error('projects:refreshMeta requires a valid projectId')
-    }
+    validateId(projectId, 'projectId')
 
     const store = getStore?.()
     if (!store) throw new Error('Store not available')
