@@ -60,6 +60,15 @@ export interface StoreSchema {
   templates: LegacyTemplate[]
   roles: Role[]
   appPrefs: {
+    /**
+     * Schema version of the persisted appPrefs blob. Versioned migrations
+     * declared in PREFS_MIGRATIONS run in sequence whenever the loaded
+     * version is below CURRENT_PREFS_VERSION; the runner then writes the
+     * latest value back. New cross-cutting prefs changes (renames,
+     * default backfills) should land as a numbered migration here rather
+     * than as another one-shot boolean flag.
+     */
+    prefsVersion?: number
     zoomFactor: number
     zoomAutoDetected?: boolean | number
     theme?: string
@@ -80,6 +89,46 @@ export interface StoreSchema {
     agentContextOverrides?: Record<string, number>
     modelContextOverrides?: Record<string, number>
   }
+}
+
+/**
+ * Versioned migration entry. Each function transforms a partial appPrefs
+ * blob in place. Runs are idempotent: if a migration has already been
+ * applied (current prefsVersion >= migration target), it is skipped.
+ *
+ * **When to add an entry:** any cross-cutting change to the appPrefs shape
+ * — renaming a key, backfilling a default for existing users, dropping a
+ * stale field. Single one-shot tasks (e.g. "seed default templates once")
+ * stay as boolean flags; the versioned runner is for shape changes.
+ */
+type AppPrefs = StoreSchema['appPrefs']
+type PrefsMigration = (prefs: AppPrefs) => void
+const PREFS_MIGRATIONS: readonly { version: number; migrate: PrefsMigration }[] = [
+  // Add entries here, e.g.:
+  //   { version: 1, migrate: (p) => { delete p.someOldKey } }
+]
+
+/** Latest prefsVersion produced by PREFS_MIGRATIONS — derived, do not edit. */
+const CURRENT_PREFS_VERSION = PREFS_MIGRATIONS.reduce((max, m) => Math.max(max, m.version), 0)
+
+/**
+ * Run any pending versioned prefs migrations. Idempotent — only migrations
+ * with version > current run. Existing one-shot boolean flags
+ * (pathsNormalized, themeMigrated, etc.) are left alone.
+ */
+export function runPrefsMigrations(store: AppStore): void {
+  const prefs = store.get('appPrefs')
+  const current = prefs.prefsVersion ?? 0
+  if (current >= CURRENT_PREFS_VERSION) return
+  const next: AppPrefs = { ...prefs }
+  for (const { version, migrate } of PREFS_MIGRATIONS) {
+    if (version > current) {
+      migrate(next)
+      log.info('Applied appPrefs migration', { version })
+    }
+  }
+  next.prefsVersion = CURRENT_PREFS_VERSION
+  store.set('appPrefs', next)
 }
 
 export type AppStore = Store<StoreSchema>
@@ -153,6 +202,12 @@ export function createProjectStore(): Store<StoreSchema> {
     store.set('projects', migrationProjects)
     log.info('Ran project name migration')
   }
+
+  // Apply any pending versioned appPrefs migrations before the rest of
+  // startup reads from prefs. Today this is a no-op; the infrastructure is
+  // here so the next shape change to appPrefs uses a numbered migration
+  // entry instead of yet another ad-hoc boolean flag.
+  runPrefsMigrations(store)
 
   // One-shot normalisation of legacy Windows-style project.path values to WSL
   // form. Idempotent via `appPrefs.pathsNormalized` — runs exactly once per
