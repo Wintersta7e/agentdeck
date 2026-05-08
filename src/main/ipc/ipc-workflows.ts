@@ -49,7 +49,7 @@ export function registerWorkflowHandlers(
   })
   ipcMain.handle('workflows:delete', async (_, id: string) => {
     if (typeof id !== 'string' || !SAFE_ID_RE.test(id)) throw new Error('Invalid workflow id')
-    // C6: Stop running workflow before deleting to avoid orphaned PTYs
+    // Stop running workflow before deleting to avoid orphaned PTYs
     getWorkflowEngine()?.stop(id)
     await deleteWorkflow(id)
   })
@@ -90,7 +90,7 @@ export function registerWorkflowHandlers(
       const importedWorkflow = d.workflow as Workflow
       const importedRoles = d.roles as unknown[]
 
-      // WF-6: Validate each imported role's fields before trusting them
+      // Validate each imported role's fields before trusting them
       for (const rawRole of importedRoles) {
         const roleErr = validateRole(rawRole)
         if (roleErr) throw new Error(`Invalid bundled role: ${roleErr}`)
@@ -215,7 +215,7 @@ export function registerWorkflowHandlers(
   ipcMain.handle(
     'workflow:run',
     async (_, workflowId: string, projectPath?: string, variables?: Record<string, string>) => {
-      // R2-05: Validate workflowId before filesystem access
+      // Validate workflowId before filesystem access
       if (typeof workflowId !== 'string' || !SAFE_ID_RE.test(workflowId)) {
         throw new Error('Invalid workflow ID')
       }
@@ -223,14 +223,14 @@ export function registerWorkflowHandlers(
       if (!workflow) throw new Error(`Workflow not found: ${workflowId}`)
       const engine = getWorkflowEngine()
       if (!engine) throw new Error('Workflow engine not initialized')
-      // C2: Validate workflow structure before execution
+      // Validate workflow structure before execution
       const validation = validateWorkflow(workflow)
       if (validation.errors.length > 0) {
         throw new Error(`Invalid workflow: ${validation.errors.join('; ')}`)
       }
       // Convert Windows path to WSL if needed (projects store Windows paths)
       const wslPath = projectPath ? toWslPath(projectPath) : undefined
-      // C2: Validate projectPath — must be absolute WSL path, no traversal or shell metacharacters.
+      // Validate projectPath — must be absolute WSL path, no traversal or shell metacharacters.
       // The workflow engine's shellQuote handles safe quoting; this rejects obviously malicious input.
       if (wslPath !== undefined) {
         if (typeof wslPath !== 'string' || wslPath.length > 1024 || !wslPath.startsWith('/')) {

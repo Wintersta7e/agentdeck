@@ -64,7 +64,7 @@ export default function WorkflowNodeEditorPanel({
     }
   }, [nodeAgent, projectPath])
 
-  // H7: Auto-clear orphan roleId when role has been deleted
+  // Auto-clear orphan roleId when role has been deleted
   useEffect(() => {
     if (!agentNode || !nodeRoleId) return
     if (!rolesMap.has(nodeRoleId)) {

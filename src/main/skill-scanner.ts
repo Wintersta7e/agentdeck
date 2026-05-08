@@ -395,7 +395,7 @@ export async function listSkills(opts: {
 
 export function invalidateProjectCache(projectPath: string): void {
   // Remove all entries matching this project path (any distro).
-  // CQ-5: Use exact key segment match instead of suffix match to prevent
+  // Use exact key segment match instead of suffix match to prevent
   // false positives when one path is a suffix of another.
   const suffix = `:${projectPath}`
   for (const key of projectCache.keys()) {
@@ -405,7 +405,7 @@ export function invalidateProjectCache(projectPath: string): void {
       projectCache.delete(key)
     }
   }
-  // R4-10: Do NOT delete from inFlight — let in-progress scans complete and
+  // Do NOT delete from inFlight — let in-progress scans complete and
   // re-populate the cache with fresh data. Deleting would cause the old promise
   // to still write its result while a new scan starts, creating a race.
 }

@@ -12,7 +12,7 @@ const log = createLogger('workflow-store')
 /** Validate id is safe for filesystem use — reject anything with non-alphanumeric chars */
 const safeId = (id: string): string => validateId(id, 'workflow id')
 
-// M4: Cache workflows directory path
+// Cache workflows directory path
 let cachedWorkflowsDir: string | null = null
 
 export function getWorkflowsDir(): string {
@@ -28,16 +28,16 @@ export function getWorkflowsDir(): string {
   return dir
 }
 
-// M2: Per-workflow write lock to prevent concurrent saves
+// Per-workflow write lock to prevent concurrent saves
 const writeLocks = new Map<string, Promise<Workflow>>()
 
-// H4: Async versions of all workflow operations
+// Async versions of all workflow operations
 
 export async function listWorkflows(): Promise<WorkflowMeta[]> {
   const dir = getWorkflowsDir()
   const files = await fs.promises.readdir(dir)
   const jsonFiles = files.filter((f) => f.endsWith('.json'))
-  // PERF-11: Read all workflow files concurrently instead of sequentially
+  // Read all workflow files concurrently instead of sequentially
   const results = await Promise.all(
     jsonFiles.map(async (f) => {
       try {
@@ -85,13 +85,13 @@ export async function saveWorkflow(workflow: Workflow): Promise<Workflow> {
       id,
     }
 
-    // C2: Validate before persisting to disk
+    // Validate before persisting to disk
     const validation = validateWorkflow(w)
     if (validation.errors.length > 0) {
       throw new Error(`Invalid workflow: ${validation.errors.join('; ')}`)
     }
 
-    // H5: Atomic write — write to .tmp then rename
+    // Atomic write — write to .tmp then rename
     const file = path.join(getWorkflowsDir(), `${safeId(w.id)}.json`)
     const tmpFile = `${file}.${randomBytes(6).toString('hex')}.tmp`
     await fs.promises.writeFile(tmpFile, JSON.stringify(w, null, 2), 'utf-8')

@@ -189,7 +189,7 @@ describe('deleteWorkflow', () => {
 
 describe('safeId (via saveWorkflow path)', () => {
   it('rejects ids with path traversal characters via validation', async () => {
-    // C2: validateWorkflow rejects ids containing dots/slashes
+    // validateWorkflow rejects ids containing dots/slashes
     await expect(
       saveWorkflow({
         id: 'wf/../../../etc/passwd',

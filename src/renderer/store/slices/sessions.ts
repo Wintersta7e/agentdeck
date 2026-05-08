@@ -81,12 +81,12 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
     set((state) => {
       const paneSessions = [...state.paneSessions]
       // Place new session in the focused pane so it's always visible
-      const targetPane = Math.min(state.focusedPane, MAX_PANE_COUNT - 1) // ARCH-11: Cap at max panes
+      const targetPane = Math.min(state.focusedPane, MAX_PANE_COUNT - 1) // Cap at max panes
       while (paneSessions.length <= targetPane) {
         paneSessions.push('')
       }
       paneSessions[targetPane] = sessionId
-      // ARCH-11: Cap paneSessions to max entries to prevent unbounded growth
+      // Cap paneSessions to max entries to prevent unbounded growth
       paneSessions.length = Math.min(paneSessions.length, MAX_PANE_COUNT)
       const session: Session = {
         id: sessionId,
@@ -369,7 +369,7 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
       // Remove old session
       const { [oldSessionId]: _, ...rest } = s.sessions
       const { [oldSessionId]: _feed, ...remainingFeeds } = s.activityFeeds
-      // LEAK-13: Clean up sessionUsage for the old session
+      // Clean up sessionUsage for the old session
       const { [oldSessionId]: _usage, ...remainingUsage } = s.sessionUsage
       const { [oldSessionId]: _writes, ...remainingWrites } = s.writeCountBySession
 

@@ -225,7 +225,7 @@ export function runAgentNode(
       lastActivityTime = Date.now()
       output = (output + text).slice(-8192)
       deps.nodeOutputs.set(node.id, output)
-      // WF-2: conditionOutputs stores up to 64KB for condition evaluation
+      // conditionOutputs stores up to 64KB for condition evaluation
       const existing = deps.conditionOutputs.get(node.id) ?? ''
       deps.conditionOutputs.set(node.id, (existing + text).slice(-65536))
       flushLines(text)
@@ -313,7 +313,7 @@ export function runShellNode(node: ShellNode, deps: NodeRunnerDeps): Promise<voi
       message: `$ ${node.command ?? ''}\n`,
     })
 
-    // M8: Use projectPath as cwd context for shell commands
+    // Use projectPath as cwd context for shell commands
     const fullCmd = deps.projectPath ? `cd ${shellQuote(deps.projectPath)} && ${cmd}` : cmd
 
     const child = execFile(
@@ -322,7 +322,7 @@ export function runShellNode(node: ShellNode, deps: NodeRunnerDeps): Promise<voi
       { timeout: node.timeout ?? 60000 },
       (err, stdout, stderr) => {
         deps.activeChildProcesses.delete(child)
-        // REL-2: Extract real exit code from ExecException instead of hardcoding 1
+        // Extract real exit code from ExecException instead of hardcoding 1
         const exitCode = err ? ((err as ExecException).code ?? 1) : 0
         deps.nodeExitCodes.set(node.id, exitCode)
         const out = stripAnsi(stdout + stderr)
@@ -338,7 +338,7 @@ export function runShellNode(node: ShellNode, deps: NodeRunnerDeps): Promise<voi
         else resolve()
       },
     )
-    // C4: Track child process so stop() can kill it
+    // Track child process so stop() can kill it
     deps.activeChildProcesses.add(child)
   })
 }

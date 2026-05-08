@@ -41,7 +41,7 @@ function runFilename(workflowId: string, startedAt: number, runId: string): stri
 
 /** Save a completed workflow run to disk. Auto-prunes old runs. */
 export async function saveRun(run: WorkflowRun): Promise<void> {
-  // WF-8: Chain onto any pending write for this workflow to prevent races
+  // Chain onto any pending write for this workflow to prevent races
   const prev = writeLocks.get(run.workflowId) ?? Promise.resolve()
   const task = prev
     .catch(() => {})
@@ -83,9 +83,9 @@ async function pruneRuns(workflowId: string): Promise<void> {
 
   if (files.length <= MAX_RUNS_PER_WORKFLOW) return
 
-  // PERF-12: Sort by timestamp embedded in filename instead of calling stat() on each file.
+  // Sort by timestamp embedded in filename instead of calling stat() on each file.
   // Filename format: ${workflowId}_${startedAt}_${runId}.json
-  // R5-03: Parse from the right — workflowId may contain underscores (SAFE_ID_RE allows _),
+  // Parse from the right — workflowId may contain underscores (SAFE_ID_RE allows _),
   // but runId (UUID) uses only hyphens and startedAt is always a number.
   const withTimestamp = files.map((f) => {
     const base = f.replace(/\.json$/, '')
@@ -151,7 +151,7 @@ export async function deleteRun(runId: string): Promise<void> {
     return
   }
 
-  // WF-9: Run ID is embedded in filename as the last segment before .json
+  // Run ID is embedded in filename as the last segment before .json
   const suffix = `_${runId}.json`
   const target = allFiles.find((f) => f.endsWith(suffix))
   if (target) {

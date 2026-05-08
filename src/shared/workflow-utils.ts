@@ -170,7 +170,7 @@ export function validateWorkflow(w: unknown): ValidationResult {
         if (typeof n.conditionPattern !== 'string' || n.conditionPattern.length === 0) {
           errors.push(`outputMatch condition "${String(n.id)}" requires non-empty conditionPattern`)
         } else {
-          // WF-4: Limit regex pattern length to mitigate DoS risk
+          // Limit regex pattern length to mitigate DoS risk
           if (n.conditionPattern.length > 500) {
             errors.push(
               `Condition regex pattern too long (${String(n.conditionPattern.length)} chars, max 500)`,
