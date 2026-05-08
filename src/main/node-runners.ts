@@ -9,13 +9,22 @@ import { spawn, execFile, type ChildProcess, type ExecException } from 'child_pr
 import { createLogger } from './logger'
 import type { WorkflowNode, WorkflowEvent, Role } from '../shared/types'
 import { AGENT_BINARY_MAP, SAFE_FLAGS_RE } from '../shared/agents'
-import { MS_PER_MINUTE } from '../shared/constants'
+import {
+  AGENT_IDLE_TIMEOUT,
+  DEFAULT_AGENT_TIMEOUT,
+  IDLE_CHECK_INTERVAL,
+  LINE_FLUSH_MS,
+  MAX_TIER_CONCURRENCY,
+} from '../shared/constants'
 import { NODE_INIT } from './wsl-utils'
 import { SAFE_SKILL_RE } from './skill-scanner'
 
 const log = createLogger('node-runners')
 
-// ── Constants ────────────────────────────────────────────────────────
+// Re-export for callers that previously imported these from this module.
+export { AGENT_IDLE_TIMEOUT, MAX_TIER_CONCURRENCY }
+
+// ── Per-agent CLI maps ────────────────────────────────────────────────
 
 /** Non-interactive / print-mode CLI flags per agent (prompt follows as last arg) */
 export const AGENT_PRINT_FLAGS: Record<string, string[]> = {
@@ -40,21 +49,6 @@ const AGENT_CD_FLAG: Record<string, string> = {
 const AGENT_ENGINE_FLAGS: Record<string, string[]> = {
   codex: ['--skip-git-repo-check'],
 }
-
-/** How long an agent node can be idle (no stdout/stderr) before being killed */
-export const AGENT_IDLE_TIMEOUT = 5 * MS_PER_MINUTE
-
-/** How often to check whether an agent node has gone idle */
-const IDLE_CHECK_INTERVAL = 0.5 * MS_PER_MINUTE
-
-/** Default absolute timeout for agent nodes without an explicit timeout */
-const DEFAULT_AGENT_TIMEOUT = 30 * MS_PER_MINUTE
-
-/** Max number of nodes to run concurrently within a single tier */
-export const MAX_TIER_CONCURRENCY = 5
-
-/** How often to flush the line buffer even without a newline */
-const LINE_FLUSH_MS = 500
 
 // ── Utility functions ────────────────────────────────────────────────
 

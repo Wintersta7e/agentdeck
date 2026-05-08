@@ -14,13 +14,8 @@ import { topoSort } from '../shared/workflow-utils'
 export { validateWorkflow, topoSort } from '../shared/workflow-utils'
 import { createScheduler } from './edge-scheduler'
 import { substituteVariables } from './variable-substitution'
-import {
-  runAgentNode,
-  runShellNode,
-  forceKillTree,
-  MAX_TIER_CONCURRENCY,
-  type NodeRunnerDeps,
-} from './node-runners'
+import { runAgentNode, runShellNode, forceKillTree, type NodeRunnerDeps } from './node-runners'
+import { MAX_CONCURRENT_WORKFLOWS, MAX_TIER_CONCURRENCY } from '../shared/constants'
 import { createRunRecorder, getErrorTail } from './workflow-history'
 
 // Re-export for backward compat (tests + external importers)
@@ -49,7 +44,6 @@ export function createWorkflowEngine(
   mainWindow: BrowserWindow,
   getRoles?: (() => Role[]) | undefined,
 ): WorkflowEngine {
-  const MAX_CONCURRENT_WORKFLOWS = 3
   const activeRuns = new Map<string, { stop: () => void; resume: (nodeId: string) => void }>()
 
   function push(workflowId: string, event: Omit<WorkflowEvent, 'id' | 'timestamp'>): void {

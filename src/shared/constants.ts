@@ -33,3 +33,21 @@ export const MAX_EXITED_SESSIONS = 20
 
 /** Agent-env snapshot cache TTL (ms) */
 export const SNAPSHOT_CACHE_TTL_MS = 30_000
+
+/** Workflow engine: max concurrent workflow runs */
+export const MAX_CONCURRENT_WORKFLOWS = 3
+
+/** Workflow engine: max nodes spawned in parallel within one tier */
+export const MAX_TIER_CONCURRENCY = 5
+
+/** Default absolute timeout for an agent node when no per-node value is set (ms) */
+export const DEFAULT_AGENT_TIMEOUT = 30 * MS_PER_MINUTE
+
+/** Kill an agent node after this much continuous idle time (no stdout/stderr) */
+export const AGENT_IDLE_TIMEOUT = 5 * MS_PER_MINUTE
+
+/** Idle-check polling interval for agent nodes (ms) */
+export const IDLE_CHECK_INTERVAL = 0.5 * MS_PER_MINUTE
+
+/** Force-flush partial line buffer this often even without a newline (ms) */
+export const LINE_FLUSH_MS = 500
