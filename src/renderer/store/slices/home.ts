@@ -48,10 +48,41 @@ export const createHomeSlice: StateCreator<AppState, [], [], HomeSlice> = (set) 
 
   setDailyBudget: (amount) => set({ dailyBudget: amount }),
 
-  tier3Collapsed: {},
+  // Persisted via localStorage so collapse choices survive restarts.
+  tier3Collapsed: readTier3Collapsed(),
 
   setTier3Collapsed: (key, collapsed) =>
-    set((state) => ({
-      tier3Collapsed: { ...state.tier3Collapsed, [key]: collapsed },
-    })),
+    set((state) => {
+      const next = { ...state.tier3Collapsed, [key]: collapsed }
+      writeTier3Collapsed(next)
+      return { tier3Collapsed: next }
+    }),
 })
+
+const TIER3_COLLAPSED_KEY = 'home.tier3Collapsed'
+
+function readTier3Collapsed(): Record<string, boolean> {
+  if (typeof localStorage === 'undefined') return {}
+  try {
+    const raw = localStorage.getItem(TIER3_COLLAPSED_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as unknown
+    if (!parsed || typeof parsed !== 'object') return {}
+    const out: Record<string, boolean> = {}
+    for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+      if (typeof v === 'boolean') out[k] = v
+    }
+    return out
+  } catch {
+    return {}
+  }
+}
+
+function writeTier3Collapsed(value: Record<string, boolean>): void {
+  if (typeof localStorage === 'undefined') return
+  try {
+    localStorage.setItem(TIER3_COLLAPSED_KEY, JSON.stringify(value))
+  } catch {
+    /* quota exceeded or storage disabled — ignore */
+  }
+}
