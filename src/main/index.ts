@@ -1,6 +1,7 @@
 import { app, BrowserWindow, safeStorage, screen } from 'electron'
 import { join } from 'path'
 import { readFileSync } from 'fs'
+import { THEME_STARTUP_BG, DEFAULT_STARTUP_BG } from '../shared/themes'
 import { createPtyManager, type PtyManager } from './pty-manager'
 import { createProjectStore, type AppStore } from './project-store'
 import { seedTemplates, seedRoles, seedTemplateData } from './store-seeds'
@@ -20,26 +21,21 @@ import { createCostHistory } from './cost-history'
 
 const costHistory = createCostHistory(join(app.getPath('userData'), 'cost-history.json'))
 
-/** Read persisted theme at startup to match BrowserWindow background to the active theme */
-const THEME_BG0: Record<string, string> = {
-  '': '#0d0e0f',
-  amber: '#0d0e0f',
-  cyan: '#080b14',
-  violet: '#0a0a12',
-  ice: '#0c0d10',
-  parchment: '#f5f0e8',
-  fog: '#f0f4f8',
-  lavender: '#f4f2f8',
-  stone: '#f2f1ef',
-}
+/**
+ * Read persisted theme at startup to match BrowserWindow background to the
+ * active theme. THEME_STARTUP_BG and DEFAULT_STARTUP_BG live in
+ * `src/shared/themes.ts`; the values must stay in sync with the `--bg0`
+ * tokens declared in `src/renderer/styles/tokens.css`.
+ */
 function getStartupBg(): string {
   try {
     const configPath = join(app.getPath('userData'), 'config.json')
     const raw = readFileSync(configPath, 'utf-8')
     const data = JSON.parse(raw) as { appPrefs?: { theme?: string } }
-    return THEME_BG0[data.appPrefs?.theme ?? ''] ?? '#0d0e0f'
+    const key = (data.appPrefs?.theme ?? '') as keyof typeof THEME_STARTUP_BG
+    return THEME_STARTUP_BG[key] ?? DEFAULT_STARTUP_BG
   } catch {
-    return '#0d0e0f'
+    return DEFAULT_STARTUP_BG
   }
 }
 import { createClaudeAdapter, createCodexAdapter } from './log-adapters'
