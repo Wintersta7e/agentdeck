@@ -85,7 +85,7 @@ export async function checkAgentVersion(agentId: string): Promise<VersionInfo> {
  */
 async function isBinaryOnPath(binary: string): Promise<boolean> {
   try {
-    // R2-03: shellQuote binary for defensive safety
+    // shellQuote binary for defensive safety
     await runWslCmd(`command -v ${shellQuote(binary)}`)
     return true
   } catch {
@@ -120,7 +120,7 @@ async function repairNpmBinLink(binary: string, updateCmd: string): Promise<bool
     // Use node's own process.execPath to derive prefix — this is always correct
     // even when nvm's PATH setup fails in bash -lc, because process.execPath
     // resolves to the actual nvm-managed node binary, not /usr/bin/node.
-    // BUG-2: Derive bin entry from package.json instead of hardcoding .js suffix.
+    // Derive bin entry from package.json instead of hardcoding .js suffix.
     // This handles agents whose npm package uses .cjs or a different filename.
     const nodeScript = [
       `const p=require("path"),fs=require("fs")`,
@@ -138,7 +138,7 @@ async function repairNpmBinLink(binary: string, updateCmd: string): Promise<bool
       `console.log("repaired")`,
     ].join(';')
 
-    // SEC-31: Use shellQuote to safely escape the script instead of raw single-quote wrapping
+    // Use shellQuote to safely escape the script instead of raw single-quote wrapping
     const result = await runWslCmd(`node -e ${shellQuote(nodeScript)}`)
     if (result.includes('repaired')) {
       log.info(`Repaired missing npm bin link for ${binary}`)

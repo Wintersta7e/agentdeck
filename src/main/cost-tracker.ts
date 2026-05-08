@@ -84,7 +84,7 @@ export function createCostTracker(
   /** File paths already bound to a session — prevents cross-session matching. */
   const boundFiles = new Set<string>()
 
-  // R4-01: Resolve $HOME once at tracker creation so all sessions share
+  // Resolve $HOME once at tracker creation so all sessions share
   // the cached value. Eliminates repeated wsl.exe calls that fail under
   // WSL resource contention when multiple sessions start simultaneously.
   let cachedHome: string | null = null

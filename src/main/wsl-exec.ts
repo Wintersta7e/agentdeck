@@ -55,15 +55,20 @@ function buildArgs(cmd: string, opts: WslExecCommonOptions): string[] {
 }
 
 /**
- * Run a command in WSL bash. Resolves with stdout on success; rejects on
- * error. Use `wslTry` if you'd rather treat failures as `null`.
+ * Run a command in WSL bash. Resolves with raw stdout on success; rejects
+ * on error. Callers that just want a single line trim themselves; callers
+ * that parse multi-line output (cost tracker tail/stat) need the trailing
+ * newline preserved. Use `wslTry` if you'd rather treat failures as `null`.
+ *
+ * The `fallbackStderrAsOutput` branch trims because that path always
+ * carries a single semver-or-similar value where the newline is noise.
  */
 export function wslRun(cmd: string, opts: WslExecThrowOptions = {}): Promise<string> {
   const timeout = opts.timeout ?? DEFAULT_TIMEOUT
   return new Promise<string>((resolve, reject) => {
     execFile('wsl.exe', buildArgs(cmd, opts), { timeout }, (err, stdout, stderr) => {
-      const out = stdout?.trim() ?? ''
       if (err) {
+        const out = stdout?.trim() ?? ''
         if (opts.fallbackStderrAsOutput && out) {
           log.debug('Command had stderr but produced output', { cmd, stderr: stderr?.trim() })
           resolve(out)
