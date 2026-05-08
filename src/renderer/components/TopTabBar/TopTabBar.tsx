@@ -39,12 +39,15 @@ const TABS: readonly TabDef[] = [
   { id: 'settings', label: 'Settings', view: 'app-settings', shortcut: 'Alt+8' },
 ] as const
 
-/** Map an arbitrary ViewType to its owning top-level tab. */
+/** Map an arbitrary ViewType to its owning top-level tab.
+ *
+ *  The switch is exhaustive on ViewType — adding a new view becomes a
+ *  compile error here, so a new view can never silently highlight the
+ *  Home tab via a default fallback. */
 function viewToTab(view: ViewType): TabId {
   switch (view) {
     case 'home':
       return 'home'
-    case 'sessions':
     case 'sessions':
     case 'new-session':
     case 'diff':
@@ -66,8 +69,6 @@ function viewToTab(view: ViewType): TabId {
     case 'app-settings':
     case 'template-editor':
       return 'settings'
-    default:
-      return 'home'
   }
 }
 
