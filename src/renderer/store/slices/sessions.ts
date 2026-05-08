@@ -352,7 +352,9 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
       if (!oldSession) return s
 
       const projectId = oldSession.projectId
-      const freshId = `session-${projectId}-${Date.now()}`
+      // Match openSession's ID format — Date.now() alone is collide-able if
+      // two restarts fire within the same millisecond for the same project.
+      const freshId = `session-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`
       newSessionId = freshId
 
       // Remove old session
@@ -378,6 +380,11 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
         ? s.openSessionIds.map((x) => (x === oldSessionId ? freshId : x))
         : [...s.openSessionIds, freshId]
 
+      // Carry over user-intent launch config from the old session
+      // (agent overrides, branch mode, cost cap, run mode, approval gates).
+      // Spawn-time captures (model, resolvedContextWindow,
+      // resolvedContextSource) and one-shot inputs (initialPrompt) reset —
+      // a restart re-detects the active model and is no longer prompted.
       return {
         sessions: {
           ...rest,
@@ -390,6 +397,11 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
             seedTemplateId: null,
             agentOverride: oldSession.agentOverride,
             agentFlagsOverride: oldSession.agentFlagsOverride,
+            branchMode: oldSession.branchMode,
+            initialBranch: oldSession.initialBranch,
+            costCap: oldSession.costCap,
+            runMode: oldSession.runMode,
+            approve: oldSession.approve,
           },
         },
         activityFeeds: remainingFeeds,
