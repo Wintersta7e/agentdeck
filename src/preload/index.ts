@@ -112,9 +112,13 @@ contextBridge.exposeInMainWorld('agentDeck', {
     ) => ipcRenderer.invoke('layout:set', patch),
   },
   store: {
-    getProjects: () => ipcRenderer.invoke('store:getProjects'),
-    saveProject: (project: unknown) => ipcRenderer.invoke('store:saveProject', project),
-    deleteProject: (id: string) => ipcRenderer.invoke('store:deleteProject', id),
+    getProjects: () =>
+      ipcRenderer.invoke('store:getProjects') as Promise<import('../shared/types').Project[]>,
+    saveProject: (project: unknown) =>
+      ipcRenderer.invoke('store:saveProject', project) as Promise<
+        import('../shared/types').Project
+      >,
+    deleteProject: (id: string) => ipcRenderer.invoke('store:deleteProject', id) as Promise<void>,
     getTemplates: () => ipcRenderer.invoke('store:getTemplates'),
     getRoles: () => ipcRenderer.invoke('store:getRoles') as Promise<Role[]>,
     saveRole: (role: unknown) => ipcRenderer.invoke('store:saveRole', role) as Promise<Role>,

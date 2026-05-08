@@ -214,15 +214,31 @@ export function createProjectStore(): Store<StoreSchema> {
   return store
 }
 
+let storeHandlersRegistered = false
+
+/**
+ * **Test-only.** Reset the registration guard so a test can call
+ * `registerStoreHandlers` multiple times against a freshly-mocked
+ * `ipcMain`. Production code never calls this.
+ */
+export function __resetStoreHandlersForTests(): void {
+  storeHandlersRegistered = false
+}
+
 /**
  * Register store-related IPC handlers (`store:*`) on the global ipcMain.
  *
  * Split out from createProjectStore so the data-access layer is testable
- * without triggering IPC side effects. Call this exactly once at startup
- * after the BrowserWindow is constructed and createProjectStore has
- * returned.
+ * without triggering IPC side effects. Throws on a second invocation
+ * rather than letting Electron's own duplicate-handler error fire — the
+ * error site here is more debuggable than `Attempted to register a
+ * second handler for 'store:getProjects'` from deep inside Electron.
  */
 export function registerStoreHandlers(store: AppStore): void {
+  if (storeHandlersRegistered) {
+    throw new Error('registerStoreHandlers called twice — invoke exactly once at startup')
+  }
+  storeHandlersRegistered = true
   ipcMain.handle('store:getProjects', () => {
     const projects = store.get('projects')
 

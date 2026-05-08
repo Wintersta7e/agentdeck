@@ -54,9 +54,9 @@ import {
   registerLegacyTemplateIpc,
   wireTemplateWindowEvents,
   registerEnvIpc,
+  registerFilesIpc,
   reviewTracker,
 } from './ipc'
-import { registerFilesIpc } from './ipc/ipc-files'
 
 const log = createLogger('app')
 

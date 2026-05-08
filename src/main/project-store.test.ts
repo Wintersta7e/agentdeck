@@ -47,11 +47,16 @@ vi.mock('electron-store', () => {
   return { default: MockStore }
 })
 
-import { createProjectStore, registerStoreHandlers } from './project-store'
+import {
+  createProjectStore,
+  registerStoreHandlers,
+  __resetStoreHandlersForTests,
+} from './project-store'
 
 /** Test helper: createProjectStore + registerStoreHandlers in one call.
- *  Mirrors the production wiring in main/index.ts. */
+ *  Resets the registration guard first so each test starts clean. */
 function setupStore(): ReturnType<typeof createProjectStore> {
+  __resetStoreHandlersForTests()
   const s = createProjectStore()
   registerStoreHandlers(s)
   return s
