@@ -5,6 +5,7 @@ import type { PtyManager } from './pty-manager'
 import type {
   Workflow,
   WorkflowNode,
+  ConditionNode,
   WorkflowEdge,
   WorkflowEvent,
   WorkflowNodeRun,
@@ -147,7 +148,7 @@ export function createWorkflowEngine(
     }
 
     // ── Condition evaluation ──────────────────────────────────────
-    function evaluateCondition(node: WorkflowNode): 'true' | 'false' {
+    function evaluateCondition(node: ConditionNode): 'true' | 'false' {
       const incomingEdge = incomingEdgesByNode.get(node.id)?.[0]
       if (!incomingEdge) return 'false'
       const upstreamId = incomingEdge.fromNodeId
@@ -224,7 +225,7 @@ export function createWorkflowEngine(
           workflowId: workflow.id,
           nodeId: node.id,
           type: node.type,
-          agent: node.agent,
+          agent: node.type === 'agent' ? node.agent : undefined,
         })
         push(workflow.id, {
           type: 'node:started',

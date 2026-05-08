@@ -71,13 +71,17 @@ function getTypeIcon(type: NodeType): React.ReactNode {
 function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Element {
   const { node, status, onUpdateNode, onDeleteNode, onDuplicateNode } = data
   const rolesMap = useRolesMap()
-  const role = node.roleId ? rolesMap.get(node.roleId) : undefined
+  // Pre-narrow agent-only fields so dep arrays and child reads stay typecheckable.
+  const agentNode = node.type === 'agent' ? node : null
+  const nodeAgent: AgentType = agentNode?.agent ?? 'claude-code'
+  const nodeRoleId = agentNode?.roleId
+  const role = nodeRoleId ? rolesMap.get(nodeRoleId) : undefined
 
   const [editing, setEditing] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [editName, setEditName] = useState(node.name)
   const [editRole, setEditRole] = useState(getNodeText(node))
-  const [editAgent, setEditAgent] = useState<AgentType>(node.agent ?? 'claude-code')
+  const [editAgent, setEditAgent] = useState<AgentType>(nodeAgent)
   const nameInputRef = useRef<HTMLInputElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -100,16 +104,16 @@ function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Ele
   }, [editing])
 
   const handleSave = useCallback(() => {
-    const updated: WorkflowNodeType = { ...node, name: editName.trim() || node.name }
+    const newName = editName.trim() || node.name
+    let updated: WorkflowNodeType
     if (node.type === 'agent') {
-      updated.prompt = editRole
-      updated.agent = editAgent
+      updated = { ...node, name: newName, prompt: editRole, agent: editAgent }
     } else if (node.type === 'shell') {
-      updated.command = editRole
+      updated = { ...node, name: newName, command: editRole }
     } else if (node.type === 'condition') {
-      updated.conditionPattern = editRole
+      updated = { ...node, name: newName, conditionPattern: editRole }
     } else {
-      updated.message = editRole
+      updated = { ...node, name: newName, message: editRole }
     }
     onUpdateNode(updated)
     setEditing(false)
@@ -118,9 +122,9 @@ function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Ele
   const handleCancel = useCallback(() => {
     setEditName(node.name)
     setEditRole(getNodeText(node))
-    setEditAgent(node.agent ?? 'claude-code')
+    setEditAgent(nodeAgent)
     setEditing(false)
-  }, [node])
+  }, [node, nodeAgent])
 
   const handleEditKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -138,9 +142,9 @@ function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Ele
   const enterEditMode = useCallback(() => {
     setEditName(node.name)
     setEditRole(getNodeText(node))
-    setEditAgent(node.agent ?? 'claude-code')
+    setEditAgent(nodeAgent)
     setEditing(true)
-  }, [node])
+  }, [node, nodeAgent])
 
   const handleDoubleClick = useCallback(
     (e: React.MouseEvent) => {

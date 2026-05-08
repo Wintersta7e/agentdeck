@@ -1,4 +1,4 @@
-import type { Workflow } from '../shared/types'
+import type { Workflow, WorkflowNode } from '../shared/types'
 
 /** Matches {{VAR_NAME}} where name is uppercase + underscore + digits */
 const VAR_RE = /\{\{([A-Z_][A-Z0-9_]*)\}\}/g
@@ -14,14 +14,21 @@ export function substituteVariables(workflow: Workflow, values: Record<string, s
     return s.replace(VAR_RE, (match, name: string) => values[name] ?? match)
   }
 
+  function substituteNode(n: WorkflowNode): WorkflowNode {
+    switch (n.type) {
+      case 'agent':
+        return { ...n, prompt: replace(n.prompt), agentFlags: replace(n.agentFlags) }
+      case 'shell':
+        return { ...n, command: replace(n.command) }
+      case 'checkpoint':
+        return { ...n, message: replace(n.message) }
+      case 'condition':
+        return n
+    }
+  }
+
   return {
     ...workflow,
-    nodes: workflow.nodes.map((n) => ({
-      ...n,
-      prompt: replace(n.prompt),
-      command: replace(n.command),
-      message: replace(n.message),
-      agentFlags: replace(n.agentFlags),
-    })),
+    nodes: workflow.nodes.map(substituteNode),
   }
 }

@@ -29,7 +29,12 @@ export default function WorkflowNodeEditorPanel({
   const roles = useAppStore((s) => s.roles)
   const rolesMap = useRolesMap()
   const { addRole, updateRole, deleteRole } = useProjects()
-  const role = node.roleId ? rolesMap.get(node.roleId) : undefined
+  // Agent-specific fields are only valid when node.type === 'agent'; pre-narrow
+  // once so dep arrays and child reads stay typecheckable.
+  const agentNode = node.type === 'agent' ? node : null
+  const nodeAgent = agentNode?.agent
+  const nodeRoleId = agentNode?.roleId
+  const role = nodeRoleId ? rolesMap.get(nodeRoleId) : undefined
 
   const [roleFormMode, setRoleFormMode] = useState<'edit' | 'create' | null>(null)
   const [skills, setSkills] = useState<SkillInfo[]>([])
@@ -40,7 +45,7 @@ export default function WorkflowNodeEditorPanel({
   useEffect(() => {
     let cancelled = false
     const run = async (): Promise<void> => {
-      if (node.type !== 'agent' || node.agent !== 'codex') {
+      if (nodeAgent !== 'codex') {
         if (!cancelled) setSkills([])
         return
       }
@@ -57,16 +62,16 @@ export default function WorkflowNodeEditorPanel({
     return () => {
       cancelled = true
     }
-  }, [node.type, node.agent, projectPath])
+  }, [nodeAgent, projectPath])
 
   // H7: Auto-clear orphan roleId when role has been deleted
   useEffect(() => {
-    if (!node.roleId) return
-    if (!rolesMap.has(node.roleId)) {
-      onUpdateNode({ ...node, roleId: undefined })
+    if (!agentNode || !nodeRoleId) return
+    if (!rolesMap.has(nodeRoleId)) {
+      onUpdateNode({ ...agentNode, roleId: undefined })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run when roleId or available roles change, not on every node object change
-  }, [node.roleId, rolesMap, onUpdateNode])
+  }, [nodeRoleId, rolesMap, onUpdateNode])
 
   const update = useCallback(
     (patch: Partial<WorkflowNode>) => {
@@ -328,12 +333,20 @@ export default function WorkflowNodeEditorPanel({
             </label>
             <textarea
               className="wf-ne-textarea"
-              value={node.prompt ?? node.command ?? node.message ?? ''}
+              value={
+                node.type === 'agent'
+                  ? (node.prompt ?? '')
+                  : node.type === 'shell'
+                    ? (node.command ?? '')
+                    : node.type === 'checkpoint'
+                      ? (node.message ?? '')
+                      : ''
+              }
               rows={5}
               onChange={(e) => {
                 if (node.type === 'agent') update({ prompt: e.target.value })
                 else if (node.type === 'shell') update({ command: e.target.value })
-                else update({ message: e.target.value })
+                else if (node.type === 'checkpoint') update({ message: e.target.value })
               }}
             />
           </div>

@@ -229,41 +229,62 @@ export interface DetectedStack {
 
 export type WorkflowNodeType = 'agent' | 'shell' | 'checkpoint' | 'condition'
 
-export interface WorkflowNode {
+/**
+ * Fields shared by every workflow node variant. Per-variant fields live on
+ * each member of the WorkflowNode discriminated union below.
+ */
+interface WorkflowNodeBase {
   id: string
-  type: WorkflowNodeType
   name: string
   x: number
   y: number
 
-  // agent nodes
+  /** Per-node timeout (ms). Shell default 60000; agent default applies only
+   *  when set; otherwise only the idle timeout applies. */
+  timeout?: number | undefined
+
+  /** If true, workflow continues executing when this node fails. */
+  continueOnError?: boolean | undefined
+
+  /** Retry count and delay (agent + shell only — engine ignores for
+   *  checkpoint and condition; validateWorkflow rejects when set). */
+  retryCount?: number | undefined
+  retryDelayMs?: number | undefined
+}
+
+export interface AgentNode extends WorkflowNodeBase {
+  type: 'agent'
   agent?: AgentType | undefined
   agentFlags?: string | undefined
   prompt?: string | undefined
   roleId?: string | undefined
-
-  // shell nodes
-  command?: string | undefined
-
-  // checkpoint nodes
-  message?: string | undefined
-
-  // shell nodes: configurable timeout (ms), defaults to 60000
-  // agent nodes: optional absolute timeout (ms). If unset, only idle timeout applies
-  timeout?: number | undefined
-
-  // If true, workflow continues executing when this node fails
-  continueOnError?: boolean | undefined
-
-  // Condition node fields
-  conditionMode?: 'exitCode' | 'outputMatch' | undefined
-  conditionPattern?: string | undefined
-  // Retry fields (agent + shell only)
-  retryCount?: number | undefined
-  retryDelayMs?: number | undefined
-  // Codex skill ID (scope:name format, e.g. "global:lint-fix")
+  /** Codex skill ID (scope:name format, e.g. "global:lint-fix") */
   skillId?: string | undefined
 }
+
+export interface ShellNode extends WorkflowNodeBase {
+  type: 'shell'
+  command?: string | undefined
+}
+
+export interface CheckpointNode extends WorkflowNodeBase {
+  type: 'checkpoint'
+  message?: string | undefined
+}
+
+export interface ConditionNode extends WorkflowNodeBase {
+  type: 'condition'
+  conditionMode?: 'exitCode' | 'outputMatch' | undefined
+  conditionPattern?: string | undefined
+}
+
+/**
+ * Discriminated union of all workflow node variants. Use `node.type` to
+ * narrow before reading variant-specific fields. Adding a new variant
+ * requires updating the engine dispatch and the validator — TypeScript will
+ * point you at the new compile errors.
+ */
+export type WorkflowNode = AgentNode | ShellNode | CheckpointNode | ConditionNode
 
 export interface WorkflowEdge {
   id: string

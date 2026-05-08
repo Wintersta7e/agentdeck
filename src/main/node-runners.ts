@@ -7,7 +7,7 @@
  */
 import { spawn, execFile, type ChildProcess, type ExecException } from 'child_process'
 import { createLogger } from './logger'
-import type { WorkflowNode, WorkflowEvent, Role } from '../shared/types'
+import type { AgentNode, ShellNode, WorkflowEvent, Role } from '../shared/types'
 import {
   AGENT_BINARY_MAP,
   AGENT_PRINT_FLAGS_MAP,
@@ -90,7 +90,7 @@ export interface NodeRunnerDeps {
 // ── Node runners ─────────────────────────────────────────────────────
 
 export function runAgentNode(
-  node: WorkflowNode,
+  node: AgentNode,
   contextSummary: string,
   roles: Map<string, Role>,
   deps: NodeRunnerDeps,
@@ -304,7 +304,7 @@ export function runAgentNode(
   })
 }
 
-export function runShellNode(node: WorkflowNode, deps: NodeRunnerDeps): Promise<void> {
+export function runShellNode(node: ShellNode, deps: NodeRunnerDeps): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     // Convert literal \n sequences to real newlines so multi-line commands
     // (e.g. python3 -c "def f():\n  return 1") execute correctly in bash.

@@ -64,7 +64,9 @@ export function registerWorkflowHandlers(
     // Bundle all referenced roles (both custom and builtin)
     const allRoles = getRoles?.() ?? []
     const referencedRoleIds = new Set(
-      workflow.nodes.map((n) => n.roleId).filter((rid): rid is string => typeof rid === 'string'),
+      workflow.nodes
+        .map((n) => (n.type === 'agent' ? n.roleId : undefined))
+        .filter((rid): rid is string => typeof rid === 'string'),
     )
     const roles = allRoles.filter((r) => referencedRoleIds.has(r.id))
 
@@ -148,9 +150,9 @@ export function registerWorkflowHandlers(
         }
       }
 
-      // Remap roleIds in workflow nodes
+      // Remap roleIds in workflow nodes (only agent nodes carry roleId)
       const remappedNodes = importedWorkflow.nodes.map((n) => {
-        if (!n.roleId) return n
+        if (n.type !== 'agent' || !n.roleId) return n
         const newId = roleIdMap.get(n.roleId)
         if (newId === '') return { ...n, roleId: undefined } // cleared
         if (newId) return { ...n, roleId: newId }
