@@ -259,8 +259,13 @@ export function registerWorkflowHandlers(
     },
   )
 
+  // Channel namespace convention: CRUD operations use the plural `workflows:*`
+  // (workflows:list, workflows:save, workflows:run, etc.) while engine execution
+  // uses the singular `workflow:*` (workflow:stop, workflow:resume, and the
+  // per-run push channel `workflow:event:<id>`). The preload unifies both under
+  // `window.agentDeck.workflows`. Keep the singular form for execution-related
+  // channels added in the future.
   ipcMain.handle('workflow:stop', (_, workflowId: string) => {
-    // R5-01: Use SAFE_ID_RE consistent with all other handlers
     if (typeof workflowId !== 'string' || !SAFE_ID_RE.test(workflowId)) return
     getWorkflowEngine()?.stop(workflowId)
   })
