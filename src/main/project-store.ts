@@ -236,46 +236,11 @@ export function createProjectStore(): Store<StoreSchema> {
   // `registerLegacyTemplateIpc`, as a compat shim that routes to the new
   // template store while migration is in progress. Do NOT re-register it here —
   // ipcMain.handle throws on duplicate channel registration.
-
-  ipcMain.handle('store:saveTemplate', (_, template: unknown) => {
-    if (!template || typeof template !== 'object') {
-      throw new Error('store:saveTemplate requires a non-null object')
-    }
-    const rawT = template as Record<string, unknown>
-    if (rawT.id !== undefined && (typeof rawT.id !== 'string' || !SAFE_ID_RE.test(rawT.id)))
-      throw new Error('store:saveTemplate — id must be a valid identifier')
-    if (rawT.name !== undefined && typeof rawT.name !== 'string')
-      throw new Error('store:saveTemplate — name must be a string')
-    if (typeof rawT.name === 'string' && rawT.name.length > 200)
-      throw new Error('store:saveTemplate — name too long')
-    if (typeof rawT.description === 'string' && rawT.description.length > 2000)
-      throw new Error('store:saveTemplate — description too long')
-    if (typeof rawT.content === 'string' && rawT.content.length > 65536)
-      throw new Error('store:saveTemplate — content too long (max 64KB)')
-    return serialized(() => {
-      const t = template as Partial<LegacyTemplate>
-      const templates = store.get('templates')
-      const id = t.id ?? randomUUID()
-      const withId = { ...t, id } as LegacyTemplate
-      const idx = templates.findIndex((existing) => existing.id === id)
-      const existingTpl = idx >= 0 ? templates[idx] : undefined
-      if (existingTpl !== undefined) {
-        templates[idx] = { ...existingTpl, ...withId }
-      } else {
-        templates.push(withId)
-      }
-      store.set('templates', templates)
-      return templates[idx >= 0 ? idx : templates.length - 1]
-    })
-  })
-
-  ipcMain.handle('store:deleteTemplate', (_, id: string) => {
-    if (typeof id !== 'string' || !SAFE_ID_RE.test(id)) throw new Error('Invalid id')
-    return serialized(() => {
-      const templates = store.get('templates').filter((t) => t.id !== id)
-      store.set('templates', templates)
-    })
-  })
+  //
+  // The legacy `store:saveTemplate` / `store:deleteTemplate` write handlers
+  // were removed: nothing in the renderer routes through them anymore — saves
+  // and deletes go through `window.agentDeck.templates.save` /
+  // `templates.delete` which target the new disk-backed TemplateStore.
 
   ipcMain.handle('store:getRoles', () => {
     return store.get('roles')

@@ -74,8 +74,8 @@ describe('createProjectStore', () => {
     expect(ipcMain.handle).toHaveBeenCalledWith('store:saveProject', expect.any(Function))
     expect(ipcMain.handle).toHaveBeenCalledWith('store:deleteProject', expect.any(Function))
     // store:getTemplates is registered by ipc-templates.ts as a compat shim — not here.
-    expect(ipcMain.handle).toHaveBeenCalledWith('store:saveTemplate', expect.any(Function))
-    expect(ipcMain.handle).toHaveBeenCalledWith('store:deleteTemplate', expect.any(Function))
+    // store:saveTemplate / store:deleteTemplate were removed once the renderer
+    // stopped routing through them; templates now go through templates:* IPC.
     expect(ipcMain.handle).toHaveBeenCalledWith('store:getRoles', expect.any(Function))
     expect(ipcMain.handle).toHaveBeenCalledWith('store:saveRole', expect.any(Function))
     expect(ipcMain.handle).toHaveBeenCalledWith('store:deleteRole', expect.any(Function))

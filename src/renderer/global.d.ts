@@ -87,20 +87,6 @@ declare global {
             category?: TemplateCategory | undefined
           }>
         >
-        saveTemplate: (template: {
-          id?: string
-          name: string
-          description: string
-          content?: string | undefined
-          category?: TemplateCategory | undefined
-        }) => Promise<{
-          id: string
-          name: string
-          description: string
-          content?: string | undefined
-          category?: TemplateCategory | undefined
-        }>
-        deleteTemplate: (id: string) => Promise<void>
         getRoles: () => Promise<Role[]>
         saveRole: (role: Partial<Role>) => Promise<Role>
         deleteRole: (id: string) => Promise<void>
