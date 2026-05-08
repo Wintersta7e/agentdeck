@@ -11,7 +11,7 @@ import { toWslPath } from './wsl-utils'
 
 const log = createLogger('project-store')
 
-// REL-2: Promise-based write lock prevents concurrent read-modify-write races.
+// Promise-based write lock prevents concurrent read-modify-write races.
 // All mutating handlers (save/delete for projects, templates, roles) are serialized
 // through this lock so a second IPC call waits for the first to finish writing.
 let writeLock = Promise.resolve()
@@ -47,7 +47,7 @@ function decryptEnvVars(envVars: EnvVar[] | undefined): EnvVar[] | undefined {
     try {
       return { ...v, value: safeStorage.decryptString(Buffer.from(v.value, 'base64')) }
     } catch (err) {
-      // C3: Preserve the raw encrypted value and flag the failure so the UI can warn.
+      // Preserve the raw encrypted value and flag the failure so the UI can warn.
       // Returning '' would cause re-encryption of empty string on next save → permanent data loss.
       log.error(`Failed to decrypt env var "${v.key}" — preserving raw value`, { err: String(err) })
       return { ...v, _decryptFailed: true }
@@ -103,10 +103,7 @@ export interface StoreSchema {
  */
 type AppPrefs = StoreSchema['appPrefs']
 type PrefsMigration = (prefs: AppPrefs) => void
-const PREFS_MIGRATIONS: readonly { version: number; migrate: PrefsMigration }[] = [
-  // Add entries here, e.g.:
-  //   { version: 1, migrate: (p) => { delete p.someOldKey } }
-]
+const PREFS_MIGRATIONS: readonly { version: number; migrate: PrefsMigration }[] = []
 
 /** Latest prefsVersion produced by PREFS_MIGRATIONS — derived, do not edit. */
 const CURRENT_PREFS_VERSION = PREFS_MIGRATIONS.reduce((max, m) => Math.max(max, m.version), 0)
