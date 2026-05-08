@@ -2,7 +2,11 @@
  * Canonical agent definitions — single source of truth for all 7 supported agents.
  *
  * Import from here in both main and renderer processes.
- * When adding/removing agents, update ONLY this file.
+ * When adding/removing agents, update ONLY this file:
+ *  - Add an entry to AGENTS with all required fields (printFlags, colorVar, short, etc.).
+ *  - Optional fields (cdFlag, engineFlags, latestCmd, installedCmd) may be omitted.
+ *  - Per-process derived maps below (AGENT_BINARY_MAP, AGENT_PRINT_FLAGS_MAP, etc.)
+ *    rebuild automatically.
  *
  * @field contextWindow
  * Last-resort context window for this CLI when active-model detection fails.
@@ -10,6 +14,25 @@
  * display everywhere in the renderer. Values here are conservative fallbacks
  * aligned with current provider minimums — NOT claims about any specific
  * model being the CLI's default.
+ *
+ * @field printFlags
+ * Non-interactive / print-mode CLI flags (prompt follows as last arg).
+ * Used by the workflow engine to invoke the agent without a TUI.
+ *
+ * @field cdFlag
+ * Native flag for setting the working directory (e.g. `-C`, `--directory`).
+ * When present, the engine uses this instead of a shell `cd &&` chain.
+ *
+ * @field engineFlags
+ * Extra flags appended automatically by the workflow engine — not user-configured.
+ * Used for workflow-specific needs like non-git project directories.
+ *
+ * @field colorVar
+ * CSS custom property name (without `var()`) holding the agent's signature
+ * color. Used by `agentColorVar()` in the renderer.
+ *
+ * @field short
+ * Two-letter mnemonic for compact UI tiles (e.g. "CC" for claude-code).
  */
 
 export const AGENTS = [
@@ -23,6 +46,10 @@ export const AGENTS = [
     versionArgs: ['--version'],
     latestCmd: 'npm view @anthropic-ai/claude-code version 2>/dev/null',
     updateCmd: 'npm install -g @anthropic-ai/claude-code@latest',
+    printFlags: ['--print'],
+    cdFlag: '--directory',
+    colorVar: '--agent-claude',
+    short: 'CC',
   },
   {
     id: 'codex',
@@ -35,6 +62,11 @@ export const AGENTS = [
     installedCmd: 'npm list -g @openai/codex --json 2>/dev/null',
     latestCmd: 'npm view @openai/codex version 2>/dev/null',
     updateCmd: 'npm install -g @openai/codex@latest',
+    printFlags: ['exec'],
+    cdFlag: '-C',
+    engineFlags: ['--skip-git-repo-check'],
+    colorVar: '--agent-codex',
+    short: 'CX',
   },
   {
     id: 'aider',
@@ -46,6 +78,9 @@ export const AGENTS = [
     versionArgs: ['--version'],
     latestCmd: 'pip index versions aider-chat 2>/dev/null | head -1',
     updateCmd: 'pip install --upgrade aider-chat',
+    printFlags: ['--message'],
+    colorVar: '--agent-aider',
+    short: 'AI',
   },
   {
     id: 'goose',
@@ -59,6 +94,9 @@ export const AGENTS = [
     // No reliable remote version check — leave empty to skip update notifications.
     latestCmd: '',
     updateCmd: 'curl -fsSL https://github.com/block/goose/raw/main/download.sh | bash',
+    printFlags: ['run', '-t'],
+    colorVar: '--agent-goose',
+    short: 'GS',
   },
   {
     id: 'gemini-cli',
@@ -70,6 +108,9 @@ export const AGENTS = [
     versionArgs: ['--version'],
     latestCmd: 'npm view @google/gemini-cli version 2>/dev/null',
     updateCmd: 'npm install -g @google/gemini-cli@latest',
+    printFlags: ['-p'],
+    colorVar: '--agent-gemini',
+    short: 'GM',
   },
   {
     id: 'amazon-q',
@@ -84,6 +125,9 @@ export const AGENTS = [
     latestCmd: '',
     updateCmd:
       'q update 2>/dev/null || echo "Run: curl -sSf https://desktop-release.codewhisperer.us-east-1.amazonaws.com/latest/q-x86_64-linux.zip -o /tmp/q.zip && unzip -o /tmp/q.zip -d /tmp/q && /tmp/q/q-x86_64-linux/install.sh"',
+    printFlags: ['chat', '--no-interactive', '--trust-all-tools'],
+    colorVar: '--agent-amazonq',
+    short: 'AQ',
   },
   {
     id: 'opencode',
@@ -96,6 +140,9 @@ export const AGENTS = [
     // Package renamed from 'opencode' to 'opencode-ai' on npm
     latestCmd: 'npm view opencode-ai version 2>/dev/null',
     updateCmd: 'npm install -g opencode-ai@latest',
+    printFlags: ['run'],
+    colorVar: '--agent-opencode',
+    short: 'OC',
   },
 ] as const
 
@@ -113,6 +160,31 @@ export const AGENT_BINARY_MAP: Readonly<Record<string, string>> = Object.freeze(
 /** Agent ID → display name for UI */
 export const AGENT_DISPLAY: Readonly<Record<string, string>> = Object.freeze(
   Object.fromEntries(AGENTS.map((a) => [a.id, a.name])),
+)
+
+/** Agent ID → non-interactive print-mode CLI flags */
+export const AGENT_PRINT_FLAGS_MAP: Readonly<Record<string, readonly string[]>> = Object.freeze(
+  Object.fromEntries(AGENTS.map((a) => [a.id, a.printFlags])),
+)
+
+/** Agent ID → native --cd / -C flag (only set for agents that support it) */
+export const AGENT_CD_FLAG_MAP: Readonly<Record<string, string>> = Object.freeze(
+  Object.fromEntries(AGENTS.flatMap((a) => ('cdFlag' in a ? [[a.id, a.cdFlag]] : []))),
+)
+
+/** Agent ID → engine-injected extra flags (only set for agents that need them) */
+export const AGENT_ENGINE_FLAGS_MAP: Readonly<Record<string, readonly string[]>> = Object.freeze(
+  Object.fromEntries(AGENTS.flatMap((a) => ('engineFlags' in a ? [[a.id, a.engineFlags]] : []))),
+)
+
+/** Agent ID → CSS variable name (without `var()`) for the agent's signature color */
+export const AGENT_COLOR_VAR_MAP: Readonly<Record<string, string>> = Object.freeze(
+  Object.fromEntries(AGENTS.map((a) => [a.id, a.colorVar])),
+)
+
+/** Agent ID → 2-letter mnemonic for compact UI tiles */
+export const AGENT_SHORT_MAP: Readonly<Record<string, string>> = Object.freeze(
+  Object.fromEntries(AGENTS.map((a) => [a.id, a.short])),
 )
 
 /**
