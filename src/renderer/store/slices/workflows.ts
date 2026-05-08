@@ -46,6 +46,10 @@ export const createWorkflowsSlice: StateCreator<AppState, [], [], WorkflowsSlice
         : [...state.openWorkflowIds, id],
     })),
 
+  // Cross-slice note: closeWorkflow reads state.sessions/activeSessionId
+  // (owned by SessionsSlice) and may write activeSessionId/currentView back
+  // when no workflows remain. Symmetric coupling lives in
+  // sessions.ts/removeSession; both atomic-update by design.
   closeWorkflow: (id?) =>
     set((state) => {
       const targetId = id ?? state.activeWorkflowId

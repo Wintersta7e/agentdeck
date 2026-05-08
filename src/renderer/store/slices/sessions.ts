@@ -77,6 +77,13 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
   openSessionIds: [],
   sessionUsage: {},
 
+  // Cross-slice note: every session-mutating action below
+  // (addSession / openSession / setActiveSession / removeSession /
+  // restartSession) reads and writes paneSessions, focusedPane, and
+  // paneLayout — those fields are declared on UiSlice but updated here
+  // atomically with the session mutation so subscribers never see a pane
+  // grid that points at sessions that don't exist or vice versa.
+  // workflows.ts/closeWorkflow has the symmetric coupling on activeSessionId.
   addSession: (sessionId, projectId, overrides) =>
     set((state) => {
       const paneSessions = [...state.paneSessions]

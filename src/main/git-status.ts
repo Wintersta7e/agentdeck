@@ -62,12 +62,31 @@ const MAX_CACHE = 200
 let diskCachePath: string | null = null
 let flushTimer: ReturnType<typeof setTimeout> | null = null
 
+/**
+ * Disk cache schema version. Bump when the persisted entry shape changes
+ * incompatibly. Older versions are dropped on load so a stale cache
+ * doesn't surface entries with possibly-mismatched fields.
+ */
+const CACHE_VERSION = 1
+
+interface DiskCacheFile {
+  version: number
+  entries: Array<{ key: string; status: GitStatus; fetchedAt: number }>
+}
+
 /** Initialize disk cache path — call once at startup with app.getPath('userData') */
 export function initGitStatusCache(userDataPath: string): void {
   diskCachePath = `${userDataPath}/git-status-cache.json`
   try {
     const raw = readFileSync(diskCachePath, 'utf8')
-    const entries = JSON.parse(raw) as Array<{ key: string; status: GitStatus; fetchedAt: number }>
+    const parsed = JSON.parse(raw) as Partial<DiskCacheFile> | unknown[]
+    // Tolerate the legacy un-versioned bare-array shape on first load
+    // after upgrade; subsequent flushes write the versioned shape.
+    const entries = Array.isArray(parsed)
+      ? (parsed as DiskCacheFile['entries'])
+      : parsed.version === CACHE_VERSION
+        ? (parsed.entries ?? [])
+        : []
     for (const entry of entries) {
       if (entry.key && entry.status) {
         cache.set(entry.key, { status: entry.status, fetchedAt: entry.fetchedAt })
@@ -83,12 +102,15 @@ function scheduleDiskFlush(): void {
   flushTimer = setTimeout(() => {
     flushTimer = null
     if (!diskCachePath) return
-    const entries = Array.from(cache.entries()).map(([key, val]) => ({
-      key,
-      status: val.status,
-      fetchedAt: val.fetchedAt,
-    }))
-    writeFile(diskCachePath, JSON.stringify(entries), 'utf8').catch(() => {
+    const file: DiskCacheFile = {
+      version: CACHE_VERSION,
+      entries: Array.from(cache.entries()).map(([key, val]) => ({
+        key,
+        status: val.status,
+        fetchedAt: val.fetchedAt,
+      })),
+    }
+    writeFile(diskCachePath, JSON.stringify(file), 'utf8').catch(() => {
       // Best-effort persistence
     })
   }, 5000)
