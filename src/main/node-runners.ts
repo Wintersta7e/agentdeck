@@ -8,7 +8,13 @@
 import { spawn, execFile, type ChildProcess, type ExecException } from 'child_process'
 import { createLogger } from './logger'
 import type { WorkflowNode, WorkflowEvent, Role } from '../shared/types'
-import { AGENT_BINARY_MAP, SAFE_FLAGS_RE } from '../shared/agents'
+import {
+  AGENT_BINARY_MAP,
+  AGENT_PRINT_FLAGS_MAP,
+  AGENT_CD_FLAG_MAP,
+  AGENT_ENGINE_FLAGS_MAP,
+  SAFE_FLAGS_RE,
+} from '../shared/agents'
 import {
   AGENT_IDLE_TIMEOUT,
   DEFAULT_AGENT_TIMEOUT,
@@ -23,32 +29,6 @@ const log = createLogger('node-runners')
 
 // Re-export for callers that previously imported these from this module.
 export { AGENT_IDLE_TIMEOUT, MAX_TIER_CONCURRENCY }
-
-// ── Per-agent CLI maps ────────────────────────────────────────────────
-
-/** Non-interactive / print-mode CLI flags per agent (prompt follows as last arg) */
-export const AGENT_PRINT_FLAGS: Record<string, string[]> = {
-  'claude-code': ['--print'],
-  codex: ['exec'],
-  aider: ['--message'],
-  goose: ['run', '-t'],
-  'gemini-cli': ['-p'],
-  'amazon-q': ['chat', '--no-interactive', '--trust-all-tools'],
-  opencode: ['run'],
-}
-
-/** Agents that support a native --cd / -C flag for setting working directory.
- *  These use the flag instead of shell `cd`, which is more reliable. */
-const AGENT_CD_FLAG: Record<string, string> = {
-  codex: '-C',
-  'claude-code': '--directory',
-}
-
-/** Extra flags injected by the engine (not user-configured).
- *  These handle workflow-specific needs like non-git project dirs. */
-const AGENT_ENGINE_FLAGS: Record<string, string[]> = {
-  codex: ['--skip-git-repo-check'],
-}
 
 // ── Utility functions ────────────────────────────────────────────────
 
@@ -158,7 +138,7 @@ export function runAgentNode(
     }
 
     const bin = AGENT_BINARY_MAP[agentName] ?? agentName
-    const printFlags = AGENT_PRINT_FLAGS[agentName] ?? ['--print']
+    const printFlags = AGENT_PRINT_FLAGS_MAP[agentName] ?? ['--print']
 
     let sanitizedFlags = ''
     if (node.agentFlags) {
@@ -178,11 +158,11 @@ export function runAgentNode(
     // For agents with native --cd (codex -C, claude --directory), the flag goes AFTER
     // the subcommand (e.g. `codex exec -C /path '<prompt>'`), not before it.
     const parts: string[] = []
-    const cdFlag = AGENT_CD_FLAG[agentName]
+    const cdFlag = AGENT_CD_FLAG_MAP[agentName]
     if (deps.projectPath && !cdFlag) parts.push(`cd ${shellQuote(deps.projectPath)}`)
     const flagStr = printFlags.length > 0 ? printFlags.join(' ') + ' ' : ''
     const cdFlagStr = deps.projectPath && cdFlag ? `${cdFlag} ${shellQuote(deps.projectPath)} ` : ''
-    const engineFlags = AGENT_ENGINE_FLAGS[agentName]
+    const engineFlags = AGENT_ENGINE_FLAGS_MAP[agentName]
     const engineFlagStr = engineFlags ? engineFlags.join(' ') + ' ' : ''
     parts.push(
       `${shellQuote(bin)} ${flagStr}${cdFlagStr}${engineFlagStr}${shellQuote(prompt)}${sanitizedFlags}`,
