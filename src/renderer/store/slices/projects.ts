@@ -40,13 +40,22 @@ export interface ProjectsSlice {
 
 export const createProjectsSlice: StateCreator<AppState, [], [], ProjectsSlice> = (set, get) => ({
   projects: [],
-  setProjects: (projects) => {
-    set({ projects })
-    // Hand cross-slice pruning to its owning slice instead of writing the
-    // gitStatuses field directly here. Two state updates is fine — both
-    // commit synchronously inside the same React event tick.
-    get().pruneGitStatuses(new Set(projects.map((p) => p.id)))
-  },
+  setProjects: (projects) =>
+    // Single set call so subscribers see one consistent transition rather
+    // than an intermediate state where projects updated but gitStatuses
+    // still has entries for deleted projects. Inline the prune calculation
+    // — the matching `pruneGitStatuses` action stays on HomeSlice for
+    // standalone callers.
+    set((state) => {
+      const liveIds = new Set(projects.map((p) => p.id))
+      const next: typeof state.gitStatuses = {}
+      let pruned = false
+      for (const [id, status] of Object.entries(state.gitStatuses)) {
+        if (liveIds.has(id)) next[id] = status
+        else pruned = true
+      }
+      return pruned ? { projects, gitStatuses: next } : { projects }
+    }),
 
   agentStatus: {},
   setAgentStatus: (status) => set({ agentStatus: status }),
