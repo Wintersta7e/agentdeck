@@ -253,6 +253,14 @@ export function createWorkflowEngine(
               nodeId: node.id,
               message: 'Resumed',
             })
+          } else {
+            // Loud-fail on unknown node types instead of silently emitting
+            // 'node:done'. Without this guard, a typed-but-unhandled node
+            // (e.g. a new variant added to the union without an engine case)
+            // would appear to succeed without ever running.
+            throw new Error(
+              `Unknown workflow node type: ${String((node as { type: unknown }).type)}`,
+            )
           }
 
           runningNodeIds.delete(node.id)
