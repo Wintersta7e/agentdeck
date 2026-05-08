@@ -67,12 +67,12 @@ describe('ClaudeAdapter', () => {
   })
 
   it('getLogDirs returns project-specific dir only', () => {
-    const dirs = adapter.getLogDirs('/home/testuser/my-project')
+    const dirs = adapter.getLogDirs('/home/testuser/my-project', {})
     expect(dirs).toHaveLength(1)
   })
 
   it('getLogDirs entry contains path slug', () => {
-    const dirs = adapter.getLogDirs('/home/testuser/my-project')
+    const dirs = adapter.getLogDirs('/home/testuser/my-project', {})
     const first = dirs[0]
     if (!first) throw new Error('Expected first dir')
     // slashes replaced by dashes
@@ -82,7 +82,7 @@ describe('ClaudeAdapter', () => {
 
   it('getLogDirs uses CLAUDE_CONFIG_DIR from env context', () => {
     const dirs = adapter.getLogDirs('/home/testuser/my-project', {
-      claudeConfigDir: '/custom/claude-config',
+      CLAUDE_CONFIG_DIR: '/custom/claude-config',
     })
     expect(dirs).toHaveLength(1)
     const first = dirs[0]
@@ -92,7 +92,7 @@ describe('ClaudeAdapter', () => {
     expect(first).not.toContain('~')
   })
 
-  it('getLogDirs falls back to ~/.claude when env context has no claudeConfigDir', () => {
+  it('getLogDirs falls back to ~/.claude when env context has no CLAUDE_CONFIG_DIR', () => {
     const dirs = adapter.getLogDirs('/home/testuser/my-project', {})
     expect(dirs).toHaveLength(1)
     const first = dirs[0]
@@ -242,7 +242,7 @@ describe('CodexAdapter', () => {
   })
 
   it('getLogDirs returns today date dir in YYYY/MM/DD format', () => {
-    const dirs = adapter.getLogDirs('/home/testuser/any')
+    const dirs = adapter.getLogDirs('/home/testuser/any', {})
     expect(dirs).toHaveLength(1)
     const dir = dirs[0]
     if (!dir) throw new Error('Expected dir')
@@ -252,7 +252,7 @@ describe('CodexAdapter', () => {
   })
 
   it('getLogDirs uses CODEX_HOME from env context', () => {
-    const dirs = adapter.getLogDirs('/home/testuser/any', { codexHome: '/custom/codex' })
+    const dirs = adapter.getLogDirs('/home/testuser/any', { CODEX_HOME: '/custom/codex' })
     expect(dirs).toHaveLength(1)
     const dir = dirs[0]
     if (!dir) throw new Error('Expected dir')
@@ -261,7 +261,7 @@ describe('CodexAdapter', () => {
     expect(dir).not.toContain('~')
   })
 
-  it('getLogDirs falls back to ~/.codex when env context has no codexHome', () => {
+  it('getLogDirs falls back to ~/.codex when env context has no CODEX_HOME', () => {
     const dirs = adapter.getLogDirs('/home/testuser/any', {})
     expect(dirs).toHaveLength(1)
     const dir = dirs[0]

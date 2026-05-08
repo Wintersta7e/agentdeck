@@ -106,23 +106,27 @@ export function createCostTracker(
   // Resolve agent config env vars from WSL (CLAUDE_CONFIG_DIR, CODEX_HOME).
   // These override the default ~/.claude and ~/.codex base paths.
   // Resolved in parallel with $HOME since they're independent.
+  // Union of env-var names declared by all adapters. Adding a new adapter
+  // that needs e.g. GOOSE_CONFIG_DIR auto-extends the resolution set with
+  // no structural changes to the resolver.
+  const envVarNames = Array.from(new Set(adapters.flatMap((a) => a.getEnvVars())))
+
   let cachedEnv: AgentEnvContext | null = null
-  const envReady: Promise<AgentEnvContext> = Promise.all([
-    // eslint-disable-next-line no-template-curly-in-string -- bash variable expansion, not JS
-    wslExec('echo "${CLAUDE_CONFIG_DIR:-}"')
-      .then((o) => o.trim())
-      .catch(() => ''),
-    // eslint-disable-next-line no-template-curly-in-string -- bash variable expansion, not JS
-    wslExec('echo "${CODEX_HOME:-}"')
-      .then((o) => o.trim())
-      .catch(() => ''),
-  ])
-    .then(([rawClaude, rawCodex]) => {
-      const claudeConfigDir = rawClaude || undefined
-      const codexHome = rawCodex || undefined
-      const env: AgentEnvContext = { claudeConfigDir, codexHome }
+  const envReady: Promise<AgentEnvContext> = Promise.all(
+    envVarNames.map((name) =>
+      // Bash variable expansion of the named env var; tolerates unset vars.
+      wslExec(`echo "$\{${name}:-}"`)
+        .then((o) => o.trim())
+        .catch(() => ''),
+    ),
+  )
+    .then((values) => {
+      const env: Record<string, string | undefined> = {}
+      envVarNames.forEach((name, i) => {
+        env[name] = values[i] || undefined
+      })
       cachedEnv = env
-      log.info('Resolved WSL agent env vars', { claudeConfigDir, codexHome })
+      log.info('Resolved WSL agent env vars', env)
       return env
     })
     .catch((err) => {
