@@ -141,7 +141,7 @@ describe('ipc-templates', () => {
     it('rejects project scope with null projectId', async () => {
       register({ migrationComplete: true })
       await expect(call('templates:save', validDraft, 'project', null)).rejects.toThrow(
-        /projectId required/,
+        /Invalid projectId/,
       )
     })
 
@@ -186,7 +186,7 @@ describe('ipc-templates', () => {
       // cap with legal identifier characters so the pattern check passes and
       // the length cap is exercised.
       const draft: TemplateDraft = { ...validDraft, id: 'a'.repeat(129) }
-      await expect(call('templates:save', draft, 'user', null)).rejects.toThrow(/id too long/)
+      await expect(call('templates:save', draft, 'user', null)).rejects.toThrow(/Invalid draft\.id/)
     })
 
     it('rejects projectId too long (>128)', async () => {
@@ -196,7 +196,7 @@ describe('ipc-templates', () => {
         existingProjects: new Set([longProjectId]),
       })
       await expect(call('templates:save', validDraft, 'project', longProjectId)).rejects.toThrow(
-        /projectId too long/,
+        /Invalid projectId/,
       )
     })
 
@@ -249,7 +249,7 @@ describe('ipc-templates', () => {
       register({ migrationComplete: true })
       await expect(
         call('templates:delete', { id: 'has spaces', scope: 'user', projectId: null }),
-      ).rejects.toThrow(/ref.id must be a valid identifier/)
+      ).rejects.toThrow(/Invalid ref\.id/)
     })
 
     it('rejects invalid ref (non-object)', async () => {

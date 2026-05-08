@@ -8,7 +8,7 @@ import type {
 } from '../../shared/types'
 import type { TemplateStore, TemplateChangeEvent } from '../template-store'
 import type { LegacyStoreAdapter } from '../template-legacy-store'
-import { SAFE_ID_RE, MAX_SAFE_ID_LEN } from '../validation'
+import { validateId } from '../../shared/validation'
 import { createLogger } from '../logger'
 import { generateTemplateId } from '../template-id'
 
@@ -54,12 +54,7 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
 function validateDraft(input: unknown): asserts input is TemplateDraft {
   if (!isPlainObject(input)) throw new Error('draft must be an object')
   const raw = input
-  if (raw.id !== undefined && (typeof raw.id !== 'string' || !SAFE_ID_RE.test(raw.id))) {
-    throw new Error('draft.id must be a valid identifier')
-  }
-  if (raw.id !== undefined && typeof raw.id === 'string' && raw.id.length > MAX_SAFE_ID_LEN) {
-    throw new Error(`draft.id too long (max ${String(MAX_SAFE_ID_LEN)})`)
-  }
+  if (raw.id !== undefined) validateId(raw.id, 'draft.id')
   if (typeof raw.name !== 'string' || raw.name.length === 0) {
     throw new Error('draft.name is required')
   }
@@ -97,13 +92,8 @@ function validateScopeAndProject(
     throw new Error('invalid scope')
   }
   if (scope === 'project') {
-    if (typeof projectId !== 'string' || !SAFE_ID_RE.test(projectId)) {
-      throw new Error('projectId required for project scope')
-    }
-    if (projectId.length > MAX_SAFE_ID_LEN) {
-      throw new Error(`projectId too long (max ${String(MAX_SAFE_ID_LEN)})`)
-    }
-    if (!ctx.getProjectExists(projectId)) {
+    validateId(projectId, 'projectId')
+    if (!ctx.getProjectExists(projectId as string)) {
       throw new Error('unknown projectId')
     }
   } else if (projectId !== null && projectId !== undefined) {
@@ -114,17 +104,12 @@ function validateScopeAndProject(
 function validateRef(input: unknown, ctx: TemplateHandlerContext): TemplateRef {
   if (!isPlainObject(input)) throw new Error('ref must be an object')
   const raw = input
-  if (typeof raw.id !== 'string' || !SAFE_ID_RE.test(raw.id)) {
-    throw new Error('ref.id must be a valid identifier')
-  }
-  if (raw.id.length > MAX_SAFE_ID_LEN) {
-    throw new Error(`ref.id too long (max ${String(MAX_SAFE_ID_LEN)})`)
-  }
+  const id = validateId(raw.id, 'ref.id')
   const scope = raw.scope
   const projectId = (raw.projectId ?? null) as string | null
   validateScopeAndProject(scope, projectId, ctx)
   return {
-    id: raw.id,
+    id,
     scope: scope as TemplateScope,
     projectId: scope === 'project' ? (projectId as string) : null,
   }
@@ -154,14 +139,7 @@ export function registerTemplateIpc(ctx: TemplateHandlerContext): void {
         throw new Error('templates:listAll input must be an object or undefined')
       }
       const projectId = input?.projectId
-      if (projectId !== undefined) {
-        if (typeof projectId !== 'string' || !SAFE_ID_RE.test(projectId)) {
-          throw new Error('templates:listAll — projectId must be a valid identifier')
-        }
-        if (projectId.length > MAX_SAFE_ID_LEN) {
-          throw new Error(`templates:listAll — projectId too long (max ${String(MAX_SAFE_ID_LEN)})`)
-        }
-      }
+      if (projectId !== undefined) validateId(projectId, 'templates:listAll projectId')
       if (!ctx.migrationComplete()) {
         return ctx.legacy.listAll()
       }
@@ -172,22 +150,15 @@ export function registerTemplateIpc(ctx: TemplateHandlerContext): void {
   ipcMain.handle(
     'templates:activateProject',
     async (_event, projectId: unknown): Promise<Template[]> => {
-      if (typeof projectId !== 'string' || !SAFE_ID_RE.test(projectId)) {
-        throw new Error('templates:activateProject — projectId must be a valid identifier')
-      }
-      if (projectId.length > MAX_SAFE_ID_LEN) {
-        throw new Error(
-          `templates:activateProject — projectId too long (max ${String(MAX_SAFE_ID_LEN)})`,
-        )
-      }
-      if (!ctx.getProjectExists(projectId)) {
+      const validProjectId = validateId(projectId, 'templates:activateProject projectId')
+      if (!ctx.getProjectExists(validProjectId)) {
         throw new Error('unknown projectId')
       }
       if (!ctx.migrationComplete()) {
         // Nothing to activate in legacy mode — all legacy templates are user-scope.
         return []
       }
-      return ctx.store.activateProject(projectId)
+      return ctx.store.activateProject(validProjectId)
     },
   )
 
