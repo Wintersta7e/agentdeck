@@ -40,17 +40,13 @@ export interface ProjectsSlice {
 
 export const createProjectsSlice: StateCreator<AppState, [], [], ProjectsSlice> = (set, get) => ({
   projects: [],
-  setProjects: (projects) =>
-    set((s) => {
-      // Prune gitStatuses entries for projects that no longer exist so the
-      // map doesn't grow unboundedly across deletions.
-      const liveIds = new Set(projects.map((p) => p.id))
-      const nextStatuses: typeof s.gitStatuses = {}
-      for (const [id, status] of Object.entries(s.gitStatuses)) {
-        if (liveIds.has(id)) nextStatuses[id] = status
-      }
-      return { projects, gitStatuses: nextStatuses }
-    }),
+  setProjects: (projects) => {
+    set({ projects })
+    // Hand cross-slice pruning to its owning slice instead of writing the
+    // gitStatuses field directly here. Two state updates is fine — both
+    // commit synchronously inside the same React event tick.
+    get().pruneGitStatuses(new Set(projects.map((p) => p.id)))
+  },
 
   agentStatus: {},
   setAgentStatus: (status) => set({ agentStatus: status }),

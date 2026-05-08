@@ -6,6 +6,9 @@ export interface HomeSlice {
   // Git status cache
   gitStatuses: Record<string, GitStatus | null>
   setGitStatus: (projectId: string, status: GitStatus | null) => void
+  /** Drop entries for project ids no longer in the live set. Called from
+   *  ProjectsSlice.setProjects so cache pruning lives next to its owner. */
+  pruneGitStatuses: (liveProjectIds: Set<string>) => void
 
   // Review queue
   reviewItems: ReviewItem[]
@@ -30,6 +33,17 @@ export const createHomeSlice: StateCreator<AppState, [], [], HomeSlice> = (set) 
     set((state) => ({
       gitStatuses: { ...state.gitStatuses, [projectId]: status },
     })),
+
+  pruneGitStatuses: (liveProjectIds) =>
+    set((state) => {
+      const next: Record<string, GitStatus | null> = {}
+      let changed = false
+      for (const [id, status] of Object.entries(state.gitStatuses)) {
+        if (liveProjectIds.has(id)) next[id] = status
+        else changed = true
+      }
+      return changed ? { gitStatuses: next } : state
+    }),
 
   reviewItems: [],
 

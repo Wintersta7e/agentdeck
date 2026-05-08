@@ -322,6 +322,23 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
       if (paneSessions[0] === '' && newActive) {
         paneSessions[0] = newActive
       }
+      // Cross-slice coupling: when the last session closes we route into
+      // an open workflow if one exists, otherwise home. currentView and
+      // activeWorkflowId are owned by other slices but updated atomically
+      // here so callers don't observe a transient "no sessions, no view"
+      // state.
+      const noSessionsLeft = openIds.length === 0
+      const hasOpenWorkflow = state.openWorkflowIds.length > 0
+      const nextWorkflowId =
+        noSessionsLeft && hasOpenWorkflow
+          ? (state.activeWorkflowId ?? state.openWorkflowIds[0] ?? null)
+          : state.activeWorkflowId
+      const nextView = noSessionsLeft
+        ? hasOpenWorkflow
+          ? ('workflow' as const)
+          : ('home' as const)
+        : state.currentView
+
       return {
         sessions,
         activityFeeds,
@@ -330,16 +347,8 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
         worktreePaths,
         openSessionIds,
         activeSessionId: state.activeSessionId === sessionId ? newActive : state.activeSessionId,
-        currentView:
-          openIds.length === 0
-            ? state.openWorkflowIds.length > 0
-              ? ('workflow' as const)
-              : ('home' as const)
-            : state.currentView,
-        activeWorkflowId:
-          openIds.length === 0 && state.openWorkflowIds.length > 0
-            ? (state.activeWorkflowId ?? state.openWorkflowIds[0] ?? null)
-            : state.activeWorkflowId,
+        currentView: nextView,
+        activeWorkflowId: nextWorkflowId,
         paneSessions,
       }
     }),
