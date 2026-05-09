@@ -267,6 +267,39 @@ describe('WorktreeManager — acquire', () => {
     expect(result.isolated).toBe(true)
     expect(git.addWorktree).toHaveBeenCalledTimes(2)
   })
+
+  it('accepts a trailing slash in the worktree base directory', async () => {
+    const git = createMockGit()
+    const lookup = createLookup({ proj1: '/home/user/project-a' })
+    const mgr = await createWorktreeManager(git, lookup, REGISTRY_DIR, '/tmp/test-worktrees/')
+
+    await mgr.acquire('proj1', 'sess-primary')
+    const result = await mgr.acquire('proj1', 'sess-worktree')
+
+    expect(result.path).toBe('/tmp/test-worktrees/proj1/sess-worktree')
+    expect(result.isolated).toBe(true)
+  })
+
+  it('does not count kept branches against the worktree cap', async () => {
+    const git = createMockGit()
+    const lookup = createLookup({ proj1: '/home/user/project-a' })
+    const mgr = await createWorktreeManager(git, lookup, REGISTRY_DIR)
+
+    await mgr.acquire('proj1', 'sess-primary')
+
+    for (let i = 0; i < 20; i++) {
+      const result = await mgr.acquire('proj1', `cap-session-${String(i)}`)
+      expect(result.isolated).toBe(true)
+    }
+
+    await expect(mgr.acquire('proj1', 'cap-overflow')).rejects.toThrow('Worktree limit reached')
+
+    await mgr.keep('cap-session-0')
+
+    await expect(mgr.acquire('proj1', 'cap-session-20')).resolves.toMatchObject({
+      isolated: true,
+    })
+  })
 })
 
 // ── Helper to set up a primary + worktree session ────────────────────────────
@@ -418,21 +451,21 @@ describe('WorktreeManager — keep', () => {
     fsStore.clear()
   })
 
-  it('marks the entry as kept so pruneOrphans skips it', async () => {
+  it('removes the worktree directory and evicts the registry entry', async () => {
     const git = createMockGit()
     const { mgr, worktreeId } = await setupWorktreeSession(git)
 
     await mgr.keep(worktreeId)
 
-    // Even if the entry is old, pruneOrphans should skip it
-    // Simulate an old lastUsed by discarding and re-checking prune count
-    // pruneOrphans returns 0 — kept entries are never pruned
+    expect(git.removeWorktree).toHaveBeenCalledTimes(1)
+
+    // The worktree branch is intentionally left in git, but the removed
+    // directory no longer has a registry entry that can consume the cap.
+    await expect(mgr.inspect(worktreeId)).rejects.toThrow(
+      `No worktree entry found for sessionId: ${worktreeId}`,
+    )
     const pruned = await mgr.pruneOrphans()
     expect(pruned).toBe(0)
-
-    // The entry is still inspectable
-    const result = await mgr.inspect(worktreeId)
-    expect(result).toBeDefined()
   })
 
   it('throws for unknown sessionId', async () => {
@@ -473,7 +506,7 @@ describe('WorktreeManager — pruneOrphans', () => {
 
     const pruned = await mgr.pruneOrphans()
     expect(pruned).toBe(0)
-    // pruneOrphans should NOT have called removeWorktree for a kept entry
+    // pruneOrphans should not see a kept entry after keep() evicts it.
     expect(git.removeWorktree).not.toHaveBeenCalled()
   })
 

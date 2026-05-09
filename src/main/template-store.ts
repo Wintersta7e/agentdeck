@@ -198,49 +198,77 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
     }
   }
 
-  // KNOWN LIMITATION: There is a scan-before-watch window — files written to
-  // `dir` between the initial scan (in activateProject / bootstrap) and the
-  // watch subscription being fully armed are silently missed. The catch-branch
-  // below also swaps fs.watch for a 10s polling interval; the watcher's own
-  // runtime 'error' event does NOT fall back to polling, so a watcher that
-  // fails mid-life stops emitting change events until the renderer triggers a
-  // manual rescan (activateProject / bootstrap). A proper fix needs an
-  // event-replay queue during the scan plus a runtime-error fallback to
-  // polling.
   function setupWatcher(dir: string, rescan: () => Promise<void>): () => void {
     let debounceTimer: ReturnType<typeof setTimeout> | null = null
+    let pollTimer: ReturnType<typeof setInterval> | null = null
+    let watcher: ReturnType<typeof watch> | null = null
+    let disposed = false
+
     const trigger = (): void => {
+      if (disposed) return
       if (debounceTimer) clearTimeout(debounceTimer)
       debounceTimer = setTimeout(() => {
+        debounceTimer = null
         void rescan()
       }, 200)
+      debounceTimer.unref?.()
     }
-    try {
-      const w = watch(dir, { persistent: false }, () => {
-        trigger()
-      })
-      w.on('error', (err) => {
-        log.warn('template-store watch emitted error', { dir, err: String(err) })
-      })
-      return () => {
+
+    const startPolling = (): void => {
+      if (disposed || pollTimer) return
+      if (watcher) {
         try {
-          w.close()
+          watcher.close()
         } catch {
           /* noop */
         }
-        if (debounceTimer) clearTimeout(debounceTimer)
+        watcher = null
       }
+      pollTimer = setInterval(() => {
+        void rescan()
+      }, 10_000)
+      pollTimer.unref?.()
+    }
+
+    try {
+      watcher = watch(dir, { persistent: false }, () => {
+        trigger()
+      })
+      watcher.on('error', (err) => {
+        log.warn('template-store watch emitted error; falling back to 10s poll', {
+          dir,
+          err: String(err),
+        })
+        startPolling()
+      })
+      // Close the scan-before-watch gap: if a file changed between the initial
+      // scan and watcher registration, this rescan catches it.
+      trigger()
     } catch (err) {
       log.warn('fs.watch failed for template dir; falling back to 10s poll', {
         dir,
         err: String(err),
       })
-      const id = setInterval(() => {
-        void rescan()
-      }, 10_000)
-      return () => {
-        clearInterval(id)
-        if (debounceTimer) clearTimeout(debounceTimer)
+      startPolling()
+    }
+
+    return () => {
+      disposed = true
+      if (watcher) {
+        try {
+          watcher.close()
+        } catch {
+          /* noop */
+        }
+        watcher = null
+      }
+      if (pollTimer) {
+        clearInterval(pollTimer)
+        pollTimer = null
+      }
+      if (debounceTimer) {
+        clearTimeout(debounceTimer)
+        debounceTimer = null
       }
     }
   }

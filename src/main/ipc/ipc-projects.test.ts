@@ -62,6 +62,12 @@ describe('ipc-projects', () => {
     ).rejects.toThrow(/traversal/)
   })
 
+  it('projects:readFile accepts non-traversal `..` substrings in projectPath', async () => {
+    await expect(
+      call('projects:readFile', '/home/user/foo..bar', 'CLAUDE.md') as Promise<unknown>,
+    ).resolves.toBeNull()
+  })
+
   it('projects:readFile rejects filenames outside the allowlist', async () => {
     await expect(
       call('projects:readFile', '/home/user/project', 'passwd') as Promise<unknown>,

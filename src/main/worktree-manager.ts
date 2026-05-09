@@ -131,7 +131,8 @@ export async function createWorktreeManager(
   registryDir: string,
   wslWorktreeDir?: string | undefined,
 ): Promise<WorktreeManager> {
-  const worktreeBaseDir = wslWorktreeDir ?? registryDir
+  const rawWorktreeBaseDir = wslWorktreeDir ?? registryDir
+  const worktreeBaseDir = path.posix.normalize(rawWorktreeBaseDir).replace(/\/+$/, '') || '/'
   // PERF-13: Await async registry load
   let entries: WorktreeEntry[] = await loadRegistry(registryDir)
 
@@ -149,16 +150,16 @@ export async function createWorktreeManager(
     return entries.find((e) => e.sessionId === sessionId)
   }
 
-  function removeEntry(sessionId: string): void {
+  async function removeEntry(sessionId: string): Promise<void> {
     entries = entries.filter((e) => e.sessionId !== sessionId)
-    void persistEntries()
+    await persistEntries()
   }
 
-  function updateEntry(sessionId: string, update: Partial<WorktreeEntry>): void {
+  async function updateEntry(sessionId: string, update: Partial<WorktreeEntry>): Promise<void> {
     const entry = findEntry(sessionId)
     if (entry) {
       Object.assign(entry, update)
-      void persistEntries()
+      await persistEntries()
     }
   }
 
@@ -175,7 +176,7 @@ export async function createWorktreeManager(
       const existing = findEntry(sessionId)
       if (existing) {
         existing.lastUsed = Date.now()
-        persistEntries()
+        await persistEntries()
         return { path: existing.path, isolated: true, branch: existing.branch }
       }
 
@@ -210,7 +211,7 @@ export async function createWorktreeManager(
       const repoRoot = await git.getRepoRoot(projectPath)
       const baseOid = await git.currentOid(projectPath)
       const worktreePath = path.posix.join(worktreeBaseDir, projectId, sessionId)
-      if (!worktreePath.startsWith(worktreeBaseDir + '/')) {
+      if (worktreeBaseDir !== '/' && !worktreePath.startsWith(worktreeBaseDir + '/')) {
         throw new Error('Worktree path escapes base directory')
       }
 
@@ -255,7 +256,7 @@ export async function createWorktreeManager(
         pendingCleanup: false,
       }
       entries.push(entry)
-      persistEntries()
+      await persistEntries()
 
       log.info('Worktree acquired', { projectId, sessionId, branch, worktreePath })
       return { path: worktreePath, isolated: true, branch }
@@ -302,7 +303,7 @@ export async function createWorktreeManager(
         sessionId,
         err: String(err),
       })
-      updateEntry(sessionId, { pendingCleanup: true })
+      await updateEntry(sessionId, { pendingCleanup: true })
       return
     }
 
@@ -323,7 +324,7 @@ export async function createWorktreeManager(
       })
     }
 
-    removeEntry(sessionId)
+    await removeEntry(sessionId)
 
     // Release primary slot if this project has no more active sessions
     if (primaries.get(entry.projectId) === sessionId) {
@@ -353,7 +354,7 @@ export async function createWorktreeManager(
       })
     }
 
-    updateEntry(sessionId, { kept: true, lastUsed: Date.now() })
+    await removeEntry(sessionId)
     log.info('Worktree kept', { sessionId, branch: entry.branch })
   }
 
@@ -374,7 +375,7 @@ export async function createWorktreeManager(
           await git.deleteBranch(entry.repoRoot, entry.branch).catch(() => {
             // Best-effort branch delete
           })
-          removeEntry(entry.sessionId)
+          await removeEntry(entry.sessionId)
           pruned++
           log.info('Pruned pendingCleanup worktree', { sessionId: entry.sessionId })
           continue
@@ -429,7 +430,7 @@ export async function createWorktreeManager(
           log.info('Removing orphan registry entry for deleted worktree directory', {
             sessionId: entry.sessionId,
           })
-          removeEntry(entry.sessionId)
+          await removeEntry(entry.sessionId)
           pruned++
           continue
         }
@@ -446,7 +447,7 @@ export async function createWorktreeManager(
         await git.deleteBranch(entry.repoRoot, entry.branch).catch(() => {
           // Best-effort
         })
-        removeEntry(entry.sessionId)
+        await removeEntry(entry.sessionId)
         pruned++
         log.info('Pruned orphan worktree', { sessionId: entry.sessionId })
       } catch (err) {
@@ -454,7 +455,7 @@ export async function createWorktreeManager(
           sessionId: entry.sessionId,
           err: String(err),
         })
-        updateEntry(entry.sessionId, { pendingCleanup: true })
+        await updateEntry(entry.sessionId, { pendingCleanup: true })
       }
     }
 

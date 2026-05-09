@@ -42,12 +42,11 @@ export function registerProjectHandlers(
     if (typeof projectPath !== 'string' || !projectPath) {
       throw new Error('projects:readFile requires a non-empty projectPath')
     }
-    // Normalize slashes AND collapse `..` segments; reject if the input
-    // contains any `..` segment (normalization would have removed it) so
-    // mixed backslash and percent-encoded traversals are all rejected.
+    // Normalize slashes and reject actual traversal segments. Do not reject
+    // `..` as a substring: names like `foo..bar` are legitimate project dirs.
     const slashified = projectPath.replace(/\\/g, '/')
     const collapsed = path.posix.normalize(slashified)
-    if (slashified !== collapsed || slashified.includes('..')) {
+    if (slashified !== collapsed || /(?:^|\/)\.\.(?:\/|$)/.test(slashified)) {
       throw new Error('projects:readFile rejects path traversal in projectPath')
     }
     // Validate filename type before allowlist check
