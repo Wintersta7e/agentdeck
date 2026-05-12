@@ -5,13 +5,13 @@ import type {
   DailyCostEntry,
   DetectedStack,
   GitStatus,
+  LegacyTemplate,
   Project,
   ProjectMeta,
   ReviewItem,
   Role,
   SkillInfo,
   Template,
-  TemplateCategory,
   TemplateDraft,
   TemplateScope,
   TokenUsage,
@@ -29,6 +29,13 @@ export interface AgentVersionInfo {
   current: string | null
   latest: string | null
   updateAvailable: boolean
+}
+
+export interface AgentUpdateResult {
+  agentId: string
+  success: boolean
+  newVersion: string | null
+  message: string
 }
 
 export interface AgentDeckBridge {
@@ -86,15 +93,7 @@ export interface AgentDeckBridge {
     getProjects: () => Promise<Project[]>
     saveProject: (project: Partial<Project>) => Promise<Project>
     deleteProject: (id: string) => Promise<void>
-    getTemplates: () => Promise<
-      Array<{
-        id: string
-        name: string
-        description: string
-        content?: string | undefined
-        category?: TemplateCategory | undefined
-      }>
-    >
+    getTemplates: () => Promise<LegacyTemplate[]>
     getRoles: () => Promise<Role[]>
     saveRole: (role: Partial<Role>) => Promise<Role>
     deleteRole: (id: string) => Promise<void>
@@ -104,12 +103,7 @@ export interface AgentDeckBridge {
     getVisible: () => Promise<string[] | null>
     setVisible: (agents: string[]) => Promise<string[]>
     checkUpdates: (installedAgents: Record<string, boolean>) => Promise<void>
-    update: (agentId: string) => Promise<{
-      agentId: string
-      success: boolean
-      newVersion: string | null
-      message: string
-    }>
+    update: (agentId: string) => Promise<AgentUpdateResult>
     onVersionInfo: (cb: (info: AgentVersionInfo) => void) => BridgeUnsubscribe
     getEffectiveContext: (agentId: string) => Promise<ContextResult | { error: string }>
     getEffectiveContextForLaunch: (agentId: string) => Promise<ContextResult | { error: string }>

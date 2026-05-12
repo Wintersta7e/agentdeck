@@ -1,26 +1,15 @@
 import type { BrowserWindow } from 'electron'
 import { AGENTS, AGENT_BINARY_MAP } from '../shared/agents'
+import type { AgentUpdateResult, AgentVersionInfo } from '../shared/bridge'
 import { createLogger } from './logger'
 import { wslRun, shellQuote } from './wsl-exec'
 
 const log = createLogger('agent-updater')
 
-/** Semver extraction pattern */
 const SEMVER_RE = /(\d+\.\d+\.\d+)/
 
-export interface VersionInfo {
-  agentId: string
-  current: string | null
-  latest: string | null
-  updateAvailable: boolean
-}
-
-export interface UpdateResult {
-  agentId: string
-  success: boolean
-  newVersion: string | null
-  message: string
-}
+export type VersionInfo = AgentVersionInfo
+export type UpdateResult = AgentUpdateResult
 
 /**
  * Run a command inside WSL via bash login shell with nvm/fnm PATH init.
