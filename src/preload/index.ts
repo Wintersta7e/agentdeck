@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type { AgentDeckBridge } from '../shared/bridge'
 import { SAFE_ID_RE } from '../shared/validation'
 import type {
   ActivityEvent,
@@ -25,7 +26,7 @@ document.addEventListener('dragover', (e) => {
   if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
 })
 
-contextBridge.exposeInMainWorld('agentDeck', {
+const agentDeckBridge: AgentDeckBridge = {
   pty: {
     spawn: (
       sessionId: string,
@@ -418,4 +419,6 @@ contextBridge.exposeInMainWorld('agentDeck', {
     openExternal: (opts: { path: string; projectPath: string }): Promise<void> =>
       ipcRenderer.invoke('files:openExternal', opts) as Promise<void>,
   },
-})
+}
+
+contextBridge.exposeInMainWorld('agentDeck', agentDeckBridge)
