@@ -1,28 +1,13 @@
 import { execFile } from 'child_process'
 import type { BrowserWindow } from 'electron'
 import { createLogger } from './logger'
+import { wslTry } from './wsl-exec'
 
 const log = createLogger('wsl-runtime')
 
 export async function resolveWslHome(): Promise<string | null> {
-  try {
-    return await new Promise<string>((resolve, reject) => {
-      execFile(
-        'wsl.exe',
-        ['--', 'bash', '-lc', 'echo $HOME'],
-        { timeout: 5000, encoding: 'utf-8' },
-        (err, stdout) => {
-          if (err) reject(err)
-          else resolve(stdout.trim())
-        },
-      )
-    })
-  } catch (err) {
-    log.warn('Could not resolve WSL $HOME - worktree isolation disabled', {
-      err: String(err),
-    })
-    return null
-  }
+  const stdout = await wslTry('echo $HOME', { timeout: 5000, logLevelOnError: 'warn' })
+  return stdout?.trim() ?? null
 }
 
 export function publishWslAvailability(mainWindow: BrowserWindow): void {
