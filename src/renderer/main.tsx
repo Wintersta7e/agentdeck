@@ -10,7 +10,7 @@ async function initAndRender(): Promise<void> {
   await bootstrapInitialRendererState()
   renderAppRoot()
   installAgentVersionInfoListener(import.meta)
-  await bootstrapWslAgentStatus()
+  void bootstrapWslAgentStatus()
 }
 
 initAndRender().catch(showFatalInitError)
