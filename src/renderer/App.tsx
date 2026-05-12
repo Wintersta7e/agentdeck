@@ -27,20 +27,12 @@ export function App(): React.JSX.Element {
   const closeShortcuts = useCallback(() => setShortcutsOpen(false), [])
   const toggleShortcuts = useCallback(() => setShortcutsOpen((prev) => !prev), [])
 
-  const handleAddTab = useCallback(() => {
-    useAppStore.getState().openCommandPalette()
-  }, [])
-
-  const handleCloseWorkflowTab = useCallback((workflowId: string) => {
-    useAppStore.getState().closeWorkflow(workflowId)
-  }, [])
-
   useAppIpcBridge()
   useGlobalShortcuts({ onNewTerminal: openTerminal, onToggleShortcuts: toggleShortcuts })
 
   return (
     <div className="app">
-      <Titlebar onCloseWorkflowTab={handleCloseWorkflowTab} onAddTab={handleAddTab} />
+      <Titlebar />
       <TopTabBar />
       <div className="app-body">
         {wslAvailable === false && (
