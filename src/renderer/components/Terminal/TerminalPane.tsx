@@ -15,6 +15,7 @@ import {
 } from '../../../shared/constants'
 import { subscribeTheme } from '../../utils/themeObserver'
 import { safeWrite } from '../../utils/pty-write'
+import { shellQuote } from '../../utils/shell-quote'
 import {
   getXtermTheme,
   validScrollback,
@@ -275,10 +276,7 @@ export function TerminalPane({
             // No text on clipboard — check for copied files
             const paths = await window.agentDeck.clipboard.readFilePaths()
             if (paths.length > 0) {
-              // Single-quote escaping (POSIX safe) — prevents injection via
-              // filenames containing ", $, `, \, or ! on shared filesystems.
-              const escaped = paths.map((p) => `'${p.replace(/'/g, "'\\''")}'`).join(' ')
-              term.paste(escaped)
+              term.paste(paths.map(shellQuote).join(' '))
             }
           })().catch((err: unknown) => {
             window.agentDeck.log.send('warn', 'terminal', `Paste failed for ${sessionId}`, {

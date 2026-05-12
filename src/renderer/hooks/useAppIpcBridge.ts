@@ -1,12 +1,9 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { safeWrite } from '../utils/pty-write'
+import { shellQuote } from '../utils/shell-quote'
 import { useAppStore } from '../store/appStore'
 import { getActiveProjectId } from '../selectors/active-project'
 import type { ActivityEvent, WorkflowEvent } from '../../shared/types'
-
-function quoteForShell(path: string): string {
-  return `'${path.replace(/'/g, "'\\''")}'`
-}
 
 export function useAppIpcBridge(): void {
   const activeProjectId = useAppStore(getActiveProjectId)
@@ -27,7 +24,7 @@ export function useAppIpcBridge(): void {
       if (state.currentView !== 'sessions') return
       const sid = state.paneSessions[state.focusedPane]
       if (!sid) return
-      safeWrite(sid, wslPaths.map(quoteForShell).join(' '))
+      safeWrite(sid, wslPaths.map(shellQuote).join(' '))
     })
     return unsub
   }, [])
