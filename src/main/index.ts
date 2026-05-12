@@ -1,63 +1,30 @@
-import { app, BrowserWindow, safeStorage, screen } from 'electron'
+import { app, safeStorage, type BrowserWindow } from 'electron'
 import { join } from 'path'
-import { readFileSync } from 'fs'
-import { THEME_STARTUP_BG, DEFAULT_STARTUP_BG } from '../shared/themes'
-import { createPtyManager, type PtyManager } from './pty-manager'
+import type { PtyManager } from './pty-manager'
 import { createProjectStore, registerStoreHandlers, type AppStore } from './project-store'
-import { seedTemplates, seedRoles, seedTemplateData } from './store-seeds'
-import { toWslPath } from './wsl-utils'
-import { createTemplateStore, type TemplateStore } from './template-store'
-import { createLegacyStoreAdapter } from './template-legacy-store'
-import { runTemplateMigration } from './template-migration'
+import { seedTemplates, seedRoles } from './store-seeds'
+import type { TemplateStore } from './template-store'
 import { initGitStatusCache } from './git-status'
 import { initLogger, createLogger, closeLogger } from './logger'
 import { seedWorkflows } from './workflow-seeds'
-import { createWorkflowEngine } from './workflow-engine'
 import type { WorkflowEngine } from './workflow-engine'
-import { createWorktreeManager, type WorktreeManager } from './worktree-manager'
-import { createWslGitPort } from './git-port'
+import type { WorktreeManager } from './worktree-manager'
 import { createCostTracker, type CostTracker } from './cost-tracker'
 import { createCostHistory } from './cost-history'
-
-const costHistory = createCostHistory(join(app.getPath('userData'), 'cost-history.json'))
-
-/**
- * Read persisted theme at startup to match BrowserWindow background to the
- * active theme. THEME_STARTUP_BG and DEFAULT_STARTUP_BG live in
- * `src/shared/themes.ts`; the values must stay in sync with the `--bg0`
- * tokens declared in `src/renderer/styles/tokens.css`.
- */
-function getStartupBg(): string {
-  try {
-    const configPath = join(app.getPath('userData'), 'config.json')
-    const raw = readFileSync(configPath, 'utf-8')
-    const data = JSON.parse(raw) as { appPrefs?: { theme?: string } }
-    const theme = data.appPrefs?.theme ?? ''
-    return (THEME_STARTUP_BG as Record<string, string | undefined>)[theme] ?? DEFAULT_STARTUP_BG
-  } catch {
-    return DEFAULT_STARTUP_BG
-  }
-}
+import { createAppWindow } from './app-window'
+import { registerAppIpcHandlers } from './app-ipc'
 import { createClaudeAdapter, createCodexAdapter } from './log-adapters'
 import {
-  registerPtyHandlers,
-  registerWindowHandlers,
-  registerAgentHandlers,
-  registerProjectHandlers,
-  registerWorkflowHandlers,
-  registerUtilHandlers,
-  registerSkillHandlers,
-  registerWorktreeHandlers,
-  registerHomeHandlers,
   registerCostHandlers,
-  registerTemplateIpc,
-  registerLegacyTemplateIpc,
   wireTemplateWindowEvents,
   registerEnvIpc,
   registerFilesIpc,
-  reviewTracker,
 } from './ipc'
+import { initializeTemplateRuntime } from './template-runtime'
+import { initializeWorktreeManager } from './worktree-runtime'
+import { publishWslAvailability, resolveWslHome } from './wsl-runtime'
 
+const costHistory = createCostHistory(join(app.getPath('userData'), 'cost-history.json'))
 const log = createLogger('app')
 
 let mainWindow: BrowserWindow | null = null
@@ -67,7 +34,6 @@ let appStore: AppStore | null = null
 let worktreeManager: WorktreeManager | null = null
 let costTracker: CostTracker | null = null
 let templateStore: TemplateStore | null = null
-let templateMigrationComplete = false
 let templateEventsOff: (() => void) | null = null
 
 // --- Crash cleanup handlers (REL-4) ---
@@ -83,138 +49,6 @@ process.on('unhandledRejection', (reason) => {
   log.error('Unhandled rejection', { reason: String(reason) })
 })
 
-function createWindow(): void {
-  mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 800,
-    minWidth: 900,
-    minHeight: 600,
-    frame: false,
-    show: false,
-    backgroundColor: getStartupBg(),
-    webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-    },
-  })
-
-  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
-    callback({
-      responseHeaders: {
-        ...details.responseHeaders,
-        'Content-Security-Policy': [
-          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:; connect-src 'none'",
-        ],
-      },
-    })
-  })
-
-  ptyManager = createPtyManager(mainWindow)
-  workflowEngine = createWorkflowEngine(ptyManager, mainWindow, () => appStore?.get('roles') ?? [])
-
-  mainWindow.once('ready-to-show', () => {
-    mainWindow?.maximize()
-    mainWindow?.show()
-  })
-
-  mainWindow.webContents.once('did-finish-load', () => {
-    const prefs = appStore?.get('appPrefs')
-    let zoom = prefs?.zoomFactor ?? 1.0
-    // Auto-detect high-DPI — re-trigger when detection version changes
-    const DETECT_VERSION = 2
-    const detected = prefs?.zoomAutoDetected
-    const needsDetect = !detected || (typeof detected === 'number' && detected < DETECT_VERSION)
-    if (needsDetect && mainWindow) {
-      const display = screen.getPrimaryDisplay()
-      // 4K (3840×2160+) or high scale factor → default to 1.5
-      if (display.size.width >= 3840 || display.scaleFactor >= 2) {
-        zoom = 1.5
-      }
-      appStore?.set('appPrefs', { ...prefs, zoomFactor: zoom, zoomAutoDetected: DETECT_VERSION })
-    }
-    if (zoom !== 1.0) mainWindow?.webContents.setZoomFactor(zoom)
-  })
-
-  if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
-  } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
-  }
-
-  mainWindow.on('closed', () => {
-    workflowEngine?.stopAll()
-    ptyManager?.killAll()
-    mainWindow = null
-  })
-
-  mainWindow.webContents.on('render-process-gone', () => {
-    workflowEngine?.stopAll()
-    ptyManager?.killAll()
-  })
-
-  // Intercept file drops: the browser tries to navigate or open a new window
-  // for the dropped file's file:// URL. Catch both pathways.
-  const handleFileUrl = (url: string): void => {
-    if (!url.startsWith('file://')) return
-    let pathname = decodeURIComponent(new URL(url).pathname)
-    if (/^\/[A-Za-z]:/.test(pathname)) pathname = pathname.slice(1)
-    const wslPath = toWslPath(pathname)
-    log.info(`File drop intercepted: ${url} → ${wslPath}`)
-    mainWindow?.webContents.send('file-dropped', [wslPath])
-  }
-
-  mainWindow.webContents.on('will-navigate', (event, url) => {
-    event.preventDefault()
-    handleFileUrl(url)
-  })
-
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    handleFileUrl(url)
-    return { action: 'deny' }
-  })
-}
-
-function registerIpcHandlers(store: AppStore): void {
-  registerPtyHandlers(() => ptyManager, {
-    getMainWindow: () => mainWindow,
-    getProjectId: (projectPath) => {
-      const projects = store.get('projects') ?? []
-      return projects.find((p: { path: string }) => p.path === projectPath)?.id ?? null
-    },
-    reviewTracker,
-  })
-  registerWindowHandlers(() => mainWindow, store)
-  registerAgentHandlers(() => mainWindow, store)
-  registerProjectHandlers(
-    () => mainWindow,
-    () => appStore,
-  )
-  registerSkillHandlers()
-  registerWorkflowHandlers(
-    () => workflowEngine,
-    () => store.get('roles') ?? [],
-    (role) => {
-      const roles = store.get('roles') ?? []
-      const idx = roles.findIndex((r) => r.id === role.id)
-      if (idx >= 0) {
-        roles[idx] = role
-      } else {
-        roles.push(role)
-      }
-      store.set('roles', roles)
-    },
-  )
-  registerUtilHandlers()
-  registerWorktreeHandlers(() => worktreeManager)
-  registerHomeHandlers((projectId) => {
-    const projects = store.get('projects') ?? []
-    const project = projects.find((p: { id: string }) => p.id === projectId)
-    return project?.path ?? null
-  })
-}
-
 app
   .whenReady()
   .then(async () => {
@@ -228,131 +62,43 @@ app
     seedRoles(appStore)
     await seedWorkflows(appStore)
 
-    const gitPort = createWslGitPort()
-    // Resolve WSL $HOME for worktree storage (can't use ~ — Node treats it literally)
-    let wslHome: string | null = null
-    try {
-      const { execFile: execFileCb } = await import('child_process')
-      wslHome = await new Promise<string>((resolve, reject) => {
-        execFileCb(
-          'wsl.exe',
-          // Use '--' separator consistent with all other WSL calls
-          ['--', 'bash', '-lc', 'echo $HOME'],
-          { timeout: 5000, encoding: 'utf-8' },
-          (err, stdout) => {
-            if (err) reject(err)
-            else resolve(stdout.trim())
-          },
-        )
-      })
-    } catch (err) {
-      log.warn('Could not resolve WSL $HOME — worktree isolation disabled', {
-        err: String(err),
-      })
-    }
-
-    const registryDir = join(app.getPath('userData'), 'worktree-registry')
-    if (wslHome) {
-      const wslWorktreeDir = `${wslHome}/.agentdeck/worktrees`
-      worktreeManager = await createWorktreeManager(
-        gitPort,
-        (id) => {
-          const projects = appStore?.get('projects') ?? []
-          return projects.find((p) => p.id === id)?.path
-        },
-        registryDir,
-        wslWorktreeDir,
-      )
-    } else {
-      log.warn('Worktree manager not created — WSL $HOME unknown')
-    }
+    const wslHome = await resolveWslHome()
+    worktreeManager = await initializeWorktreeManager(appStore, wslHome)
 
     // `agentdeckRoot` is the parent dir; `templateUserRoot` lives underneath
     // it. Falls back to app userData when WSL $HOME is unavailable.
     const agentdeckRoot = wslHome ? `${wslHome}/.agentdeck` : app.getPath('userData')
-    const templateUserRoot = `${agentdeckRoot}/templates`
-
-    // One-shot legacy-templates migration (flat electron-store → on-disk JSON files).
-    // On failure we still create the templateStore so the legacy-fallback path
-    // in `ipc-templates.ts` keeps the UI functional.
-    try {
-      const migrationResult = await runTemplateMigration({
-        store: appStore as unknown as {
-          has: (k: string) => boolean
-          get: <T>(k: string) => T
-          set: (k: string, v: unknown) => void
-          delete: (k: string) => void
-        },
-        userRoot: templateUserRoot,
-        seeds: seedTemplateData,
-      })
-      templateMigrationComplete = migrationResult.status !== 'failed'
-      log.info('template migration', {
-        status: migrationResult.status,
-        count: migrationResult.count,
-      })
-    } catch (err) {
-      log.error('template migration threw — falling back to legacy store', {
-        err: String(err),
-      })
-      templateMigrationComplete = false
-    }
-
-    try {
-      templateStore = await createTemplateStore({
-        userRoot: templateUserRoot,
-        getProjectPath: (projectId) => {
-          const projects = appStore?.get('projects') ?? []
-          return projects.find((p) => p.id === projectId)?.path ?? null
-        },
-      })
-    } catch (err) {
-      log.error('createTemplateStore failed — legacy-only template access', {
-        err: String(err),
-      })
-      templateStore = null
-    }
-
-    const legacyTemplateAdapter = createLegacyStoreAdapter(
-      appStore as unknown as {
-        get: <T>(k: string) => T
-        set: <T>(k: string, v: T) => void
-        has: (k: string) => boolean
-      },
-    )
-
-    if (templateStore) {
-      const store = templateStore
-      const templateCtx = {
-        store,
-        legacy: legacyTemplateAdapter,
-        migrationComplete: (): boolean => templateMigrationComplete,
-        getProjectExists: (projectId: string): boolean => {
-          const projects = appStore?.get('projects') ?? []
-          return projects.some((p) => p.id === projectId)
-        },
-      }
-      registerTemplateIpc(templateCtx)
-      registerLegacyTemplateIpc({
-        store,
-        legacy: legacyTemplateAdapter,
-        migrationComplete: templateCtx.migrationComplete,
-      })
-    }
+    const templateRuntime = await initializeTemplateRuntime(appStore, agentdeckRoot)
+    templateStore = templateRuntime.templateStore
 
     registerEnvIpc({
       claudeConfigDir: process.env['CLAUDE_CONFIG_DIR'] ?? null,
       codexHome: process.env['CODEX_HOME'] ?? null,
       agentdeckRoot,
-      templateUserRoot,
+      templateUserRoot: templateRuntime.templateUserRoot,
       getProjectPath: (id) => appStore?.get('projects').find((p) => p.id === id)?.path ?? null,
     })
 
     registerFilesIpc()
 
-    registerIpcHandlers(appStore)
+    registerAppIpcHandlers({
+      store: appStore,
+      getMainWindow: () => mainWindow,
+      getAppStore: () => appStore,
+      getPtyManager: () => ptyManager,
+      getWorkflowEngine: () => workflowEngine,
+      getWorktreeManager: () => worktreeManager,
+    })
 
-    createWindow()
+    const windowRuntime = createAppWindow(appStore)
+    mainWindow = windowRuntime.mainWindow
+    ptyManager = windowRuntime.ptyManager
+    workflowEngine = windowRuntime.workflowEngine
+    mainWindow.on('closed', () => {
+      if (mainWindow === windowRuntime.mainWindow) {
+        mainWindow = null
+      }
+    })
     log.info('Window created')
 
     if (templateStore) {
@@ -382,20 +128,8 @@ app
       log.warn('Worktree prune failed', { err: String(err) })
     })
 
-    // Check WSL2 availability asynchronously after the window is shown,
-    // then push the result to the renderer via IPC.
     if (mainWindow) {
-      const win = mainWindow
-      const { execFile } = await import('child_process')
-      execFile('wsl.exe', ['--status'], { timeout: 10_000 }, (err) => {
-        if (err) {
-          log.warn('WSL2 not detected', { err: String(err) })
-          win.webContents.send('wsl:status', { available: false, error: String(err) })
-        } else {
-          log.info('WSL2 detected')
-          win.webContents.send('wsl:status', { available: true })
-        }
-      })
+      publishWslAvailability(mainWindow)
     }
   })
   .catch((err: unknown) => {
