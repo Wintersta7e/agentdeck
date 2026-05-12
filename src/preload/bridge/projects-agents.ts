@@ -1,6 +1,7 @@
 import { ipcRenderer } from 'electron'
 import type { AgentDeckBridge, AgentVersionInfo } from '../../shared/bridge'
 import type { ContextResult } from '../../shared/context-types'
+import { onIpc } from './events'
 
 type ProjectsAgentsBridge = Pick<AgentDeckBridge, 'store' | 'agents' | 'projects' | 'skills'>
 
@@ -21,12 +22,7 @@ export function createProjectsAgentsBridge(): ProjectsAgentsBridge {
       setVisible: (agents) => ipcRenderer.invoke('agents:setVisible', agents),
       checkUpdates: (installedAgents) => ipcRenderer.invoke('agents:checkUpdates', installedAgents),
       update: (agentId) => ipcRenderer.invoke('agents:update', agentId),
-      onVersionInfo: (cb) => {
-        const handler = (_event: Electron.IpcRendererEvent, info: AgentVersionInfo): void =>
-          cb(info)
-        ipcRenderer.on('agents:versionInfo', handler)
-        return () => ipcRenderer.removeListener('agents:versionInfo', handler)
-      },
+      onVersionInfo: (cb) => onIpc<AgentVersionInfo>('agents:versionInfo', cb),
       getEffectiveContext: (agentId) =>
         ipcRenderer.invoke('agents:getEffectiveContext', agentId) as Promise<
           ContextResult | { error: string }
