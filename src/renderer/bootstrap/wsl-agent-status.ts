@@ -5,6 +5,9 @@ interface WslAgentStatus {
   agents: Record<string, boolean>
 }
 
+const RETRY_DELAY_MS = 5000
+let retryHandle: ReturnType<typeof setTimeout> | null = null
+
 async function fetchWslAgentStatus(): Promise<WslAgentStatus> {
   const [username, agents, distro] = await Promise.all([
     window.agentDeck.app.wslUsername().catch((err: unknown) => {
@@ -38,12 +41,21 @@ function checkAgentUpdates(installedAgents: Record<string, boolean>): void {
   })
 }
 
+function cancelPendingRetry(): void {
+  if (retryHandle !== null) {
+    clearTimeout(retryHandle)
+    retryHandle = null
+  }
+}
+
 export async function bootstrapWslAgentStatus(): Promise<void> {
+  cancelPendingRetry()
   const { username, agents } = await fetchWslAgentStatus()
   const allMissing = Object.keys(agents).length === 0 || Object.values(agents).every((v) => !v)
 
   if (!username && allMissing) {
-    setTimeout(() => {
+    retryHandle = setTimeout(() => {
+      retryHandle = null
       void fetchWslAgentStatus()
         .then(({ agents: retryAgents }) => {
           if (Object.values(retryAgents).some((v) => v)) {
@@ -55,9 +67,15 @@ export async function bootstrapWslAgentStatus(): Promise<void> {
             err: String(err),
           })
         })
-    }, 5000)
+    }, RETRY_DELAY_MS)
     return
   }
 
   checkAgentUpdates(agents)
 }
+
+window.addEventListener('pagehide', cancelPendingRetry, { once: true })
+
+type HotImportMeta = ImportMeta & { hot?: { dispose: (cb: () => void) => void } }
+const hot = (import.meta as HotImportMeta).hot
+if (hot) hot.dispose(cancelPendingRetry)
