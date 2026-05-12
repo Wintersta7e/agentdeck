@@ -1,82 +1,22 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { safeWrite } from './utils/pty-write'
+import { useCallback, useState } from 'react'
 import { Titlebar } from './components/Titlebar/Titlebar'
-import { TopTabBar, TABS } from './components/TopTabBar/TopTabBar'
-import { SessionsScreen } from './screens/SessionsScreen/SessionsScreen'
-import { SessionHero } from './components/SessionHero/SessionHero'
-import { NewSessionScreen } from './screens/NewSessionScreen/NewSessionScreen'
-import { DiffReviewScreen } from './screens/DiffReviewScreen/DiffReviewScreen'
-import { AgentsScreen } from './screens/AgentsScreen/AgentsScreen'
-import { AlertsScreen } from './screens/AlertsScreen/AlertsScreen'
-import { AppSettingsScreen } from './screens/AppSettingsScreen/AppSettingsScreen'
-import { WorkflowsScreen } from './screens/WorkflowsScreen/WorkflowsScreen'
-import { ProjectsScreen } from './screens/ProjectsScreen/ProjectsScreen'
-import { HistoryScreen } from './screens/HistoryScreen/HistoryScreen'
+import { TopTabBar } from './components/TopTabBar/TopTabBar'
 import { StatusBar } from './components/StatusBar/StatusBar'
-import { HomeScreen } from './components/HomeScreen/HomeScreen'
-import { SplitView } from './components/SplitView/SplitView'
-import { RightPanel } from './components/RightPanel/RightPanel'
-import { PanelDivider } from './components/shared/PanelDivider'
 import { CommandPalette } from './components/CommandPalette/CommandPalette'
 import { AboutDialog } from './components/AboutDialog/AboutDialog'
 import { ShortcutsDialog } from './components/ShortcutsDialog/ShortcutsDialog'
 import { NotificationToast } from './components/NotificationToast/NotificationToast'
-import { PlaceholderScreen } from './components/PlaceholderScreen/PlaceholderScreen'
+import { SessionWorkspace } from './components/SessionWorkspace/SessionWorkspace'
+import { AppRoutes } from './AppRoutes'
 import { useAppStore } from './store/appStore'
-import { useProjects } from './hooks/useProjects'
-import { getActiveProjectId } from './selectors/active-project'
-import type { ActivityEvent, AgentConfig, Project, WorkflowEvent } from '../shared/types'
+import { useAppIpcBridge } from './hooks/useAppIpcBridge'
+import { useGlobalShortcuts } from './hooks/useGlobalShortcuts'
+import { useProjectSessionLauncher } from './hooks/useProjectSessionLauncher'
 import './App.css'
 
-const WorkflowEditor = lazy(() => import('./screens/WorkflowEditor/WorkflowEditor'))
-const ProjectSettings = lazy(() =>
-  import('./components/ProjectSettings/ProjectSettings').then((m) => ({
-    default: m.ProjectSettings,
-  })),
-)
-const NewProjectWizard = lazy(() =>
-  import('./components/NewProjectWizard/NewProjectWizard').then((m) => ({
-    default: m.NewProjectWizard,
-  })),
-)
-const TemplateEditor = lazy(() =>
-  import('./components/TemplateEditor/TemplateEditor').then((m) => ({
-    default: m.TemplateEditor,
-  })),
-)
-
 export function App(): React.JSX.Element {
-  const currentView = useAppStore((s) => s.currentView)
-  const activeSessionId = useAppStore((s) => s.activeSessionId)
-  const addSession = useAppStore((s) => s.addSession)
-  const captureSessionSnapshot = useAppStore((s) => s.captureSessionSnapshot)
-  const activeWorkflowId = useAppStore((s) => s.activeWorkflowId)
-  const settingsProjectId = useAppStore((s) => s.settingsProjectId)
-
-  const rightPanelOpen = useAppStore((s) => s.rightPanelOpen)
-  const rightPanelWidth = useAppStore((s) => s.rightPanelWidth)
-  const setRightPanelWidth = useAppStore((s) => s.setRightPanelWidth)
-  const rightPanelRef = useRef<HTMLDivElement>(null)
-
-  const rightPanelStyle = useMemo<React.CSSProperties>(
-    () => ({ width: rightPanelWidth, flexShrink: 0 }),
-    [rightPanelWidth],
-  )
-
-  // Derive a stable session ID list — only changes when sessions are added/removed,
-  // not when session status updates (which create a new sessions object)
-  const sessionIds = useAppStore((s) => {
-    const ids = Object.keys(s.sessions)
-    return ids.join(',')
-  })
-  const sessionIdList = useMemo(() => (sessionIds ? sessionIds.split(',') : []), [sessionIds])
-
-  // Stable list of currently-open workflow tabs (joined string for shallow eq)
-  const openWorkflowIdsStr = useAppStore((s) => s.openWorkflowIds.join(','))
-  const openWorkflowIdList = useMemo(
-    () => (openWorkflowIdsStr ? openWorkflowIdsStr.split(',') : []),
-    [openWorkflowIdsStr],
-  )
+  const wslAvailable = useAppStore((s) => s.wslAvailable)
+  const { openTerminal, openProject, openProjectWithAgent } = useProjectSessionLauncher()
 
   const [aboutOpen, setAboutOpen] = useState(false)
   const openAbout = useCallback(() => setAboutOpen(true), [])
@@ -85,49 +25,7 @@ export function App(): React.JSX.Element {
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const openShortcuts = useCallback(() => setShortcutsOpen(true), [])
   const closeShortcuts = useCallback(() => setShortcutsOpen(false), [])
-
-  const handleNewTerminal = useCallback(() => {
-    const sessionId = `terminal-${Date.now()}`
-    addSession(sessionId, '')
-  }, [addSession])
-
-  const { updateProject } = useProjects()
-
-  const handleOpenProject = useCallback(
-    (project: Project) => {
-      const sessionId = `session-${project.id}-${Date.now()}`
-      addSession(sessionId, project.id)
-      if (project.agent) {
-        void captureSessionSnapshot(sessionId, project.agent)
-      }
-      void updateProject({ ...project, lastOpened: Date.now() }).catch((err: unknown) => {
-        window.agentDeck.log.send('warn', 'app', 'Failed to update lastOpened', {
-          err: String(err),
-        })
-      })
-    },
-    [addSession, captureSessionSnapshot, updateProject],
-  )
-
-  const handleOpenProjectWithAgent = useCallback(
-    (project: Project, agentConfig: AgentConfig) => {
-      const sessionId = `session-${project.id}-${Date.now()}`
-      const overrides: { agentOverride: typeof agentConfig.agent; agentFlagsOverride?: string } = {
-        agentOverride: agentConfig.agent,
-      }
-      if (agentConfig.agentFlags !== undefined) {
-        overrides.agentFlagsOverride = agentConfig.agentFlags
-      }
-      addSession(sessionId, project.id, overrides)
-      void captureSessionSnapshot(sessionId, agentConfig.agent)
-      void updateProject({ ...project, lastOpened: Date.now() }).catch((err: unknown) => {
-        window.agentDeck.log.send('warn', 'app', 'Failed to update lastOpened', {
-          err: String(err),
-        })
-      })
-    },
-    [addSession, captureSessionSnapshot, updateProject],
-  )
+  const toggleShortcuts = useCallback(() => setShortcutsOpen((prev) => !prev), [])
 
   const handleAddTab = useCallback(() => {
     useAppStore.getState().openCommandPalette()
@@ -137,313 +35,8 @@ export function App(): React.JSX.Element {
     useAppStore.getState().closeWorkflow(workflowId)
   }, [])
 
-  // File drag-and-drop: preload handles the DOM drop event (File.path is only
-  // available in the preload world with contextIsolation). Main process converts
-  // paths to WSL and sends them here via IPC.
-  useEffect(() => {
-    const unsub = window.agentDeck.onFileDrop((wslPaths: string[]) => {
-      const state = useAppStore.getState()
-      if (state.currentView !== 'sessions') return
-      const sid = state.paneSessions[state.focusedPane]
-      if (!sid) return
-      const escaped = wslPaths.map((p) => `'${p.replace(/'/g, "'\\''")}'`).join(' ')
-      safeWrite(sid, escaped)
-    })
-    return unsub
-  }, [])
-
-  // Hydrate workflow execution state from main process on mount (REL-8)
-  useEffect(() => {
-    window.agentDeck.workflows
-      .getRunning()
-      .then((ids) => {
-        const store = useAppStore.getState()
-        for (const id of ids) {
-          store.setWorkflowStatus(id, 'running')
-        }
-      })
-      .catch((err: unknown) => {
-        window.agentDeck.log.send('warn', 'app', 'Failed to hydrate workflow state', {
-          err: String(err),
-        })
-      })
-  }, [])
-
-  // Listen for WSL status from main process
-  const wslAvailable = useAppStore((s) => s.wslAvailable)
-  useEffect(() => {
-    const unsub = window.agentDeck.wsl.onStatus((data) => {
-      useAppStore.getState().setWslAvailable(data.available)
-    })
-    return unsub
-  }, [])
-
-  // Listen for cost/token usage updates from main process
-  useEffect(() => {
-    const unsub = window.agentDeck.cost.onUpdate((data) => {
-      useAppStore.getState().setSessionUsage(data.sessionId, data.usage)
-    })
-    return unsub
-  }, [])
-
-  // Listen for encryption unavailability warning
-  useEffect(() => {
-    const unsub = window.agentDeck.security.onEncryptionUnavailable(() => {
-      useAppStore
-        .getState()
-        .addNotification('warning', 'Encryption unavailable — API keys are stored as plaintext')
-    })
-    return unsub
-  }, [])
-
-  // One-shot theme-migration notification: the v5.x → v6.0.0 palette rename
-  // normalises persisted theme values on first boot. Tell the user what
-  // changed so "my amber theme is gone" isn't a silent surprise.
-  useEffect(() => {
-    window.agentDeck.theme
-      .popMigration()
-      .then((migration) => {
-        if (!migration) return
-        const targetLabel = migration.to === '' ? 'tungsten' : migration.to
-        useAppStore
-          .getState()
-          .addNotification(
-            'info',
-            `Theme “${migration.from}” was retired in v6.0.0 — switched to “${targetLabel}”. Pick a different one in Settings if you like.`,
-          )
-      })
-      .catch((err: unknown) => {
-        void window.agentDeck.log.send('warn', 'theme-migration', 'popMigration failed', {
-          error: err instanceof Error ? err.message : String(err),
-        })
-      })
-  }, [])
-
-  // Activate project-scope templates when the active project changes. The
-  // slice is idempotent — repeated calls for the same projectId are a no-op.
-  const activeProjectId = useAppStore(getActiveProjectId)
-  const activateProjectTemplates = useAppStore((s) => s.activateProjectTemplates)
-  useEffect(() => {
-    void activateProjectTemplates(activeProjectId)
-  }, [activeProjectId, activateProjectTemplates])
-
-  // Load saved zoom level on mount
-  useEffect(() => {
-    window.agentDeck.zoom
-      .get()
-      .then((factor) => {
-        useAppStore.getState().setZoomFactor(factor)
-      })
-      .catch((err: unknown) => {
-        window.agentDeck.log.send('warn', 'app', 'Failed to load zoom', { err: String(err) })
-      })
-  }, [])
-
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent): void {
-      // Zoom shortcuts
-      if (e.ctrlKey && (e.key === '=' || e.key === '+')) {
-        e.preventDefault()
-        const current = useAppStore.getState().zoomFactor
-        window.agentDeck.zoom
-          .set(current + 0.1)
-          .then((z) => useAppStore.getState().setZoomFactor(z))
-          .catch((err: unknown) => {
-            window.agentDeck.log.send('warn', 'app', 'Zoom IPC failed', { err: String(err) })
-          })
-        return
-      }
-      if (e.ctrlKey && e.key === '-') {
-        e.preventDefault()
-        const current = useAppStore.getState().zoomFactor
-        window.agentDeck.zoom
-          .set(current - 0.1)
-          .then((z) => useAppStore.getState().setZoomFactor(z))
-          .catch((err: unknown) => {
-            window.agentDeck.log.send('warn', 'app', 'Zoom IPC failed', { err: String(err) })
-          })
-        return
-      }
-      if (e.ctrlKey && e.key === '0') {
-        e.preventDefault()
-        window.agentDeck.zoom
-          .reset()
-          .then((z) => useAppStore.getState().setZoomFactor(z))
-          .catch((err: unknown) => {
-            window.agentDeck.log.send('warn', 'app', 'Zoom IPC failed', { err: String(err) })
-          })
-        return
-      }
-      if (e.ctrlKey && e.key === 'k') {
-        e.preventDefault()
-        const state = useAppStore.getState()
-        if (state.commandPaletteOpen) {
-          state.closeCommandPalette()
-        } else {
-          state.openCommandPalette()
-        }
-        return
-      }
-      if (e.ctrlKey && e.key === 'n') {
-        e.preventDefault()
-        useAppStore.getState().openWizard()
-        return
-      }
-      if (e.ctrlKey && e.key === 't') {
-        e.preventDefault()
-        handleNewTerminal()
-        return
-      }
-      if (e.ctrlKey && e.key === '/') {
-        e.preventDefault()
-        setShortcutsOpen((prev) => !prev)
-        return
-      }
-      if (e.ctrlKey && e.key === '\\') {
-        e.preventDefault()
-        useAppStore.getState().toggleRightPanel()
-        return
-      }
-      if (e.ctrlKey && (e.key === '1' || e.key === '2' || e.key === '3')) {
-        e.preventDefault()
-        useAppStore.getState().setPaneLayout(Number(e.key) as 1 | 2 | 3)
-        return
-      }
-      // Alt+1..N — jump to the nth top-level tab. Derived from TopTabBar's
-      // TABS list so the shortcut order tracks the tab order automatically.
-      if (e.altKey && !e.ctrlKey && !e.shiftKey) {
-        const idx = Number(e.key) - 1
-        const target = Number.isInteger(idx) && idx >= 0 ? TABS[idx]?.view : undefined
-        if (target) {
-          e.preventDefault()
-          useAppStore.getState().setTab(target)
-          return
-        }
-      }
-      if (e.ctrlKey && e.key === 'Tab') {
-        e.preventDefault()
-        const state = useAppStore.getState()
-        const ids = Object.entries(state.sessions)
-          .filter(([, s]) => s.status !== 'exited')
-          .map(([id]) => id)
-        if (ids.length === 0) return
-        const currentIdx = state.activeSessionId ? ids.indexOf(state.activeSessionId) : -1
-        const next = e.shiftKey
-          ? (currentIdx - 1 + ids.length) % ids.length
-          : (currentIdx + 1) % ids.length
-        const nextId = ids[next]
-        if (nextId) state.setActiveSession(nextId)
-        return
-      }
-      if (e.key === 'Escape') {
-        const state = useAppStore.getState()
-        if (state.commandPaletteOpen) {
-          // Let the CommandPalette's own capture-phase handler close it
-          return
-        }
-        if (state.currentView === 'wizard') {
-          state.closeWizard()
-        } else if (state.currentView === 'settings') {
-          state.closeSettings()
-        } else if (state.currentView === 'template-editor') {
-          state.closeTemplateEditor()
-        } else {
-          // Toggle command palette open with Escape
-          state.openCommandPalette()
-        }
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [handleNewTerminal])
-
-  // Subscribe to PTY activity events for all active sessions (ref-based to avoid re-subscribing)
-  const subscribedRef = useRef<Map<string, () => void>>(new Map())
-
-  useEffect(() => {
-    const subscriptions = subscribedRef.current
-    // Subscribe to new sessions only
-    for (const sid of sessionIdList) {
-      if (!subscriptions.has(sid)) {
-        const unsub = window.agentDeck.pty.onActivity(sid, (event: ActivityEvent) => {
-          useAppStore.getState().addActivityEvent(sid, event)
-        })
-        subscriptions.set(sid, unsub)
-      }
-    }
-    // Unsubscribe from removed sessions
-    for (const [sid, unsub] of subscriptions) {
-      if (!sessionIdList.includes(sid)) {
-        unsub()
-        subscriptions.delete(sid)
-      }
-    }
-    return () => {
-      for (const unsub of subscriptions.values()) unsub()
-      subscriptions.clear()
-    }
-  }, [sessionIdList])
-
-  // Subscribe to workflow execution events for all open workflow tabs.
-  // Lifted out of WorkflowEditor so leaving + returning to the tab doesn't
-  // tear down the IPC listener and lose events that fire during the gap
-  // (which would freeze the per-node animations on return).
-  const workflowSubscribedRef = useRef<Map<string, () => void>>(new Map())
-
-  useEffect(() => {
-    const subscriptions = workflowSubscribedRef.current
-    for (const wfId of openWorkflowIdList) {
-      if (!subscriptions.has(wfId)) {
-        const unsub = window.agentDeck.workflows.onEvent(wfId, (event: WorkflowEvent) => {
-          const s = useAppStore.getState()
-          s.addWorkflowLog(wfId, event)
-          const nid = event.nodeId
-          switch (event.type) {
-            case 'workflow:started':
-              s.setWorkflowStatus(wfId, 'running')
-              break
-            case 'workflow:done':
-              s.setWorkflowStatus(wfId, 'done')
-              break
-            case 'workflow:error':
-              s.setWorkflowStatus(wfId, 'error')
-              break
-            case 'workflow:stopped':
-              s.setWorkflowStatus(wfId, 'stopped')
-              break
-            case 'node:started':
-            case 'node:resumed':
-              if (nid) s.setWorkflowNodeStatus(wfId, nid, 'running')
-              break
-            case 'node:done':
-              if (nid) s.setWorkflowNodeStatus(wfId, nid, 'done')
-              break
-            case 'node:error':
-              if (nid) s.setWorkflowNodeStatus(wfId, nid, 'error')
-              break
-            case 'node:paused':
-              if (nid) s.setWorkflowNodeStatus(wfId, nid, 'paused')
-              break
-            case 'node:skipped':
-              if (nid) s.setWorkflowNodeStatus(wfId, nid, 'skipped')
-              break
-            // node:retry / node:loopIteration are logged only
-          }
-        })
-        subscriptions.set(wfId, unsub)
-      }
-    }
-    for (const [wfId, unsub] of subscriptions) {
-      if (!openWorkflowIdList.includes(wfId)) {
-        unsub()
-        subscriptions.delete(wfId)
-      }
-    }
-    return () => {
-      for (const unsub of subscriptions.values()) unsub()
-      subscriptions.clear()
-    }
-  }, [openWorkflowIdList])
+  useAppIpcBridge()
+  useGlobalShortcuts({ onNewTerminal: openTerminal, onToggleShortcuts: toggleShortcuts })
 
   return (
     <div className="app">
@@ -452,75 +45,20 @@ export function App(): React.JSX.Element {
       <div className="app-body">
         {wslAvailable === false && (
           <div className="wsl-warning-banner" role="alert">
-            WSL not detected — check that your distribution is running
+            WSL not detected - check that your distribution is running
           </div>
         )}
         <div className="app-main">
-          {currentView === 'home' && (
-            <HomeScreen
-              onOpenProject={handleOpenProject}
-              onOpenProjectWithAgent={handleOpenProjectWithAgent}
-            />
-          )}
-          {currentView === 'sessions' && !activeSessionId && <SessionsScreen />}
-          {currentView === 'projects' && (
-            <ProjectsScreen
-              onOpenProject={handleOpenProject}
-              onOpenProjectWithAgent={handleOpenProjectWithAgent}
-            />
-          )}
-          {currentView === 'project-detail' && (
-            <PlaceholderScreen
-              phase="Phase 3.5"
-              title="Project Detail"
-              subtitle="Single-project overview with sessions, settings entry point, and recent activity."
-            />
-          )}
-          {currentView === 'agents' && <AgentsScreen />}
-          {currentView === 'workflows' && !activeWorkflowId && <WorkflowsScreen />}
-          {currentView === 'history' && <HistoryScreen />}
-          {currentView === 'alerts' && <AlertsScreen />}
-          {currentView === 'app-settings' && <AppSettingsScreen />}
-          {currentView === 'new-session' && <NewSessionScreen />}
-          {currentView === 'diff' && <DiffReviewScreen />}
-          <Suspense fallback={<div className="suspense-spinner" />}>
-            {currentView === 'wizard' && <NewProjectWizard onCreateProject={handleOpenProject} />}
-            {currentView === 'settings' && <ProjectSettings key={settingsProjectId} />}
-            {currentView === 'template-editor' && <TemplateEditor />}
-            {(currentView === 'workflow' || (currentView === 'workflows' && activeWorkflowId)) &&
-              activeWorkflowId && (
-                <WorkflowEditor key={activeWorkflowId} workflowId={activeWorkflowId} />
-              )}
-          </Suspense>
-          <div
-            className={`view-panel ${currentView === 'sessions' && activeSessionId ? 'view-panel--visible' : 'view-panel--hidden'}`}
-          >
-            <SessionHero>
-              <SplitView />
-              {rightPanelOpen && (
-                <>
-                  <PanelDivider
-                    side="right"
-                    panelRef={rightPanelRef}
-                    minWidth={180}
-                    maxWidth={500}
-                    onResizeEnd={setRightPanelWidth}
-                  />
-                  <div ref={rightPanelRef} style={rightPanelStyle}>
-                    <RightPanel />
-                  </div>
-                </>
-              )}
-            </SessionHero>
-          </div>
+          <AppRoutes onOpenProject={openProject} onOpenProjectWithAgent={openProjectWithAgent} />
+          <SessionWorkspace />
         </div>
       </div>
       <StatusBar onAboutClick={openAbout} onShortcutsClick={openShortcuts} />
       <CommandPalette
-        onOpenProject={handleOpenProject}
+        onOpenProject={openProject}
         onAbout={openAbout}
         onShortcuts={openShortcuts}
-        onNewTerminal={handleNewTerminal}
+        onNewTerminal={openTerminal}
       />
       {aboutOpen && <AboutDialog onClose={closeAbout} />}
       {shortcutsOpen && <ShortcutsDialog onClose={closeShortcuts} />}
