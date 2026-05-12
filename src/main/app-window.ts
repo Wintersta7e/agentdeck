@@ -88,7 +88,7 @@ function loadRenderer(mainWindow: BrowserWindow): void {
   }
 }
 
-export function createAppWindow(store: AppStore): AppWindowRuntime {
+export function createAppWindow(store: AppStore, onClosed?: () => void): AppWindowRuntime {
   const mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -122,15 +122,15 @@ export function createAppWindow(store: AppStore): AppWindowRuntime {
   installZoomBootstrap(mainWindow, store)
   loadRenderer(mainWindow)
 
+  const teardown = (): void => {
+    workflowEngine.stopAll()
+    ptyManager.killAll()
+  }
   mainWindow.on('closed', () => {
-    workflowEngine.stopAll()
-    ptyManager.killAll()
+    teardown()
+    onClosed?.()
   })
-
-  mainWindow.webContents.on('render-process-gone', () => {
-    workflowEngine.stopAll()
-    ptyManager.killAll()
-  })
+  mainWindow.webContents.on('render-process-gone', teardown)
 
   installFileDropBridge(mainWindow)
 

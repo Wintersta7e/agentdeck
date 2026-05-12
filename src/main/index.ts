@@ -36,7 +36,6 @@ let costTracker: CostTracker | null = null
 let templateStore: TemplateStore | null = null
 let templateEventsOff: (() => void) | null = null
 
-// --- Crash cleanup handlers (REL-4) ---
 process.on('uncaughtException', (err) => {
   log.error('Uncaught exception', { error: err.message, stack: err.stack })
   if (workflowEngine) workflowEngine.stopAll()
@@ -65,8 +64,6 @@ app
     const wslHome = await resolveWslHome()
     worktreeManager = await initializeWorktreeManager(appStore, wslHome)
 
-    // `agentdeckRoot` is the parent dir; `templateUserRoot` lives underneath
-    // it. Falls back to app userData when WSL $HOME is unavailable.
     const agentdeckRoot = wslHome ? `${wslHome}/.agentdeck` : app.getPath('userData')
     const templateRuntime = await initializeTemplateRuntime(appStore, agentdeckRoot)
     templateStore = templateRuntime.templateStore
@@ -90,15 +87,12 @@ app
       getWorktreeManager: () => worktreeManager,
     })
 
-    const windowRuntime = createAppWindow(appStore)
+    const windowRuntime = createAppWindow(appStore, () => {
+      mainWindow = null
+    })
     mainWindow = windowRuntime.mainWindow
     ptyManager = windowRuntime.ptyManager
     workflowEngine = windowRuntime.workflowEngine
-    mainWindow.on('closed', () => {
-      if (mainWindow === windowRuntime.mainWindow) {
-        mainWindow = null
-      }
-    })
     log.info('Window created')
 
     if (templateStore) {
