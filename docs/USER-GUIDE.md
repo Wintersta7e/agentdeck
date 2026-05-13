@@ -1,6 +1,6 @@
 # AgentDeck User Guide
 
-> **Version**: 6.1.0
+> **Version**: 6.5.0
 
 AgentDeck is a desktop command center for managing AI coding agents through WSL2 terminals. This guide covers every feature from first launch to advanced workflow automation.
 
@@ -9,23 +9,24 @@ AgentDeck is a desktop command center for managing AI coding agents through WSL2
 ## Table of Contents
 
 1. [Getting Started](#getting-started)
-2. [Home Screen](#home-screen)
-3. [Creating a Project](#creating-a-project)
-4. [Terminal Sessions](#terminal-sessions)
-5. [Bare Terminals](#bare-terminals)
-6. [Split View](#split-view)
-7. [Terminal Search](#terminal-search)
-8. [Right Panel](#right-panel)
-9. [Prompt Templates](#prompt-templates)
-10. [Agentic Workflows](#agentic-workflows) (conditions, loops, variables, import/export, history)
-11. [Workflow Roles](#workflow-roles)
-12. [Command Palette](#command-palette)
-13. [Cost/Token Tracking](#costtoken-tracking)
-14. [Git Worktree Isolation](#git-worktree-isolation)
-15. [Agent Updates](#agent-updates)
-16. [Themes](#themes)
-17. [Keyboard Shortcuts](#keyboard-shortcuts)
-18. [Troubleshooting](#troubleshooting)
+2. [Top Tab Bar Navigation](#top-tab-bar-navigation)
+3. [Home Screen](#home-screen)
+4. [Creating a Project](#creating-a-project)
+5. [Terminal Sessions](#terminal-sessions)
+6. [Bare Terminals](#bare-terminals)
+7. [Split View](#split-view)
+8. [Terminal Search](#terminal-search)
+9. [Right Panel](#right-panel)
+10. [Prompt Templates](#prompt-templates)
+11. [Agentic Workflows](#agentic-workflows) (conditions, loops, variables, import/export, history)
+12. [Workflow Roles](#workflow-roles)
+13. [Command Palette](#command-palette)
+14. [Cost/Token Tracking](#costtoken-tracking)
+15. [Git Worktree Isolation](#git-worktree-isolation)
+16. [Agent Updates](#agent-updates)
+17. [Themes](#themes)
+18. [Keyboard Shortcuts](#keyboard-shortcuts)
+19. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -34,6 +35,7 @@ AgentDeck is a desktop command center for managing AI coding agents through WSL2
 ### Prerequisites
 
 - Windows 11 with WSL2 installed (Ubuntu recommended)
+- Node.js 22.22.1 or later (only if building from source; the portable .exe ships its own runtime)
 - At least one AI coding agent installed in WSL (e.g., Claude Code, Aider, Codex)
 
 ### Launching
@@ -52,6 +54,25 @@ On first launch, AgentDeck will:
 4. Seed 16 prompt templates and 8 workflow roles into local storage
 
 If WSL is still booting (cold start can take 15+ seconds), the app retries automatically after 5 seconds.
+
+---
+
+## Top Tab Bar Navigation
+
+The titlebar carries an 8-tab navigation strip. Each tab maps to a primary workspace; sub-views (session detail, project detail, the new-session composer, etc.) render under their owning tab so the active tab never "loses" you.
+
+| Tab | Shortcut | What lives here |
+|-----|----------|------------------|
+| Home | **Alt+1** | Dashboard: digest, live sessions, projects, cost, agents |
+| Sessions | **Alt+2** | Active and exited session list + tabbed split view |
+| Projects | **Alt+3** | All projects, wizards, settings |
+| Agents | **Alt+4** | Per-agent detection, version, update, env / hooks / skills |
+| Workflows | **Alt+5** | Workflow library + editor canvases |
+| History | **Alt+6** | Workflow run history across all workflows |
+| Alerts | **Alt+7** | Notifications and review queue |
+| Settings | **Alt+8** | Theme, context overrides, agent visibility, paths |
+
+Open sessions and open workflow editors render as a secondary "SessionTabs" strip under the Sessions and Workflows tabs respectively — closing a tab there does not affect the top-level navigation.
 
 ---
 
@@ -148,8 +169,9 @@ Click a pinned project on the home screen to open a session. Each session:
 
 Multiple ways to start:
 1. Click a project card on the home screen
-2. Click "New Session" or pick a project from the Sessions tab
-3. Use the Command Palette (Esc > search project name)
+2. Click "New Session" anywhere to open the **NewSessionScreen** composer — pick a project + agent, drop in a starting prompt, choose a branch mode (worktree / current branch / new branch), then launch. The prompt is piped into the agent's stdin a couple of seconds after spawn.
+3. Pick an existing project from the Sessions tab and hit its agent button to launch with that agent's defaults (skips the composer)
+4. Use the Command Palette (Esc > search project name)
 
 ### Session Tabs
 
@@ -255,6 +277,7 @@ Drag the left edge of the right panel to resize it. Toggle visibility with **Ctr
 
 ---
 
+## Prompt Templates
 
 AgentDeck ships with 16 built-in templates across 8 categories:
 
@@ -549,8 +572,8 @@ AgentDeck tracks token usage and estimated cost for **Claude Code** and **Codex 
 
 When a session starts, AgentDeck discovers the agent's JSONL log file in WSL and tails it every 3 seconds. Token usage and cost are parsed from the log entries and pushed to the UI.
 
-- **Claude Code**: Reads `~/.claude/projects/` session logs. Pricing uses the model ID (opus/sonnet/haiku) with cache-aware rates — cache writes cost 1.25x, cache reads cost 0.1x of the base input rate.
-- **Codex CLI**: Reads `~/.codex/sessions/` rollout files. Pricing uses per-model maps (gpt-4o, o3, gpt-5.3, etc.).
+- **Claude Code**: Reads `~/.claude/projects/` session logs (or `$CLAUDE_CONFIG_DIR/projects/` when overridden). Pricing uses the model ID (opus/sonnet/haiku, including the `[1m]` 1M-context variants) with cache-aware rates — cache writes cost 1.25x, cache reads cost 0.1x of the base input rate.
+- **Codex CLI**: Reads `~/.codex/sessions/` rollout files (or `$CODEX_HOME/sessions/`). Per-model pricing covers the gpt-5.4 family (incl. mini/nano/pro), gpt-5.3 / gpt-5.3-codex / gpt-5.2-codex, gpt-5, o3, gpt-4o, and gpt-4-turbo.
 
 ### The Cost Badge
 
@@ -580,7 +603,7 @@ Each agent session can run in its own **git worktree** — an isolated copy of t
 ### How It Works
 
 When you open a session for a project that is a git repository, AgentDeck automatically creates a worktree:
-- A new branch is created (e.g. `agentdeck/session-abc`)
+- A new branch is created using the pattern `agentdeck/p-<projectHash>/s-<sessionHash>` (e.g. `agentdeck/p-4019a684/s-e2dc9ccf`). On collision, a numeric suffix is appended.
 - The agent works in the worktree directory, not your main working copy
 - Changes are isolated until you decide to keep or discard them
 
@@ -623,25 +646,15 @@ Use the Command Palette or home screen to re-check agent status. This also trigg
 
 ## Themes
 
-AgentDeck includes 8 themes:
+AgentDeck v6.x ships three dark themes — the eight v5.x palettes were retired in v6.0 and are auto-migrated to their nearest successor on first boot.
 
-### Dark Themes
+| Theme | Accent | Vibe |
+|-------|--------|------|
+| **Tungsten** (default) | Sodium amber | Warm charcoal — the v6 flagship |
+| **Phosphor** | CRT green | Retro green-on-ink |
+| **Dusk** | Violet + coral | Plum-black with cool highlights |
 
-| Theme | Accent | Description |
-|-------|--------|-------------|
-| Amber | Orange-gold | Warm, focused (default) |
-| Cyan | Teal-blue | Cool, technical |
-| Violet | Purple | Creative, modern |
-| Ice | Light blue | Clean, minimal |
-
-### Light Themes
-
-| Theme | Description |
-|-------|-------------|
-| Parchment | Warm paper-like background |
-| Fog | Cool grey with blue accents |
-| Lavender | Soft purple tones |
-| Stone | Neutral warm grey |
+All three palettes drive their tokens from `src/renderer/styles/tokens.css`. Per-agent accent tokens (`--agent-claude`, `--agent-codex`, …) keep each agent's signature color consistent across themes.
 
 ### Switching Themes
 
@@ -650,9 +663,7 @@ AgentDeck includes 8 themes:
 3. Arrow keys preview themes in real-time
 4. Enter to apply
 
-Theme changes use a circular reveal animation (View Transition API). Light themes keep terminal backgrounds dark for readability.
-
-All 8 themes use theme-adaptive surface tokens. Light themes (Parchment, Fog, Lavender, Stone) have proper contrast with dark tints for borders, hover states, and shadows.
+Theme changes use a circular reveal animation via the View Transition API. The BrowserWindow background colour is set from the persisted theme before the renderer mounts, eliminating the white-flash on startup.
 
 ---
 
@@ -774,7 +785,7 @@ If the scrollbar is missing or content is cut off:
 
 ### Fonts look wrong
 
-AgentDeck bundles JetBrains Mono and Syne locally. If fonts appear incorrect:
+AgentDeck bundles JetBrains Mono (terminal) and Space Grotesk (display) locally, with Syne kept as a fallback. If fonts appear incorrect:
 1. The portable exe may need to extract fully on first run
 2. Try restarting the application
 
