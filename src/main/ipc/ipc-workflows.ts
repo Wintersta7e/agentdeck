@@ -1,3 +1,4 @@
+import { CH } from '../../shared/ipc-channels'
 import crypto from 'node:crypto'
 import { ipcMain } from 'electron'
 import {
@@ -26,12 +27,12 @@ export function registerWorkflowHandlers(
   saveRole?: ((role: Role) => void) | undefined,
 ): void {
   /* ── Workflow CRUD ──────────────────────────────────────────────── */
-  ipcMain.handle('workflows:list', () => listWorkflows())
-  ipcMain.handle('workflows:load', (_, id: string) => {
+  ipcMain.handle(CH.workflowsList, () => listWorkflows())
+  ipcMain.handle(CH.workflowsLoad, (_, id: string) => {
     if (typeof id !== 'string' || !SAFE_ID_RE.test(id)) throw new Error('Invalid workflow ID')
     return loadWorkflow(id)
   })
-  ipcMain.handle('workflows:save', (_, workflow: Workflow) => {
+  ipcMain.handle(CH.workflowsSave, (_, workflow: Workflow) => {
     if (!workflow || typeof workflow !== 'object') throw new Error('Invalid workflow')
     // IPC bypasses TS — id can be missing at runtime despite the Workflow type.
     // Allow save for new workflows where id is absent (saveWorkflow mints one);
@@ -42,13 +43,13 @@ export function registerWorkflowHandlers(
     }
     return saveWorkflow(workflow)
   })
-  ipcMain.handle('workflows:rename', (_, id: string, name: string) => {
+  ipcMain.handle(CH.workflowsRename, (_, id: string, name: string) => {
     if (typeof id !== 'string' || !SAFE_ID_RE.test(id)) throw new Error('Invalid workflow id')
     if (typeof name !== 'string' || !name.trim() || name.length > 200)
       throw new Error('Invalid workflow name')
     return renameWorkflow(id, name)
   })
-  ipcMain.handle('workflows:delete', async (_, id: string) => {
+  ipcMain.handle(CH.workflowsDelete, async (_, id: string) => {
     if (typeof id !== 'string' || !SAFE_ID_RE.test(id)) throw new Error('Invalid workflow id')
     // Stop running workflow before deleting to avoid orphaned PTYs
     getWorkflowEngine()?.stop(id)
@@ -57,7 +58,7 @@ export function registerWorkflowHandlers(
 
   /* ── Export / Import / Duplicate ─────────────────────────────── */
 
-  ipcMain.handle('workflows:export', async (_, id: string): Promise<WorkflowExport> => {
+  ipcMain.handle(CH.workflowsExport, async (_, id: string): Promise<WorkflowExport> => {
     if (typeof id !== 'string' || !SAFE_ID_RE.test(id)) throw new Error('Invalid workflow ID')
     const workflow = await loadWorkflow(id)
     if (!workflow) throw new Error('Workflow not found')
@@ -75,7 +76,7 @@ export function registerWorkflowHandlers(
   })
 
   ipcMain.handle(
-    'workflows:import',
+    CH.workflowsImport,
     async (
       _,
       data: unknown,
@@ -174,7 +175,7 @@ export function registerWorkflowHandlers(
     },
   )
 
-  ipcMain.handle('workflows:duplicate', async (_, id: string): Promise<Workflow> => {
+  ipcMain.handle(CH.workflowsDuplicate, async (_, id: string): Promise<Workflow> => {
     if (typeof id !== 'string' || !SAFE_ID_RE.test(id)) throw new Error('Invalid workflow ID')
     const workflow = await loadWorkflow(id)
     if (!workflow) throw new Error('Workflow not found')
@@ -191,14 +192,14 @@ export function registerWorkflowHandlers(
 
   /* ── Workflow Run History ──────────────────────────────────────── */
 
-  ipcMain.handle('workflows:listRuns', async (_, workflowId: string) => {
+  ipcMain.handle(CH.workflowsListRuns, async (_, workflowId: string) => {
     if (typeof workflowId !== 'string' || !SAFE_ID_RE.test(workflowId)) {
       throw new Error('Invalid workflow ID')
     }
     return listRuns(workflowId)
   })
 
-  ipcMain.handle('workflows:deleteRun', async (_, runId: string) => {
+  ipcMain.handle(CH.workflowsDeleteRun, async (_, runId: string) => {
     if (typeof runId !== 'string' || !SAFE_ID_RE.test(runId)) {
       throw new Error('Invalid run ID')
     }
@@ -206,7 +207,7 @@ export function registerWorkflowHandlers(
   })
 
   /* ── Workflow State Hydration ───────────────────────────────────── */
-  ipcMain.handle('workflows:getRunning', () => {
+  ipcMain.handle(CH.workflowsGetRunning, () => {
     return getWorkflowEngine()?.getRunningWorkflows() ?? []
   })
 
@@ -214,7 +215,7 @@ export function registerWorkflowHandlers(
   const VAR_NAME_RE = /^[A-Z_][A-Z0-9_]*$/
 
   ipcMain.handle(
-    'workflow:run',
+    CH.workflowRun,
     async (_, workflowId: string, projectPath?: string, variables?: Record<string, string>) => {
       // Validate workflowId before filesystem access
       if (typeof workflowId !== 'string' || !SAFE_ID_RE.test(workflowId)) {
@@ -268,12 +269,12 @@ export function registerWorkflowHandlers(
   // per-run push channel `workflow:event:<id>`). The preload unifies both under
   // `window.agentDeck.workflows`. Keep the singular form for execution-related
   // channels added in the future.
-  ipcMain.handle('workflow:stop', (_, workflowId: string) => {
+  ipcMain.handle(CH.workflowStop, (_, workflowId: string) => {
     if (typeof workflowId !== 'string' || !SAFE_ID_RE.test(workflowId)) return
     getWorkflowEngine()?.stop(workflowId)
   })
 
-  ipcMain.handle('workflow:resume', (_, workflowId: string, nodeId: string) => {
+  ipcMain.handle(CH.workflowResume, (_, workflowId: string, nodeId: string) => {
     if (typeof workflowId !== 'string' || !SAFE_ID_RE.test(workflowId)) return
     if (typeof nodeId !== 'string' || !SAFE_ID_RE.test(nodeId)) return
     getWorkflowEngine()?.resume(workflowId, nodeId)

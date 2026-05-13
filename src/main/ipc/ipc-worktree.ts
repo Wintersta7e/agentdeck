@@ -1,3 +1,4 @@
+import { CH } from '../../shared/ipc-channels'
 import { ipcMain } from 'electron'
 import type { WorktreeManager } from '../worktree-manager'
 import { validateId } from '../validation'
@@ -10,7 +11,7 @@ import { validateId } from '../validation'
  * capture it and pass it on rather than using `as string` casts on the raw input.
  */
 export function registerWorktreeHandlers(getWorktreeManager: () => WorktreeManager | null): void {
-  ipcMain.handle('worktree:acquire', async (_, projectId: unknown, sessionId: unknown) => {
+  ipcMain.handle(CH.worktreeAcquire, async (_, projectId: unknown, sessionId: unknown) => {
     const pid = validateId(projectId, 'projectId')
     const sid = validateId(sessionId, 'sessionId')
     const mgr = getWorktreeManager()
@@ -18,28 +19,28 @@ export function registerWorktreeHandlers(getWorktreeManager: () => WorktreeManag
     return mgr.acquire(pid, sid)
   })
 
-  ipcMain.handle('worktree:inspect', async (_, sessionId: unknown) => {
+  ipcMain.handle(CH.worktreeInspect, async (_, sessionId: unknown) => {
     const sid = validateId(sessionId, 'sessionId')
     const mgr = getWorktreeManager()
     if (!mgr) throw new Error('WorktreeManager not initialized')
     return mgr.inspect(sid)
   })
 
-  ipcMain.handle('worktree:discard', async (_, sessionId: unknown) => {
+  ipcMain.handle(CH.worktreeDiscard, async (_, sessionId: unknown) => {
     const sid = validateId(sessionId, 'sessionId')
     const mgr = getWorktreeManager()
     if (!mgr) throw new Error('WorktreeManager not initialized')
     return mgr.discard(sid)
   })
 
-  ipcMain.handle('worktree:keep', async (_, sessionId: unknown) => {
+  ipcMain.handle(CH.worktreeKeep, async (_, sessionId: unknown) => {
     const sid = validateId(sessionId, 'sessionId')
     const mgr = getWorktreeManager()
     if (!mgr) throw new Error('WorktreeManager not initialized')
     return mgr.keep(sid)
   })
 
-  ipcMain.handle('worktree:releasePrimary', async (_, projectId: unknown, sessionId: unknown) => {
+  ipcMain.handle(CH.worktreeReleasePrimary, async (_, projectId: unknown, sessionId: unknown) => {
     const pid = validateId(projectId, 'projectId')
     const sid = validateId(sessionId, 'sessionId')
     const mgr = getWorktreeManager()

@@ -1,3 +1,4 @@
+import { CH } from '../shared/ipc-channels'
 import { app, safeStorage, type BrowserWindow } from 'electron'
 import { join } from 'path'
 import type { PtyManager } from './pty-manager'
@@ -113,7 +114,7 @@ app
     if (!safeStorage.isEncryptionAvailable() && mainWindow) {
       log.warn('safeStorage encryption unavailable — secrets stored as plaintext')
       mainWindow.webContents.once('did-finish-load', () => {
-        mainWindow?.webContents.send('security:encryption-unavailable')
+        mainWindow?.webContents.send(CH.securityEncryptionUnavailable)
       })
     }
 

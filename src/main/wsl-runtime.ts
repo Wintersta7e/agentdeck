@@ -1,3 +1,4 @@
+import { CH } from '../shared/ipc-channels'
 import { execFile } from 'child_process'
 import type { BrowserWindow } from 'electron'
 import { createLogger } from './logger'
@@ -14,10 +15,10 @@ export function publishWslAvailability(mainWindow: BrowserWindow): void {
   execFile('wsl.exe', ['--status'], { timeout: 10_000 }, (err) => {
     if (err) {
       log.warn('WSL2 not detected', { err: String(err) })
-      mainWindow.webContents.send('wsl:status', { available: false, error: String(err) })
+      mainWindow.webContents.send(CH.wslStatus, { available: false, error: String(err) })
     } else {
       log.info('WSL2 detected')
-      mainWindow.webContents.send('wsl:status', { available: true })
+      mainWindow.webContents.send(CH.wslStatus, { available: true })
     }
   })
 }

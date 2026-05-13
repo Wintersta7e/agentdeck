@@ -1,3 +1,4 @@
+import { workflowEventChannel } from '../shared/ipc-channels'
 import { BrowserWindow } from 'electron'
 import type { ChildProcess } from 'child_process'
 import { createLogger } from './logger'
@@ -49,8 +50,7 @@ export function createWorkflowEngine(
 
   function push(workflowId: string, event: Omit<WorkflowEvent, 'id' | 'timestamp'>): void {
     if (mainWindow.isDestroyed()) return
-    const safeChannel = `workflow:event:${workflowId}`
-    mainWindow.webContents.send(safeChannel, {
+    mainWindow.webContents.send(workflowEventChannel(workflowId), {
       ...event,
       id: crypto.randomUUID(),
       timestamp: Date.now(),

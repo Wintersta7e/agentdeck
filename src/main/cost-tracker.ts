@@ -1,3 +1,4 @@
+import { CH } from '../shared/ipc-channels'
 /**
  * CostTracker — watches agent JSONL log files and pushes usage updates.
  *
@@ -341,7 +342,7 @@ export function createCostTracker(
 
           if (usageChanged) {
             if (!mainWindow.isDestroyed()) {
-              mainWindow.webContents.send('cost:update', {
+              mainWindow.webContents.send(CH.costUpdate, {
                 sessionId: session.sessionId,
                 usage: { ...session.usage },
               })

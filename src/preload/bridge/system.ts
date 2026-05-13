@@ -1,3 +1,4 @@
+import { CH } from '../../shared/ipc-channels'
 import { ipcRenderer } from 'electron'
 import type { AgentDeckBridge } from '../../shared/bridge'
 import { onIpc, onIpcNoData } from './events'
@@ -20,43 +21,43 @@ type SystemBridge = Pick<
 export function createSystemBridge(): SystemBridge {
   return {
     app: {
-      version: () => ipcRenderer.invoke('app:version'),
-      versions: () => ipcRenderer.invoke('app:versions'),
-      wslUsername: () => ipcRenderer.invoke('app:wslUsername'),
+      version: () => ipcRenderer.invoke(CH.appVersion),
+      versions: () => ipcRenderer.invoke(CH.appVersions),
+      wslUsername: () => ipcRenderer.invoke(CH.appWslUsername),
     },
     window: {
-      close: () => ipcRenderer.invoke('window:close'),
-      minimize: () => ipcRenderer.invoke('window:minimize'),
-      maximize: () => ipcRenderer.invoke('window:maximize'),
+      close: () => ipcRenderer.invoke(CH.windowClose),
+      minimize: () => ipcRenderer.invoke(CH.windowMinimize),
+      maximize: () => ipcRenderer.invoke(CH.windowMaximize),
     },
     zoom: {
-      get: () => ipcRenderer.invoke('zoom:get'),
-      set: (factor) => ipcRenderer.invoke('zoom:set', factor),
-      reset: () => ipcRenderer.invoke('zoom:reset'),
+      get: () => ipcRenderer.invoke(CH.zoomGet),
+      set: (factor) => ipcRenderer.invoke(CH.zoomSet, factor),
+      reset: () => ipcRenderer.invoke(CH.zoomReset),
     },
     theme: {
-      get: () => ipcRenderer.invoke('theme:get'),
-      set: (name) => ipcRenderer.invoke('theme:set', name),
-      popMigration: () => ipcRenderer.invoke('theme:popMigration'),
+      get: () => ipcRenderer.invoke(CH.themeGet),
+      set: (name) => ipcRenderer.invoke(CH.themeSet, name),
+      popMigration: () => ipcRenderer.invoke(CH.themePopMigration),
     },
     layout: {
-      get: () => ipcRenderer.invoke('layout:get'),
-      set: (patch) => ipcRenderer.invoke('layout:set', patch),
+      get: () => ipcRenderer.invoke(CH.layoutGet),
+      set: (patch) => ipcRenderer.invoke(CH.layoutSet, patch),
     },
-    pickFolder: () => ipcRenderer.invoke('dialog:pickFolder'),
+    pickFolder: () => ipcRenderer.invoke(CH.dialogPickFolder),
     log: {
       send: (level, mod, message, data) =>
-        ipcRenderer.invoke('log:renderer', level, mod, message, data),
+        ipcRenderer.invoke(CH.logRenderer, level, mod, message, data),
     },
     clipboard: {
-      readFilePaths: () => ipcRenderer.invoke('clipboard:readFilePaths'),
+      readFilePaths: () => ipcRenderer.invoke(CH.clipboardReadFilePaths),
     },
     wsl: {
-      onStatus: (cb) => onIpc('wsl:status', cb),
+      onStatus: (cb) => onIpc(CH.wslStatus, cb),
     },
     security: {
-      onEncryptionUnavailable: (cb) => onIpcNoData('security:encryption-unavailable', cb),
+      onEncryptionUnavailable: (cb) => onIpcNoData(CH.securityEncryptionUnavailable, cb),
     },
-    onFileDrop: (cb) => onIpc('file-dropped', cb),
+    onFileDrop: (cb) => onIpc(CH.fileDropped, cb),
   }
 }

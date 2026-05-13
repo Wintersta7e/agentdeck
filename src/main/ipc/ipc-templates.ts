@@ -1,3 +1,4 @@
+import { CH } from '../../shared/ipc-channels'
 import { ipcMain, type BrowserWindow } from 'electron'
 import type {
   Template,
@@ -131,7 +132,7 @@ function validateRef(input: unknown, ctx: TemplateHandlerContext): TemplateRef {
  */
 export function registerTemplateIpc(ctx: TemplateHandlerContext): void {
   ipcMain.handle(
-    'templates:listAll',
+    CH.templatesListAll,
     async (_event, input?: { projectId?: string } | undefined): Promise<Template[]> => {
       // Validate input BEFORE the migration-complete branch so malformed
       // payloads are rejected uniformly regardless of current migration state.
@@ -148,7 +149,7 @@ export function registerTemplateIpc(ctx: TemplateHandlerContext): void {
   )
 
   ipcMain.handle(
-    'templates:activateProject',
+    CH.templatesActivateProject,
     async (_event, projectId: unknown): Promise<Template[]> => {
       const validProjectId = validateId(projectId, 'templates:activateProject projectId')
       if (!ctx.getProjectExists(validProjectId)) {
@@ -163,7 +164,7 @@ export function registerTemplateIpc(ctx: TemplateHandlerContext): void {
   )
 
   ipcMain.handle(
-    'templates:save',
+    CH.templatesSave,
     async (
       _event,
       draft: unknown,
@@ -211,7 +212,7 @@ export function registerTemplateIpc(ctx: TemplateHandlerContext): void {
     },
   )
 
-  ipcMain.handle('templates:delete', async (_event, refInput: unknown): Promise<void> => {
+  ipcMain.handle(CH.templatesDelete, async (_event, refInput: unknown): Promise<void> => {
     const ref = validateRef(refInput, ctx)
     if (!ctx.migrationComplete()) {
       await ctx.legacy.delete(ref.id)
@@ -220,7 +221,7 @@ export function registerTemplateIpc(ctx: TemplateHandlerContext): void {
     await ctx.store.delete(ref)
   })
 
-  ipcMain.handle('templates:incrementUsage', async (_event, refInput: unknown): Promise<void> => {
+  ipcMain.handle(CH.templatesIncrementUsage, async (_event, refInput: unknown): Promise<void> => {
     const ref = validateRef(refInput, ctx)
     if (!ctx.migrationComplete()) {
       await ctx.legacy.incrementUsage(ref.id)
@@ -230,7 +231,7 @@ export function registerTemplateIpc(ctx: TemplateHandlerContext): void {
   })
 
   ipcMain.handle(
-    'templates:setPinned',
+    CH.templatesSetPinned,
     async (_event, refInput: unknown, pinned: unknown): Promise<void> => {
       const ref = validateRef(refInput, ctx)
       if (typeof pinned !== 'boolean') {
@@ -256,7 +257,7 @@ export function registerLegacyTemplateIpc(ctx: {
   legacy: LegacyStoreAdapter
   migrationComplete: () => boolean
 }): void {
-  ipcMain.handle('store:getTemplates', async (): Promise<Template[]> => {
+  ipcMain.handle(CH.storeGetTemplates, async (): Promise<Template[]> => {
     if (!ctx.migrationComplete()) {
       return ctx.legacy.listAll()
     }
@@ -272,12 +273,12 @@ export function wireTemplateWindowEvents(
   const offChange = store.onChange((event: TemplateChangeEvent): void => {
     const win = getWindow()
     if (!win || win.isDestroyed()) return
-    win.webContents.send('templates:change', event)
+    win.webContents.send(CH.templatesChange, event)
   })
   const offParseError = store.onParseError((event): void => {
     const win = getWindow()
     if (!win || win.isDestroyed()) return
-    win.webContents.send('templates:parseError', event)
+    win.webContents.send(CH.templatesParseError, event)
   })
   return () => {
     offChange()

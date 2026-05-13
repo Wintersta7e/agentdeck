@@ -1,3 +1,4 @@
+import { CH } from '../shared/ipc-channels'
 import Store from 'electron-store'
 import { app, ipcMain, safeStorage } from 'electron'
 import * as fs from 'fs'
@@ -232,14 +233,14 @@ export function __resetStoreHandlersForTests(): void {
  * without triggering IPC side effects. Throws on a second invocation
  * rather than letting Electron's own duplicate-handler error fire — the
  * error site here is more debuggable than `Attempted to register a
- * second handler for 'store:getProjects'` from deep inside Electron.
+ * second handler for CH.storeGetProjects` from deep inside Electron.
  */
 export function registerStoreHandlers(store: AppStore): void {
   if (storeHandlersRegistered) {
     throw new Error('registerStoreHandlers called twice — invoke exactly once at startup')
   }
   storeHandlersRegistered = true
-  ipcMain.handle('store:getProjects', () => {
+  ipcMain.handle(CH.storeGetProjects, () => {
     const projects = store.get('projects')
 
     // Auto-migrate legacy single-agent projects to agents[] array
@@ -257,7 +258,7 @@ export function registerStoreHandlers(store: AppStore): void {
     return updated.map((p) => ({ ...p, envVars: decryptEnvVars(p.envVars) }))
   })
 
-  ipcMain.handle('store:saveProject', (_, project: unknown) => {
+  ipcMain.handle(CH.storeSaveProject, (_, project: unknown) => {
     if (!project || typeof project !== 'object') {
       throw new Error('store:saveProject requires a non-null object')
     }
@@ -302,7 +303,7 @@ export function registerStoreHandlers(store: AppStore): void {
     })
   })
 
-  ipcMain.handle('store:deleteProject', (_, id: string) => {
+  ipcMain.handle(CH.storeDeleteProject, (_, id: string) => {
     validateId(id, 'projectId')
     return serialized(() => {
       const projects = store.get('projects').filter((p) => p.id !== id)
@@ -321,11 +322,11 @@ export function registerStoreHandlers(store: AppStore): void {
   // and deletes go through `window.agentDeck.templates.save` /
   // `templates.delete` which target the new disk-backed TemplateStore.
 
-  ipcMain.handle('store:getRoles', () => {
+  ipcMain.handle(CH.storeGetRoles, () => {
     return store.get('roles')
   })
 
-  ipcMain.handle('store:saveRole', (_, role: unknown) => {
+  ipcMain.handle(CH.storeSaveRole, (_, role: unknown) => {
     if (!role || typeof role !== 'object') {
       throw new Error('store:saveRole requires a non-null object')
     }
@@ -356,7 +357,7 @@ export function registerStoreHandlers(store: AppStore): void {
     })
   })
 
-  ipcMain.handle('store:deleteRole', (_, id: string) => {
+  ipcMain.handle(CH.storeDeleteRole, (_, id: string) => {
     validateId(id, 'roleId')
     return serialized(() => {
       const roles = store.get('roles').filter((r) => r.id !== id)

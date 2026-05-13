@@ -1,3 +1,4 @@
+import { ptyDataChannel, ptyExitChannel, ptyActivityChannel } from '../shared/ipc-channels'
 import type { BrowserWindow } from 'electron'
 import type { IPty } from 'node-pty'
 import * as pty from 'node-pty'
@@ -150,7 +151,7 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
     } catch (err) {
       log.error(`Failed to spawn PTY for session ${sessionId}`, { err: String(err) })
       if (!mainWindow.isDestroyed()) {
-        mainWindow.webContents.send(`pty:exit:${sessionId}`, -1)
+        mainWindow.webContents.send(ptyExitChannel(sessionId), -1)
       }
       return
     }
@@ -252,7 +253,7 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
 
           // Send batched data to renderer
           if (!mainWindow.isDestroyed()) {
-            mainWindow.webContents.send(`pty:data:${sessionId}`, buffered)
+            mainWindow.webContents.send(ptyDataChannel(sessionId), buffered)
           }
 
           // Parse activity from the batched buffer (off the per-chunk hot path)
@@ -271,7 +272,7 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
             const line = parts[i] ?? ''
             const parsed = parseActivityLine(line)
             if (parsed && !mainWindow.isDestroyed()) {
-              mainWindow.webContents.send(`pty:activity:${sessionId}`, {
+              mainWindow.webContents.send(ptyActivityChannel(sessionId), {
                 id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
                 type: parsed.type,
                 title: parsed.title,
@@ -293,7 +294,7 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
       dataBuffers.delete(sessionId)
       flushScheduled.delete(sessionId)
       if (!mainWindow.isDestroyed()) {
-        mainWindow.webContents.send(`pty:exit:${sessionId}`, exitCode)
+        mainWindow.webContents.send(ptyExitChannel(sessionId), exitCode)
       }
       ptyBus.emit(`exit:${sessionId}`, exitCode)
     })

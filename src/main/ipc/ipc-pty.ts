@@ -1,3 +1,4 @@
+import { CH } from '../../shared/ipc-channels'
 import { ipcMain } from 'electron'
 import type { BrowserWindow } from 'electron'
 import { execFile } from 'node:child_process'
@@ -84,7 +85,7 @@ export function registerPtyHandlers(
   deps: PtyHandlerDeps,
 ): void {
   ipcMain.handle(
-    'pty:spawn',
+    CH.ptySpawn,
     (
       _,
       sessionId: string,
@@ -188,7 +189,7 @@ export function registerPtyHandlers(
                 if (win && !win.isDestroyed()) {
                   // Signal-only — renderer re-fetches per-project to avoid leaking
                   // cross-project file paths in the broadcast payload.
-                  win.webContents.send('home:reviewsUpdated', [])
+                  win.webContents.send(CH.homeReviewsUpdated, [])
                 }
               } catch {
                 // Best-effort: swallow all errors so PTY exit is never blocked
@@ -201,7 +202,7 @@ export function registerPtyHandlers(
   )
 
   ipcMain.handle(
-    'pty:write',
+    CH.ptyWrite,
     (_, sessionId: string, data: string): { ok: boolean; error?: string } => {
       try {
         validateId(sessionId, 'sessionId')
@@ -240,7 +241,7 @@ export function registerPtyHandlers(
 
   // Note: resize rate-limiting is handled renderer-side (80ms debounced ResizeObserver).
   // No server-side guard — node-pty resize is cheap and idempotent.
-  ipcMain.on('pty:resize', (_, sessionId: string, cols: number, rows: number) => {
+  ipcMain.on(CH.ptyResize, (_, sessionId: string, cols: number, rows: number) => {
     // Fire-and-forget — silently drop invalid sessionId rather than throw
     // (the renderer-side ResizeObserver fires on every layout shift).
     if (typeof sessionId !== 'string' || !SAFE_ID_RE.test(sessionId)) return
@@ -248,7 +249,7 @@ export function registerPtyHandlers(
     if (cols > 0 && rows > 0) getPtyManager()?.resize(sessionId, cols, rows)
   })
 
-  ipcMain.handle('pty:kill', (_, sessionId: string) => {
+  ipcMain.handle(CH.ptyKill, (_, sessionId: string) => {
     validateId(sessionId, 'sessionId')
     getPtyManager()?.kill(sessionId)
   })

@@ -1,3 +1,4 @@
+import { CH } from '../../shared/ipc-channels'
 import { ipcMain } from 'electron'
 import path from 'node:path'
 import { listSkills } from '../skill-scanner'
@@ -7,7 +8,7 @@ const log = createLogger('ipc-skills')
 
 export function registerSkillHandlers(): void {
   ipcMain.handle(
-    'skills:list',
+    CH.skillsList,
     async (_, opts: { projectPath?: string; includeGlobal?: boolean }) => {
       if (opts && typeof opts !== 'object') {
         throw new Error('skills:list expects an options object')
@@ -32,7 +33,7 @@ export function registerSkillHandlers(): void {
       }
 
       const includeGlobal = opts?.includeGlobal !== false
-      log.debug('skills:list', { projectPath, includeGlobal })
+      log.debug(CH.skillsList, { projectPath, includeGlobal })
       return listSkills({ projectPath, includeGlobal })
     },
   )

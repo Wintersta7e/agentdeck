@@ -1,3 +1,4 @@
+import { CH } from '../../shared/ipc-channels'
 import { ipcMain } from 'electron'
 import { toWslPath } from '../wsl-utils'
 import { createLogger } from '../logger'
@@ -15,7 +16,7 @@ const MAX_LOGGERS = 50
  */
 export function registerUtilHandlers(): void {
   /* ── Clipboard: read file paths from copied files ────────────── */
-  ipcMain.handle('clipboard:readFilePaths', async () => {
+  ipcMain.handle(CH.clipboardReadFilePaths, async () => {
     const { execFile } = await import('child_process')
     return new Promise<string[]>((resolve) => {
       execFile(
@@ -47,7 +48,7 @@ export function registerUtilHandlers(): void {
   /* ── Renderer log relay ────────────────────────────────────────── */
   const rendererLoggers = new Map<string, ReturnType<typeof createLogger>>()
   ipcMain.handle(
-    'log:renderer',
+    CH.logRenderer,
     (_, level: string, mod: string, message: string, data?: unknown) => {
       if (typeof level !== 'string' || !ALLOWED_LOG_LEVELS.has(level)) return
       if (typeof mod !== 'string' || mod.length > MAX_MOD_LENGTH) return

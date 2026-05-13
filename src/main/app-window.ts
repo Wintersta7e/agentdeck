@@ -1,3 +1,4 @@
+import { CH } from '../shared/ipc-channels'
 import { app, BrowserWindow, screen } from 'electron'
 import { readFileSync } from 'fs'
 import { join } from 'path'
@@ -66,7 +67,7 @@ function installFileDropBridge(mainWindow: BrowserWindow): void {
     if (/^\/[A-Za-z]:/.test(pathname)) pathname = pathname.slice(1)
     const wslPath = toWslPath(pathname)
     log.info(`File drop intercepted: ${url} -> ${wslPath}`)
-    mainWindow.webContents.send('file-dropped', [wslPath])
+    mainWindow.webContents.send(CH.fileDropped, [wslPath])
   }
 
   mainWindow.webContents.on('will-navigate', (event, url) => {

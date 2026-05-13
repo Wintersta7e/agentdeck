@@ -1,3 +1,4 @@
+import { CH } from '../../shared/ipc-channels'
 import { dialog, ipcMain } from 'electron'
 import type { BrowserWindow } from 'electron'
 import * as fs from 'fs'
@@ -22,7 +23,7 @@ export function registerProjectHandlers(
   getWindow: () => BrowserWindow | null,
   getStore?: (() => AppStore | null) | undefined,
 ): void {
-  ipcMain.handle('projects:detectStack', async (_, p: string, distro?: string) => {
+  ipcMain.handle(CH.projectsDetectStack, async (_, p: string, distro?: string) => {
     // Validate path and distro inputs
     if (typeof p !== 'string' || !p || p.length > 1024) {
       throw new Error('projects:detectStack requires a valid path')
@@ -34,11 +35,11 @@ export function registerProjectHandlers(
     return detectStack(p, resolvedDistro)
   })
 
-  ipcMain.handle('projects:getDefaultDistro', async () => {
+  ipcMain.handle(CH.projectsGetDefaultDistro, async () => {
     return getDefaultDistroAsync()
   })
 
-  ipcMain.handle('projects:readFile', async (_event, projectPath: string, filename: string) => {
+  ipcMain.handle(CH.projectsReadFile, async (_event, projectPath: string, filename: string) => {
     if (typeof projectPath !== 'string' || !projectPath) {
       throw new Error('projects:readFile requires a non-empty projectPath')
     }
@@ -91,7 +92,7 @@ export function registerProjectHandlers(
   })
 
   /* ── Dialogs ────────────────────────────────────────────────────── */
-  ipcMain.handle('dialog:pickFolder', async () => {
+  ipcMain.handle(CH.dialogPickFolder, async () => {
     const win = getWindow()
     if (!win) return null
     const result = await dialog.showOpenDialog(win, {
@@ -101,7 +102,7 @@ export function registerProjectHandlers(
   })
 
   /* ── Project Metadata Refresh ──────────────────────────────────── */
-  ipcMain.handle('projects:refreshMeta', async (_, projectId: string) => {
+  ipcMain.handle(CH.projectsRefreshMeta, async (_, projectId: string) => {
     validateId(projectId, 'projectId')
 
     const store = getStore?.()

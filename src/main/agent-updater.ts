@@ -1,3 +1,4 @@
+import { CH } from '../shared/ipc-channels'
 import type { BrowserWindow } from 'electron'
 import { AGENTS, AGENT_BINARY_MAP } from '../shared/agents'
 import type { AgentUpdateResult, AgentVersionInfo } from '../shared/bridge'
@@ -318,7 +319,7 @@ export function checkAllUpdates(
     void checkAgentVersion(agentId)
       .then((info) => {
         if (!win.isDestroyed()) {
-          win.webContents.send('agents:versionInfo', info)
+          win.webContents.send(CH.agentsVersionInfo, info)
         }
       })
       .catch((err) => {
