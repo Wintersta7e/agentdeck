@@ -5,6 +5,115 @@ All notable changes to AgentDeck will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.5.0] - 2026-05-13
+
+Tech-debt audit closure plus a dependency-refresh pass. The user-visible
+surface is unchanged; this release consolidates internal patterns
+introduced over v6.3.0–v6.4.0 (CSS tokens, IPC channel names, versioned
+disk caches, agent registry) and ships a major Electron jump.
+
+### Added
+
+- `scripts/build-portable.sh` + `npm run release-portable` — gated release build that runs lint, typecheck, tests, then `electron-vite build` + `electron-builder --win portable` and confirms the produced `.exe`.
+- `src/shared/ipc-channels.ts` with 84 named `CH.*` constants + 4 dynamic helpers; 26 production files swept off raw string channel names.
+- `WorkflowRun.version: 1` field with forward-stamping in the persisted run JSON.
+- New spacing tokens `--sp-half`, `--sp-0_75`, `--sp-1_5`; new z-index tokens `--z-*` (4 levels); new overlay/surface tokens (`--overlay-soft`, `--overlay-dim`, `--surface-tint-light`).
+- 42 new tests across `fs-atomic`, `wsl-exec`, `workflow-seed-blueprints`, and `workflow-seeds` (top 4 of 8 priority files).
+- `.nvmrc` pinned to `22.22.1`; `engines.node` raised to `>=22.22.1` to match the lint-staged 17 requirement.
+- `overrides.node-abi: ^4.30.0` in `package.json` to keep electron-rebuild's ABI lookup in sync with Electron majors.
+
+### Changed
+
+- Workflow seeds split: `workflow-seeds.ts` shrank from 922 → 103 LOC (orchestration only); blueprint data moved to a new 815 LOC `workflow-seed-blueprints.ts`.
+- Mascot character colors tokenized via local CSS vars instead of literal palette values.
+- 11 literal-rgba sites tokenized via overlay/surface tokens (4 xterm-theme entries kept as accepted exceptions).
+- 19 raw z-index values tokenized via `--z-*`.
+- 128 of 142 raw px spacing values tokenized via `--sp-*` (remaining 14 are documented exceptions).
+- `as any` removed from production code (`MockChild.pid` widening); production `as unknown as` cut 4 → 2.
+
+### Dependencies
+
+- electron 41.3.0 → 42.0.1 (Chromium 148, Node 24, V8 14.8)
+- react / react-dom 19.2.5 → 19.2.6
+- lint-staged 16.4.0 → 17.0.4 (requires Node ≥ 22.22.1, Git ≥ 2.32.0)
+- @types/node 25.6.0 → 25.7.0
+- typescript-eslint 8.59.1 → 8.59.3
+- zustand 5.0.12 → 5.0.13
+- vitest / @vitest/coverage-v8 4.1.5 → 4.1.6
+- yaml 2.8.4 → 2.9.0
+- `npm audit fix` patched fast-uri, postcss, and @xmldom/xmldom transitives; npm audit reports 0 vulnerabilities.
+
+## [6.4.0] - 2026-05-08
+
+Architecture deep-review pass. Two formal review rounds plus simplify
+passes — 34 commits that tighten boundaries, exhaustiveness, and the
+single-source-of-truth pattern for agents, themes, and validation.
+
+### Added
+
+- `WorkflowNode` is now a discriminated union (`AgentNode | ShellNode | CheckpointNode | ConditionNode`); the engine dispatch and the validator are exhaustive at compile time, and the engine throws on unknown node types.
+- Per-agent CLI/UI data consolidated in `AGENTS` registry — `printFlags`, `cdFlag`, `engineFlags`, `colorVar`, `short`, `supportsSkills`, plus derived `AGENT_*_MAP` exports. `agent-ui`, `node-runners`, and `agent-detector` now read from the registry.
+- `wsl-exec.ts` consolidates four prior bash-invocation helpers into `wslRun` / `wslTry` / `shellQuote`.
+- `SAFE_ID_RE` + `validateId()` centralized in `src/shared/validation`; adopted across pty, worktree, projects, templates, and store handlers. `MAX_SAFE_ID_LEN` is a single shared constant.
+- `KNOWN_AGENT_IDS` guard at `runAgentNode` entry; `AGENT_BY_ID` moved to shared for O(1) lookup.
+- `RETRY_ALLOWED_TYPES` allowlist on workflow nodes.
+- `runPrefsMigrations` versioned migration runner (currently empty list, infra ready).
+- `THEME_GROUPS` derived from `THEME_IDS` via typed `THEME_METADATA`; Alt+N shortcuts derived from `TABS` registry.
+- `cost-history.json` and `git-status-cache.json` got `version: 1` schema fields for forward-compatible disk caches.
+
+### Changed
+
+- `viewToTab` is now exhaustive over `ViewType`.
+- `restartSession` carries the full launch config (agent + flags + branch mode) so RERUN doesn't lose state.
+- `createProjectStore` split from `registerStoreHandlers`; cross-slice writes for `gitStatuses` extracted to `HomeSlice.pruneGitStatuses`; `setProjects` made atomic so subscribers see consistent state.
+- `THEME_STARTUP_BG` colocated in `src/shared/themes` and corrected to the v6 palette (`''` / `phosphor` / `dusk`).
+- `AgentEnvContext` is adapter-driven via per-agent `getEnvVars()`.
+- `registerStoreHandlers` gained a double-call guard and `__resetStoreHandlersForTests` for isolated tests.
+- Preload split by domain; `registerFilesIpc` exported via barrel.
+- Workflow timing constants centralized.
+- Test count 1113 → 1181; portable size 97 → 93 MB.
+
+### Removed
+
+- Dead `store:saveTemplate` / `store:deleteTemplate` IPC handlers.
+- Pass-through Titlebar prop callbacks.
+
+## [6.3.0] - 2026-05-02
+
+Terminal copy now substitutes tabs back into selections by tracking a
+parallel cell-grid model alongside xterm. Plus a batch of terminal
+correctness and performance fixes.
+
+> **Known limitation:** the tab-preservation feature is functionally
+> a no-op on Windows + WSL because ConPTY (Windows Pseudo Console)
+> parses VT input into a cell grid and re-serializes as bytes upstream
+> of node-pty, dropping `\t` along the way. The implementation is
+> sound and will work on any non-ConPTY pipeline.
+
+### Added
+
+- `TerminalGridMirror` — parallel cell-grid model that tracks cursor + scroll region + alt buffer + per-row `\t` spans, fed unconditionally on every `pty.onData` and cached alongside the xterm instance across tab switches.
+- `wcwidth` utility for cell-width arithmetic with an ASCII fast-path.
+- `getLogicalSelection(term, options)` substitutes `\t` for fully-contained tab spans during copy.
+- `src/shared/ansi.ts` — extracted ANSI escape regex.
+- Tests for tab-span substitution paths in `getLogicalSelection`.
+
+### Changed
+
+- Copy selection now operates by logical line (soft-wrap dejam + trailing-space rstrip) rather than visual cell row.
+- Default scrollback bumped 5000 → 25000.
+- `mirror.ingest` coalesces printable ASCII runs in chunk-slices for a 10–50× speedup on plain-ASCII bursts.
+- DEC mode constants are now named; alt-buffer save-cursor handling fixed.
+- Notifications dismiss avoids a redundant `set()` when the id is in neither list.
+- `SessionTabs` memoizes `projectById`; `EnvTab` uses `AGENT_BY_ID` for O(1) lookup; `FileTree` memoizes its visible index; `files-gitignore` uses a Set for O(N) lookup; `files-lister` drops the unused per-file stat pass.
+- `template-store` parallelizes scanDir per-file `readFile + stat` and emits `'add'` for new IDs instead of always `'update'`.
+- `agent-env-resolver` uses a type-safe Reader dispatch + shared `SNAPSHOT_CACHE_TTL_MS` constant.
+
+### Fixed
+
+- WebGL canvas clipped to its container via `isolation: isolate; contain: paint`; context menu portalled so the contain layer can't trap it.
+- Paste routed through `term.paste()` so bracketed-paste markers actually fire.
+
 ## [6.2.0] - 2026-04-25
 
 Session-UI rework. Strips the left sidebar and retired right-panel tabs,
