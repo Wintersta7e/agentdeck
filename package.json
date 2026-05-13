@@ -32,6 +32,7 @@
     "dev": "node node_modules/electron-vite/bin/electron-vite.js dev",
     "build": "node node_modules/electron-vite/bin/electron-vite.js build",
     "dist": "node node_modules/electron-vite/bin/electron-vite.js build && node node_modules/electron-builder/out/cli/cli.js --win portable",
+    "release-portable": "bash scripts/build-portable.sh",
     "postinstall": "node node_modules/@electron/rebuild/lib/cli.js -f -w node-pty",
     "lint": "node node_modules/eslint/bin/eslint.js src/ --max-warnings=0",
     "lint:fix": "node node_modules/eslint/bin/eslint.js src/ --fix --max-warnings=0",
