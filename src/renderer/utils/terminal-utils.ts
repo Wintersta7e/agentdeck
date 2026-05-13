@@ -38,6 +38,9 @@ export interface FitCallbacks {
 
 // ─── Constants ───────────────────────────────────────────────────────
 
+// xterm.js's ITheme requires literal hex strings; CSS custom properties are
+// resolved separately via getXtermTheme() / accentRgb. Keep these palettes
+// in sync with --bg0/--text0/--accent etc. across themes in tokens.css.
 export const BASE_XTERM_THEME: Readonly<ITheme> = Object.freeze({
   background: '#0d0e0f',
   foreground: '#b8b4ae',

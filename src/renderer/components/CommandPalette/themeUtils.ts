@@ -15,6 +15,13 @@ export interface ThemeGroup {
  * UI metadata for each theme. Keyed by ThemeId so adding a theme to
  * THEME_IDS in shared/themes triggers a TypeScript error here until the
  * label/accent pair is added.
+ *
+ * Accent hex values intentionally duplicate the `--accent` token defined for
+ * each theme in `styles/tokens.css`. They are read by the theme picker
+ * (CommandPalette) before the theme is applied to the document, so resolving
+ * them via getComputedStyle would require a hidden probe element per theme.
+ * Keep this map in sync with the `--accent` declaration per [data-theme=...]
+ * block in tokens.css.
  */
 const THEME_METADATA: Record<ThemeId, { label: string; accent: string }> = {
   '': { label: 'Tungsten', accent: '#f5a623' },

@@ -1,4 +1,11 @@
 .mascot {
+  /* Character-specific palette — fixed across themes (the mascot does not re-tint). */
+  --mascot-pink: #ff9eb4;
+  --mascot-ink: #2a1208;
+  --mascot-cream: #f8f5ee;
+  --mascot-deep: #0a0a0a;
+  --mascot-highlight: #ffffff;
+
   position: relative;
   display: inline-block;
   user-select: none;
@@ -61,21 +68,21 @@
 }
 
 .mascot__ear-inner {
-  fill: #ff9eb4;
+  fill: var(--mascot-pink);
   opacity: 0.6;
 }
 
 .mascot__nose {
-  fill: #ff9eb4;
+  fill: var(--mascot-pink);
 }
 
 .mascot__mouth {
-  stroke: #2a1208;
+  stroke: var(--mascot-ink);
   stroke-width: 1.4;
 }
 
 .mascot__yawn {
-  fill: #2a1208;
+  fill: var(--mascot-ink);
 }
 
 .mascot__whiskers {
@@ -85,19 +92,19 @@
 }
 
 .mascot__eye-white {
-  fill: #f8f5ee;
+  fill: var(--mascot-cream);
 }
 
 .mascot__pupil {
-  fill: #0a0a0a;
+  fill: var(--mascot-deep);
 }
 
 .mascot__catchlight {
-  fill: #ffffff;
+  fill: var(--mascot-highlight);
 }
 
 .mascot__eye-line {
-  stroke: #0a0a0a;
+  stroke: var(--mascot-deep);
   stroke-width: 1.4;
 }
 
