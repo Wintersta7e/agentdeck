@@ -67,7 +67,7 @@
 .st-b1__track {
   position: relative;
   height: 14px;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--overlay-soft);
   border-radius: 1px;
   overflow: hidden;
 }

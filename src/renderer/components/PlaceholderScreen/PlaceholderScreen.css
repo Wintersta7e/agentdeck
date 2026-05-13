@@ -18,7 +18,7 @@
   padding: var(--sp-8) var(--sp-7);
   background: var(--bg1);
   border: 1px solid var(--border);
-  box-shadow: var(--shadow-sm, 0 2px 16px rgba(0, 0, 0, 0.2));
+  box-shadow: var(--shadow-sm);
   text-align: center;
 }
 

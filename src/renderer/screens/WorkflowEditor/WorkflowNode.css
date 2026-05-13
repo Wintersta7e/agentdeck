@@ -24,7 +24,7 @@
   font-family: var(--font-display);
   box-shadow:
     0 0 16px color-mix(in oklch, var(--node-accent) 16%, transparent),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+    inset 0 0 0 1px var(--surface-tint-light);
   transition:
     border-color var(--duration-base),
     box-shadow var(--duration-base);
@@ -34,7 +34,7 @@
   border-color: color-mix(in oklch, var(--node-accent) 65%, transparent);
   box-shadow:
     0 0 20px color-mix(in oklch, var(--node-accent) 22%, transparent),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+    inset 0 0 0 1px var(--surface-kbd);
 }
 
 .wf-node-inner.selected {
@@ -402,7 +402,7 @@
   border: 1px solid color-mix(in oklch, var(--node-accent) 35%, transparent);
   box-shadow:
     0 0 24px color-mix(in oklch, var(--node-accent) 20%, transparent),
-    0 6px 16px rgba(0, 0, 0, 0.45);
+    0 6px 16px var(--overlay-dim);
   z-index: var(--z-dropdown);
   overflow: hidden;
 }

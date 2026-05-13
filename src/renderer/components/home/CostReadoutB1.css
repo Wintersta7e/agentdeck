@@ -109,7 +109,7 @@
 
 .cr-b1__agent-track {
   height: 4px;
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--overlay-dim);
   border-radius: 1px;
   overflow: hidden;
 }
