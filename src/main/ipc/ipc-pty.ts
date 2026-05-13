@@ -122,7 +122,7 @@ export function registerPtyHandlers(
       if (agent !== undefined && (typeof agent !== 'string' || !KNOWN_AGENT_IDS.has(agent))) {
         throw new Error('Invalid agent')
       }
-      // SEC-30: Validate startupCommands — reject crafted payloads
+      // Validate startupCommands — reject crafted payloads
       if (startupCommands !== undefined) {
         if (!Array.isArray(startupCommands) || startupCommands.length > MAX_STARTUP_COMMANDS) {
           throw new Error('Invalid startupCommands')

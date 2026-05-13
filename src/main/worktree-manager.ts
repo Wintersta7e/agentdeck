@@ -62,7 +62,7 @@ function registryPath(registryDir: string): string {
   return path.join(registryDir, 'registry.json')
 }
 
-// PERF-13: Async registry I/O to avoid blocking the main process event loop
+// Async registry I/O to avoid blocking the main process event loop
 async function loadRegistry(registryDir: string): Promise<WorktreeEntry[]> {
   const file = registryPath(registryDir)
   try {
@@ -133,7 +133,7 @@ export async function createWorktreeManager(
 ): Promise<WorktreeManager> {
   const rawWorktreeBaseDir = wslWorktreeDir ?? registryDir
   const worktreeBaseDir = path.posix.normalize(rawWorktreeBaseDir).replace(/\/+$/, '') || '/'
-  // PERF-13: Await async registry load
+  // Await async registry load
   let entries: WorktreeEntry[] = await loadRegistry(registryDir)
 
   // Primary tracking: projectId -> sessionId. NOT persisted.

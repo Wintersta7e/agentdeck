@@ -60,7 +60,7 @@ export function registerUtilHandlers(): void {
         rendererLog = createLogger(`renderer:${safeMod}`)
         rendererLoggers.set(safeMod, rendererLog)
       }
-      // SEC-33: Bound renderer-supplied data to prevent log exhaustion / stack overflow
+      // Bound renderer-supplied data to prevent log exhaustion / stack overflow
       let safeData: unknown
       if (data !== undefined) {
         try {

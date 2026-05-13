@@ -54,7 +54,7 @@ export function createRunRecorder(
     },
 
     finalize(status: WorkflowStatus): void {
-      // REL-1: Guard against double finalization (normal completion + error handler race)
+      // Guard against double finalization (normal completion + error handler race)
       if (finalized) return
       finalized = true
 

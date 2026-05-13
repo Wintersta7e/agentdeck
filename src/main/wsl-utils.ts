@@ -78,7 +78,7 @@ export async function withUncFallback<T>(
 /** Cached distro name — populated by async detection */
 let cachedDistro: string | null = null
 
-/** Async distro detection — never blocks the main thread (PERF-5) */
+/** Async distro detection — never blocks the main thread */
 export function getDefaultDistroAsync(): Promise<string> {
   if (cachedDistro) return Promise.resolve(cachedDistro)
   return new Promise<string>((resolve) => {

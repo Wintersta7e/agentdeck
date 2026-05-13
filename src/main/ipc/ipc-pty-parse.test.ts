@@ -36,20 +36,20 @@ describe('parseNameStatus', () => {
     ])
   })
 
-  it('caps output at MAX_REVIEW_FILES entries (SEC2-03)', () => {
+  it('caps output at MAX_REVIEW_FILES entries', () => {
     const lines = Array.from({ length: 600 }, (_, i) => `M\tfile_${i}.ts`).join('\n')
     const result = parseNameStatus(lines)
     expect(result.length).toBe(500)
   })
 
-  it('skips paths exceeding MAX_REVIEW_PATH_LEN (SEC2-03)', () => {
+  it('skips paths exceeding MAX_REVIEW_PATH_LEN', () => {
     const longPath = 'a'.repeat(1025)
     const input = `M\t${longPath}\nM\tshort.ts`
     const result = parseNameStatus(input)
     expect(result.map((f) => f.path)).toEqual(['short.ts'])
   })
 
-  it('strips null bytes from paths (SEC2-03)', () => {
+  it('strips null bytes from paths', () => {
     const input = 'M\tfi\0le.ts'
     const result = parseNameStatus(input)
     expect(result[0]?.path).toBe('file.ts')

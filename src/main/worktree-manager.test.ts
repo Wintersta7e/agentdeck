@@ -37,7 +37,7 @@ vi.mock('fs', () => {
     writeFileSync: writeFn,
     renameSync: renameFn,
     mkdirSync: mkdirFn,
-    // PERF-13: Async fs.promises versions for the updated worktree-manager
+    // Async fs.promises versions for the updated worktree-manager
     promises: {
       readFile: vi.fn(async (filepath: string) => readFn(filepath)),
       writeFile: vi.fn(async (filepath: string, data: string) => writeFn(filepath, data)),

@@ -93,7 +93,7 @@ export function createScheduler(
 
   // Ready queue: nodes with 0 pending
   const readyQueue: string[] = []
-  // PERF-14: Track count of non-terminal nodes for O(1) isDone()
+  // Track count of non-terminal nodes for O(1) isDone()
   let activeCount = stateMap.size
   for (const [id, state] of stateMap) {
     if (state.pending === 0) {
@@ -132,7 +132,7 @@ export function createScheduler(
         downstream.skippedEdgeIds.size === downstream.incomingForwardEdgeIds.size
       if (allSkipped) {
         downstream.status = 'skipped'
-        activeCount-- // PERF-14: track terminal transition
+        activeCount-- // track terminal transition
         // Propagate skip to all outgoing forward edges
         propagateSkip(downstream.node.id)
       } else {
@@ -229,7 +229,7 @@ export function createScheduler(
       return getState(nodeId).status
     },
 
-    // PERF-14: O(1) isDone via activeCount tracking
+    // O(1) isDone via activeCount tracking
     isDone(): boolean {
       return activeCount === 0
     },
@@ -265,7 +265,7 @@ export function createScheduler(
         if (!state) continue
 
         const intraDegree = intraLoopInDegree.get(id) ?? 0
-        // PERF-14: Re-increment activeCount for nodes transitioning from terminal → idle.
+        // Re-increment activeCount for nodes transitioning from terminal → idle.
         // Running/paused nodes are already counted as active, so no re-increment needed.
         // Their old processNode promise will either: (a) complete and hit the status guard
         // in completeNode (status is no longer 'running'), or (b) be superseded by the
@@ -301,7 +301,7 @@ export function createScheduler(
           target.incomingForwardEdgeIds = new Set(originalIncoming.map((e) => e.id))
           target.pending = originalIncoming.length
           target.skippedEdgeIds = new Set()
-          // PERF-14: Re-increment for exit target reset (status is 'skipped' or 'done' here)
+          // Re-increment for exit target reset (status is 'skipped' or 'done' here)
           activeCount++
           target.status = 'idle'
 

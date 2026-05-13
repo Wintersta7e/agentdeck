@@ -105,7 +105,7 @@ export const OSC_RESPONSE_RE = /\x1b\]\d+;[^\x07\x1b]*(?:\x07|\x1b\\)/g
  */
 export function getXtermTheme(themeId: string): ITheme {
   const base = { ...BASE_XTERM_THEME, ...(XTERM_THEME_OVERRIDES[themeId] ?? {}) }
-  // PERF-15: Use cached accent RGB from themeObserver instead of calling getComputedStyle.
+  // Use cached accent RGB from themeObserver instead of calling getComputedStyle.
   // Falls back to a fresh read on first call (before observer fires).
   if (typeof document !== 'undefined') {
     const accentRgb =

@@ -183,7 +183,6 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
       commands.push(...filtered)
     }
 
-    /* Fix 6 (SEC-2): Validate agentFlags before use */
     let sanitizedFlags = agentFlags
     if (sanitizedFlags && !SAFE_FLAGS_RE.test(sanitizedFlags)) {
       log.warn(`Rejected unsafe agentFlags for session ${sessionId}`, {
@@ -242,7 +241,7 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
         flushScheduled.set(sessionId, true)
         setImmediate(() => {
           flushScheduled.delete(sessionId)
-          // REL-3: Guard against firing after session was killed
+          // Guard against firing after session was killed
           if (!sessions.has(sessionId)) {
             dataBuffers.delete(sessionId)
             return

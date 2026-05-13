@@ -61,7 +61,7 @@ describe('pty:spawn IPC validation', () => {
     ).toThrow(/agent/)
   })
 
-  it('rejects agentFlags containing shell metacharacters (SEC2-01)', () => {
+  it('rejects agentFlags containing shell metacharacters', () => {
     expect(() =>
       call('pty:spawn', 'sess-1', 80, 24, '/p', undefined, undefined, 'claude-code', '; rm -rf /'),
     ).toThrow(/agentFlags/)
