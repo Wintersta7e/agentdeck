@@ -34,6 +34,7 @@ export function createRunRecorder(
   variables: Record<string, string>,
 ): RunRecorder {
   const run: WorkflowRun = {
+    version: 1,
     id: crypto.randomUUID(),
     workflowId: workflow.id,
     workflowName: workflow.name,

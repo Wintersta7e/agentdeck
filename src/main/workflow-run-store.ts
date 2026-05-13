@@ -40,6 +40,9 @@ function runFilename(workflowId: string, startedAt: number, runId: string): stri
 }
 
 /** Save a completed workflow run to disk. Auto-prunes old runs. */
+/** Persisted JSON schema version. Bump when WorkflowRun shape changes. */
+const WORKFLOW_RUN_VERSION = 1
+
 export async function saveRun(run: WorkflowRun): Promise<void> {
   // Chain onto any pending write for this workflow to prevent races
   const prev = writeLocks.get(run.workflowId) ?? Promise.resolve()
@@ -51,8 +54,10 @@ export async function saveRun(run: WorkflowRun): Promise<void> {
       const file = path.join(dir, filename)
       const tmpFile = `${file}.${randomBytes(6).toString('hex')}.tmp`
 
-      // Atomic write: write to .tmp, then rename
-      await fs.promises.writeFile(tmpFile, JSON.stringify(run, null, 2), 'utf-8')
+      // Always stamp the current schema version so older payloads created without
+      // the field migrate forward on the next save.
+      const payload: WorkflowRun = { ...run, version: WORKFLOW_RUN_VERSION }
+      await fs.promises.writeFile(tmpFile, JSON.stringify(payload, null, 2), 'utf-8')
       await fs.promises.rename(tmpFile, file)
 
       log.info('Workflow run saved', { id: run.id, workflowId: run.workflowId })
@@ -127,8 +132,11 @@ export async function listRuns(workflowId: string): Promise<WorkflowRun[]> {
   for (const f of jsonFiles) {
     try {
       const raw = await fs.promises.readFile(path.join(dir, f), 'utf-8')
-      const parsed = JSON.parse(raw) as WorkflowRun
-      runs.push(parsed)
+      const parsed = JSON.parse(raw) as Partial<WorkflowRun>
+      // Legacy runs persisted before the version field was added are shape-compatible
+      // with v1 — stamp the version on read so callers see a uniformly-typed run.
+      const run: WorkflowRun = { ...(parsed as WorkflowRun), version: WORKFLOW_RUN_VERSION }
+      runs.push(run)
     } catch (err) {
       log.warn('Failed to parse workflow run file', { file: f, err: String(err) })
     }

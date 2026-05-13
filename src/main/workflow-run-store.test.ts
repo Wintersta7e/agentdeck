@@ -62,6 +62,7 @@ const testStats = (fs as unknown as { __testStats: Map<string, { mtimeMs: number
 
 function makeRun(overrides: Partial<WorkflowRun> = {}): WorkflowRun {
   return {
+    version: 1,
     id: 'run-1',
     workflowId: 'wf-abc',
     workflowName: 'Test Workflow',

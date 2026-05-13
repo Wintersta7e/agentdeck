@@ -367,6 +367,8 @@ export type ContextSource =
   | 'default'
 
 export interface WorkflowRun {
+  /** Schema version of the persisted JSON. Bump when adding/renaming fields. */
+  version: 1
   id: string
   workflowId: string
   workflowName: string
