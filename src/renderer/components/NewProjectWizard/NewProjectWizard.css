@@ -170,7 +170,7 @@
 }
 .detection-chip {
   font-size: var(--fs-xs);
-  padding: 2px var(--sp-2);
+  padding: var(--sp-half) var(--sp-2);
   background: var(--green-dim);
   border: 1px solid var(--green-border);
   border-radius: 20px;
@@ -196,7 +196,7 @@
   font-size: var(--fs-xs);
   color: var(--text2);
   cursor: pointer;
-  padding: var(--sp-2) 2px;
+  padding: var(--sp-2) var(--sp-half);
   transition: color var(--duration-base);
   background: none;
   border: none;
@@ -220,7 +220,7 @@
   letter-spacing: 0.12em;
   color: var(--text2);
   font-weight: 600;
-  padding: var(--sp-2) 0 2px;
+  padding: var(--sp-2) 0 var(--sp-half);
 }
 
 .template-group + .template-group .template-group-label {
@@ -273,7 +273,7 @@
 .template-opt-desc {
   font-size: var(--fs-xs);
   color: var(--text2);
-  margin-top: 2px;
+  margin-top: var(--sp-half);
 }
 
 /* Summary card */
@@ -312,7 +312,7 @@
 .summary-project-path {
   font-size: var(--fs-xs);
   color: var(--text2);
-  margin-top: 2px;
+  margin-top: var(--sp-half);
 }
 .summary-rows {
   padding: var(--sp-3) var(--sp-4);
@@ -332,7 +332,7 @@
   letter-spacing: 0.08em;
   width: 80px;
   flex-shrink: 0;
-  padding-top: 2px;
+  padding-top: var(--sp-half);
 }
 .summary-value {
   font-size: var(--fs-sm);
@@ -347,7 +347,7 @@
 }
 .summary-chip {
   font-size: var(--fs-xs);
-  padding: 2px var(--sp-2);
+  padding: var(--sp-half) var(--sp-2);
   border-radius: 20px;
   background: var(--bg4);
   border: 1px solid var(--border);

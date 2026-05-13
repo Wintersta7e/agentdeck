@@ -47,8 +47,8 @@
 
 .about-close {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: var(--sp-2);
+  right: var(--sp-2);
   background: none;
   border: none;
   color: var(--text3);

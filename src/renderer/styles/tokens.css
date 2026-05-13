@@ -107,7 +107,10 @@
   --text3-rgb: 109, 95, 80;
 
   /* ── Spacing scale (4px base) ── */
+  --sp-half: 2px;
+  --sp-0_75: 3px;
   --sp-1: 4px;
+  --sp-1_5: 6px;
   --sp-2: 8px;
   --sp-3: 12px;
   --sp-4: 16px;

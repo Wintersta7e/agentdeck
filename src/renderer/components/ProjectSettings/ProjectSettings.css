@@ -86,7 +86,7 @@
   display: flex;
   align-items: center;
   gap: var(--sp-3);
-  margin-bottom: 3px;
+  margin-bottom: var(--sp-0_75);
 }
 .project-title {
   font-family: var(--font-display);
@@ -100,7 +100,7 @@
   color: var(--text2);
   font-size: var(--fs-sm);
   cursor: pointer;
-  padding: 2px var(--sp-1);
+  padding: var(--sp-half) var(--sp-1);
   border-radius: 3px;
   transition: all var(--duration-base);
   font-family: inherit;
@@ -273,7 +273,7 @@
 .form-sublabel {
   font-size: var(--fs-xs);
   color: var(--text2);
-  margin-top: 2px;
+  margin-top: var(--sp-half);
   line-height: 1.4;
 }
 .form-control-col {
@@ -312,7 +312,7 @@
 .form-field-error {
   font-size: var(--fs-xs);
   color: var(--red);
-  margin-top: 3px;
+  margin-top: var(--sp-0_75);
 }
 
 /* Select */
@@ -526,7 +526,7 @@
 .danger-row-desc {
   font-size: var(--fs-xs);
   color: var(--text2);
-  margin-top: 2px;
+  margin-top: var(--sp-half);
 }
 .danger-btn {
   background: none;
@@ -565,7 +565,7 @@
   font-size: var(--fs-xs);
   color: var(--text2);
   cursor: pointer;
-  padding: var(--sp-2) 2px;
+  padding: var(--sp-2) var(--sp-half);
   transition: color var(--duration-base);
   background: none;
   border: none;
@@ -704,7 +704,7 @@
   font-size: var(--fs-md);
   cursor: pointer;
   color: var(--text3);
-  padding: 2px var(--sp-1);
+  padding: var(--sp-half) var(--sp-1);
   flex-shrink: 0;
 }
 
@@ -722,7 +722,7 @@
   font-size: var(--fs-sm);
   cursor: pointer;
   color: var(--text3);
-  padding: 2px var(--sp-2);
+  padding: var(--sp-half) var(--sp-2);
   flex-shrink: 0;
 }
 
@@ -739,7 +739,7 @@
 .section-head-sub {
   font-size: var(--fs-sm);
   color: var(--text3);
-  margin-top: 2px;
+  margin-top: var(--sp-half);
 }
 /* Responsive: stack form rows on narrow windows */
 @media (max-width: 900px) {

@@ -222,7 +222,7 @@
 
 .wf-ne-role-form-badge {
   font-size: var(--fs-xs);
-  padding: 2px var(--sp-2);
+  padding: var(--sp-half) var(--sp-2);
   border-radius: var(--r);
   font-weight: 600;
 }
@@ -395,7 +395,7 @@
   background: var(--bg2);
   border: 1px solid var(--accent);
   border-radius: calc(var(--r) * 3);
-  padding: 2px var(--sp-2) 2px var(--sp-3);
+  padding: var(--sp-half) var(--sp-2) var(--sp-half) var(--sp-3);
   margin-bottom: var(--sp-2);
   font-size: var(--fs-sm);
   color: var(--accent);
@@ -413,7 +413,7 @@
   color: var(--text3);
   cursor: pointer;
   font-size: var(--fs-base);
-  padding: 0 2px;
+  padding: 0 var(--sp-half);
   line-height: 1;
 }
 .wf-ne-skill-chip-clear:hover {

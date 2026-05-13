@@ -36,8 +36,8 @@
 
 /* Controls panel */
 .wf-reactflow .react-flow__controls {
-  bottom: 12px;
-  left: 12px;
+  bottom: var(--sp-3);
+  left: var(--sp-3);
 }
 
 .wf-reactflow .react-flow__controls-button {

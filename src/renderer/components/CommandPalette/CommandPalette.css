@@ -91,7 +91,7 @@
   color: var(--text3);
   background: var(--bg3);
   border: 1px solid var(--border);
-  padding: 2px var(--sp-2);
+  padding: var(--sp-half) var(--sp-2);
   border-radius: 3px;
   flex-shrink: 0;
 }
@@ -417,7 +417,7 @@
   letter-spacing: 0.12em;
   color: var(--text3);
   font-weight: 600;
-  padding: var(--sp-2) var(--sp-4) 2px;
+  padding: var(--sp-2) var(--sp-4) var(--sp-half);
 }
 
 .cp-theme-item {

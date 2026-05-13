@@ -242,7 +242,7 @@
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--text3);
-  margin-bottom: 2px;
+  margin-bottom: var(--sp-half);
 }
 
 .wf-node-field-value {
@@ -265,7 +265,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--sp-1);
-  padding: 2px var(--sp-2);
+  padding: var(--sp-half) var(--sp-2);
   font-family: var(--font-mono);
   font-size: 8px;
   letter-spacing: 0.2em;
@@ -360,7 +360,7 @@
 }
 
 .wf-node-edit-btn {
-  padding: 3px var(--sp-3);
+  padding: var(--sp-0_75) var(--sp-3);
   font-family: var(--font-mono);
   font-size: 9px;
   letter-spacing: 0.2em;

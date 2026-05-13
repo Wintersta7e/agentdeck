@@ -111,14 +111,14 @@
 }
 
 .scope-viz__caption--tl {
-  top: 12px;
+  top: var(--sp-3);
   left: 14px;
   color: var(--accent);
 }
 
 .scope-viz__caption--br {
   right: 14px;
-  bottom: 12px;
+  bottom: var(--sp-3);
   color: var(--text3);
 }
 

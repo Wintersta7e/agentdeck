@@ -1,14 +1,14 @@
 .st-b1 {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--sp-1_5);
 }
 
 .st-b1__ruler {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  padding: 0 4px 6px;
+  padding: 0 var(--sp-1) var(--sp-1_5);
   border-bottom: 1px dotted var(--border-bright);
   font-family: var(--font-mono);
   font-size: 9px;
@@ -38,7 +38,7 @@
   grid-template-columns: 28px minmax(0, 110px) 1fr 80px;
   align-items: center;
   gap: 10px;
-  padding: 6px 4px;
+  padding: var(--sp-1_5) var(--sp-1);
   border-bottom: 1px dotted var(--border);
   color: var(--text1);
 }
@@ -87,8 +87,8 @@
 .st-b1__edge {
   position: absolute;
   right: 0;
-  top: 2px;
-  bottom: 2px;
+  top: var(--sp-half);
+  bottom: var(--sp-half);
   width: 2px;
   background: var(--row-color, var(--accent));
   animation: st-b1-blink 1.2s ease-in-out infinite;

@@ -58,7 +58,7 @@
 
 .wf-run-field-required {
   color: var(--red);
-  margin-left: 2px;
+  margin-left: var(--sp-half);
 }
 
 .wf-run-field--error input,
@@ -70,7 +70,7 @@
 .wf-run-field-error {
   font-size: var(--fs-xs);
   color: var(--red);
-  margin-top: 2px;
+  margin-top: var(--sp-half);
 }
 
 .wf-run-field input,

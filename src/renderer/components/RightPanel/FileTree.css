@@ -19,7 +19,7 @@
   display: flex;
   align-items: center;
   gap: var(--sp-1);
-  padding: 2px var(--sp-2);
+  padding: var(--sp-half) var(--sp-2);
   cursor: pointer;
   border-radius: var(--r);
   transition: background-color var(--duration-fast) var(--ease-out);

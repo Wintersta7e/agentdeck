@@ -27,7 +27,7 @@
   align-items: center;
   padding-bottom: var(--sp-1);
   border-bottom: 1px dotted var(--border-bright);
-  margin-bottom: 2px;
+  margin-bottom: var(--sp-half);
 }
 
 .history-heatmap__corner {

@@ -1,8 +1,8 @@
 /* ─── TERMINAL SEARCH BAR ─── */
 .term-search-bar {
   position: absolute;
-  top: 8px;
-  right: 20px;
+  top: var(--sp-2);
+  right: var(--sp-5);
   background: var(--bg2);
   border: 1px solid var(--border-bright);
   border-radius: 6px;

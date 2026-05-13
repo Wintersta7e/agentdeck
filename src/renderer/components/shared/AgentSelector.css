@@ -40,7 +40,7 @@
 .agent-opt-desc {
   font-size: var(--fs-xs);
   color: var(--text2);
-  margin-top: 2px;
+  margin-top: var(--sp-half);
 }
 
 .agent-opt-check {

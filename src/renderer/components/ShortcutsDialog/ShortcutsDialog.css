@@ -48,8 +48,8 @@
 
 .shortcuts-close {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: var(--sp-2);
+  right: var(--sp-2);
   background: none;
   border: none;
   color: var(--text3);
@@ -100,7 +100,7 @@
   display: flex;
   align-items: center;
   gap: var(--sp-3);
-  padding: 3px 0;
+  padding: var(--sp-0_75) 0;
 }
 
 .shortcuts-kbd {

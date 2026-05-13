@@ -42,7 +42,7 @@
   font-weight: 700;
   line-height: 1.1;
   color: var(--text0);
-  margin: 2px 0 0;
+  margin: var(--sp-half) 0 0;
   letter-spacing: -0.01em;
 }
 

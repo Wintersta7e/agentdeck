@@ -93,7 +93,7 @@
   cursor: pointer;
   transition: all var(--duration-base);
   border: 1px solid transparent;
-  margin-bottom: 2px;
+  margin-bottom: var(--sp-half);
 }
 
 .te-row:hover {
@@ -133,7 +133,7 @@
 .te-row-desc {
   font-size: var(--fs-xs);
   color: var(--text2);
-  margin-top: 2px;
+  margin-top: var(--sp-half);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -142,7 +142,7 @@
 .te-row-usage {
   font-size: var(--fs-xs);
   color: var(--text3);
-  margin-top: 2px;
+  margin-top: var(--sp-half);
 }
 
 /* ─── Center: editor main ─── */
@@ -201,7 +201,7 @@
   color: var(--text1);
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
-  padding: 3px var(--sp-2);
+  padding: var(--sp-0_75) var(--sp-2);
   outline: none;
   cursor: pointer;
   flex-shrink: 0;

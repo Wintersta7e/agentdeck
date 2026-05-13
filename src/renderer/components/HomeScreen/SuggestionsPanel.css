@@ -42,7 +42,7 @@
   display: flex;
   align-items: flex-start;
   gap: var(--sp-2);
-  padding: 6px 0; /* mockup-specific */
+  padding: var(--sp-1_5) 0; /* mockup-specific */
   border-bottom: 1px solid var(--surface-sep);
 }
 
@@ -70,7 +70,7 @@
 .suggestion-action {
   font-size: 9px; /* mockup-specific */
   color: var(--accent);
-  margin-top: 2px;
+  margin-top: var(--sp-half);
   cursor: pointer;
 }
 

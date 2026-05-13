@@ -26,7 +26,7 @@
 .form-sublabel {
   font-size: var(--fs-xs);
   color: var(--text2);
-  margin-top: 2px;
+  margin-top: var(--sp-half);
   line-height: 1.4;
 }
 

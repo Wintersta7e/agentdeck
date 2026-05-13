@@ -53,7 +53,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: var(--sp-1);
 }
 
 .panel-tab__label {

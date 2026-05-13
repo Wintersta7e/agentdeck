@@ -61,8 +61,8 @@
 
 .layout-controls {
   position: absolute;
-  bottom: 12px;
-  right: 12px;
+  bottom: var(--sp-3);
+  right: var(--sp-3);
   display: flex;
   gap: var(--sp-1);
   z-index: var(--z-floating-high);

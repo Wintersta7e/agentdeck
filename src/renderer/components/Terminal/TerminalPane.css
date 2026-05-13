@@ -76,8 +76,8 @@
 
 .term-copy-flash {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: var(--sp-3);
+  right: var(--sp-3);
   padding: var(--sp-1) var(--sp-3);
   font-size: var(--fs-sm);
   font-weight: 600;
