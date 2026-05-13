@@ -42,5 +42,5 @@ AgentDeck follows Electron security best practices:
 
 | Version | Supported |
 |---------|-----------|
-| 4.x     | Yes       |
-| < 4.0   | No        |
+| 6.x     | Yes       |
+| < 6.0   | No        |

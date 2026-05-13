@@ -18,7 +18,7 @@ Thanks for your interest in contributing to AgentDeck!
 ## Prerequisites
 
 - Windows 10/11 with WSL2 (Ubuntu recommended)
-- Node.js 22+
+- Node.js 22.22.1+ (see `.nvmrc`; required by `lint-staged` 17)
 - At least one AI coding agent installed in WSL
 
 ## Code Standards
