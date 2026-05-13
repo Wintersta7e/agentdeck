@@ -1,3 +1,4 @@
+import { CH } from '../../shared/ipc-channels'
 import crypto from 'node:crypto'
 import { ipcMain } from 'electron'
 import {
@@ -26,37 +27,38 @@ export function registerWorkflowHandlers(
   saveRole?: ((role: Role) => void) | undefined,
 ): void {
   /* ── Workflow CRUD ──────────────────────────────────────────────── */
-  ipcMain.handle('workflows:list', () => listWorkflows())
-  ipcMain.handle('workflows:load', (_, id: string) => {
+  ipcMain.handle(CH.workflowsList, () => listWorkflows())
+  ipcMain.handle(CH.workflowsLoad, (_, id: string) => {
     if (typeof id !== 'string' || !SAFE_ID_RE.test(id)) throw new Error('Invalid workflow ID')
     return loadWorkflow(id)
   })
-  ipcMain.handle('workflows:save', (_, workflow: Workflow) => {
+  ipcMain.handle(CH.workflowsSave, (_, workflow: Workflow) => {
     if (!workflow || typeof workflow !== 'object') throw new Error('Invalid workflow')
-    const raw = workflow as unknown as Record<string, unknown>
+    // IPC bypasses TS — id can be missing at runtime despite the Workflow type.
     // Allow save for new workflows where id is absent (saveWorkflow mints one);
     // when present, enforce SAFE_ID_RE at the IPC boundary consistent with peers.
-    if (raw.id !== undefined && (typeof raw.id !== 'string' || !SAFE_ID_RE.test(raw.id))) {
+    const id: unknown = (workflow as { id?: unknown }).id
+    if (id !== undefined && (typeof id !== 'string' || !SAFE_ID_RE.test(id))) {
       throw new Error('Invalid workflow ID')
     }
     return saveWorkflow(workflow)
   })
-  ipcMain.handle('workflows:rename', (_, id: string, name: string) => {
+  ipcMain.handle(CH.workflowsRename, (_, id: string, name: string) => {
     if (typeof id !== 'string' || !SAFE_ID_RE.test(id)) throw new Error('Invalid workflow id')
     if (typeof name !== 'string' || !name.trim() || name.length > 200)
       throw new Error('Invalid workflow name')
     return renameWorkflow(id, name)
   })
-  ipcMain.handle('workflows:delete', async (_, id: string) => {
+  ipcMain.handle(CH.workflowsDelete, async (_, id: string) => {
     if (typeof id !== 'string' || !SAFE_ID_RE.test(id)) throw new Error('Invalid workflow id')
-    // C6: Stop running workflow before deleting to avoid orphaned PTYs
+    // Stop running workflow before deleting to avoid orphaned PTYs
     getWorkflowEngine()?.stop(id)
     await deleteWorkflow(id)
   })
 
   /* ── Export / Import / Duplicate ─────────────────────────────── */
 
-  ipcMain.handle('workflows:export', async (_, id: string): Promise<WorkflowExport> => {
+  ipcMain.handle(CH.workflowsExport, async (_, id: string): Promise<WorkflowExport> => {
     if (typeof id !== 'string' || !SAFE_ID_RE.test(id)) throw new Error('Invalid workflow ID')
     const workflow = await loadWorkflow(id)
     if (!workflow) throw new Error('Workflow not found')
@@ -64,7 +66,9 @@ export function registerWorkflowHandlers(
     // Bundle all referenced roles (both custom and builtin)
     const allRoles = getRoles?.() ?? []
     const referencedRoleIds = new Set(
-      workflow.nodes.map((n) => n.roleId).filter((rid): rid is string => typeof rid === 'string'),
+      workflow.nodes
+        .map((n) => (n.type === 'agent' ? n.roleId : undefined))
+        .filter((rid): rid is string => typeof rid === 'string'),
     )
     const roles = allRoles.filter((r) => referencedRoleIds.has(r.id))
 
@@ -72,7 +76,7 @@ export function registerWorkflowHandlers(
   })
 
   ipcMain.handle(
-    'workflows:import',
+    CH.workflowsImport,
     async (
       _,
       data: unknown,
@@ -88,7 +92,7 @@ export function registerWorkflowHandlers(
       const importedWorkflow = d.workflow as Workflow
       const importedRoles = d.roles as unknown[]
 
-      // WF-6: Validate each imported role's fields before trusting them
+      // Validate each imported role's fields before trusting them
       for (const rawRole of importedRoles) {
         const roleErr = validateRole(rawRole)
         if (roleErr) throw new Error(`Invalid bundled role: ${roleErr}`)
@@ -148,9 +152,9 @@ export function registerWorkflowHandlers(
         }
       }
 
-      // Remap roleIds in workflow nodes
+      // Remap roleIds in workflow nodes (only agent nodes carry roleId)
       const remappedNodes = importedWorkflow.nodes.map((n) => {
-        if (!n.roleId) return n
+        if (n.type !== 'agent' || !n.roleId) return n
         const newId = roleIdMap.get(n.roleId)
         if (newId === '') return { ...n, roleId: undefined } // cleared
         if (newId) return { ...n, roleId: newId }
@@ -171,7 +175,7 @@ export function registerWorkflowHandlers(
     },
   )
 
-  ipcMain.handle('workflows:duplicate', async (_, id: string): Promise<Workflow> => {
+  ipcMain.handle(CH.workflowsDuplicate, async (_, id: string): Promise<Workflow> => {
     if (typeof id !== 'string' || !SAFE_ID_RE.test(id)) throw new Error('Invalid workflow ID')
     const workflow = await loadWorkflow(id)
     if (!workflow) throw new Error('Workflow not found')
@@ -188,14 +192,14 @@ export function registerWorkflowHandlers(
 
   /* ── Workflow Run History ──────────────────────────────────────── */
 
-  ipcMain.handle('workflows:listRuns', async (_, workflowId: string) => {
+  ipcMain.handle(CH.workflowsListRuns, async (_, workflowId: string) => {
     if (typeof workflowId !== 'string' || !SAFE_ID_RE.test(workflowId)) {
       throw new Error('Invalid workflow ID')
     }
     return listRuns(workflowId)
   })
 
-  ipcMain.handle('workflows:deleteRun', async (_, runId: string) => {
+  ipcMain.handle(CH.workflowsDeleteRun, async (_, runId: string) => {
     if (typeof runId !== 'string' || !SAFE_ID_RE.test(runId)) {
       throw new Error('Invalid run ID')
     }
@@ -203,7 +207,7 @@ export function registerWorkflowHandlers(
   })
 
   /* ── Workflow State Hydration ───────────────────────────────────── */
-  ipcMain.handle('workflows:getRunning', () => {
+  ipcMain.handle(CH.workflowsGetRunning, () => {
     return getWorkflowEngine()?.getRunningWorkflows() ?? []
   })
 
@@ -211,9 +215,9 @@ export function registerWorkflowHandlers(
   const VAR_NAME_RE = /^[A-Z_][A-Z0-9_]*$/
 
   ipcMain.handle(
-    'workflow:run',
+    CH.workflowRun,
     async (_, workflowId: string, projectPath?: string, variables?: Record<string, string>) => {
-      // R2-05: Validate workflowId before filesystem access
+      // Validate workflowId before filesystem access
       if (typeof workflowId !== 'string' || !SAFE_ID_RE.test(workflowId)) {
         throw new Error('Invalid workflow ID')
       }
@@ -221,14 +225,14 @@ export function registerWorkflowHandlers(
       if (!workflow) throw new Error(`Workflow not found: ${workflowId}`)
       const engine = getWorkflowEngine()
       if (!engine) throw new Error('Workflow engine not initialized')
-      // C2: Validate workflow structure before execution
+      // Validate workflow structure before execution
       const validation = validateWorkflow(workflow)
       if (validation.errors.length > 0) {
         throw new Error(`Invalid workflow: ${validation.errors.join('; ')}`)
       }
       // Convert Windows path to WSL if needed (projects store Windows paths)
       const wslPath = projectPath ? toWslPath(projectPath) : undefined
-      // C2: Validate projectPath — must be absolute WSL path, no traversal or shell metacharacters.
+      // Validate projectPath — must be absolute WSL path, no traversal or shell metacharacters.
       // The workflow engine's shellQuote handles safe quoting; this rejects obviously malicious input.
       if (wslPath !== undefined) {
         if (typeof wslPath !== 'string' || wslPath.length > 1024 || !wslPath.startsWith('/')) {
@@ -259,13 +263,18 @@ export function registerWorkflowHandlers(
     },
   )
 
-  ipcMain.handle('workflow:stop', (_, workflowId: string) => {
-    // R5-01: Use SAFE_ID_RE consistent with all other handlers
+  // Channel namespace convention: CRUD operations use the plural `workflows:*`
+  // (workflows:list, workflows:save, workflows:run, etc.) while engine execution
+  // uses the singular `workflow:*` (workflow:stop, workflow:resume, and the
+  // per-run push channel `workflow:event:<id>`). The preload unifies both under
+  // `window.agentDeck.workflows`. Keep the singular form for execution-related
+  // channels added in the future.
+  ipcMain.handle(CH.workflowStop, (_, workflowId: string) => {
     if (typeof workflowId !== 'string' || !SAFE_ID_RE.test(workflowId)) return
     getWorkflowEngine()?.stop(workflowId)
   })
 
-  ipcMain.handle('workflow:resume', (_, workflowId: string, nodeId: string) => {
+  ipcMain.handle(CH.workflowResume, (_, workflowId: string, nodeId: string) => {
     if (typeof workflowId !== 'string' || !SAFE_ID_RE.test(workflowId)) return
     if (typeof nodeId !== 'string' || !SAFE_ID_RE.test(nodeId)) return
     getWorkflowEngine()?.resume(workflowId, nodeId)

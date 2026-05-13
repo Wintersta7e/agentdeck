@@ -1,4 +1,5 @@
 import type { Workflow, WorkflowMeta } from '../../shared/types'
+import { useAppStore } from '../store/appStore'
 
 export async function createBlankWorkflow(
   setWorkflows: (w: WorkflowMeta[]) => void,
@@ -18,7 +19,6 @@ export async function createBlankWorkflow(
     setWorkflows(list)
     openWorkflow(saved.id)
   } catch (err) {
-    const { useAppStore } = await import('../store/appStore')
     useAppStore.getState().addNotification('error', `Failed to create workflow: ${String(err)}`)
   }
 }

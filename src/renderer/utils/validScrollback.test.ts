@@ -2,27 +2,27 @@ import { describe, it, expect } from 'vitest'
 import { validScrollback } from './terminal-utils'
 
 describe('validScrollback', () => {
-  it('returns 5000 for undefined', () => {
-    expect(validScrollback(undefined)).toBe(5000)
+  it('returns 25000 for undefined', () => {
+    expect(validScrollback(undefined)).toBe(25000)
   })
 
-  it('returns 5000 for NaN', () => {
-    expect(validScrollback(NaN)).toBe(5000)
+  it('returns 25000 for NaN', () => {
+    expect(validScrollback(NaN)).toBe(25000)
   })
 
-  it('returns 5000 for Infinity', () => {
-    expect(validScrollback(Infinity)).toBe(5000)
+  it('returns 25000 for Infinity', () => {
+    expect(validScrollback(Infinity)).toBe(25000)
   })
 
-  it('returns 5000 for negative values', () => {
-    expect(validScrollback(-1)).toBe(5000)
-    expect(validScrollback(-100)).toBe(5000)
+  it('returns 25000 for negative values', () => {
+    expect(validScrollback(-1)).toBe(25000)
+    expect(validScrollback(-100)).toBe(25000)
   })
 
-  it('returns 5000 for values below 1000', () => {
-    expect(validScrollback(0)).toBe(5000)
-    expect(validScrollback(500)).toBe(5000)
-    expect(validScrollback(999)).toBe(5000)
+  it('returns 25000 for values below 1000', () => {
+    expect(validScrollback(0)).toBe(25000)
+    expect(validScrollback(500)).toBe(25000)
+    expect(validScrollback(999)).toBe(25000)
   })
 
   it('returns the value for exactly 1000', () => {

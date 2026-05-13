@@ -1,12 +1,22 @@
 import { describe, it, expect } from 'vitest'
 import { substituteVariables } from './variable-substitution'
 import { makeWorkflow, makeWorkflowNode } from '../__test__/helpers'
+import type { WorkflowNode } from '../shared/types'
 
-/** Safely get the first node from a result (avoids TS2532 on array indexing) */
-function firstNode(wf: ReturnType<typeof substituteVariables>) {
+type NodeOfType<T extends WorkflowNode['type']> = Extract<WorkflowNode, { type: T }>
+
+/**
+ * Safely get the first node from a substitute-variables result and narrow it
+ * to a specific variant. Throws if missing or wrong type.
+ */
+function firstNode<T extends WorkflowNode['type']>(
+  wf: ReturnType<typeof substituteVariables>,
+  type: T,
+): NodeOfType<T> {
   const node = wf.nodes[0]
   if (!node) throw new Error('Expected at least one node')
-  return node
+  if (node.type !== type) throw new Error(`Expected ${type} node, got ${node.type}`)
+  return node as NodeOfType<T>
 }
 
 describe('substituteVariables', () => {
@@ -15,7 +25,7 @@ describe('substituteVariables', () => {
       nodes: [makeWorkflowNode({ type: 'agent', prompt: 'Fix {{FILE_PATH}} now' })],
     })
     const result = substituteVariables(wf, { FILE_PATH: '/src/main.ts' })
-    expect(firstNode(result).prompt).toBe('Fix /src/main.ts now')
+    expect(firstNode(result, 'agent').prompt).toBe('Fix /src/main.ts now')
   })
 
   it('replaces {{VAR}} in command', () => {
@@ -23,7 +33,7 @@ describe('substituteVariables', () => {
       nodes: [makeWorkflowNode({ type: 'shell', command: 'cd {{DIR}} && npm test' })],
     })
     const result = substituteVariables(wf, { DIR: '/home/user/project' })
-    expect(firstNode(result).command).toBe('cd /home/user/project && npm test')
+    expect(firstNode(result, 'shell').command).toBe('cd /home/user/project && npm test')
   })
 
   it('replaces {{VAR}} in message', () => {
@@ -31,7 +41,7 @@ describe('substituteVariables', () => {
       nodes: [makeWorkflowNode({ type: 'checkpoint', message: 'Review {{FEATURE}} changes' })],
     })
     const result = substituteVariables(wf, { FEATURE: 'auth' })
-    expect(firstNode(result).message).toBe('Review auth changes')
+    expect(firstNode(result, 'checkpoint').message).toBe('Review auth changes')
   })
 
   it('replaces {{VAR}} in agentFlags', () => {
@@ -45,7 +55,7 @@ describe('substituteVariables', () => {
       ],
     })
     const result = substituteVariables(wf, { MODEL: 'gpt-4' })
-    expect(firstNode(result).agentFlags).toBe('--model gpt-4')
+    expect(firstNode(result, 'agent').agentFlags).toBe('--model gpt-4')
   })
 
   it('replaces multiple variables in one field', () => {
@@ -53,7 +63,7 @@ describe('substituteVariables', () => {
       nodes: [makeWorkflowNode({ type: 'agent', prompt: '{{ACTION}} the {{TARGET}}' })],
     })
     const result = substituteVariables(wf, { ACTION: 'Fix', TARGET: 'bug' })
-    expect(firstNode(result).prompt).toBe('Fix the bug')
+    expect(firstNode(result, 'agent').prompt).toBe('Fix the bug')
   })
 
   it('leaves unresolved {{VAR}} as-is', () => {
@@ -61,7 +71,7 @@ describe('substituteVariables', () => {
       nodes: [makeWorkflowNode({ type: 'agent', prompt: 'Fix {{UNKNOWN_VAR}}' })],
     })
     const result = substituteVariables(wf, {})
-    expect(firstNode(result).prompt).toBe('Fix {{UNKNOWN_VAR}}')
+    expect(firstNode(result, 'agent').prompt).toBe('Fix {{UNKNOWN_VAR}}')
   })
 
   // eslint-disable-next-line no-template-curly-in-string -- testing shell syntax literal
@@ -79,7 +89,7 @@ describe('substituteVariables', () => {
     // The regex matches {{GITHUB_TOKEN}} inside ${{...}} because $ is before {{.
     // This is acceptable — real shell syntax uses ${VAR} not ${{VAR}}.
     const result = substituteVariables(wf, { GITHUB_TOKEN: 'bad', REAL_VAR: 'good' })
-    expect(firstNode(result).command).toContain('good')
+    expect(firstNode(result, 'shell').command).toContain('good')
   })
 
   it('handles undefined fields gracefully', () => {
@@ -87,10 +97,10 @@ describe('substituteVariables', () => {
       nodes: [makeWorkflowNode({ type: 'agent' })],
     })
     const result = substituteVariables(wf, { FOO: 'bar' })
-    const node = firstNode(result)
+    const node = firstNode(result, 'agent')
+    // Agent node fields default to undefined; the union enforces that
+    // command/message do not exist on AgentNode at all.
     expect(node.prompt).toBeUndefined()
-    expect(node.command).toBeUndefined()
-    expect(node.message).toBeUndefined()
     expect(node.agentFlags).toBeUndefined()
   })
 
@@ -100,7 +110,7 @@ describe('substituteVariables', () => {
     })
     substituteVariables(wf, { FILE: 'test.ts' })
     const original = wf.nodes[0]
-    if (!original) throw new Error('Expected node')
+    if (!original || original.type !== 'agent') throw new Error('Expected agent node')
     expect(original.prompt).toBe('Fix {{FILE}}')
   })
 
@@ -109,7 +119,7 @@ describe('substituteVariables', () => {
       nodes: [makeWorkflowNode({ type: 'agent', prompt: 'Fix {{FILE}}' })],
     })
     const result = substituteVariables(wf, { FILE: '' })
-    expect(firstNode(result).prompt).toBe('Fix ')
+    expect(firstNode(result, 'agent').prompt).toBe('Fix ')
   })
 
   it('preserves non-substituted node properties', () => {
@@ -128,7 +138,7 @@ describe('substituteVariables', () => {
       ],
     })
     const result = substituteVariables(wf, { ACTION: 'Fix' })
-    const node = firstNode(result)
+    const node = firstNode(result, 'agent')
     expect(node.name).toBe('My Node')
     expect(node.agent).toBe('claude-code')
     expect(node.x).toBe(100)
@@ -160,7 +170,9 @@ describe('substituteVariables', () => {
     })
     const result = substituteVariables(wf, { VAR: 'test' })
     const [n0, n1, n2] = result.nodes
-    if (!n0 || !n1 || !n2) throw new Error('Expected 3 nodes')
+    if (!n0 || n0.type !== 'agent') throw new Error('Expected agent node at [0]')
+    if (!n1 || n1.type !== 'shell') throw new Error('Expected shell node at [1]')
+    if (!n2 || n2.type !== 'checkpoint') throw new Error('Expected checkpoint node at [2]')
     expect(n0.prompt).toBe('test first')
     expect(n1.command).toBe('echo test')
     expect(n2.message).toBe('test done')

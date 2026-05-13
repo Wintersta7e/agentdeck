@@ -14,7 +14,16 @@ export interface CostHistory {
   flush: () => void
 }
 
+/**
+ * Persisted shape on disk. `version` is bumped whenever the
+ * DailyCostEntry shape changes incompatibly so old snapshots can be
+ * detected and discarded rather than silently producing partial entries
+ * with `undefined` numeric fields.
+ */
+const PERSISTED_VERSION = 1
+
 interface PersistedData {
+  version?: number
   entries: DailyCostEntry[]
   budget: number | null
 }
@@ -27,6 +36,12 @@ function loadFromDisk(storePath: string): {
     if (!existsSync(storePath)) return { entries: new Map(), budget: null }
     const raw = readFileSync(storePath, 'utf-8')
     const data = JSON.parse(raw) as PersistedData
+    if (data.version !== undefined && data.version !== PERSISTED_VERSION) {
+      // Incompatible schema — discard rather than load entries with
+      // possibly-mismatched fields. Next flush will rewrite at the
+      // current version with whatever in-memory state is fresh.
+      return { entries: new Map(), budget: null }
+    }
     const entries = new Map<string, DailyCostEntry>((data.entries ?? []).map((e) => [e.date, e]))
     return { entries, budget: data.budget ?? null }
   } catch {
@@ -53,6 +68,7 @@ export function createCostHistory(storePath?: string): CostHistory {
 
   function serialize(): string {
     const data: PersistedData = {
+      version: PERSISTED_VERSION,
       entries: Array.from(entries.values()),
       budget: dailyBudget,
     }

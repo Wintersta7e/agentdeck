@@ -339,7 +339,7 @@
   font-family: var(--font-ui);
   font-size: var(--fs-sm);
   color: var(--text2);
-  margin-top: 2px;
+  margin-top: var(--sp-half);
   line-height: 1.4;
 }
 
@@ -475,7 +475,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--sp-1);
-  padding: 2px var(--sp-2);
+  padding: var(--sp-half) var(--sp-2);
   background: transparent;
   border: 1px solid var(--border-bright);
   color: var(--text1);

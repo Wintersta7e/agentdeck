@@ -26,7 +26,7 @@
 /* Selected state — use badge tokens from tokens.css */
 .badge-pill.selected {
   border-width: 2px;
-  padding: 3px var(--sp-2); /* compensate for border width */
+  padding: var(--sp-0_75) var(--sp-2); /* compensate for border width */
   color: var(--bg0);
 }
 

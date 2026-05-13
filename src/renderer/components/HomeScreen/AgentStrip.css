@@ -1,7 +1,7 @@
 .agent-strip {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 6px; /* mockup-specific */
+  gap: var(--sp-1_5); /* mockup-specific */
 }
 
 .agent-chip-v2 {
@@ -38,7 +38,7 @@
 .agent-chip-progress {
   width: 100%;
   height: 2px;
-  margin-top: 3px;
+  margin-top: var(--sp-0_75);
   border-radius: 1px;
   background: rgba(var(--accent-rgb), 0.15);
   overflow: hidden;
@@ -84,7 +84,7 @@
   font-size: 9px; /* mockup-specific */
   font-weight: 600;
   color: var(--text0);
-  margin-top: 2px;
+  margin-top: var(--sp-half);
 }
 
 .agent-chip-ver {
@@ -99,7 +99,7 @@
   border-radius: 2px;
   font-weight: 600;
   letter-spacing: 0.5px;
-  margin-top: 3px;
+  margin-top: var(--sp-0_75);
   display: inline-block;
 }
 

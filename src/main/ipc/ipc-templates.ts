@@ -1,3 +1,4 @@
+import { CH } from '../../shared/ipc-channels'
 import { ipcMain, type BrowserWindow } from 'electron'
 import type {
   Template,
@@ -8,8 +9,9 @@ import type {
 } from '../../shared/types'
 import type { TemplateStore, TemplateChangeEvent } from '../template-store'
 import type { LegacyStoreAdapter } from '../template-legacy-store'
-import { SAFE_ID_RE } from '../validation'
+import { validateId } from '../../shared/validation'
 import { createLogger } from '../logger'
+import { generateTemplateId } from '../template-id'
 
 const log = createLogger('ipc-templates')
 
@@ -25,8 +27,6 @@ const CATEGORIES = new Set<TemplateCategory>([
   'Git',
 ])
 
-const MAX_ID_LEN = 128
-const MAX_PROJECT_ID_LEN = 128
 const MAX_NAME_LEN = 256
 const MAX_DESC_LEN = 1024
 const MAX_CONTENT_LEN = 100_000
@@ -55,12 +55,7 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
 function validateDraft(input: unknown): asserts input is TemplateDraft {
   if (!isPlainObject(input)) throw new Error('draft must be an object')
   const raw = input
-  if (raw.id !== undefined && (typeof raw.id !== 'string' || !SAFE_ID_RE.test(raw.id))) {
-    throw new Error('draft.id must be a valid identifier')
-  }
-  if (raw.id !== undefined && typeof raw.id === 'string' && raw.id.length > MAX_ID_LEN) {
-    throw new Error(`draft.id too long (max ${String(MAX_ID_LEN)})`)
-  }
+  if (raw.id !== undefined) validateId(raw.id, 'draft.id')
   if (typeof raw.name !== 'string' || raw.name.length === 0) {
     throw new Error('draft.name is required')
   }
@@ -98,13 +93,8 @@ function validateScopeAndProject(
     throw new Error('invalid scope')
   }
   if (scope === 'project') {
-    if (typeof projectId !== 'string' || !SAFE_ID_RE.test(projectId)) {
-      throw new Error('projectId required for project scope')
-    }
-    if (projectId.length > MAX_PROJECT_ID_LEN) {
-      throw new Error(`projectId too long (max ${String(MAX_PROJECT_ID_LEN)})`)
-    }
-    if (!ctx.getProjectExists(projectId)) {
+    validateId(projectId, 'projectId')
+    if (!ctx.getProjectExists(projectId as string)) {
       throw new Error('unknown projectId')
     }
   } else if (projectId !== null && projectId !== undefined) {
@@ -115,29 +105,19 @@ function validateScopeAndProject(
 function validateRef(input: unknown, ctx: TemplateHandlerContext): TemplateRef {
   if (!isPlainObject(input)) throw new Error('ref must be an object')
   const raw = input
-  if (typeof raw.id !== 'string' || !SAFE_ID_RE.test(raw.id)) {
-    throw new Error('ref.id must be a valid identifier')
-  }
-  if (raw.id.length > MAX_ID_LEN) {
-    throw new Error(`ref.id too long (max ${String(MAX_ID_LEN)})`)
-  }
+  const id = validateId(raw.id, 'ref.id')
   const scope = raw.scope
   const projectId = (raw.projectId ?? null) as string | null
   validateScopeAndProject(scope, projectId, ctx)
   return {
-    id: raw.id,
+    id,
     scope: scope as TemplateScope,
     projectId: scope === 'project' ? (projectId as string) : null,
   }
 }
 
-function genTemplateId(): string {
-  const suffix = Math.random().toString(36).slice(2, 8)
-  return `tmpl-${String(Date.now())}-${suffix}`
-}
-
 /**
- * Register the v6.1.0 template IPC surface:
+ * Register the file-backed template IPC surface:
  *
  *   templates:listAll
  *   templates:activateProject
@@ -152,7 +132,7 @@ function genTemplateId(): string {
  */
 export function registerTemplateIpc(ctx: TemplateHandlerContext): void {
   ipcMain.handle(
-    'templates:listAll',
+    CH.templatesListAll,
     async (_event, input?: { projectId?: string } | undefined): Promise<Template[]> => {
       // Validate input BEFORE the migration-complete branch so malformed
       // payloads are rejected uniformly regardless of current migration state.
@@ -160,16 +140,7 @@ export function registerTemplateIpc(ctx: TemplateHandlerContext): void {
         throw new Error('templates:listAll input must be an object or undefined')
       }
       const projectId = input?.projectId
-      if (projectId !== undefined) {
-        if (typeof projectId !== 'string' || !SAFE_ID_RE.test(projectId)) {
-          throw new Error('templates:listAll — projectId must be a valid identifier')
-        }
-        if (projectId.length > MAX_PROJECT_ID_LEN) {
-          throw new Error(
-            `templates:listAll — projectId too long (max ${String(MAX_PROJECT_ID_LEN)})`,
-          )
-        }
-      }
+      if (projectId !== undefined) validateId(projectId, 'templates:listAll projectId')
       if (!ctx.migrationComplete()) {
         return ctx.legacy.listAll()
       }
@@ -178,29 +149,22 @@ export function registerTemplateIpc(ctx: TemplateHandlerContext): void {
   )
 
   ipcMain.handle(
-    'templates:activateProject',
+    CH.templatesActivateProject,
     async (_event, projectId: unknown): Promise<Template[]> => {
-      if (typeof projectId !== 'string' || !SAFE_ID_RE.test(projectId)) {
-        throw new Error('templates:activateProject — projectId must be a valid identifier')
-      }
-      if (projectId.length > MAX_PROJECT_ID_LEN) {
-        throw new Error(
-          `templates:activateProject — projectId too long (max ${String(MAX_PROJECT_ID_LEN)})`,
-        )
-      }
-      if (!ctx.getProjectExists(projectId)) {
+      const validProjectId = validateId(projectId, 'templates:activateProject projectId')
+      if (!ctx.getProjectExists(validProjectId)) {
         throw new Error('unknown projectId')
       }
       if (!ctx.migrationComplete()) {
         // Nothing to activate in legacy mode — all legacy templates are user-scope.
         return []
       }
-      return ctx.store.activateProject(projectId)
+      return ctx.store.activateProject(validProjectId)
     },
   )
 
   ipcMain.handle(
-    'templates:save',
+    CH.templatesSave,
     async (
       _event,
       draft: unknown,
@@ -227,7 +191,7 @@ export function registerTemplateIpc(ctx: TemplateHandlerContext): void {
       if (!ctx.migrationComplete()) {
         const d = draft as TemplateDraft
         const file: TemplateFile = {
-          id: d.id ?? genTemplateId(),
+          id: d.id ?? generateTemplateId(),
           name: d.name,
           description: d.description,
           content: d.content,
@@ -248,7 +212,7 @@ export function registerTemplateIpc(ctx: TemplateHandlerContext): void {
     },
   )
 
-  ipcMain.handle('templates:delete', async (_event, refInput: unknown): Promise<void> => {
+  ipcMain.handle(CH.templatesDelete, async (_event, refInput: unknown): Promise<void> => {
     const ref = validateRef(refInput, ctx)
     if (!ctx.migrationComplete()) {
       await ctx.legacy.delete(ref.id)
@@ -257,7 +221,7 @@ export function registerTemplateIpc(ctx: TemplateHandlerContext): void {
     await ctx.store.delete(ref)
   })
 
-  ipcMain.handle('templates:incrementUsage', async (_event, refInput: unknown): Promise<void> => {
+  ipcMain.handle(CH.templatesIncrementUsage, async (_event, refInput: unknown): Promise<void> => {
     const ref = validateRef(refInput, ctx)
     if (!ctx.migrationComplete()) {
       await ctx.legacy.incrementUsage(ref.id)
@@ -267,7 +231,7 @@ export function registerTemplateIpc(ctx: TemplateHandlerContext): void {
   })
 
   ipcMain.handle(
-    'templates:setPinned',
+    CH.templatesSetPinned,
     async (_event, refInput: unknown, pinned: unknown): Promise<void> => {
       const ref = validateRef(refInput, ctx)
       if (typeof pinned !== 'boolean') {
@@ -285,16 +249,15 @@ export function registerTemplateIpc(ctx: TemplateHandlerContext): void {
 }
 
 /**
- * PREREQ B5: compat shim for the legacy `store:getTemplates` channel, moved
- * out of `project-store.ts` to avoid double-registration at boot. Removed in
- * v6.2.0 alongside the legacy-fallback path.
+ * Compat shim for the legacy `store:getTemplates` channel, kept here (rather
+ * than in `project-store.ts`) to avoid double-registration at boot.
  */
 export function registerLegacyTemplateIpc(ctx: {
   store: TemplateStore
   legacy: LegacyStoreAdapter
   migrationComplete: () => boolean
 }): void {
-  ipcMain.handle('store:getTemplates', async (): Promise<Template[]> => {
+  ipcMain.handle(CH.storeGetTemplates, async (): Promise<Template[]> => {
     if (!ctx.migrationComplete()) {
       return ctx.legacy.listAll()
     }
@@ -310,12 +273,12 @@ export function wireTemplateWindowEvents(
   const offChange = store.onChange((event: TemplateChangeEvent): void => {
     const win = getWindow()
     if (!win || win.isDestroyed()) return
-    win.webContents.send('templates:change', event)
+    win.webContents.send(CH.templatesChange, event)
   })
   const offParseError = store.onParseError((event): void => {
     const win = getWindow()
     if (!win || win.isDestroyed()) return
-    win.webContents.send('templates:parseError', event)
+    win.webContents.send(CH.templatesParseError, event)
   })
   return () => {
     offChange()

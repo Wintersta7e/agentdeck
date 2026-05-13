@@ -1,3 +1,4 @@
+import { CH } from '../../shared/ipc-channels'
 import { dialog, ipcMain } from 'electron'
 import type { BrowserWindow } from 'electron'
 import * as fs from 'fs'
@@ -8,6 +9,7 @@ import { detectStack } from '../detect-stack'
 import { scanSkillDirectory, invalidateProjectCache } from '../skill-scanner'
 import { getDefaultDistroAsync, wslPathToWindows, withUncFallback } from '../wsl-utils'
 import { createLogger } from '../logger'
+import { validateId } from '../validation'
 
 const log = createLogger('ipc-projects')
 
@@ -21,8 +23,8 @@ export function registerProjectHandlers(
   getWindow: () => BrowserWindow | null,
   getStore?: (() => AppStore | null) | undefined,
 ): void {
-  ipcMain.handle('projects:detectStack', async (_, p: string, distro?: string) => {
-    // R6-02: Validate path and distro inputs
+  ipcMain.handle(CH.projectsDetectStack, async (_, p: string, distro?: string) => {
+    // Validate path and distro inputs
     if (typeof p !== 'string' || !p || p.length > 1024) {
       throw new Error('projects:detectStack requires a valid path')
     }
@@ -33,23 +35,22 @@ export function registerProjectHandlers(
     return detectStack(p, resolvedDistro)
   })
 
-  ipcMain.handle('projects:getDefaultDistro', async () => {
+  ipcMain.handle(CH.projectsGetDefaultDistro, async () => {
     return getDefaultDistroAsync()
   })
 
-  ipcMain.handle('projects:readFile', async (_event, projectPath: string, filename: string) => {
+  ipcMain.handle(CH.projectsReadFile, async (_event, projectPath: string, filename: string) => {
     if (typeof projectPath !== 'string' || !projectPath) {
       throw new Error('projects:readFile requires a non-empty projectPath')
     }
-    // Normalize slashes AND collapse `..` segments; reject if the input
-    // contains any `..` segment (normalization would have removed it) so
-    // mixed backslash and percent-encoded traversals are all rejected.
+    // Normalize slashes and reject actual traversal segments. Do not reject
+    // `..` as a substring: names like `foo..bar` are legitimate project dirs.
     const slashified = projectPath.replace(/\\/g, '/')
     const collapsed = path.posix.normalize(slashified)
-    if (slashified !== collapsed || slashified.includes('..')) {
+    if (slashified !== collapsed || /(?:^|\/)\.\.(?:\/|$)/.test(slashified)) {
       throw new Error('projects:readFile rejects path traversal in projectPath')
     }
-    // R6-01: Validate filename type before allowlist check
+    // Validate filename type before allowlist check
     if (typeof filename !== 'string' || !filename) {
       throw new Error('projects:readFile requires a non-empty filename')
     }
@@ -91,7 +92,7 @@ export function registerProjectHandlers(
   })
 
   /* ── Dialogs ────────────────────────────────────────────────────── */
-  ipcMain.handle('dialog:pickFolder', async () => {
+  ipcMain.handle(CH.dialogPickFolder, async () => {
     const win = getWindow()
     if (!win) return null
     const result = await dialog.showOpenDialog(win, {
@@ -101,11 +102,8 @@ export function registerProjectHandlers(
   })
 
   /* ── Project Metadata Refresh ──────────────────────────────────── */
-  ipcMain.handle('projects:refreshMeta', async (_, projectId: string) => {
-    // R4-07: Validate with SAFE_ID_RE consistent with all other handlers
-    if (typeof projectId !== 'string' || !/^[a-zA-Z0-9_-]+$/.test(projectId)) {
-      throw new Error('projects:refreshMeta requires a valid projectId')
-    }
+  ipcMain.handle(CH.projectsRefreshMeta, async (_, projectId: string) => {
+    validateId(projectId, 'projectId')
 
     const store = getStore?.()
     if (!store) throw new Error('Store not available')

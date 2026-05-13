@@ -1,3 +1,4 @@
+import { CH } from '../shared/ipc-channels'
 import Store from 'electron-store'
 import { app, ipcMain, safeStorage } from 'electron'
 import * as fs from 'fs'
@@ -6,12 +7,12 @@ import { randomUUID } from 'crypto'
 import type { EnvVar, Project, Role, LegacyTemplate } from '../shared/types'
 import { migrateProjectAgents } from '../shared/agent-helpers'
 import { createLogger } from './logger'
-import { SAFE_ID_RE } from './validation'
+import { validateId } from './validation'
 import { toWslPath } from './wsl-utils'
 
 const log = createLogger('project-store')
 
-// REL-2: Promise-based write lock prevents concurrent read-modify-write races.
+// Promise-based write lock prevents concurrent read-modify-write races.
 // All mutating handlers (save/delete for projects, templates, roles) are serialized
 // through this lock so a second IPC call waits for the first to finish writing.
 let writeLock = Promise.resolve()
@@ -47,7 +48,7 @@ function decryptEnvVars(envVars: EnvVar[] | undefined): EnvVar[] | undefined {
     try {
       return { ...v, value: safeStorage.decryptString(Buffer.from(v.value, 'base64')) }
     } catch (err) {
-      // C3: Preserve the raw encrypted value and flag the failure so the UI can warn.
+      // Preserve the raw encrypted value and flag the failure so the UI can warn.
       // Returning '' would cause re-encryption of empty string on next save → permanent data loss.
       log.error(`Failed to decrypt env var "${v.key}" — preserving raw value`, { err: String(err) })
       return { ...v, _decryptFailed: true }
@@ -60,12 +61,21 @@ export interface StoreSchema {
   templates: LegacyTemplate[]
   roles: Role[]
   appPrefs: {
+    /**
+     * Schema version of the persisted appPrefs blob. Versioned migrations
+     * declared in PREFS_MIGRATIONS run in sequence whenever the loaded
+     * version is below CURRENT_PREFS_VERSION; the runner then writes the
+     * latest value back. New cross-cutting prefs changes (renames,
+     * default backfills) should land as a numbered migration here rather
+     * than as another one-shot boolean flag.
+     */
+    prefsVersion?: number
     zoomFactor: number
     zoomAutoDetected?: boolean | number
     theme?: string
     /** Set once when the v5.x → v6.0.0 theme rename migration has run. */
     themeMigrated?: boolean
-    /** Set once when project.path values have been normalised to WSL form (v6.1.0 PREREQ H8). */
+    /** Set once when legacy Windows-style `project.path` values have been normalised to WSL form. */
     pathsNormalized?: boolean
     /** Set once when the legacy flat `templates` key has been migrated to on-disk files. */
     templatesMigrated?: boolean
@@ -82,11 +92,48 @@ export interface StoreSchema {
   }
 }
 
+/**
+ * Versioned migration entry. Each function transforms a partial appPrefs
+ * blob in place. Runs are idempotent: if a migration has already been
+ * applied (current prefsVersion >= migration target), it is skipped.
+ *
+ * **When to add an entry:** any cross-cutting change to the appPrefs shape
+ * — renaming a key, backfilling a default for existing users, dropping a
+ * stale field. Single one-shot tasks (e.g. "seed default templates once")
+ * stay as boolean flags; the versioned runner is for shape changes.
+ */
+type AppPrefs = StoreSchema['appPrefs']
+type PrefsMigration = (prefs: AppPrefs) => void
+const PREFS_MIGRATIONS: readonly { version: number; migrate: PrefsMigration }[] = []
+
+/** Latest prefsVersion produced by PREFS_MIGRATIONS — derived, do not edit. */
+const CURRENT_PREFS_VERSION = PREFS_MIGRATIONS.reduce((max, m) => Math.max(max, m.version), 0)
+
+/**
+ * Run any pending versioned prefs migrations. Idempotent — only migrations
+ * with version > current run. Existing one-shot boolean flags
+ * (pathsNormalized, themeMigrated, etc.) are left alone.
+ */
+export function runPrefsMigrations(store: AppStore): void {
+  const prefs = store.get('appPrefs')
+  const current = prefs.prefsVersion ?? 0
+  if (current >= CURRENT_PREFS_VERSION) return
+  const next: AppPrefs = { ...prefs }
+  for (const { version, migrate } of PREFS_MIGRATIONS) {
+    if (version > current) {
+      migrate(next)
+      log.info('Applied appPrefs migration', { version })
+    }
+  }
+  next.prefsVersion = CURRENT_PREFS_VERSION
+  store.set('appPrefs', next)
+}
+
 export type AppStore = Store<StoreSchema>
 
 /**
- * PREREQ H8: one-shot normalisation of legacy `project.path` values so every
- * project ends up with a WSL-style path (e.g. `/home/user/proj`, `/mnt/c/foo`).
+ * One-shot normalisation of legacy `project.path` values so every project
+ * ends up with a WSL-style path (e.g. `/home/user/proj`, `/mnt/c/foo`).
  * Guarded by `appPrefs.pathsNormalized`. On failure the flag stays false so
  * the next boot retries.
  */
@@ -154,13 +201,46 @@ export function createProjectStore(): Store<StoreSchema> {
     log.info('Ran project name migration')
   }
 
-  // PREREQ H8: one-shot normalisation of legacy Windows-style project.path
-  // values to WSL form. Idempotent via `appPrefs.pathsNormalized` — runs
-  // exactly once per install. On failure, the flag is NOT set so the next
-  // boot retries.
+  // Apply any pending versioned appPrefs migrations before the rest of
+  // startup reads from prefs. Today this is a no-op; the infrastructure is
+  // here so the next shape change to appPrefs uses a numbered migration
+  // entry instead of yet another ad-hoc boolean flag.
+  runPrefsMigrations(store)
+
+  // One-shot normalisation of legacy Windows-style project.path values to WSL
+  // form. Idempotent via `appPrefs.pathsNormalized` — runs exactly once per
+  // install. On failure, the flag is NOT set so the next boot retries.
   normalizeProjectPaths(store)
 
-  ipcMain.handle('store:getProjects', () => {
+  return store
+}
+
+let storeHandlersRegistered = false
+
+/**
+ * **Test-only.** Reset the registration guard so a test can call
+ * `registerStoreHandlers` multiple times against a freshly-mocked
+ * `ipcMain`. Production code never calls this.
+ */
+export function __resetStoreHandlersForTests(): void {
+  storeHandlersRegistered = false
+}
+
+/**
+ * Register store-related IPC handlers (`store:*`) on the global ipcMain.
+ *
+ * Split out from createProjectStore so the data-access layer is testable
+ * without triggering IPC side effects. Throws on a second invocation
+ * rather than letting Electron's own duplicate-handler error fire — the
+ * error site here is more debuggable than `Attempted to register a
+ * second handler for CH.storeGetProjects` from deep inside Electron.
+ */
+export function registerStoreHandlers(store: AppStore): void {
+  if (storeHandlersRegistered) {
+    throw new Error('registerStoreHandlers called twice — invoke exactly once at startup')
+  }
+  storeHandlersRegistered = true
+  ipcMain.handle(CH.storeGetProjects, () => {
     const projects = store.get('projects')
 
     // Auto-migrate legacy single-agent projects to agents[] array
@@ -178,14 +258,13 @@ export function createProjectStore(): Store<StoreSchema> {
     return updated.map((p) => ({ ...p, envVars: decryptEnvVars(p.envVars) }))
   })
 
-  ipcMain.handle('store:saveProject', (_, project: unknown) => {
+  ipcMain.handle(CH.storeSaveProject, (_, project: unknown) => {
     if (!project || typeof project !== 'object') {
       throw new Error('store:saveProject requires a non-null object')
     }
     // Validate required fields from renderer input before trusting the shape
     const raw = project as Record<string, unknown>
-    if (raw.id !== undefined && (typeof raw.id !== 'string' || !SAFE_ID_RE.test(raw.id)))
-      throw new Error('store:saveProject — id must be a valid identifier')
+    if (raw.id !== undefined) validateId(raw.id, 'store:saveProject id')
     if (raw.name !== undefined && typeof raw.name !== 'string')
       throw new Error('store:saveProject — name must be a string')
     if (raw.path !== undefined && typeof raw.path !== 'string')
@@ -224,8 +303,8 @@ export function createProjectStore(): Store<StoreSchema> {
     })
   })
 
-  ipcMain.handle('store:deleteProject', (_, id: string) => {
-    if (typeof id !== 'string' || !SAFE_ID_RE.test(id)) throw new Error('Invalid id')
+  ipcMain.handle(CH.storeDeleteProject, (_, id: string) => {
+    validateId(id, 'projectId')
     return serialized(() => {
       const projects = store.get('projects').filter((p) => p.id !== id)
       store.set('projects', projects)
@@ -233,62 +312,26 @@ export function createProjectStore(): Store<StoreSchema> {
     })
   })
 
-  // PREREQ B5: `store:getTemplates` is registered in `ipc-templates.ts` only,
-  // via `registerLegacyTemplateIpc`, as a compat shim that routes to the new
+  // `store:getTemplates` is registered in `ipc-templates.ts` only, via
+  // `registerLegacyTemplateIpc`, as a compat shim that routes to the new
   // template store while migration is in progress. Do NOT re-register it here —
   // ipcMain.handle throws on duplicate channel registration.
+  //
+  // The legacy `store:saveTemplate` / `store:deleteTemplate` write handlers
+  // were removed: nothing in the renderer routes through them anymore — saves
+  // and deletes go through `window.agentDeck.templates.save` /
+  // `templates.delete` which target the new disk-backed TemplateStore.
 
-  ipcMain.handle('store:saveTemplate', (_, template: unknown) => {
-    if (!template || typeof template !== 'object') {
-      throw new Error('store:saveTemplate requires a non-null object')
-    }
-    const rawT = template as Record<string, unknown>
-    if (rawT.id !== undefined && (typeof rawT.id !== 'string' || !SAFE_ID_RE.test(rawT.id)))
-      throw new Error('store:saveTemplate — id must be a valid identifier')
-    if (rawT.name !== undefined && typeof rawT.name !== 'string')
-      throw new Error('store:saveTemplate — name must be a string')
-    if (typeof rawT.name === 'string' && rawT.name.length > 200)
-      throw new Error('store:saveTemplate — name too long')
-    if (typeof rawT.description === 'string' && rawT.description.length > 2000)
-      throw new Error('store:saveTemplate — description too long')
-    if (typeof rawT.content === 'string' && rawT.content.length > 65536)
-      throw new Error('store:saveTemplate — content too long (max 64KB)')
-    return serialized(() => {
-      const t = template as Partial<LegacyTemplate>
-      const templates = store.get('templates')
-      const id = t.id ?? randomUUID()
-      const withId = { ...t, id } as LegacyTemplate
-      const idx = templates.findIndex((existing) => existing.id === id)
-      const existingTpl = idx >= 0 ? templates[idx] : undefined
-      if (existingTpl !== undefined) {
-        templates[idx] = { ...existingTpl, ...withId }
-      } else {
-        templates.push(withId)
-      }
-      store.set('templates', templates)
-      return templates[idx >= 0 ? idx : templates.length - 1]
-    })
-  })
-
-  ipcMain.handle('store:deleteTemplate', (_, id: string) => {
-    if (typeof id !== 'string' || !SAFE_ID_RE.test(id)) throw new Error('Invalid id')
-    return serialized(() => {
-      const templates = store.get('templates').filter((t) => t.id !== id)
-      store.set('templates', templates)
-    })
-  })
-
-  ipcMain.handle('store:getRoles', () => {
+  ipcMain.handle(CH.storeGetRoles, () => {
     return store.get('roles')
   })
 
-  ipcMain.handle('store:saveRole', (_, role: unknown) => {
+  ipcMain.handle(CH.storeSaveRole, (_, role: unknown) => {
     if (!role || typeof role !== 'object') {
       throw new Error('store:saveRole requires a non-null object')
     }
     const rawR = role as Record<string, unknown>
-    if (rawR.id !== undefined && (typeof rawR.id !== 'string' || !SAFE_ID_RE.test(rawR.id)))
-      throw new Error('store:saveRole — id must be a valid identifier')
+    if (rawR.id !== undefined) validateId(rawR.id, 'store:saveRole id')
     if (rawR.name !== undefined && typeof rawR.name !== 'string')
       throw new Error('store:saveRole — name must be a string')
     if (typeof rawR.name === 'string' && rawR.name.length > 200)
@@ -314,15 +357,13 @@ export function createProjectStore(): Store<StoreSchema> {
     })
   })
 
-  ipcMain.handle('store:deleteRole', (_, id: string) => {
-    if (typeof id !== 'string' || !SAFE_ID_RE.test(id)) throw new Error('Invalid id')
+  ipcMain.handle(CH.storeDeleteRole, (_, id: string) => {
+    validateId(id, 'roleId')
     return serialized(() => {
       const roles = store.get('roles').filter((r) => r.id !== id)
       store.set('roles', roles)
     })
   })
-
-  return store
 }
 
 /** Read roles directly from the store (for use in main process only). */

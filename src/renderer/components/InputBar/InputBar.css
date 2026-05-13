@@ -50,7 +50,7 @@
 
 .input-chip {
   font-size: var(--fs-xs);
-  padding: 3px var(--sp-2);
+  padding: var(--sp-0_75) var(--sp-2);
   border-radius: 20px;
   background: var(--bg3);
   border: 1px solid var(--border);

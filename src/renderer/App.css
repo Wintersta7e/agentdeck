@@ -64,7 +64,7 @@
   color: var(--bg0);
   text-align: center;
   padding: var(--sp-2);
-  z-index: 10;
+  z-index: var(--z-floating);
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   font-weight: 600;

@@ -1,3 +1,4 @@
+import { CH } from '../../shared/ipc-channels'
 import { app, ipcMain } from 'electron'
 import type { BrowserWindow } from 'electron'
 import type { AppStore } from '../project-store'
@@ -61,9 +62,9 @@ export function registerWindowHandlers(
   }
 
   /* ── Window controls ────────────────────────────────────────────── */
-  ipcMain.handle('window:close', () => getWindow()?.close())
-  ipcMain.handle('window:minimize', () => getWindow()?.minimize())
-  ipcMain.handle('window:maximize', () => {
+  ipcMain.handle(CH.windowClose, () => getWindow()?.close())
+  ipcMain.handle(CH.windowMinimize, () => getWindow()?.minimize())
+  ipcMain.handle(CH.windowMaximize, () => {
     const win = getWindow()
     if (win?.isMaximized()) {
       win.unmaximize()
@@ -73,22 +74,22 @@ export function registerWindowHandlers(
   })
 
   /* ── Zoom ─────────────────────────────────────────────────────────── */
-  ipcMain.handle('zoom:get', () => store.get('appPrefs').zoomFactor)
-  ipcMain.handle('zoom:set', (_, factor: number) => {
+  ipcMain.handle(CH.zoomGet, () => store.get('appPrefs').zoomFactor)
+  ipcMain.handle(CH.zoomSet, (_, factor: number) => {
     const clamped = Math.round(Math.max(0.5, Math.min(2.5, factor)) * 10) / 10
     store.set('appPrefs', { ...store.get('appPrefs'), zoomFactor: clamped })
     getWindow()?.webContents.setZoomFactor(clamped)
     return clamped
   })
-  ipcMain.handle('zoom:reset', () => {
+  ipcMain.handle(CH.zoomReset, () => {
     store.set('appPrefs', { ...store.get('appPrefs'), zoomFactor: 1.0 })
     getWindow()?.webContents.setZoomFactor(1.0)
     return 1.0
   })
 
   /* ── Theme ──────────────────────────────────────────────────────── */
-  ipcMain.handle('theme:get', () => store.get('appPrefs').theme ?? '')
-  ipcMain.handle('theme:set', (_, theme: string) => {
+  ipcMain.handle(CH.themeGet, () => store.get('appPrefs').theme ?? '')
+  ipcMain.handle(CH.themeSet, (_, theme: string) => {
     const { safe, migratedFrom } = normaliseTheme(theme)
     // Unknown input: neither a valid current theme nor a known legacy
     // palette. The silent coerce to tungsten stays (we don't want to
@@ -107,21 +108,21 @@ export function registerWindowHandlers(
    * user's old palette, the renderer surfaces a single info toast and
    * the value is cleared so it never fires twice.
    */
-  ipcMain.handle('theme:popMigration', () => {
+  ipcMain.handle(CH.themePopMigration, () => {
     const migration = pendingThemeMigration
     pendingThemeMigration = null
     return migration
   })
 
   /* ── Layout persistence ───────────────────────────────────────── */
-  ipcMain.handle('layout:get', () => {
+  ipcMain.handle(CH.layoutGet, () => {
     const p = store.get('appPrefs')
     return {
       rightPanelWidth: p.rightPanelWidth,
       wfLogPanelWidth: p.wfLogPanelWidth,
     }
   })
-  ipcMain.handle('layout:set', (_, patch: Record<string, unknown>) => {
+  ipcMain.handle(CH.layoutSet, (_, patch: Record<string, unknown>) => {
     const current = store.get('appPrefs')
     const filtered: Record<string, unknown> = {}
     for (const [k, v] of Object.entries(patch)) {
@@ -133,8 +134,8 @@ export function registerWindowHandlers(
   })
 
   /* ── App info ─────────────────────────────────────────────────────── */
-  ipcMain.handle('app:version', () => app.getVersion())
-  ipcMain.handle('app:versions', () => ({
+  ipcMain.handle(CH.appVersion, () => app.getVersion())
+  ipcMain.handle(CH.appVersions, () => ({
     electron: process.versions.electron,
     chrome: process.versions.chrome,
     node: process.versions.node,

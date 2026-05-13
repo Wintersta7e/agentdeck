@@ -4,18 +4,13 @@ import { randomBytes } from 'node:crypto'
 import { app } from 'electron'
 import { createLogger } from './logger'
 import type { WorkflowRun } from '../shared/types'
-import { SAFE_ID_RE } from './validation'
+import { validateId } from '../shared/validation'
 
 const log = createLogger('workflow-run-store')
 const MAX_RUNS_PER_WORKFLOW = 20
 
 /** Validate id is safe for filesystem use. */
-function safeId(id: string): string {
-  if (!id || !SAFE_ID_RE.test(id)) {
-    throw new Error(`Invalid id for filesystem use: ${id}`)
-  }
-  return id
-}
+const safeId = (id: string): string => validateId(id, 'workflow-run id')
 
 /** Cache the runs directory path after first creation. */
 let cachedRunsDir: string | null = null
@@ -45,8 +40,11 @@ function runFilename(workflowId: string, startedAt: number, runId: string): stri
 }
 
 /** Save a completed workflow run to disk. Auto-prunes old runs. */
+/** Persisted JSON schema version. Bump when WorkflowRun shape changes. */
+const WORKFLOW_RUN_VERSION = 1
+
 export async function saveRun(run: WorkflowRun): Promise<void> {
-  // WF-8: Chain onto any pending write for this workflow to prevent races
+  // Chain onto any pending write for this workflow to prevent races
   const prev = writeLocks.get(run.workflowId) ?? Promise.resolve()
   const task = prev
     .catch(() => {})
@@ -56,8 +54,10 @@ export async function saveRun(run: WorkflowRun): Promise<void> {
       const file = path.join(dir, filename)
       const tmpFile = `${file}.${randomBytes(6).toString('hex')}.tmp`
 
-      // Atomic write: write to .tmp, then rename
-      await fs.promises.writeFile(tmpFile, JSON.stringify(run, null, 2), 'utf-8')
+      // Always stamp the current schema version so older payloads created without
+      // the field migrate forward on the next save.
+      const payload: WorkflowRun = { ...run, version: WORKFLOW_RUN_VERSION }
+      await fs.promises.writeFile(tmpFile, JSON.stringify(payload, null, 2), 'utf-8')
       await fs.promises.rename(tmpFile, file)
 
       log.info('Workflow run saved', { id: run.id, workflowId: run.workflowId })
@@ -88,9 +88,9 @@ async function pruneRuns(workflowId: string): Promise<void> {
 
   if (files.length <= MAX_RUNS_PER_WORKFLOW) return
 
-  // PERF-12: Sort by timestamp embedded in filename instead of calling stat() on each file.
+  // Sort by timestamp embedded in filename instead of calling stat() on each file.
   // Filename format: ${workflowId}_${startedAt}_${runId}.json
-  // R5-03: Parse from the right — workflowId may contain underscores (SAFE_ID_RE allows _),
+  // Parse from the right — workflowId may contain underscores (SAFE_ID_RE allows _),
   // but runId (UUID) uses only hyphens and startedAt is always a number.
   const withTimestamp = files.map((f) => {
     const base = f.replace(/\.json$/, '')
@@ -132,8 +132,11 @@ export async function listRuns(workflowId: string): Promise<WorkflowRun[]> {
   for (const f of jsonFiles) {
     try {
       const raw = await fs.promises.readFile(path.join(dir, f), 'utf-8')
-      const parsed = JSON.parse(raw) as WorkflowRun
-      runs.push(parsed)
+      const parsed = JSON.parse(raw) as Partial<WorkflowRun>
+      // Legacy runs persisted before the version field was added are shape-compatible
+      // with v1 — stamp the version on read so callers see a uniformly-typed run.
+      const run: WorkflowRun = { ...(parsed as WorkflowRun), version: WORKFLOW_RUN_VERSION }
+      runs.push(run)
     } catch (err) {
       log.warn('Failed to parse workflow run file', { file: f, err: String(err) })
     }
@@ -156,7 +159,7 @@ export async function deleteRun(runId: string): Promise<void> {
     return
   }
 
-  // WF-9: Run ID is embedded in filename as the last segment before .json
+  // Run ID is embedded in filename as the last segment before .json
   const suffix = `_${runId}.json`
   const target = allFiles.find((f) => f.endsWith(suffix))
   if (target) {

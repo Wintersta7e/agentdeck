@@ -43,7 +43,7 @@ describe('validateWorkflow — outputMatch condition', () => {
     expect(result.errors.some((e) => /too long/.test(e))).toBe(true)
   })
 
-  it('rejects patterns with nested quantifiers (ReDoS heuristic — SEC2-04)', () => {
+  it('rejects patterns with nested quantifiers (ReDoS heuristic)', () => {
     const wf = makeWorkflow({
       nodes: [
         { id: 'src', type: 'agent', name: 'Src', agent: 'claude-code' },
@@ -60,7 +60,7 @@ describe('validateWorkflow — outputMatch condition', () => {
     expect(result.errors.some((e) => /ReDoS/.test(e))).toBe(true)
   })
 
-  it('rejects alternation with outer quantifier (SEC3-01)', () => {
+  it('rejects alternation with outer quantifier', () => {
     const wf = makeWorkflow({
       nodes: [
         { id: 'src', type: 'agent', name: 'Src', agent: 'claude-code' },
@@ -77,7 +77,7 @@ describe('validateWorkflow — outputMatch condition', () => {
     expect(result.errors.some((e) => /ReDoS/.test(e))).toBe(true)
   })
 
-  it('rejects nested-group ReDoS shapes like ((a+))+ (SEC4-01)', () => {
+  it('rejects nested-group ReDoS shapes like ((a+))+', () => {
     const wf = makeWorkflow({
       nodes: [
         { id: 'src', type: 'agent', name: 'Src', agent: 'claude-code' },

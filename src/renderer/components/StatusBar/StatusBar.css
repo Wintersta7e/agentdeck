@@ -99,9 +99,9 @@
   background: var(--bg0);
   border: 1px solid var(--border);
   border-radius: 2px;
-  padding: 0 3px;
+  padding: 0 var(--sp-0_75);
   line-height: 14px;
-  margin-left: 2px;
+  margin-left: var(--sp-half);
 }
 
 .status-cmd:hover .status-cmd-kbd {

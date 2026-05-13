@@ -29,7 +29,7 @@
 
 .toggle-thumb {
   position: absolute;
-  top: 8px;
+  top: var(--sp-2);
   left: 1px;
   width: 14px;
   height: 14px;

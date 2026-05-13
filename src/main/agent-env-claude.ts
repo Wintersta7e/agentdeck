@@ -7,9 +7,10 @@ import type {
   ConfigEntry,
 } from '../shared/types'
 import { getDefaultDistroAsync } from './wsl-utils'
-import { getClaudeConfigDir, getWslHome, readWslFileSafe } from './wsl-paths'
+import { getClaudeConfigDir, getWslHome } from './wsl-paths'
 import { scanSkillDirectory } from './skill-scanner'
 import { createLogger } from './logger'
+import { truncate, readWslParsed, type ReadOpts } from './agent-env-shared'
 
 const log = createLogger('agent-env-claude')
 
@@ -23,20 +24,18 @@ const HOOK_EVENTS = [
   'Notification',
 ] as const
 
-const MAX_VALUE_LEN = 200
-
-interface ReadOpts {
-  projectPath?: string | undefined
-}
-
 export async function readClaudeSnapshot(opts: ReadOpts): Promise<AgentEnvSnapshot> {
-  const userConfigDir = await getClaudeConfigDir()
+  const [distro, home, userConfigDir] = await Promise.all([
+    getDefaultDistroAsync(),
+    getWslHome(),
+    getClaudeConfigDir(),
+  ])
   const projectConfigDir = opts.projectPath ? `${opts.projectPath}/.claude` : null
 
-  const userSettings = userConfigDir ? await readJsonSafe(`${userConfigDir}/settings.json`) : null
-  const projectSettings = projectConfigDir
-    ? await readJsonSafe(`${projectConfigDir}/settings.json`)
-    : null
+  const [userSettings, projectSettings] = await Promise.all([
+    userConfigDir ? readJsonSafe(`${userConfigDir}/settings.json`) : Promise.resolve(null),
+    projectConfigDir ? readJsonSafe(`${projectConfigDir}/settings.json`) : Promise.resolve(null),
+  ])
 
   const hooks: HookEntry[] = []
   if (userSettings) hooks.push(...extractHooks(userSettings, 'user'))
@@ -46,8 +45,10 @@ export async function readClaudeSnapshot(opts: ReadOpts): Promise<AgentEnvSnapsh
   if (userSettings) config.push(...extractConfig(userSettings, 'user'))
   if (projectSettings) config.push(...extractConfig(projectSettings, 'project'))
 
-  const skills = await collectSkills(userConfigDir, opts.projectPath)
-  const mcpServers = await collectMcpServers(userConfigDir, opts.projectPath)
+  const [skills, mcpServers] = await Promise.all([
+    collectSkills(userConfigDir, distro, opts.projectPath),
+    collectMcpServers(userConfigDir, home, opts.projectPath),
+  ])
 
   log.info('claude snapshot resolved', {
     projectPath: opts.projectPath ?? null,
@@ -79,16 +80,12 @@ export async function readClaudeSnapshot(opts: ReadOpts): Promise<AgentEnvSnapsh
   }
 }
 
-async function readJsonSafe(path: string): Promise<Record<string, unknown> | null> {
-  const text = await readWslFileSafe(path)
-  if (text === null) return null
-  try {
-    const parsed = parseJsonc(text) as Record<string, unknown> | undefined
-    return parsed ?? null
-  } catch (err) {
-    log.debug('json parse failed', { path, err: String(err) })
-    return null
-  }
+function readJsonSafe(path: string): Promise<Record<string, unknown> | null> {
+  return readWslParsed(
+    path,
+    (text) => (parseJsonc(text) as Record<string, unknown> | undefined) ?? null,
+    log,
+  )
 }
 
 function extractHooks(settings: Record<string, unknown>, scope: 'user' | 'project'): HookEntry[] {
@@ -153,9 +150,9 @@ function extractConfig(
 
 async function collectSkills(
   userConfigDir: string | null,
+  distro: string,
   projectPath?: string,
 ): Promise<SkillEntry[]> {
-  const distro = await getDefaultDistroAsync()
   const out: SkillEntry[] = []
 
   if (userConfigDir) {
@@ -196,11 +193,11 @@ async function collectSkills(
  */
 async function collectMcpServers(
   userConfigDir: string | null,
+  home: string | null,
   projectPath?: string,
 ): Promise<McpServerEntry[]> {
   const out: McpServerEntry[] = []
 
-  const home = await getWslHome()
   if (home) {
     const claudeJson = await readJsonSafe(`${home}/.claude.json`)
     if (claudeJson) {
@@ -251,8 +248,4 @@ function parseMcpJson(json: Record<string, unknown>, scope: 'user' | 'project'):
     out.push(entry)
   }
   return out
-}
-
-function truncate(s: string): string {
-  return s.length > MAX_VALUE_LEN ? s.slice(0, MAX_VALUE_LEN) + '…' : s
 }

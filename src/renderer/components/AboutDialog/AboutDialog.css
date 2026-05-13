@@ -42,13 +42,13 @@
   right: 0;
   height: 1px;
   background: linear-gradient(90deg, transparent, var(--edge-highlight), transparent);
-  z-index: 1;
+  z-index: var(--z-raised);
 }
 
 .about-close {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: var(--sp-2);
+  right: var(--sp-2);
   background: none;
   border: none;
   color: var(--text3);

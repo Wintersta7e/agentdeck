@@ -41,6 +41,7 @@ function makeMockWindow(destroyed = false): import('electron').BrowserWindow {
 function makeTestAdapter(overrides: Partial<LogAdapter> = {}): LogAdapter {
   return {
     agent: 'claude-code',
+    getEnvVars: () => [],
     getLogDirs: () => ['~/.claude/projects/test/sessions/'],
     getFilePattern: () => '*.jsonl',
     matchSession: () => true,

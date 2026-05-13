@@ -12,7 +12,7 @@
 .titlebar-brand__ident {
   display: inline-flex;
   align-items: baseline;
-  gap: 4px;
+  gap: var(--sp-1);
   font-family: var(--font-display);
   font-size: var(--fs-sm);
   font-weight: 700;
@@ -31,7 +31,7 @@
 
 .titlebar-brand__ident-sep {
   color: var(--accent);
-  margin: 0 3px;
+  margin: 0 var(--sp-0_75);
 }
 
 /* ─── Search pill ─── */
@@ -42,7 +42,7 @@
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  padding: 4px 10px;
+  padding: var(--sp-1) 10px;
   background: color-mix(in oklch, var(--bg0) 70%, transparent);
   border: 1px solid var(--border);
   color: var(--text3);
@@ -93,7 +93,7 @@
 .titlebar-brand__live {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-1_5);
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 0.2em;
@@ -145,7 +145,7 @@
 .titlebar-brand__clock {
   display: inline-flex;
   align-items: baseline;
-  gap: 6px;
+  gap: var(--sp-1_5);
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 0.18em;

@@ -1,4 +1,3 @@
-import { execFile } from 'child_process'
 import { createLogger } from './logger'
 import { getDefaultDistroAsync } from './wsl-utils'
 import type { SkillInfo } from '../shared/types'
@@ -46,34 +45,17 @@ const cachedCodexHomes = new Map<string, string>()
 const projectCache = new Map<string, SkillCache>()
 const inFlight = new Map<string, Promise<SkillCache>>()
 
-// ── Shell-quoting ──────────────────────────────────────────────────
+// ── Shell-quoting + WSL execution ──────────────────────────────────
 
-function shellQuote(s: string): string {
-  return "'" + s.replace(/'/g, "'\\''") + "'"
-}
+import { wslTry, shellQuote } from './wsl-exec'
 
-// ── WSL execution helper ───────────────────────────────────────────
-
-function wslExec(cmd: string, distro?: string): Promise<string | null> {
-  return new Promise((resolve) => {
-    const args = distro ? ['-d', distro, '--', 'bash', '-lc', cmd] : ['--', 'bash', '-lc', cmd]
-    execFile(
-      'wsl.exe',
-      args,
-      { timeout: WSL_TIMEOUT_MS, encoding: 'utf-8' },
-      (err, stdout, stderr) => {
-        if (err) {
-          log.warn('wslExec failed', { cmd: cmd.slice(0, 120), err: String(err) })
-          resolve(null)
-          return
-        }
-        if (stderr.trim()) {
-          log.debug('wslExec stderr', { cmd: cmd.slice(0, 120), stderr: stderr.slice(0, 500) })
-        }
-        resolve(stdout)
-      },
-    )
-  })
+const wslExec = (cmd: string, distro?: string): Promise<string | null> => {
+  const opts: Parameters<typeof wslTry>[1] = {
+    timeout: WSL_TIMEOUT_MS,
+    logLevelOnError: 'warn',
+  }
+  if (distro !== undefined) opts.distro = distro
+  return wslTry(cmd, opts)
 }
 
 // ── Cached $HOME resolution ───────────────────────────────────────
@@ -413,7 +395,7 @@ export async function listSkills(opts: {
 
 export function invalidateProjectCache(projectPath: string): void {
   // Remove all entries matching this project path (any distro).
-  // CQ-5: Use exact key segment match instead of suffix match to prevent
+  // Use exact key segment match instead of suffix match to prevent
   // false positives when one path is a suffix of another.
   const suffix = `:${projectPath}`
   for (const key of projectCache.keys()) {
@@ -423,7 +405,7 @@ export function invalidateProjectCache(projectPath: string): void {
       projectCache.delete(key)
     }
   }
-  // R4-10: Do NOT delete from inFlight — let in-progress scans complete and
+  // Do NOT delete from inFlight — let in-progress scans complete and
   // re-populate the cache with fresh data. Deleting would cause the old promise
   // to still write its result while a new scan starts, creating a race.
 }

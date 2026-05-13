@@ -1,6 +1,6 @@
 {
   "name": "agentdeck",
-  "version": "6.2.0",
+  "version": "6.5.0",
   "description": "Electron desktop app for managing WSL agent sessions",
   "main": "./out/main/index.js",
   "license": "Elastic-2.0",
@@ -71,17 +71,17 @@
     "@xyflow/react": "^12.10.2",
     "electron-store": "^11.0.2",
     "jsonc-parser": "^3.3.1",
-    "lucide-react": "^1.8.0",
+    "lucide-react": "^1.14.0",
     "node-pty": "^1.0.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.5",
     "react-window": "^2.2.7",
     "smol-toml": "^1.6.1",
-    "yaml": "^2.8.3",
+    "yaml": "^2.8.4",
     "zustand": "^5.0.12"
   },
   "devDependencies": {
-    "@electron/rebuild": "^4.0.3",
+    "@electron/rebuild": "^4.0.4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
@@ -98,11 +98,11 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
     "husky": "^9.1.7",
-    "jsdom": "^29.0.2",
+    "jsdom": "^29.1.1",
     "lint-staged": "^16.4.0",
     "prettier": "^3.8.3",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.59.0",
-    "vitest": "^4.1.4"
+    "typescript-eslint": "^8.59.1",
+    "vitest": "^4.1.5"
   }
 }

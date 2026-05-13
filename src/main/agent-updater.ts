@@ -1,56 +1,26 @@
-import { execFile } from 'child_process'
+import { CH } from '../shared/ipc-channels'
 import type { BrowserWindow } from 'electron'
 import { AGENTS, AGENT_BINARY_MAP } from '../shared/agents'
+import type { AgentUpdateResult, AgentVersionInfo } from '../shared/bridge'
 import { createLogger } from './logger'
-import { NODE_INIT } from './wsl-utils'
-import { shellQuote } from './node-runners'
+import { wslRun, shellQuote } from './wsl-exec'
 
 const log = createLogger('agent-updater')
 
-/** Semver extraction pattern */
 const SEMVER_RE = /(\d+\.\d+\.\d+)/
 
-export interface VersionInfo {
-  agentId: string
-  current: string | null
-  latest: string | null
-  updateAvailable: boolean
-}
-
-export interface UpdateResult {
-  agentId: string
-  success: boolean
-  newVersion: string | null
-  message: string
-}
+export type VersionInfo = AgentVersionInfo
+export type UpdateResult = AgentUpdateResult
 
 /**
  * Run a command inside WSL via bash login shell with nvm/fnm PATH init.
  * Returns stdout on success. Tolerates stderr noise (e.g. fnm warnings)
- * — only rejects if exit code is non-zero AND stdout is empty.
+ * — only rejects if exit code is non-zero AND stdout is empty. Trims
+ * stdout to match the previous helper's contract.
  */
-function runWslCmd(cmd: string, timeout = 15000): Promise<string> {
-  return new Promise((resolve, reject) => {
-    execFile(
-      'wsl.exe',
-      ['--', 'bash', '-lc', NODE_INIT + cmd],
-      { timeout },
-      (err, stdout, stderr) => {
-        const out = stdout?.trim() ?? ''
-        if (err) {
-          // If we got usable stdout despite a non-zero exit, return it
-          if (out) {
-            log.debug(`Command had stderr but produced output`, { cmd, stderr: stderr?.trim() })
-            resolve(out)
-            return
-          }
-          reject(new Error(stderr?.trim() || err.message))
-          return
-        }
-        resolve(out)
-      },
-    )
-  })
+async function runWslCmd(cmd: string, timeout = 15000): Promise<string> {
+  const out = await wslRun(cmd, { timeout, prefixNodeInit: true, fallbackStderrAsOutput: true })
+  return out.trim()
 }
 
 /**
@@ -79,14 +49,17 @@ export async function checkAgentVersion(agentId: string): Promise<VersionInfo> {
     log.debug(`Failed to get current version for ${agentId}`)
   }
 
-  // Get latest version
+  // Get latest version. Skip when latestCmd is empty (goose, amazon-q have
+  // no reliable remote version check) — symmetric with updateAgent's guard.
   let latest: string | null = null
-  try {
-    const raw = await runWslCmd(agent.latestCmd)
-    const match = SEMVER_RE.exec(raw)
-    latest = match?.[1] ?? null
-  } catch {
-    log.debug(`Failed to get latest version for ${agentId}`)
+  if (agent.latestCmd) {
+    try {
+      const raw = await runWslCmd(agent.latestCmd)
+      const match = SEMVER_RE.exec(raw)
+      latest = match?.[1] ?? null
+    } catch {
+      log.debug(`Failed to get latest version for ${agentId}`)
+    }
   }
 
   const updateAvailable = current !== null && latest !== null && current !== latest
@@ -102,7 +75,7 @@ export async function checkAgentVersion(agentId: string): Promise<VersionInfo> {
  */
 async function isBinaryOnPath(binary: string): Promise<boolean> {
   try {
-    // R2-03: shellQuote binary for defensive safety
+    // shellQuote binary for defensive safety
     await runWslCmd(`command -v ${shellQuote(binary)}`)
     return true
   } catch {
@@ -137,7 +110,7 @@ async function repairNpmBinLink(binary: string, updateCmd: string): Promise<bool
     // Use node's own process.execPath to derive prefix — this is always correct
     // even when nvm's PATH setup fails in bash -lc, because process.execPath
     // resolves to the actual nvm-managed node binary, not /usr/bin/node.
-    // BUG-2: Derive bin entry from package.json instead of hardcoding .js suffix.
+    // Derive bin entry from package.json instead of hardcoding .js suffix.
     // This handles agents whose npm package uses .cjs or a different filename.
     const nodeScript = [
       `const p=require("path"),fs=require("fs")`,
@@ -155,7 +128,7 @@ async function repairNpmBinLink(binary: string, updateCmd: string): Promise<bool
       `console.log("repaired")`,
     ].join(';')
 
-    // SEC-31: Use shellQuote to safely escape the script instead of raw single-quote wrapping
+    // Use shellQuote to safely escape the script instead of raw single-quote wrapping
     const result = await runWslCmd(`node -e ${shellQuote(nodeScript)}`)
     if (result.includes('repaired')) {
       log.info(`Repaired missing npm bin link for ${binary}`)
@@ -346,7 +319,7 @@ export function checkAllUpdates(
     void checkAgentVersion(agentId)
       .then((info) => {
         if (!win.isDestroyed()) {
-          win.webContents.send('agents:versionInfo', info)
+          win.webContents.send(CH.agentsVersionInfo, info)
         }
       })
       .catch((err) => {

@@ -41,15 +41,20 @@ export interface ProjectsSlice {
 export const createProjectsSlice: StateCreator<AppState, [], [], ProjectsSlice> = (set, get) => ({
   projects: [],
   setProjects: (projects) =>
-    set((s) => {
-      // Prune gitStatuses entries for projects that no longer exist so the
-      // map doesn't grow unboundedly across deletions.
+    // Single set call so subscribers see one consistent transition rather
+    // than an intermediate state where projects updated but gitStatuses
+    // still has entries for deleted projects. Inline the prune calculation
+    // — the matching `pruneGitStatuses` action stays on HomeSlice for
+    // standalone callers.
+    set((state) => {
       const liveIds = new Set(projects.map((p) => p.id))
-      const nextStatuses: typeof s.gitStatuses = {}
-      for (const [id, status] of Object.entries(s.gitStatuses)) {
-        if (liveIds.has(id)) nextStatuses[id] = status
+      const next: typeof state.gitStatuses = {}
+      let pruned = false
+      for (const [id, status] of Object.entries(state.gitStatuses)) {
+        if (liveIds.has(id)) next[id] = status
+        else pruned = true
       }
-      return { projects, gitStatuses: nextStatuses }
+      return pruned ? { projects, gitStatuses: next } : { projects }
     }),
 
   agentStatus: {},

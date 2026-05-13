@@ -58,7 +58,7 @@ const mockPtyManager: PtyManager = {
 }
 
 interface MockChild extends EventEmitter {
-  pid: number
+  pid: number | undefined
   stdin: { end: ReturnType<typeof vi.fn> }
   stdout: EventEmitter
   stderr: EventEmitter
@@ -713,8 +713,7 @@ describe('error scenarios', () => {
 
   it('falls back to SIGKILL when pid is null in forceKillTree', async () => {
     const child = createMockChild()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ;(child as any).pid = undefined
+    child.pid = undefined
     mockSpawn.mockReturnValue(child)
 
     const wf = makeWorkflow({

@@ -1,13 +1,12 @@
 import type { AgentEnvSnapshot } from '../shared/types'
-import { KNOWN_AGENT_IDS } from '../shared/agents'
+import { KNOWN_AGENT_IDS, type AgentId } from '../shared/agents'
+import { SNAPSHOT_CACHE_TTL_MS } from '../shared/constants'
 import { readClaudeSnapshot } from './agent-env-claude'
 import { readCodexSnapshot } from './agent-env-codex'
 import { readOtherAgentSnapshot } from './agent-env-other'
 import { createLogger } from './logger'
 
 const log = createLogger('agent-env-resolver')
-
-const TTL_MS = 30_000
 
 interface CacheEntry {
   snapshot: AgentEnvSnapshot
@@ -23,6 +22,13 @@ export interface GetSnapshotOpts {
   force?: boolean | undefined
 }
 
+type Reader = (opts: { projectPath?: string | undefined }) => Promise<AgentEnvSnapshot>
+
+const READERS: Partial<Record<AgentId, Reader>> = {
+  'claude-code': (opts) => readClaudeSnapshot(opts),
+  codex: (opts) => readCodexSnapshot(opts),
+}
+
 export async function getAgentSnapshot(opts: GetSnapshotOpts): Promise<AgentEnvSnapshot> {
   const { agentId, projectPath, force = false } = opts
   if (!KNOWN_AGENT_IDS.has(agentId)) {
@@ -33,7 +39,7 @@ export async function getAgentSnapshot(opts: GetSnapshotOpts): Promise<AgentEnvS
 
   if (!force) {
     const hit = cache.get(key)
-    if (hit && Date.now() - hit.timestamp < TTL_MS) {
+    if (hit && Date.now() - hit.timestamp < SNAPSHOT_CACHE_TTL_MS) {
       return hit.snapshot
     }
     const inFlightPromise = inFlight.get(key)
@@ -42,14 +48,10 @@ export async function getAgentSnapshot(opts: GetSnapshotOpts): Promise<AgentEnvS
 
   const promise = (async (): Promise<AgentEnvSnapshot> => {
     log.info('resolving agent snapshot', { agentId, projectPath, force })
-    let snapshot: AgentEnvSnapshot
-    if (agentId === 'claude-code') {
-      snapshot = await readClaudeSnapshot({ projectPath })
-    } else if (agentId === 'codex') {
-      snapshot = await readCodexSnapshot({ projectPath })
-    } else {
-      snapshot = await readOtherAgentSnapshot({ agentId, projectPath })
-    }
+    const reader = READERS[agentId as AgentId]
+    const snapshot = reader
+      ? await reader({ projectPath })
+      : await readOtherAgentSnapshot({ agentId, projectPath })
     cache.set(key, { snapshot, timestamp: Date.now() })
     return snapshot
   })()

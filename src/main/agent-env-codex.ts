@@ -1,25 +1,20 @@
 import { parse as parseToml } from 'smol-toml'
 import type { AgentEnvSnapshot, ConfigEntry, McpServerEntry, SkillEntry } from '../shared/types'
 import { getDefaultDistroAsync } from './wsl-utils'
-import { getCodexHome, readWslFileSafe } from './wsl-paths'
+import { getCodexHome } from './wsl-paths'
 import { scanSkillDirectory } from './skill-scanner'
 import { createLogger } from './logger'
+import { truncate, readWslParsed, type ReadOpts } from './agent-env-shared'
 
 const log = createLogger('agent-env-codex')
 
-const MAX_VALUE_LEN = 200
-
-interface ReadOpts {
-  projectPath?: string | undefined
-}
-
 export async function readCodexSnapshot(_opts: ReadOpts): Promise<AgentEnvSnapshot> {
-  const codexHome = await getCodexHome()
+  const [distro, codexHome] = await Promise.all([getDefaultDistroAsync(), getCodexHome()])
   const configToml = codexHome ? await readTomlSafe(`${codexHome}/config.toml`) : null
 
   const config: ConfigEntry[] = configToml ? extractConfig(configToml) : []
   const mcpServers: McpServerEntry[] = configToml ? extractMcp(configToml) : []
-  const skills = await collectSkills(codexHome)
+  const skills = await collectSkills(codexHome, distro)
 
   log.info('codex snapshot resolved', {
     codexHome,
@@ -49,16 +44,8 @@ export async function readCodexSnapshot(_opts: ReadOpts): Promise<AgentEnvSnapsh
   }
 }
 
-async function readTomlSafe(path: string): Promise<Record<string, unknown> | null> {
-  const text = await readWslFileSafe(path)
-  if (text === null) return null
-  try {
-    const parsed = parseToml(text) as Record<string, unknown>
-    return parsed
-  } catch (err) {
-    log.debug('readTomlSafe parse failed', { path, err: String(err) })
-    return null
-  }
+function readTomlSafe(path: string): Promise<Record<string, unknown> | null> {
+  return readWslParsed(path, (text) => parseToml(text) as Record<string, unknown>, log)
 }
 
 function extractConfig(toml: Record<string, unknown>): ConfigEntry[] {
@@ -107,13 +94,8 @@ function extractMcp(toml: Record<string, unknown>): McpServerEntry[] {
   return out
 }
 
-async function collectSkills(codexHome: string | null): Promise<SkillEntry[]> {
+async function collectSkills(codexHome: string | null, distro: string): Promise<SkillEntry[]> {
   if (!codexHome) return []
-  const distro = await getDefaultDistroAsync()
   const result = await scanSkillDirectory(`${codexHome}/skills`, 'global', distro)
   return result.skills.map((s) => ({ name: s.name, scope: 'user' as const, path: s.path }))
-}
-
-function truncate(s: string): string {
-  return s.length > MAX_VALUE_LEN ? s.slice(0, MAX_VALUE_LEN) + '…' : s
 }

@@ -42,7 +42,7 @@
 
 .live-card-project {
   font-size: 9px; /* mockup-specific */
-  padding: 2px var(--sp-2);
+  padding: var(--sp-half) var(--sp-2);
   border-radius: var(--r);
   background: var(--surface-kbd);
   color: var(--text3);
@@ -159,7 +159,7 @@
 .live-card-footer {
   display: flex;
   justify-content: space-between;
-  padding-top: 6px; /* mockup-specific */
+  padding-top: var(--sp-1_5); /* mockup-specific */
   border-top: 1px solid var(--surface-tint-2);
   font-size: 9px; /* mockup-specific */
   color: var(--text3);
@@ -194,7 +194,7 @@
 
 .live-grid-empty kbd {
   font-size: 8px; /* mockup-specific */
-  padding: 2px 5px; /* mockup-specific */
+  padding: var(--sp-half) 5px; /* mockup-specific */
   background: var(--surface-kbd);
   border: 1px solid var(--surface-border-hover);
   border-radius: 3px;

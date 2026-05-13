@@ -2,6 +2,13 @@
   position: relative;
   flex: 1;
   overflow: hidden;
+  /* WebGL canvases get promoted to GPU compositor layers and ignore ancestor
+     overflow: hidden unless the ancestor establishes its own stacking context
+     and paint containment. Without these, large pastes / fast scrolls can
+     visibly spill text past the pane bounds (over the status bar, sidebar,
+     or adjacent split panes). */
+  isolation: isolate;
+  contain: paint;
   background: var(--bg0);
   /* Ensure .xterm fills the full container height (xterm is content-sized by default) */
   display: flex;
@@ -48,7 +55,7 @@
   justify-content: center;
   gap: var(--sp-2);
   pointer-events: none;
-  z-index: 1;
+  z-index: var(--z-raised);
   opacity: 0.25;
 }
 
@@ -69,8 +76,8 @@
 
 .term-copy-flash {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: var(--sp-3);
+  right: var(--sp-3);
   padding: var(--sp-1) var(--sp-3);
   font-size: var(--fs-sm);
   font-weight: 600;
@@ -78,7 +85,7 @@
   background: var(--accent);
   border-radius: var(--r);
   pointer-events: none;
-  z-index: 2;
+  z-index: calc(var(--z-raised) + 1);
   animation: copyFlashIn 1.2s ease-out forwards;
 }
 

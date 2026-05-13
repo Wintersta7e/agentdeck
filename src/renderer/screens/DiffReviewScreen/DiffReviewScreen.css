@@ -122,7 +122,7 @@
 .dr-summary__stats > div {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--sp-half);
 }
 
 .dr-summary__stats dt {
@@ -196,7 +196,7 @@
 .dr-files__hint code {
   color: var(--accent);
   background: var(--accent-glow2);
-  padding: 0 3px;
+  padding: 0 var(--sp-0_75);
 }
 
 .dr-link {

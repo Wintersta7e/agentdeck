@@ -79,10 +79,19 @@ export const createNotificationsSlice: StateCreator<AppState, [], [], Notificati
   },
 
   dismissNotification: (id) =>
-    set((state) => ({
-      notifications: state.notifications.filter((n) => n.id !== id),
-      silencedToastIds: state.silencedToastIds.filter((x) => x !== id),
-    })),
+    set((state) => {
+      const inNotifications = state.notifications.some((n) => n.id === id)
+      const inSilenced = state.silencedToastIds.includes(id)
+      if (!inNotifications && !inSilenced) return state
+      return {
+        notifications: inNotifications
+          ? state.notifications.filter((n) => n.id !== id)
+          : state.notifications,
+        silencedToastIds: inSilenced
+          ? state.silencedToastIds.filter((x) => x !== id)
+          : state.silencedToastIds,
+      }
+    }),
 
   silenceToast: (id) =>
     set((state) =>

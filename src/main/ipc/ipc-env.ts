@@ -1,3 +1,4 @@
+import { CH } from '../../shared/ipc-channels'
 import { ipcMain } from 'electron'
 import { getAgentSnapshot } from '../agent-env-resolver'
 import { getDefaultDistroAsync } from '../wsl-utils'
@@ -35,14 +36,14 @@ export interface EnvCtx {
  *   truth for project-scope lookups.
  */
 export function registerEnvIpc(ctx: EnvCtx): void {
-  ipcMain.handle('env:getAgentPaths', async () => ({
+  ipcMain.handle(CH.envGetAgentPaths, async () => ({
     claudeConfigDir: ctx.claudeConfigDir,
     codexHome: ctx.codexHome,
     agentdeckRoot: ctx.agentdeckRoot,
     templateUserRoot: ctx.templateUserRoot,
   }))
 
-  ipcMain.handle('env:getAgentSnapshot', async (_, opts: unknown): Promise<AgentEnvSnapshot> => {
+  ipcMain.handle(CH.envGetAgentSnapshot, async (_, opts: unknown): Promise<AgentEnvSnapshot> => {
     if (!opts || typeof opts !== 'object') {
       throw new Error('env:getAgentSnapshot expects an options object')
     }
@@ -66,18 +67,13 @@ export function registerEnvIpc(ctx: EnvCtx): void {
       projectPath = resolved
     }
     const forceVal = force === true
-    log.debug('env:getAgentSnapshot', { agentId, projectId, force: forceVal })
+    log.debug(CH.envGetAgentSnapshot, { agentId, projectId, force: forceVal })
 
-    const snapshot = await getAgentSnapshot({
-      agentId,
-      projectPath,
-      force: forceVal,
-    })
-
-    // Decorate with EnvCtx + runtime footer fields. Per-agent readers leave
-    // these null so the IPC can be the single source of truth here.
-    const wslDistro = await getDefaultDistroAsync().catch(() => null)
-    const wslHome = await getWslHome().catch(() => null)
+    const [snapshot, wslDistro, wslHome] = await Promise.all([
+      getAgentSnapshot({ agentId, projectPath, force: forceVal }),
+      getDefaultDistroAsync().catch(() => null),
+      getWslHome().catch(() => null),
+    ])
     return {
       ...snapshot,
       paths: {

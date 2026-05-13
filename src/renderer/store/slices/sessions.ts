@@ -16,7 +16,7 @@ import { nextApprovalState } from '../../../shared/approval-transitions'
 export interface SessionsSlice {
   sessions: Record<string, Session>
   activeSessionId: string | null
-  /** Ordered list of session ids currently open in the tab bar (v6.1.0 §7.1). */
+  /** Ordered list of session ids currently open in the tab bar. */
   openSessionIds: string[]
   addSession: (sessionId: string, projectId: string, overrides?: SessionLaunchConfig) => void
   captureSessionSnapshot: (sessionId: string, agentId: AgentType) => Promise<void>
@@ -77,16 +77,23 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
   openSessionIds: [],
   sessionUsage: {},
 
+  // Cross-slice note: every session-mutating action below
+  // (addSession / openSession / setActiveSession / removeSession /
+  // restartSession) reads and writes paneSessions, focusedPane, and
+  // paneLayout — those fields are declared on UiSlice but updated here
+  // atomically with the session mutation so subscribers never see a pane
+  // grid that points at sessions that don't exist or vice versa.
+  // workflows.ts/closeWorkflow has the symmetric coupling on activeSessionId.
   addSession: (sessionId, projectId, overrides) =>
     set((state) => {
       const paneSessions = [...state.paneSessions]
       // Place new session in the focused pane so it's always visible
-      const targetPane = Math.min(state.focusedPane, MAX_PANE_COUNT - 1) // ARCH-11: Cap at max panes
+      const targetPane = Math.min(state.focusedPane, MAX_PANE_COUNT - 1) // Cap at max panes
       while (paneSessions.length <= targetPane) {
         paneSessions.push('')
       }
       paneSessions[targetPane] = sessionId
-      // ARCH-11: Cap paneSessions to max entries to prevent unbounded growth
+      // Cap paneSessions to max entries to prevent unbounded growth
       paneSessions.length = Math.min(paneSessions.length, MAX_PANE_COUNT)
       const session: Session = {
         id: sessionId,
@@ -104,8 +111,8 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
         runMode: overrides?.runMode,
         approve: overrides?.approve,
       }
-      // PREREQ H1: legacy addSession must also append to openSessionIds so
-      // SessionTabs (Phase 4) sees every session regardless of launch path.
+      // legacy addSession must also append to openSessionIds so SessionTabs
+      // sees every session regardless of launch path.
       const openSessionIds = state.openSessionIds.includes(sessionId)
         ? state.openSessionIds
         : [...state.openSessionIds, sessionId]
@@ -217,9 +224,6 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
         openSessionIds,
         paneSessions,
         activeSessionId: id,
-        // PREREQ B8: singular 'session' until Phase 8 Task 8.1 renames the
-        // ViewType atomically. Using 'sessions' here would route to the
-        // Sessions list screen instead of the live terminal.
         currentView: 'sessions' as const,
       }
     })
@@ -325,6 +329,23 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
       if (paneSessions[0] === '' && newActive) {
         paneSessions[0] = newActive
       }
+      // Cross-slice coupling: when the last session closes we route into
+      // an open workflow if one exists, otherwise home. currentView and
+      // activeWorkflowId are owned by other slices but updated atomically
+      // here so callers don't observe a transient "no sessions, no view"
+      // state.
+      const noSessionsLeft = openIds.length === 0
+      const hasOpenWorkflow = state.openWorkflowIds.length > 0
+      const nextWorkflowId =
+        noSessionsLeft && hasOpenWorkflow
+          ? (state.activeWorkflowId ?? state.openWorkflowIds[0] ?? null)
+          : state.activeWorkflowId
+      const nextView = noSessionsLeft
+        ? hasOpenWorkflow
+          ? ('workflow' as const)
+          : ('home' as const)
+        : state.currentView
+
       return {
         sessions,
         activityFeeds,
@@ -333,16 +354,8 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
         worktreePaths,
         openSessionIds,
         activeSessionId: state.activeSessionId === sessionId ? newActive : state.activeSessionId,
-        currentView:
-          openIds.length === 0
-            ? state.openWorkflowIds.length > 0
-              ? ('workflow' as const)
-              : ('home' as const)
-            : state.currentView,
-        activeWorkflowId:
-          openIds.length === 0 && state.openWorkflowIds.length > 0
-            ? (state.activeWorkflowId ?? state.openWorkflowIds[0] ?? null)
-            : state.activeWorkflowId,
+        currentView: nextView,
+        activeWorkflowId: nextWorkflowId,
         paneSessions,
       }
     }),
@@ -355,13 +368,15 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
       if (!oldSession) return s
 
       const projectId = oldSession.projectId
-      const freshId = `session-${projectId}-${Date.now()}`
+      // Match openSession's ID format — Date.now() alone is collide-able if
+      // two restarts fire within the same millisecond for the same project.
+      const freshId = `session-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`
       newSessionId = freshId
 
       // Remove old session
       const { [oldSessionId]: _, ...rest } = s.sessions
       const { [oldSessionId]: _feed, ...remainingFeeds } = s.activityFeeds
-      // LEAK-13: Clean up sessionUsage for the old session
+      // Clean up sessionUsage for the old session
       const { [oldSessionId]: _usage, ...remainingUsage } = s.sessionUsage
       const { [oldSessionId]: _writes, ...remainingWrites } = s.writeCountBySession
 
@@ -381,6 +396,11 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
         ? s.openSessionIds.map((x) => (x === oldSessionId ? freshId : x))
         : [...s.openSessionIds, freshId]
 
+      // Carry over user-intent launch config from the old session
+      // (agent overrides, branch mode, cost cap, run mode, approval gates).
+      // Spawn-time captures (model, resolvedContextWindow,
+      // resolvedContextSource) and one-shot inputs (initialPrompt) reset —
+      // a restart re-detects the active model and is no longer prompted.
       return {
         sessions: {
           ...rest,
@@ -393,6 +413,11 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
             seedTemplateId: null,
             agentOverride: oldSession.agentOverride,
             agentFlagsOverride: oldSession.agentFlagsOverride,
+            branchMode: oldSession.branchMode,
+            initialBranch: oldSession.initialBranch,
+            costCap: oldSession.costCap,
+            runMode: oldSession.runMode,
+            approve: oldSession.approve,
           },
         },
         activityFeeds: remainingFeeds,

@@ -37,19 +37,26 @@ export const ZERO_USAGE: Readonly<TokenUsage> = Object.freeze({
 /**
  * Resolved WSL environment variables for agent config directories.
  * These are read from the WSL environment (via wslExec), NOT from Node's process.env.
- * Each field is the resolved absolute path, or undefined if the env var is unset.
+ * Resolved WSL environment variables that adapters care about — keyed by
+ * env var name (e.g. `CLAUDE_CONFIG_DIR`, `CODEX_HOME`). Values are the
+ * literal env var contents, or undefined when the var is unset. Adapters
+ * declare which keys they read via `getEnvVars()` so the cost tracker
+ * resolves only what's actually needed; new adapters do not require
+ * structural changes here or in the resolver.
  */
-export interface AgentEnvContext {
-  /** $CLAUDE_CONFIG_DIR — overrides ~/.claude */
-  claudeConfigDir?: string | undefined
-  /** $CODEX_HOME — overrides ~/.codex */
-  codexHome?: string | undefined
-}
+export type AgentEnvContext = Readonly<Record<string, string | undefined>>
 
 export interface LogAdapter {
   agent: string
+  /**
+   * Names of WSL env vars whose resolved value this adapter wants in
+   * AgentEnvContext (e.g. `['CLAUDE_CONFIG_DIR']`). The cost tracker
+   * unions getEnvVars() across all adapters and resolves each via WSL once
+   * at startup. Return an empty array for adapters that don't need any.
+   */
+  getEnvVars(): readonly string[]
   /** Return candidate directories (tilde-prefixed) to search for log files. */
-  getLogDirs(projectPath: string, env?: AgentEnvContext): string[]
+  getLogDirs(projectPath: string, env: AgentEnvContext): string[]
   /** Glob pattern for log files within the dir. */
   getFilePattern(): string
   /**
@@ -127,14 +134,18 @@ export function createClaudeAdapter(): LogAdapter {
   return {
     agent: 'claude-code',
 
-    getLogDirs(projectPath: string, env?: AgentEnvContext): string[] {
+    getEnvVars(): readonly string[] {
+      return ['CLAUDE_CONFIG_DIR']
+    },
+
+    getLogDirs(projectPath: string, env: AgentEnvContext): string[] {
       // Replace every `/` with `-` to match Claude's path-slug convention.
       const pathSlug = projectPath.replace(/\//g, '-')
       // JSONL files live directly in the project slug directory (no sessions/ subdir).
       // Only search the project-specific directory — the old fallback
       // `~/.claude/projects/` recursively scanned ALL projects, returning hundreds
       // of candidates and causing discovery timeouts with multiple concurrent sessions.
-      const claudeHome = env?.claudeConfigDir ?? '~/.claude'
+      const claudeHome = env['CLAUDE_CONFIG_DIR'] ?? '~/.claude'
       return [`${claudeHome}/projects/${pathSlug}/`]
     },
 
@@ -236,8 +247,12 @@ export function createCodexAdapter(): LogAdapter {
   return {
     agent: 'codex',
 
-    getLogDirs(_projectPath: string, env?: AgentEnvContext): string[] {
-      const codexHome = env?.codexHome ?? '~/.codex'
+    getEnvVars(): readonly string[] {
+      return ['CODEX_HOME']
+    },
+
+    getLogDirs(_projectPath: string, env: AgentEnvContext): string[] {
+      const codexHome = env['CODEX_HOME'] ?? '~/.codex'
       return [`${codexHome}/sessions/${todayDateDir()}`]
     },
 

@@ -18,7 +18,7 @@
   right: 0;
   height: 1px;
   background: linear-gradient(90deg, transparent, var(--edge-highlight), transparent);
-  z-index: 1;
+  z-index: var(--z-raised);
 }
 
 .panel-tabs {
@@ -53,7 +53,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: var(--sp-1);
 }
 
 .panel-tab__label {

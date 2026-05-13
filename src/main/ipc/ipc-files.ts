@@ -1,3 +1,4 @@
+import { CH } from '../../shared/ipc-channels'
 import { ipcMain, shell } from 'electron'
 import path from 'node:path'
 import { listDir, type DirEntry } from '../files-lister'
@@ -50,16 +51,16 @@ export interface ListDirIpcResult {
 }
 
 export function registerFilesIpc(): void {
-  ipcMain.handle('files:listDir', async (_, opts: unknown): Promise<ListDirIpcResult> => {
+  ipcMain.handle(CH.filesListDir, async (_, opts: unknown): Promise<ListDirIpcResult> => {
     if (!opts || typeof opts !== 'object') {
       throw new Error('files:listDir expects an options object')
     }
     const { path: dirPath, projectPath } = opts as { path: unknown; projectPath: unknown }
-    const validatedDir = validateAbsolutePath(dirPath, 'files:listDir')
+    const validatedDir = validateAbsolutePath(dirPath, CH.filesListDir)
     const validatedProj = validateAbsolutePath(projectPath, 'files:listDir.projectPath')
-    assertWithinProject(validatedDir, validatedProj, 'files:listDir')
+    assertWithinProject(validatedDir, validatedProj, CH.filesListDir)
 
-    log.debug('files:listDir', { dirPath: validatedDir })
+    log.debug(CH.filesListDir, { dirPath: validatedDir })
 
     const result = await listDir(validatedDir)
     const names = result.entries.map((e) => e.name)
@@ -71,18 +72,18 @@ export function registerFilesIpc(): void {
     return { entries: filtered, gitignored: [...ignoredSet] }
   })
 
-  ipcMain.handle('files:openExternal', async (_, opts: unknown): Promise<void> => {
+  ipcMain.handle(CH.filesOpenExternal, async (_, opts: unknown): Promise<void> => {
     if (!opts || typeof opts !== 'object') {
       throw new Error('files:openExternal expects an options object')
     }
     const { path: filePath, projectPath } = opts as { path: unknown; projectPath: unknown }
-    const validated = validateAbsolutePath(filePath, 'files:openExternal')
+    const validated = validateAbsolutePath(filePath, CH.filesOpenExternal)
     const validatedProj = validateAbsolutePath(projectPath, 'files:openExternal.projectPath')
-    assertWithinProject(validated, validatedProj, 'files:openExternal')
+    assertWithinProject(validated, validatedProj, CH.filesOpenExternal)
 
     const distro = await getDefaultDistroAsync()
     const winPath = validated.startsWith('/') ? wslPathToWindows(validated, distro) : validated
-    log.debug('files:openExternal', { winPath })
+    log.debug(CH.filesOpenExternal, { winPath })
     const err = await shell.openPath(winPath)
     if (err) throw new Error(`shell.openPath failed: ${err}`)
   })

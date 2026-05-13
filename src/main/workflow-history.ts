@@ -34,6 +34,7 @@ export function createRunRecorder(
   variables: Record<string, string>,
 ): RunRecorder {
   const run: WorkflowRun = {
+    version: 1,
     id: crypto.randomUUID(),
     workflowId: workflow.id,
     workflowName: workflow.name,
@@ -54,7 +55,7 @@ export function createRunRecorder(
     },
 
     finalize(status: WorkflowStatus): void {
-      // REL-1: Guard against double finalization (normal completion + error handler race)
+      // Guard against double finalization (normal completion + error handler race)
       if (finalized) return
       finalized = true
 

@@ -1,11 +1,12 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { useTemplates } from '../../hooks/useTemplates'
 import { AGENTS } from '../../../shared/agents'
+import { getDefaultAgent, getProjectAgents } from '../../../shared/agent-helpers'
 import { ScreenShell } from '../../components/shared/ScreenShell'
 import { AGENT_BY_ID, agentColorVar, agentShort } from '../../utils/agent-ui'
 import { useEffectiveContext, badgeLabelFor } from '../../hooks/useEffectiveContext'
-import type { AgentType, SessionLaunchConfig, Template } from '../../../shared/types'
+import type { AgentType, OpenSessionSeed, Project, Template } from '../../../shared/types'
 import './NewSessionScreen.css'
 
 type Mode = 'watch' | 'auto' | 'plan-first'
@@ -43,21 +44,32 @@ function Section({ eyebrow, title, sub, children }: ComposerSectionProps): React
 
 export function NewSessionScreen(): React.JSX.Element {
   const projects = useAppStore((s) => s.projects)
+  const activeSessionId = useAppStore((s) => s.activeSessionId)
+  const activeSession = useAppStore((s) =>
+    s.activeSessionId ? s.sessions[s.activeSessionId] : undefined,
+  )
+  const activeProjectId = activeSession?.projectId
+  const activeAgentOverride = activeSession?.agentOverride
   const templates = useTemplates()
   const setCurrentView = useAppStore((s) => s.setCurrentView)
-  const addSession = useAppStore((s) => s.addSession)
+  const openSession = useAppStore((s) => s.openSession)
   const captureSessionSnapshot = useAppStore((s) => s.captureSessionSnapshot)
-  const setActiveSession = useAppStore((s) => s.setActiveSession)
   const openWizard = useAppStore((s) => s.openWizard)
+  const incrementUsage = useAppStore((s) => s.incrementUsage)
+  const saveTemplate = useAppStore((s) => s.saveTemplate)
+  const addNotification = useAppStore((s) => s.addNotification)
 
-  // Seed state from the most-recent project + its default agent (if any).
-  const defaultProjectId = useMemo(() => {
+  const defaultProject = useMemo<Project | null>(() => {
+    const activeProject = activeProjectId
+      ? projects.find((p) => p.id === activeProjectId)
+      : undefined
+    if (activeProject) return activeProject
     const sorted = [...projects].sort((a, b) => (b.lastOpened ?? 0) - (a.lastOpened ?? 0))
-    return sorted[0]?.id ?? ''
-  }, [projects])
+    return sorted[0] ?? null
+  }, [activeProjectId, projects])
+  const defaultProjectId = defaultProject?.id ?? ''
 
   const [projectId, setProjectId] = useState(defaultProjectId)
-  const [agentId, setAgentId] = useState<AgentType>('claude-code')
   const [templateId, setTemplateId] = useState<string | null>(null)
   const [prompt, setPrompt] = useState('')
   const [branch, setBranch] = useState('main')
@@ -70,21 +82,34 @@ export function NewSessionScreen(): React.JSX.Element {
     commands: false,
     commits: false,
   })
-  const [contextFiles, setContextFiles] = useState<string[]>([])
 
   const project = useMemo(
-    () => projects.find((p) => p.id === projectId) ?? projects[0],
-    [projects, projectId],
+    () => projects.find((p) => p.id === projectId) ?? defaultProject,
+    [defaultProject, projects, projectId],
+  )
+  const effectiveProjectId = project?.id ?? ''
+  const defaultAgentId = useMemo<AgentType>(() => {
+    if (project && activeProjectId === project.id && activeAgentOverride) {
+      return activeAgentOverride
+    }
+    return project ? getDefaultAgent(project).agent : 'claude-code'
+  }, [activeAgentOverride, activeProjectId, project])
+  const [agentSelection, setAgentSelection] = useState<{ projectId: string; agentId: AgentType }>({
+    projectId: defaultProjectId,
+    agentId: defaultAgentId,
+  })
+  const agentId =
+    agentSelection.projectId === effectiveProjectId ? agentSelection.agentId : defaultAgentId
+  const selectedAgentConfig = useMemo(
+    () => (project ? getProjectAgents(project).find((config) => config.agent === agentId) : null),
+    [agentId, project],
   )
   const agent = AGENT_BY_ID.get(agentId)
   const colorVar = agentColorVar(agentId)
   const ctxResolved = useEffectiveContext(agentId)
 
   const approvedCount = Object.values(approve).filter(Boolean).length
-  const tokenEstimate = useMemo(
-    () => Math.max(0, Math.ceil(prompt.length / 4)) + contextFiles.length * 1200,
-    [prompt.length, contextFiles.length],
-  )
+  const tokenEstimate = useMemo(() => Math.max(0, Math.ceil(prompt.length / 4)), [prompt.length])
   const perStepCost = Math.max(0.01, (tokenEstimate / 1000) * 0.01)
 
   const handlePickTemplate = useCallback(
@@ -100,8 +125,11 @@ export function NewSessionScreen(): React.JSX.Element {
     if (!project) return
     const trimmedPrompt = prompt.trim()
     const trimmedBranch = branch.trim()
-    const overrides: SessionLaunchConfig = {
+    const seed: OpenSessionSeed = {
+      projectId: project.id,
+      seedTemplateId: templateId,
       agentOverride: agentId,
+      agentFlagsOverride: selectedAgentConfig?.agentFlags,
       initialPrompt: trimmedPrompt.length > 0 ? trimmedPrompt : undefined,
       branchMode,
       initialBranch: trimmedBranch.length > 0 ? trimmedBranch : undefined,
@@ -109,13 +137,20 @@ export function NewSessionScreen(): React.JSX.Element {
       runMode: mode,
       approve,
     }
-    const sessionId = `session-${project.id}-${Date.now()}`
-    addSession(sessionId, project.id, overrides)
+    const sessionId = openSession(seed)
     void captureSessionSnapshot(sessionId, agentId)
-    setActiveSession(sessionId)
-    setCurrentView('sessions')
+    const template = templateId ? templates.find((t) => t.id === templateId) : undefined
+    if (template) {
+      void incrementUsage({
+        id: template.id,
+        scope: template.scope,
+        projectId: template.projectId,
+      })
+    }
   }, [
     project,
+    templateId,
+    selectedAgentConfig?.agentFlags,
     agentId,
     prompt,
     branch,
@@ -123,11 +158,58 @@ export function NewSessionScreen(): React.JSX.Element {
     costCap,
     mode,
     approve,
-    addSession,
+    openSession,
     captureSessionSnapshot,
-    setActiveSession,
-    setCurrentView,
+    templates,
+    incrementUsage,
   ])
+
+  const handleSaveTemplate = useCallback(async () => {
+    const trimmedPrompt = prompt.trim()
+    if (!trimmedPrompt) return
+    const firstLine = trimmedPrompt
+      .split('\n')
+      .find((line) => line.trim().length > 0)
+      ?.trim()
+    const name = firstLine ? firstLine.slice(0, 60) : 'New session prompt'
+    try {
+      const saved = await saveTemplate(
+        {
+          name,
+          description: firstLine ?? '',
+          content: trimmedPrompt,
+        },
+        'user',
+        null,
+      )
+      setTemplateId(saved.id)
+      addNotification('info', `Saved template "${saved.name}"`)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      addNotification('error', `Failed to save template: ${message}`)
+      void window.agentDeck.log.send('warn', 'new-session', 'save template failed', {
+        err: message,
+      })
+    }
+  }, [addNotification, prompt, saveTemplate])
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent): void {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        e.stopPropagation()
+        setCurrentView(activeSessionId ? 'sessions' : 'home')
+        return
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault()
+        e.stopPropagation()
+        handleLaunch()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown, { capture: true })
+    return () => window.removeEventListener('keydown', handleKeyDown, { capture: true })
+  }, [activeSessionId, handleLaunch, setCurrentView])
 
   return (
     <ScreenShell
@@ -180,75 +262,11 @@ export function NewSessionScreen(): React.JSX.Element {
                 <span>
                   {prompt.length} chars · ~{Math.ceil(prompt.length / 4)} tokens
                 </span>
-                <span className="ns-prompt__chips">
-                  <button type="button" className="ns-chip">
-                    @ file
-                  </button>
-                  <button type="button" className="ns-chip">
-                    # symbol
-                  </button>
-                  <button type="button" className="ns-chip">
-                    ~ output
-                  </button>
-                </span>
               </div>
             </div>
           </Section>
 
-          <Section
-            eyebrow="03"
-            title="Context"
-            sub={`${contextFiles.length} attached · ~${formatTokens(contextFiles.length * 1200)} tokens`}
-          >
-            <div className="ns-context">
-              {contextFiles.length === 0 ? (
-                <div className="ns-context__empty">
-                  Attach files, folders, symbols, git diffs, or command output to ground the agent.
-                  Skip to use the full project tree by default.
-                </div>
-              ) : (
-                <ul className="ns-context__list">
-                  {contextFiles.map((f) => (
-                    <li key={f} className="ns-context__item">
-                      <span className="ns-context__glyph">◆</span>
-                      <span className="ns-context__name">{f}</span>
-                      <span className="ns-context__size">~1.2k tok</span>
-                      <button
-                        type="button"
-                        className="ns-context__remove"
-                        onClick={() => setContextFiles((prev) => prev.filter((x) => x !== f))}
-                        aria-label={`Remove ${f}`}
-                      >
-                        ×
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <div className="ns-context__add">
-                <button type="button" className="ns-chip">
-                  + FILE
-                </button>
-                <button type="button" className="ns-chip">
-                  + FOLDER
-                </button>
-                <button type="button" className="ns-chip">
-                  + SYMBOL
-                </button>
-                <button type="button" className="ns-chip">
-                  + GIT DIFF
-                </button>
-                <button type="button" className="ns-chip">
-                  + COMMAND OUTPUT
-                </button>
-                <button type="button" className="ns-chip">
-                  + URL
-                </button>
-              </div>
-            </div>
-          </Section>
-
-          <Section eyebrow="04" title="Advanced" sub="optional controls">
+          <Section eyebrow="03" title="Advanced" sub="optional controls">
             <div className="ns-advanced">
               <div className="ns-field">
                 <div className="ns-field__label">COST CAP</div>
@@ -337,7 +355,12 @@ export function NewSessionScreen(): React.JSX.Element {
                     key={a.id}
                     type="button"
                     className={`ns-agent-pill${active ? ' is-active' : ''}`}
-                    onClick={() => setAgentId(a.id as AgentType)}
+                    onClick={() =>
+                      setAgentSelection({
+                        projectId: effectiveProjectId,
+                        agentId: a.id as AgentType,
+                      })
+                    }
                     style={{
                       ['--sel-color' as 'color']: `var(${agentColorVar(a.id)})`,
                     }}
@@ -364,7 +387,7 @@ export function NewSessionScreen(): React.JSX.Element {
             ) : (
               <>
                 <select
-                  value={projectId}
+                  value={effectiveProjectId}
                   onChange={(e) => setProjectId(e.target.value)}
                   className="ns-select"
                   aria-label="Project"
@@ -433,16 +456,23 @@ export function NewSessionScreen(): React.JSX.Element {
             <button
               type="button"
               className="ns-launch"
-              disabled={!project || prompt.trim().length === 0}
+              disabled={!project}
               onClick={handleLaunch}
               style={{ ['--sel-color' as 'color']: `var(${colorVar})` }}
             >
               ▸ LAUNCH SESSION
             </button>
-            <button type="button" className="ns-save" disabled>
+            <button
+              type="button"
+              className="ns-save"
+              disabled={prompt.trim().length === 0}
+              onClick={() => {
+                void handleSaveTemplate()
+              }}
+            >
               SAVE AS TEMPLATE
             </button>
-            <div className="ns-target__hint">⏎ LAUNCH · ESC CANCEL</div>
+            <div className="ns-target__hint">CTRL+ENTER LAUNCH · ESC CANCEL</div>
           </footer>
         </aside>
       </div>

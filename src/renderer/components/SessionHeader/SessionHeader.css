@@ -80,7 +80,7 @@
 }
 
 .session-header__btn {
-  padding: 4px 10px;
+  padding: var(--sp-1) 10px;
   background: var(--bg0);
   border: 1px solid var(--bg3);
   color: var(--text0);

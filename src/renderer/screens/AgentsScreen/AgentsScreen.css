@@ -57,7 +57,7 @@
   font-size: 9px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  padding: 2px var(--sp-2);
+  padding: var(--sp-half) var(--sp-2);
   border: 1px solid var(--border);
 }
 
@@ -104,7 +104,7 @@
 .agent-tile__meta > div {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--sp-half);
 }
 
 .agent-tile__meta dt {

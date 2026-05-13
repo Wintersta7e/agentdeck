@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { AGENT_PRINT_FLAGS } from './node-runners'
-import { AGENT_BINARY_MAP } from '../shared/agents'
+import { AGENT_BINARY_MAP, AGENT_PRINT_FLAGS_MAP as AGENT_PRINT_FLAGS } from '../shared/agents'
 
 /**
  * Snapshot tests for the non-interactive command strings that the workflow

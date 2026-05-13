@@ -25,13 +25,13 @@
   letter-spacing: 1.5px;
   font-weight: 600;
   color: var(--text3);
-  margin-bottom: 6px; /* mockup-specific */
+  margin-bottom: var(--sp-1_5); /* mockup-specific */
 }
 
 .daily-digest-row {
   display: flex;
   justify-content: space-between;
-  padding: 2px 0;
+  padding: var(--sp-half) 0;
   font-size: 11px; /* mockup-specific */
 }
 

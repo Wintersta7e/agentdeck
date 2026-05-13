@@ -70,7 +70,7 @@
 
 .quick-action-kbd {
   font-size: 8px; /* mockup-specific */
-  padding: 2px 5px; /* mockup-specific */
+  padding: var(--sp-half) 5px; /* mockup-specific */
   background: var(--surface-kbd);
   border: 1px solid var(--surface-border);
   border-radius: 3px;

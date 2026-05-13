@@ -38,6 +38,9 @@ export interface FitCallbacks {
 
 // ─── Constants ───────────────────────────────────────────────────────
 
+// xterm.js's ITheme requires literal hex strings; CSS custom properties are
+// resolved separately via getXtermTheme() / accentRgb. Keep these palettes
+// in sync with --bg0/--text0/--accent etc. across themes in tokens.css.
 export const BASE_XTERM_THEME: Readonly<ITheme> = Object.freeze({
   background: '#0d0e0f',
   foreground: '#b8b4ae',
@@ -105,7 +108,7 @@ export const OSC_RESPONSE_RE = /\x1b\]\d+;[^\x07\x1b]*(?:\x07|\x1b\\)/g
  */
 export function getXtermTheme(themeId: string): ITheme {
   const base = { ...BASE_XTERM_THEME, ...(XTERM_THEME_OVERRIDES[themeId] ?? {}) }
-  // PERF-15: Use cached accent RGB from themeObserver instead of calling getComputedStyle.
+  // Use cached accent RGB from themeObserver instead of calling getComputedStyle.
   // Falls back to a fresh read on first call (before observer fires).
   if (typeof document !== 'undefined') {
     const accentRgb =
@@ -118,10 +121,13 @@ export function getXtermTheme(themeId: string): ITheme {
   return base
 }
 
-/** Validate scrollback: enforce minimum of 1000, default to 5000 if unset/invalid. */
+/** Validate scrollback: enforce minimum of 1000, default to 25000 if unset/invalid.
+ * Default is generous because long agent transcripts (Claude Code multi-turn
+ * conversations, codex review runs) easily exceed 5000 rows, and "select all
+ * + copy" silently truncates when scrollback overflows.  */
 export function validScrollback(value: number | undefined): number {
-  if (value === undefined || value === null) return 5000
-  if (!Number.isFinite(value) || value < 1000) return 5000
+  if (value === undefined || value === null) return 25000
+  if (!Number.isFinite(value) || value < 1000) return 25000
   return value
 }
 
@@ -171,4 +177,123 @@ export function safeFitAndResize(
       callbacks.resizePty(term.cols, term.rows)
     }
   }
+}
+
+// ─── Logical-line selection ──────────────────────────────────────────
+
+/** Minimal buffer-line shape we read for logical-selection extraction. */
+export interface SelectionBufferLine {
+  isWrapped: boolean
+  translateToString: (trimRight: boolean, startColumn?: number, endColumn?: number) => string
+}
+
+/** Minimal terminal shape for getLogicalSelection — read-only buffer view. */
+export interface SelectionTerminal {
+  getSelectionPosition: () =>
+    | { start: { x: number; y: number }; end: { x: number; y: number } }
+    | undefined
+  buffer: { active: { getLine: (y: number) => SelectionBufferLine | undefined } }
+}
+
+/** A tab span: starting col (inclusive) and how many cells it fills. */
+export interface TabSpan {
+  col: number
+  width: number
+}
+
+/** Callback returning the tab spans recorded on the given xterm-buffer-y row. */
+export type RowTabSpansProvider = (yBuffer: number) => readonly TabSpan[]
+
+/** Optional behaviour switches for `getLogicalSelection`. */
+export interface LogicalSelectionOptions {
+  /** When provided, cell ranges that came from a `\t` byte are emitted as `\t`. */
+  tabSpansForRow?: RowTabSpansProvider
+}
+
+/**
+ * Replace cell ranges that originated from a `\t` byte with literal `\t` in
+ * the copied text. Only tab spans whose entire range is inside `[startCol,
+ * endCol)` are substituted — spans that cross either boundary stay as
+ * spaces (visual fidelity for partial-row selections).
+ */
+function substituteTabs(
+  cellText: string,
+  startCol: number,
+  endCol: number,
+  spans: readonly TabSpan[],
+): string {
+  if (spans.length === 0) return cellText
+  const fullSpans = spans.filter((s) => s.col >= startCol && s.col + s.width <= endCol)
+  if (fullSpans.length === 0) return cellText
+  let out = ''
+  let c = 0
+  while (c < cellText.length) {
+    const absCol = startCol + c
+    const span = fullSpans.find((s) => s.col === absCol)
+    if (span) {
+      out += '\t'
+      c += span.width
+    } else {
+      out += cellText[c] ?? ''
+      c += 1
+    }
+  }
+  return out
+}
+
+/**
+ * Like xterm's `term.getSelection()`, but reconstructs *logical* lines from
+ * the cell buffer:
+ *
+ *   - rows whose successor reports `isWrapped === true` are joined into a
+ *     single line (undoing soft-wraps that xterm inserted to fit width)
+ *   - trailing whitespace on each logical line is stripped (xterm leaves
+ *     space-padded cells for unset positions; copying them produces
+ *     spurious right-margin spaces in the clipboard)
+ *
+ * With `options.tabSpansForRow`, cell ranges that originated from a `\t`
+ * byte are substituted back as `\t` in the output. Spans that don't fit
+ * entirely inside the per-row selection (partial-row selections that cut
+ * a tab in half) are not substituted — those cells stay as spaces,
+ * matching what the user sees.
+ */
+export function getLogicalSelection(
+  term: SelectionTerminal,
+  options?: LogicalSelectionOptions,
+): string {
+  const sel = term.getSelectionPosition()
+  if (!sel) return ''
+  const buffer = term.buffer.active
+  const startY = sel.start.y
+  const endY = sel.end.y
+  const startX = sel.start.x
+  const endX = sel.end.x
+  const tabSpansForRow = options?.tabSpansForRow
+
+  const out: string[] = []
+  let logical = ''
+
+  for (let y = startY; y <= endY; y++) {
+    const line = buffer.getLine(y)
+    if (!line) continue
+
+    const colStart = y === startY ? startX : 0
+    const colEnd = y === endY ? endX : undefined
+    let cellText = line.translateToString(false, colStart, colEnd)
+
+    if (tabSpansForRow) {
+      const effectiveEndCol = colEnd ?? colStart + cellText.length
+      cellText = substituteTabs(cellText, colStart, effectiveEndCol, tabSpansForRow(y))
+    }
+
+    logical += cellText
+
+    const next = y < endY ? buffer.getLine(y + 1) : undefined
+    if (!next?.isWrapped) {
+      out.push(logical.replace(/[ \t]+$/, ''))
+      logical = ''
+    }
+  }
+
+  return out.join('\n')
 }

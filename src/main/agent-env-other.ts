@@ -5,12 +5,11 @@ import type {
   ConfigEntry,
   McpServerEntry,
 } from '../shared/types'
-import { getWslHome, readWslFileSafe } from './wsl-paths'
+import { getWslHome } from './wsl-paths'
 import { createLogger } from './logger'
+import { truncate, readWslParsed } from './agent-env-shared'
 
 const log = createLogger('agent-env-other')
-
-const MAX_VALUE_LEN = 200
 
 interface ReadOpts {
   agentId: string
@@ -36,8 +35,10 @@ export async function readOtherAgentSnapshot(opts: ReadOpts): Promise<AgentEnvSn
 
 async function readAider(projectPath?: string): Promise<AgentEnvSnapshot> {
   const home = await getWslHome()
-  const userConf = home ? await readYamlSafe(`${home}/.aider.conf.yml`) : null
-  const projectConf = projectPath ? await readYamlSafe(`${projectPath}/.aider.conf.yml`) : null
+  const [userConf, projectConf] = await Promise.all([
+    home ? readYamlSafe(`${home}/.aider.conf.yml`) : Promise.resolve(null),
+    projectPath ? readYamlSafe(`${projectPath}/.aider.conf.yml`) : Promise.resolve(null),
+  ])
 
   const config: ConfigEntry[] = []
   if (userConf) config.push(...extractAiderConfig(userConf, 'user'))
@@ -160,18 +161,13 @@ function placeholder(agentId: string, agentName: string): AgentEnvSnapshot {
   }
 }
 
-async function readYamlSafe(path: string): Promise<Record<string, unknown> | null> {
-  const text = await readWslFileSafe(path)
-  if (text === null) return null
-  try {
-    const parsed = parseYaml(text) as Record<string, unknown> | null
-    return parsed && typeof parsed === 'object' ? parsed : null
-  } catch (err) {
-    log.debug('readYamlSafe parse failed', { path, err: String(err) })
-    return null
-  }
-}
-
-function truncate(s: string): string {
-  return s.length > MAX_VALUE_LEN ? s.slice(0, MAX_VALUE_LEN) + '…' : s
+function readYamlSafe(path: string): Promise<Record<string, unknown> | null> {
+  return readWslParsed(
+    path,
+    (text) => {
+      const parsed = parseYaml(text) as Record<string, unknown> | null
+      return parsed && typeof parsed === 'object' ? parsed : null
+    },
+    log,
+  )
 }

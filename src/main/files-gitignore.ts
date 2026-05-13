@@ -46,10 +46,11 @@ export async function gitignoreCheck(
           .split('\n')
           .map((l) => l.trim())
           .filter(Boolean)
+        const nameSet = new Set(names)
         const set = new Set<string>()
         for (const full of ignoredFull) {
           const name = dirRelPath ? full.slice(dirRelPath.length + 1) : full
-          if (names.includes(name)) set.add(name)
+          if (nameSet.has(name)) set.add(name)
         }
         resolve(set)
       },

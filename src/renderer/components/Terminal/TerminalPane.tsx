@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebglAddon } from '@xterm/addon-webgl'
@@ -14,19 +15,25 @@ import {
 } from '../../../shared/constants'
 import { subscribeTheme } from '../../utils/themeObserver'
 import { safeWrite } from '../../utils/pty-write'
+import { shellQuote } from '../../utils/shell-quote'
 import {
   getXtermTheme,
   validScrollback,
   writeWithScrollGuard,
   safeFitAndResize,
+  getLogicalSelection,
   OSC_RESPONSE_RE,
   type FitCallbacks,
   type ScrollGuardTerminal,
 } from '../../utils/terminal-utils'
+import { TerminalGridMirror } from '../../utils/terminal-grid-mirror'
 import { TerminalSearchBar } from './TerminalSearchBar'
 import './TerminalPane.css'
 
 // ─── Viewport sync helper ─────────────────────────────────────────────
+// xterm 5.5 exposes no public viewport-sync method; reaching into _core is the
+// documented workaround. Tracked as a blocker for the xterm 6 upgrade — when
+// a public replacement lands upstream, drop this cast.
 type XtermCore = { viewport?: { syncScrollArea: () => void } }
 
 function syncViewport(term: Terminal): void {
@@ -45,6 +52,7 @@ interface CachedTerminal {
   webgl: WebglAddon | null
   search: SearchAddon | null
   hiddenBuffer: string[]
+  mirror: TerminalGridMirror
 }
 const terminalCache = new Map<string, CachedTerminal>()
 
@@ -102,6 +110,7 @@ export function TerminalPane({
   const copyFlashTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const writeBufferRef = useRef<string[]>([])
   const writeRafRef = useRef(0)
+  const mirrorRef = useRef<TerminalGridMirror | null>(null)
   const applySessionStatus = useAppStore((s) => s.applySessionStatus)
   const setWorktreePath = useAppStore((s) => s.setWorktreePath)
   const clearWorktreePath = useAppStore((s) => s.clearWorktreePath)
@@ -173,6 +182,7 @@ export function TerminalPane({
       if (cached.hiddenBuffer.length > 0) {
         hiddenBufferRef.current = cached.hiddenBuffer
       }
+      mirrorRef.current = cached.mirror
       isReattached = true
       // Move the xterm DOM tree into the new container
       if (term.element) {
@@ -198,6 +208,7 @@ export function TerminalPane({
         })
     } else {
       // ── Create fresh terminal ──
+      const validatedScrollback = validScrollback(scrollbackRef.current)
       term = new Terminal({
         fontFamily: TERMINAL_FONT_FAMILY,
         fontSize: TERMINAL_DEFAULT_FONT_SIZE,
@@ -206,7 +217,12 @@ export function TerminalPane({
         cursorInactiveStyle: 'none',
         allowProposedApi: true,
         theme: getXtermTheme(document.documentElement.dataset.theme ?? ''),
-        scrollback: validScrollback(scrollbackRef.current),
+        scrollback: validatedScrollback,
+      })
+      mirrorRef.current = new TerminalGridMirror({
+        rows: term.rows,
+        cols: term.cols,
+        scrollback: validatedScrollback,
       })
 
       // Copy/paste: Ctrl+Shift+C/V or Ctrl+C (with selection) / Ctrl+V
@@ -221,7 +237,11 @@ export function TerminalPane({
         // Ctrl+Shift+C or Ctrl+C with selection → copy
         if (e.ctrlKey && e.key === 'c' && (e.shiftKey || term.hasSelection())) {
           navigator.clipboard
-            .writeText(term.getSelection())
+            .writeText(
+              getLogicalSelection(term, {
+                tabSpansForRow: (y) => mirrorRef.current?.getTabSpans(y) ?? [],
+              }),
+            )
             .then(() => {
               setCopyFlash(true)
               clearTimeout(copyFlashTimerRef.current)
@@ -247,16 +267,19 @@ export function TerminalPane({
               // Permission denied or no text — fall through to file paths
             }
             if (text) {
-              safeWrite(sessionId, text)
+              // term.paste() wraps with bracketed-paste markers
+              // (\x1b[200~ ... \x1b[201~) when the agent has enabled mode
+              // 2004, otherwise sends raw. Using safeWrite directly bypassed
+              // this and made big pastes look "swallowed" — agents like
+              // Claude Code that expect bracketed paste would otherwise see
+              // the chars as fast-typed input and submit / drop mid-stream.
+              term.paste(text)
               return
             }
             // No text on clipboard — check for copied files
             const paths = await window.agentDeck.clipboard.readFilePaths()
             if (paths.length > 0) {
-              // Single-quote escaping (POSIX safe) — prevents injection via
-              // filenames containing ", $, `, \, or ! on shared filesystems.
-              const escaped = paths.map((p) => `'${p.replace(/'/g, "'\\''")}'`).join(' ')
-              safeWrite(sessionId, escaped)
+              term.paste(paths.map(shellQuote).join(' '))
             }
           })().catch((err: unknown) => {
             window.agentDeck.log.send('warn', 'terminal', `Paste failed for ${sessionId}`, {
@@ -336,7 +359,10 @@ export function TerminalPane({
     // Build fit callbacks that close over this effect's `term` and `sessionId`
     const fitCallbacks: FitCallbacks = {
       syncViewport: () => syncViewport(term),
-      resizePty: (cols, rows) => window.agentDeck.pty.resize(sessionId, cols, rows),
+      resizePty: (cols, rows) => {
+        mirrorRef.current?.resize(rows, cols)
+        window.agentDeck.pty.resize(sessionId, cols, rows)
+      },
     }
     fitCallbacksRef.current = fitCallbacks
 
@@ -495,6 +521,10 @@ export function TerminalPane({
     // condition that causes viewport jumping during rapid agent output.
     const unsubData = window.agentDeck.pty.onData(sessionId, (data) => {
       setShowWatermark(false)
+      // Feed the cursor mirror unconditionally — it parses the same byte
+      // stream xterm sees, regardless of pane visibility, so its cell-grid
+      // model stays in lockstep across hidden→visible transitions.
+      mirrorRef.current?.ingest(data)
       if (visibleRef.current) {
         writeBufferRef.current.push(data)
         if (!writeRafRef.current) {
@@ -650,13 +680,17 @@ export function TerminalPane({
         if (term.element?.parentElement) {
           term.element.parentElement.removeChild(term.element)
         }
-        terminalCache.set(sessionId, {
-          term,
-          fit,
-          webgl: webglAddon,
-          search,
-          hiddenBuffer: hiddenBufferRef.current,
-        })
+        const cachedMirror = mirrorRef.current
+        if (cachedMirror) {
+          terminalCache.set(sessionId, {
+            term,
+            fit,
+            webgl: webglAddon,
+            search,
+            hiddenBuffer: hiddenBufferRef.current,
+            mirror: cachedMirror,
+          })
+        }
       } else {
         // Session removed → dispose everything
         // CDX-4/CDX-2: Clean up worktree resources for project sessions that exited
@@ -825,7 +859,11 @@ export function TerminalPane({
         case 'copy':
           if (term.hasSelection()) {
             navigator.clipboard
-              .writeText(term.getSelection())
+              .writeText(
+                getLogicalSelection(term, {
+                  tabSpansForRow: (y) => mirrorRef.current?.getTabSpans(y) ?? [],
+                }),
+              )
               .then(() => {
                 setCopyFlash(true)
                 clearTimeout(copyFlashTimerRef.current)
@@ -838,7 +876,7 @@ export function TerminalPane({
           navigator.clipboard
             .readText()
             .then((text) => {
-              if (text) safeWrite(sessionId, text)
+              if (text) term.paste(text)
             })
             .catch(() => {})
           break
@@ -880,38 +918,40 @@ export function TerminalPane({
           onClose={() => setSearchOpen(false)}
         />
       )}
-      {ctxMenu && (
-        <div
-          ref={ctxMenuRef}
-          className="term-context-menu"
-          style={{ top: ctxMenu.y, left: ctxMenu.x }}
-        >
-          <button
-            className="term-ctx-item"
-            disabled={!ctxHasSelection}
-            onClick={() => handleCtxAction('copy')}
+      {ctxMenu &&
+        createPortal(
+          <div
+            ref={ctxMenuRef}
+            className="term-context-menu"
+            style={{ top: ctxMenu.y, left: ctxMenu.x }}
           >
-            Copy
-            <span className="term-ctx-hint">Ctrl+Shift+C</span>
-          </button>
-          <button className="term-ctx-item" onClick={() => handleCtxAction('paste')}>
-            Paste
-            <span className="term-ctx-hint">Ctrl+V</span>
-          </button>
-          <button className="term-ctx-item" onClick={() => handleCtxAction('selectAll')}>
-            Select All
-          </button>
-          <div className="term-ctx-sep" />
-          <button className="term-ctx-item" onClick={() => handleCtxAction('clear')}>
-            Clear Scrollback
-          </button>
-          <div className="term-ctx-sep" />
-          <button className="term-ctx-item" onClick={() => handleCtxAction('search')}>
-            Search
-            <span className="term-ctx-hint">Ctrl+Shift+F</span>
-          </button>
-        </div>
-      )}
+            <button
+              className="term-ctx-item"
+              disabled={!ctxHasSelection}
+              onClick={() => handleCtxAction('copy')}
+            >
+              Copy
+              <span className="term-ctx-hint">Ctrl+Shift+C</span>
+            </button>
+            <button className="term-ctx-item" onClick={() => handleCtxAction('paste')}>
+              Paste
+              <span className="term-ctx-hint">Ctrl+V</span>
+            </button>
+            <button className="term-ctx-item" onClick={() => handleCtxAction('selectAll')}>
+              Select All
+            </button>
+            <div className="term-ctx-sep" />
+            <button className="term-ctx-item" onClick={() => handleCtxAction('clear')}>
+              Clear Scrollback
+            </button>
+            <div className="term-ctx-sep" />
+            <button className="term-ctx-item" onClick={() => handleCtxAction('search')}>
+              Search
+              <span className="term-ctx-hint">Ctrl+Shift+F</span>
+            </button>
+          </div>,
+          document.body,
+        )}
     </div>
   )
 }

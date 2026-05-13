@@ -189,7 +189,7 @@ describe('deleteWorkflow', () => {
 
 describe('safeId (via saveWorkflow path)', () => {
   it('rejects ids with path traversal characters via validation', async () => {
-    // C2: validateWorkflow rejects ids containing dots/slashes
+    // validateWorkflow rejects ids containing dots/slashes
     await expect(
       saveWorkflow({
         id: 'wf/../../../etc/passwd',
@@ -275,13 +275,12 @@ describe('seedWorkflows', () => {
     await seedWorkflows(store)
     const codeReview = await loadWorkflow('seed-wf-code-review')
     expect(codeReview).not.toBeNull()
-    const crNodes = codeReview ?? {
-      nodes: [] as { type: string; message?: string; prompt?: string }[],
-    }
-    const checkpoint = crNodes.nodes.find((n) => n.type === 'checkpoint')
+    const checkpoint = codeReview?.nodes.find((n) => n.type === 'checkpoint')
     expect(checkpoint).toBeDefined()
     expect(checkpoint?.message).toBeTruthy()
-    expect(checkpoint?.prompt).toBeUndefined()
+    // No `expect(checkpoint?.prompt).toBeUndefined()` — `prompt` does not
+    // exist on CheckpointNode under the discriminated union, so the absence
+    // is a compile-time guarantee.
   })
 
   it('replaces seed workflows on upgrade, preserves user workflows', async () => {

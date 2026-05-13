@@ -4,12 +4,7 @@ import { useAppStore } from '../../store/appStore'
 import { TitlebarBrand } from './TitlebarBrand'
 import './Titlebar.css'
 
-interface TitlebarProps {
-  onCloseWorkflowTab: (workflowId: string) => void
-  onAddTab: () => void
-}
-
-export function Titlebar({ onCloseWorkflowTab, onAddTab }: TitlebarProps): React.JSX.Element {
+export function Titlebar(): React.JSX.Element {
   const [closingTabs, setClosingTabs] = useState<Set<string>>(() => new Set())
   const closeTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
@@ -21,22 +16,23 @@ export function Titlebar({ onCloseWorkflowTab, onAddTab }: TitlebarProps): React
     [],
   )
 
-  const animateCloseWorkflow = useCallback(
-    (workflowId: string) => {
-      setClosingTabs((prev) => new Set(prev).add(workflowId))
-      const timer = setTimeout(() => {
-        closeTimersRef.current.delete(workflowId)
-        setClosingTabs((prev) => {
-          const next = new Set(prev)
-          next.delete(workflowId)
-          return next
-        })
-        onCloseWorkflowTab(workflowId)
-      }, 250)
-      closeTimersRef.current.set(workflowId, timer)
-    },
-    [onCloseWorkflowTab],
-  )
+  const animateCloseWorkflow = useCallback((workflowId: string) => {
+    setClosingTabs((prev) => new Set(prev).add(workflowId))
+    const timer = setTimeout(() => {
+      closeTimersRef.current.delete(workflowId)
+      setClosingTabs((prev) => {
+        const next = new Set(prev)
+        next.delete(workflowId)
+        return next
+      })
+      useAppStore.getState().closeWorkflow(workflowId)
+    }, 250)
+    closeTimersRef.current.set(workflowId, timer)
+  }, [])
+
+  const handleAddTab = useCallback(() => {
+    useAppStore.getState().openCommandPalette()
+  }, [])
   const currentView = useAppStore((s) => s.currentView)
   const setCurrentView = useAppStore((s) => s.setCurrentView)
   const closeWizard = useAppStore((s) => s.closeWizard)
@@ -115,11 +111,11 @@ export function Titlebar({ onCloseWorkflowTab, onAddTab }: TitlebarProps): React
           ))}
           <div
             className="tab-add"
-            onClick={onAddTab}
+            onClick={handleAddTab}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault()
-                onAddTab()
+                handleAddTab()
               }
             }}
             role="button"

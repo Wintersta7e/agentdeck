@@ -1,3 +1,4 @@
+import { workflowEventChannel } from '../shared/ipc-channels'
 import { BrowserWindow } from 'electron'
 import type { ChildProcess } from 'child_process'
 import { createLogger } from './logger'
@@ -5,6 +6,7 @@ import type { PtyManager } from './pty-manager'
 import type {
   Workflow,
   WorkflowNode,
+  ConditionNode,
   WorkflowEdge,
   WorkflowEvent,
   WorkflowNodeRun,
@@ -14,13 +16,8 @@ import { topoSort } from '../shared/workflow-utils'
 export { validateWorkflow, topoSort } from '../shared/workflow-utils'
 import { createScheduler } from './edge-scheduler'
 import { substituteVariables } from './variable-substitution'
-import {
-  runAgentNode,
-  runShellNode,
-  forceKillTree,
-  MAX_TIER_CONCURRENCY,
-  type NodeRunnerDeps,
-} from './node-runners'
+import { runAgentNode, runShellNode, forceKillTree, type NodeRunnerDeps } from './node-runners'
+import { MAX_CONCURRENT_WORKFLOWS, MAX_TIER_CONCURRENCY } from '../shared/constants'
 import { createRunRecorder, getErrorTail } from './workflow-history'
 
 // Re-export for backward compat (tests + external importers)
@@ -49,13 +46,11 @@ export function createWorkflowEngine(
   mainWindow: BrowserWindow,
   getRoles?: (() => Role[]) | undefined,
 ): WorkflowEngine {
-  const MAX_CONCURRENT_WORKFLOWS = 3
   const activeRuns = new Map<string, { stop: () => void; resume: (nodeId: string) => void }>()
 
   function push(workflowId: string, event: Omit<WorkflowEvent, 'id' | 'timestamp'>): void {
     if (mainWindow.isDestroyed()) return
-    const safeChannel = `workflow:event:${workflowId}`
-    mainWindow.webContents.send(safeChannel, {
+    mainWindow.webContents.send(workflowEventChannel(workflowId), {
       ...event,
       id: crypto.randomUUID(),
       timestamp: Date.now(),
@@ -76,7 +71,7 @@ export function createWorkflowEngine(
       log.warn('Max concurrent workflows reached', { limit: MAX_CONCURRENT_WORKFLOWS })
       throw new Error(`Maximum concurrent workflow runs reached (${MAX_CONCURRENT_WORKFLOWS})`)
     }
-    // C5: Guard against concurrent runs of the same workflow
+    // Guard against concurrent runs of the same workflow
     if (activeRuns.has(workflow.id)) {
       log.warn('Workflow already running, ignoring duplicate run', { id: workflow.id })
       push(workflow.id, {
@@ -86,7 +81,7 @@ export function createWorkflowEngine(
       })
       return
     }
-    // BUG-10: Reject empty workflows instead of persisting 0ms run records
+    // Reject empty workflows instead of persisting 0ms run records
     if (workflow.nodes.length === 0) {
       push(workflow.id, {
         type: 'workflow:error',
@@ -105,11 +100,11 @@ export function createWorkflowEngine(
     let stopped = false
     const nodeOutputs = new Map<string, string>()
     const nodeExitCodes = new Map<string, number>()
-    // WF-2: Full output (up to 64KB) for condition evaluation — nodeOutputs is truncated to 8KB
+    // Full output (up to 64KB) for condition evaluation — nodeOutputs is truncated to 8KB
     const conditionOutputs = new Map<string, string>()
     const activeChildProcesses = new Set<ChildProcess>()
     const runningNodeIds = new Set<string>()
-    // H10: Key checkpoints by workflowId:nodeId (scoped to this run)
+    // Key checkpoints by workflowId:nodeId (scoped to this run)
     const runCheckpoints = new Map<string, () => void>()
 
     // ── Run history recorder ────────────────────────────────────────
@@ -153,7 +148,7 @@ export function createWorkflowEngine(
     }
 
     // ── Condition evaluation ──────────────────────────────────────
-    function evaluateCondition(node: WorkflowNode): 'true' | 'false' {
+    function evaluateCondition(node: ConditionNode): 'true' | 'false' {
       const incomingEdge = incomingEdgesByNode.get(node.id)?.[0]
       if (!incomingEdge) return 'false'
       const upstreamId = incomingEdge.fromNodeId
@@ -164,7 +159,7 @@ export function createWorkflowEngine(
       }
 
       if (node.conditionMode === 'outputMatch') {
-        // WF-2: Read full output from conditionOutputs (64KB), falling back to nodeOutputs (8KB)
+        // Read full output from conditionOutputs (64KB), falling back to nodeOutputs (8KB)
         const fullOutput = conditionOutputs.get(upstreamId) ?? nodeOutputs.get(upstreamId) ?? ''
         if (!fullOutput) {
           push(workflow.id, {
@@ -175,12 +170,12 @@ export function createWorkflowEngine(
           })
           return 'false'
         }
-        // WF-4: Limit output to 100KB to mitigate regex DoS risk from user-provided patterns
+        // Limit output to 100KB to mitigate regex DoS risk from user-provided patterns
         const testOutput = fullOutput.slice(0, 102400)
         try {
           return new RegExp(node.conditionPattern ?? '').test(testOutput) ? 'true' : 'false'
         } catch {
-          // PERF-3: Catch regex syntax errors so they don't crash the engine
+          // Catch regex syntax errors so they don't crash the engine
           log.warn('Condition regex failed', {
             nodeId: node.id,
             pattern: node.conditionPattern,
@@ -188,7 +183,7 @@ export function createWorkflowEngine(
           return 'false'
         }
       }
-      // WF-11: Unknown conditionMode — warn and evaluate as false
+      // Unknown conditionMode — warn and evaluate as false
       push(workflow.id, {
         type: 'node:output',
         workflowId: workflow.id,
@@ -230,7 +225,7 @@ export function createWorkflowEngine(
           workflowId: workflow.id,
           nodeId: node.id,
           type: node.type,
-          agent: node.agent,
+          agent: node.type === 'agent' ? node.agent : undefined,
         })
         push(workflow.id, {
           type: 'node:started',
@@ -259,6 +254,14 @@ export function createWorkflowEngine(
               nodeId: node.id,
               message: 'Resumed',
             })
+          } else {
+            // Loud-fail on unknown node types instead of silently emitting
+            // 'node:done'. Without this guard, a typed-but-unhandled node
+            // (e.g. a new variant added to the union without an engine case)
+            // would appear to succeed without ever running.
+            throw new Error(
+              `Unknown workflow node type: ${String((node as { type: unknown }).type)}`,
+            )
           }
 
           runningNodeIds.delete(node.id)
@@ -385,7 +388,7 @@ export function createWorkflowEngine(
                 message: `Loop iteration ${String(count)}/${String(le.maxIterations)}`,
               })
               const resetIds = scheduler.resetLoopSubgraph(le.toNodeId, node.id)
-              // REL-7: Clear loop counters for inner loop edges within the reset subgraph
+              // Clear loop counters for inner loop edges within the reset subgraph
               // so nested loops restart correctly on each outer iteration.
               // BUG-5/CDX-5: Also check toNodeId is in resetIds — prevents sibling loop
               // edges from the same condition node from having their counters cleared
@@ -400,7 +403,7 @@ export function createWorkflowEngine(
                   }
                 }
               }
-              // PERF-4: Clear output maps for re-executing nodes to prevent unbounded growth
+              // Clear output maps for re-executing nodes to prevent unbounded growth
               for (const nid of resetIds) {
                 nodeOutputs.delete(nid)
                 conditionOutputs.delete(nid)
@@ -474,7 +477,7 @@ export function createWorkflowEngine(
 
       // Track which nodes we've emitted skip events for
       const emittedSkipped = new Set<string>()
-      // R2-01: Track deadlock (nodes stuck pending after upstream failure)
+      // Track deadlock (nodes stuck pending after upstream failure)
       let deadlocked = false
 
       try {
@@ -534,7 +537,7 @@ export function createWorkflowEngine(
       }
 
       if (deadlocked) {
-        // R2-01: Report stall as error, not false success
+        // Report stall as error, not false success
         log.warn('Workflow stalled — unreachable nodes', { id: workflow.id })
         push(workflow.id, {
           type: 'workflow:error',
@@ -557,7 +560,7 @@ export function createWorkflowEngine(
         })
       }
 
-      // REL-6: Resolve any pending checkpoint promises so execute() can complete
+      // Resolve any pending checkpoint promises so execute() can complete
       for (const [, resolve] of runCheckpoints) {
         resolve()
       }
@@ -581,12 +584,12 @@ export function createWorkflowEngine(
           })
         }
         runningNodeIds.clear()
-        // C4: Force-kill all in-flight child processes (entire process tree)
+        // Force-kill all in-flight child processes (entire process tree)
         for (const child of activeChildProcesses) {
           forceKillTree(child)
         }
         activeChildProcesses.clear()
-        // H10: Only clear this run's checkpoints
+        // Only clear this run's checkpoints
         for (const [, resolve] of runCheckpoints) {
           resolve()
         }
@@ -598,7 +601,7 @@ export function createWorkflowEngine(
           resolver()
           runCheckpoints.delete(nodeId)
         } else {
-          // M8: Warn on invalid checkpoint resume
+          // Warn on invalid checkpoint resume
           push(workflow.id, {
             type: 'node:output',
             workflowId: workflow.id,

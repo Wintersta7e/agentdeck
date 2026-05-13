@@ -1,3 +1,4 @@
+import { CH } from '../../shared/ipc-channels'
 import { ipcMain } from 'electron'
 import { SAFE_ID_RE } from '../validation'
 import { KNOWN_AGENT_IDS } from '../../shared/agents'
@@ -11,18 +12,18 @@ export function registerCostHandlers(
   getCostTracker: () => CostTracker | null,
   costHistory: CostHistory,
 ): void {
-  ipcMain.handle('cost:getHistory', (_, days: number) => {
+  ipcMain.handle(CH.costGetHistory, (_, days: number) => {
     if (typeof days !== 'number' || days < 1 || days > 365) {
       throw new Error('Invalid days parameter')
     }
     return costHistory.getHistory(days)
   })
 
-  ipcMain.handle('cost:getBudget', () => {
+  ipcMain.handle(CH.costGetBudget, () => {
     return costHistory.getBudget()
   })
 
-  ipcMain.handle('cost:setBudget', (_, amount: number | null) => {
+  ipcMain.handle(CH.costSetBudget, (_, amount: number | null) => {
     if (amount !== null && (typeof amount !== 'number' || amount < 0)) {
       throw new Error('Invalid budget amount')
     }
@@ -30,7 +31,7 @@ export function registerCostHandlers(
   })
 
   ipcMain.handle(
-    'cost:bind',
+    CH.costBind,
     (
       _,
       sessionId: string,
@@ -58,7 +59,7 @@ export function registerCostHandlers(
     },
   )
 
-  ipcMain.handle('cost:unbind', (_, sessionId: string) => {
+  ipcMain.handle(CH.costUnbind, (_, sessionId: string) => {
     if (typeof sessionId !== 'string' || !SAFE_ID_RE.test(sessionId)) {
       throw new Error('cost:unbind requires a valid sessionId')
     }

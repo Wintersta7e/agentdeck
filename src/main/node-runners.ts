@@ -7,54 +7,30 @@
  */
 import { spawn, execFile, type ChildProcess, type ExecException } from 'child_process'
 import { createLogger } from './logger'
-import type { WorkflowNode, WorkflowEvent, Role } from '../shared/types'
-import { AGENT_BINARY_MAP, SAFE_FLAGS_RE } from '../shared/agents'
-import { MS_PER_MINUTE } from '../shared/constants'
+import type { AgentNode, ShellNode, WorkflowEvent, Role } from '../shared/types'
+import {
+  AGENT_BINARY_MAP,
+  AGENT_PRINT_FLAGS_MAP,
+  AGENT_CD_FLAG_MAP,
+  AGENT_ENGINE_FLAGS_MAP,
+  AGENT_SUPPORTS_SKILLS_MAP,
+  KNOWN_AGENT_IDS,
+  SAFE_FLAGS_RE,
+} from '../shared/agents'
+import {
+  AGENT_IDLE_TIMEOUT,
+  DEFAULT_AGENT_TIMEOUT,
+  IDLE_CHECK_INTERVAL,
+  LINE_FLUSH_MS,
+  MAX_TIER_CONCURRENCY,
+} from '../shared/constants'
 import { NODE_INIT } from './wsl-utils'
 import { SAFE_SKILL_RE } from './skill-scanner'
 
 const log = createLogger('node-runners')
 
-// ── Constants ────────────────────────────────────────────────────────
-
-/** Non-interactive / print-mode CLI flags per agent (prompt follows as last arg) */
-export const AGENT_PRINT_FLAGS: Record<string, string[]> = {
-  'claude-code': ['--print'],
-  codex: ['exec'],
-  aider: ['--message'],
-  goose: ['run', '-t'],
-  'gemini-cli': ['-p'],
-  'amazon-q': ['chat', '--no-interactive', '--trust-all-tools'],
-  opencode: ['run'],
-}
-
-/** Agents that support a native --cd / -C flag for setting working directory.
- *  These use the flag instead of shell `cd`, which is more reliable. */
-const AGENT_CD_FLAG: Record<string, string> = {
-  codex: '-C',
-  'claude-code': '--directory',
-}
-
-/** Extra flags injected by the engine (not user-configured).
- *  These handle workflow-specific needs like non-git project dirs. */
-const AGENT_ENGINE_FLAGS: Record<string, string[]> = {
-  codex: ['--skip-git-repo-check'],
-}
-
-/** How long an agent node can be idle (no stdout/stderr) before being killed */
-export const AGENT_IDLE_TIMEOUT = 5 * MS_PER_MINUTE
-
-/** How often to check whether an agent node has gone idle */
-const IDLE_CHECK_INTERVAL = 0.5 * MS_PER_MINUTE
-
-/** Default absolute timeout for agent nodes without an explicit timeout */
-const DEFAULT_AGENT_TIMEOUT = 30 * MS_PER_MINUTE
-
-/** Max number of nodes to run concurrently within a single tier */
-export const MAX_TIER_CONCURRENCY = 5
-
-/** How often to flush the line buffer even without a newline */
-const LINE_FLUSH_MS = 500
+// Re-export for callers that previously imported these from this module.
+export { AGENT_IDLE_TIMEOUT, MAX_TIER_CONCURRENCY }
 
 // ── Utility functions ────────────────────────────────────────────────
 
@@ -78,27 +54,20 @@ export function forceKillTree(child: ChildProcess): void {
   })
 }
 
-/** Strip ANSI escape sequences and terminal control codes */
-const ANSI_STRIP_RE =
-  /\x1b\[[0-9;?]*[a-zA-Z~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[()#][A-Z0-9]|\x1b[=>NOMDEHc78]|\r/g
-
-export function stripAnsi(s: string): string {
-  return s.replace(ANSI_STRIP_RE, '')
-}
-
-/** Shell-safe single-quote escaping */
-export function shellQuote(s: string): string {
-  return "'" + s.replace(/'/g, "'\\''") + "'"
-}
+import { stripAnsi } from '../shared/ansi'
+export { stripAnsi }
+export { shellQuote } from './wsl-exec'
+import { shellQuote } from './wsl-exec'
 
 // ── Skill prefix extraction ──────────────────────────────────────────
 
 /**
- * Extract the Codex skill invocation prefix from a compound skillId.
- * Returns the prefix string (e.g. "$lint-fix ") or null if invalid/not applicable.
+ * Extract a skill invocation prefix from a compound skillId. Returns the
+ * prefix string (e.g. "$lint-fix ") or null if the skillId is missing,
+ * malformed, or the agent doesn't declare `supportsSkills` in the registry.
  */
 export function extractSkillPrefix(skillId: string | undefined, agentName: string): string | null {
-  if (!skillId || agentName !== 'codex') return null
+  if (!skillId || !AGENT_SUPPORTS_SKILLS_MAP[agentName]) return null
   const name = skillId.split(':').pop() ?? ''
   if (SAFE_SKILL_RE.test(name) && name.length > 0) return `$${name} `
   return null
@@ -121,7 +90,7 @@ export interface NodeRunnerDeps {
 // ── Node runners ─────────────────────────────────────────────────────
 
 export function runAgentNode(
-  node: WorkflowNode,
+  node: AgentNode,
   contextSummary: string,
   roles: Map<string, Role>,
   deps: NodeRunnerDeps,
@@ -148,12 +117,20 @@ export function runAgentNode(
     if (contextSummary) promptParts.push(`Context from previous steps:\n${contextSummary}`)
     let prompt = promptParts.join('\n\n')
 
-    // Prepend Codex skill invocation if skillId is set (codex-only feature)
     const agentName = node.agent ?? 'claude-code'
+    if (!KNOWN_AGENT_IDS.has(agentName)) {
+      // Loud-fail on unknown agents instead of falling through to '--print'
+      // and AGENT_BINARY_MAP[id] ?? id — that pair would silently invoke
+      // whatever string the renderer sent as a binary name.
+      settleReject(new Error(`Unknown agent: ${agentName}`))
+      return
+    }
+
+    // Prepend skill invocation prefix if the agent declares supportsSkills.
     const skillPrefix = extractSkillPrefix(node.skillId, agentName)
     if (skillPrefix) {
       prompt = skillPrefix + prompt
-    } else if (node.skillId && agentName === 'codex') {
+    } else if (node.skillId && AGENT_SUPPORTS_SKILLS_MAP[agentName]) {
       // Skill name failed validation
       deps.push({
         type: 'node:output',
@@ -169,7 +146,7 @@ export function runAgentNode(
     }
 
     const bin = AGENT_BINARY_MAP[agentName] ?? agentName
-    const printFlags = AGENT_PRINT_FLAGS[agentName] ?? ['--print']
+    const printFlags = AGENT_PRINT_FLAGS_MAP[agentName] ?? ['--print']
 
     let sanitizedFlags = ''
     if (node.agentFlags) {
@@ -189,11 +166,11 @@ export function runAgentNode(
     // For agents with native --cd (codex -C, claude --directory), the flag goes AFTER
     // the subcommand (e.g. `codex exec -C /path '<prompt>'`), not before it.
     const parts: string[] = []
-    const cdFlag = AGENT_CD_FLAG[agentName]
+    const cdFlag = AGENT_CD_FLAG_MAP[agentName]
     if (deps.projectPath && !cdFlag) parts.push(`cd ${shellQuote(deps.projectPath)}`)
     const flagStr = printFlags.length > 0 ? printFlags.join(' ') + ' ' : ''
     const cdFlagStr = deps.projectPath && cdFlag ? `${cdFlag} ${shellQuote(deps.projectPath)} ` : ''
-    const engineFlags = AGENT_ENGINE_FLAGS[agentName]
+    const engineFlags = AGENT_ENGINE_FLAGS_MAP[agentName]
     const engineFlagStr = engineFlags ? engineFlags.join(' ') + ' ' : ''
     parts.push(
       `${shellQuote(bin)} ${flagStr}${cdFlagStr}${engineFlagStr}${shellQuote(prompt)}${sanitizedFlags}`,
@@ -259,7 +236,7 @@ export function runAgentNode(
       lastActivityTime = Date.now()
       output = (output + text).slice(-8192)
       deps.nodeOutputs.set(node.id, output)
-      // WF-2: conditionOutputs stores up to 64KB for condition evaluation
+      // conditionOutputs stores up to 64KB for condition evaluation
       const existing = deps.conditionOutputs.get(node.id) ?? ''
       deps.conditionOutputs.set(node.id, (existing + text).slice(-65536))
       flushLines(text)
@@ -335,7 +312,7 @@ export function runAgentNode(
   })
 }
 
-export function runShellNode(node: WorkflowNode, deps: NodeRunnerDeps): Promise<void> {
+export function runShellNode(node: ShellNode, deps: NodeRunnerDeps): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     // Convert literal \n sequences to real newlines so multi-line commands
     // (e.g. python3 -c "def f():\n  return 1") execute correctly in bash.
@@ -347,7 +324,7 @@ export function runShellNode(node: WorkflowNode, deps: NodeRunnerDeps): Promise<
       message: `$ ${node.command ?? ''}\n`,
     })
 
-    // M8: Use projectPath as cwd context for shell commands
+    // Use projectPath as cwd context for shell commands
     const fullCmd = deps.projectPath ? `cd ${shellQuote(deps.projectPath)} && ${cmd}` : cmd
 
     const child = execFile(
@@ -356,7 +333,7 @@ export function runShellNode(node: WorkflowNode, deps: NodeRunnerDeps): Promise<
       { timeout: node.timeout ?? 60000 },
       (err, stdout, stderr) => {
         deps.activeChildProcesses.delete(child)
-        // REL-2: Extract real exit code from ExecException instead of hardcoding 1
+        // Extract real exit code from ExecException instead of hardcoding 1
         const exitCode = err ? ((err as ExecException).code ?? 1) : 0
         deps.nodeExitCodes.set(node.id, exitCode)
         const out = stripAnsi(stdout + stderr)
@@ -372,7 +349,7 @@ export function runShellNode(node: WorkflowNode, deps: NodeRunnerDeps): Promise<
         else resolve()
       },
     )
-    // C4: Track child process so stop() can kill it
+    // Track child process so stop() can kill it
     deps.activeChildProcesses.add(child)
   })
 }

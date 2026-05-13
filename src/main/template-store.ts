@@ -1,8 +1,9 @@
 import { promises as fs, watch } from 'node:fs'
 import { join, resolve } from 'node:path'
-import { randomBytes } from 'node:crypto'
 import type { Template, TemplateFile, TemplateDraft, TemplateScope } from '../shared/types'
 import { createLogger } from './logger'
+import { atomicWrite } from './fs-atomic'
+import { generateTemplateId } from './template-id'
 
 const log = createLogger('template-store')
 
@@ -85,24 +86,19 @@ async function scanDir(
   } catch {
     return []
   }
-  const out: Template[] = []
-  for (const n of names) {
-    if (!n.endsWith('.json')) continue
-    const path = join(dir, n)
-    const file = await readTemplateFile(path, emitParseError)
-    if (!file) continue
-    const s = await fs.stat(path)
-    out.push({ ...file, scope, projectId, path, mtimeMs: s.mtimeMs })
-  }
-  return out
-}
-
-async function atomicWrite(path: string, data: string): Promise<number> {
-  const tmp = `${path}.${randomBytes(6).toString('hex')}.tmp`
-  await fs.writeFile(tmp, data, 'utf-8')
-  await fs.rename(tmp, path)
-  const s = await fs.stat(path)
-  return s.mtimeMs
+  const jsonNames = names.filter((n) => n.endsWith('.json'))
+  const results = await Promise.all(
+    jsonNames.map(async (n): Promise<Template | null> => {
+      const path = join(dir, n)
+      const [file, stats] = await Promise.all([
+        readTemplateFile(path, emitParseError),
+        fs.stat(path).catch(() => null),
+      ])
+      if (!file || !stats) return null
+      return { ...file, scope, projectId, path, mtimeMs: stats.mtimeMs }
+    }),
+  )
+  return results.filter((t): t is Template => t !== null)
 }
 
 export async function createTemplateStore(opts: TemplateStoreOptions): Promise<TemplateStore> {
@@ -141,7 +137,8 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
     return join(projectPath, '.agentdeck', 'templates', `${id}.json`)
   }
 
-  // PREREQ B4: Unlocked variant — callers that already hold the lock use this.
+  // In-process saves share the same mutex, so internal callers must use this
+  // unlocked variant to avoid deadlocking the per-id chain.
   async function writeTemplateUnlocked(
     file: TemplateFile,
     scope: TemplateScope,
@@ -150,6 +147,8 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
   ): Promise<Template> {
     const path = resolvePath(scope, projectId, file.id)
     await fs.mkdir(join(path, '..'), { recursive: true })
+
+    const isNew = !findById(file.id)
 
     if (baseMtime !== undefined) {
       let currentMtime = 0
@@ -172,7 +171,7 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
       const pool = projectPools.get(projectId) ?? []
       projectPools.set(projectId, [loaded, ...pool.filter((t) => t.id !== file.id)])
     }
-    emitChange({ kind: 'update', scope, projectId, template: loaded })
+    emitChange({ kind: isNew ? 'add' : 'update', scope, projectId, template: loaded })
     return loaded
   }
 
@@ -199,50 +198,77 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
     }
   }
 
-  // KNOWN LIMITATION (v6.1.1 deferred — Section 4 of v6.1.0 codex review):
-  // There is a scan-before-watch window: files written to `dir` between the
-  // initial scan (in activateProject / bootstrap) and the watch subscription
-  // being fully armed are silently missed. Additionally, the catch-branch
-  // below swaps fs.watch for a 10s polling interval — the watcher's own
-  // runtime 'error' event (logged above) does NOT fall back to polling, so a
-  // watcher that fails mid-life will stop emitting change events until the
-  // renderer triggers a manual rescan (activateProject / bootstrap).
-  // Proper fix requires an event-replay queue during the scan and a
-  // runtime-error fallback to polling — scoped too large for v6.1.0.
   function setupWatcher(dir: string, rescan: () => Promise<void>): () => void {
     let debounceTimer: ReturnType<typeof setTimeout> | null = null
+    let pollTimer: ReturnType<typeof setInterval> | null = null
+    let watcher: ReturnType<typeof watch> | null = null
+    let disposed = false
+
     const trigger = (): void => {
+      if (disposed) return
       if (debounceTimer) clearTimeout(debounceTimer)
       debounceTimer = setTimeout(() => {
+        debounceTimer = null
         void rescan()
       }, 200)
+      debounceTimer.unref?.()
     }
-    try {
-      const w = watch(dir, { persistent: false }, () => {
-        trigger()
-      })
-      w.on('error', (err) => {
-        log.warn('template-store watch emitted error', { dir, err: String(err) })
-      })
-      return () => {
+
+    const startPolling = (): void => {
+      if (disposed || pollTimer) return
+      if (watcher) {
         try {
-          w.close()
+          watcher.close()
         } catch {
           /* noop */
         }
-        if (debounceTimer) clearTimeout(debounceTimer)
+        watcher = null
       }
+      pollTimer = setInterval(() => {
+        void rescan()
+      }, 10_000)
+      pollTimer.unref?.()
+    }
+
+    try {
+      watcher = watch(dir, { persistent: false }, () => {
+        trigger()
+      })
+      watcher.on('error', (err) => {
+        log.warn('template-store watch emitted error; falling back to 10s poll', {
+          dir,
+          err: String(err),
+        })
+        startPolling()
+      })
+      // Close the scan-before-watch gap: if a file changed between the initial
+      // scan and watcher registration, this rescan catches it.
+      trigger()
     } catch (err) {
       log.warn('fs.watch failed for template dir; falling back to 10s poll', {
         dir,
         err: String(err),
       })
-      const id = setInterval(() => {
-        void rescan()
-      }, 10_000)
-      return () => {
-        clearInterval(id)
-        if (debounceTimer) clearTimeout(debounceTimer)
+      startPolling()
+    }
+
+    return () => {
+      disposed = true
+      if (watcher) {
+        try {
+          watcher.close()
+        } catch {
+          /* noop */
+        }
+        watcher = null
+      }
+      if (pollTimer) {
+        clearInterval(pollTimer)
+        pollTimer = null
+      }
+      if (debounceTimer) {
+        clearTimeout(debounceTimer)
+        debounceTimer = null
       }
     }
   }
@@ -289,11 +315,11 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
     },
 
     save: async (draft, scope, projectId, baseMtime) => {
-      const id = draft.id ?? `tmpl-${randomBytes(6).toString('hex')}`
-      // PREREQ H6 (refined): cross-scope collision check runs INSIDE the
-      // per-id serialize so two concurrent same-id cross-scope saves can't
-      // both pass the findById check and race to write. The lookup, the
-      // file-build, and the atomic write all share the same critical section.
+      const id = draft.id ?? generateTemplateId()
+      // Cross-scope collision check runs INSIDE the per-id serialize so two
+      // concurrent same-id cross-scope saves can't both pass the findById
+      // check and race to write — lookup, file-build, and write share the
+      // same critical section.
       return serialize(id, async () => {
         const existing = findById(id)
         if (existing && (existing.scope !== scope || existing.projectId !== projectId)) {
@@ -334,7 +360,6 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
       })
     },
 
-    // PREREQ B4: calls writeTemplateUnlocked from inside serialize.
     incrementUsage: async (ref) => {
       await serialize(ref.id, async () => {
         const hit = findById(ref.id)
@@ -353,7 +378,6 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
       })
     },
 
-    // PREREQ B4: calls writeTemplateUnlocked from inside serialize.
     setPinned: async (ref, pinned) => {
       await serialize(ref.id, async () => {
         const hit = findById(ref.id)

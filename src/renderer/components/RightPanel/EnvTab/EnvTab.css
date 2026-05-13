@@ -103,14 +103,14 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--sp-half);
 }
 
 .env-tab__row {
   display: grid;
   grid-template-columns: max-content 1fr;
   gap: var(--sp-2);
-  padding: 2px 0;
+  padding: var(--sp-half) 0;
   font-size: var(--fs-sm);
 }
 
@@ -242,7 +242,7 @@
 .env-tab__hooks-scopes {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--sp-1);
 }
 
 .env-tab__hooks-detail {
@@ -258,7 +258,7 @@
 .env-tab__hooks-entry {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--sp-half);
 }
 
 .env-tab__hooks-entry-line {
@@ -281,7 +281,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px;
+  gap: var(--sp-1);
   font-size: var(--fs-xs);
   color: var(--text3);
   padding-left: var(--sp-3);
@@ -294,7 +294,7 @@
 .env-tab__hooks-matcher {
   font-family: var(--font-mono);
   color: var(--text2);
-  padding: 0 4px;
+  padding: 0 var(--sp-1);
   background: var(--bg2);
   border-radius: var(--r);
 }
@@ -330,7 +330,7 @@
   padding: 0 0 0 var(--sp-3);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--sp-half);
   border-left: 1px dotted var(--bg3);
 }
 
@@ -377,7 +377,7 @@
 .env-tab__mcp-row {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--sp-half);
   padding: var(--sp-1) 0;
   border-bottom: 1px dotted var(--bg2);
 }

@@ -110,7 +110,7 @@
 /* ── Log entries ── */
 
 .wf-log-entry {
-  margin-bottom: 2px;
+  margin-bottom: var(--sp-half);
   display: flex;
   gap: var(--sp-2);
   align-items: flex-start;
@@ -247,7 +247,7 @@
 }
 
 .wf-log-resume-btn {
-  padding: 3px var(--sp-3);
+  padding: var(--sp-0_75) var(--sp-3);
   font-size: var(--fs-xs);
   font-family: var(--font-mono);
   font-weight: 600;

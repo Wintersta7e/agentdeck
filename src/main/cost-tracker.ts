@@ -1,3 +1,4 @@
+import { CH } from '../shared/ipc-channels'
 /**
  * CostTracker — watches agent JSONL log files and pushes usage updates.
  *
@@ -7,7 +8,6 @@
  * cumulative totals to the renderer over IPC.
  */
 import type { BrowserWindow } from 'electron'
-import { execFile } from 'child_process'
 import { toWslPath } from './wsl-utils'
 import { createLogger } from './logger'
 import type { AgentEnvContext, LogAdapter, TokenUsage } from './log-adapters'
@@ -69,24 +69,10 @@ export interface CostRecorder {
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
-/** Single-quote a path for safe use inside bash -lc commands. */
-function sq(s: string): string {
-  return "'" + s.replace(/'/g, "'\\''") + "'"
-}
+import { wslRun, shellQuote as sq } from './wsl-exec'
 
-/**
- * Run a command inside WSL bash and return stdout.
- * Resolves with stdout on success; rejects on error.
- */
-function wslExec(cmd: string): Promise<string> {
-  return new Promise<string>((resolve, reject) => {
-    // R2-20: Use '--' separator consistent with all other WSL exec calls in the codebase
-    execFile('wsl.exe', ['--', 'bash', '-lc', cmd], { timeout: WSL_TIMEOUT_MS }, (err, stdout) => {
-      if (err) reject(err)
-      else resolve(stdout)
-    })
-  })
-}
+/** Run a command inside WSL bash; rejects on error. */
+const wslExec = (cmd: string): Promise<string> => wslRun(cmd, { timeout: WSL_TIMEOUT_MS })
 
 // ── Factory ─────────────────────────────────────────────────────────
 
@@ -99,7 +85,7 @@ export function createCostTracker(
   /** File paths already bound to a session — prevents cross-session matching. */
   const boundFiles = new Set<string>()
 
-  // R4-01: Resolve $HOME once at tracker creation so all sessions share
+  // Resolve $HOME once at tracker creation so all sessions share
   // the cached value. Eliminates repeated wsl.exe calls that fail under
   // WSL resource contention when multiple sessions start simultaneously.
   let cachedHome: string | null = null
@@ -121,23 +107,27 @@ export function createCostTracker(
   // Resolve agent config env vars from WSL (CLAUDE_CONFIG_DIR, CODEX_HOME).
   // These override the default ~/.claude and ~/.codex base paths.
   // Resolved in parallel with $HOME since they're independent.
+  // Union of env-var names declared by all adapters. Adding a new adapter
+  // that needs e.g. GOOSE_CONFIG_DIR auto-extends the resolution set with
+  // no structural changes to the resolver.
+  const envVarNames = Array.from(new Set(adapters.flatMap((a) => a.getEnvVars())))
+
   let cachedEnv: AgentEnvContext | null = null
-  const envReady: Promise<AgentEnvContext> = Promise.all([
-    // eslint-disable-next-line no-template-curly-in-string -- bash variable expansion, not JS
-    wslExec('echo "${CLAUDE_CONFIG_DIR:-}"')
-      .then((o) => o.trim())
-      .catch(() => ''),
-    // eslint-disable-next-line no-template-curly-in-string -- bash variable expansion, not JS
-    wslExec('echo "${CODEX_HOME:-}"')
-      .then((o) => o.trim())
-      .catch(() => ''),
-  ])
-    .then(([rawClaude, rawCodex]) => {
-      const claudeConfigDir = rawClaude || undefined
-      const codexHome = rawCodex || undefined
-      const env: AgentEnvContext = { claudeConfigDir, codexHome }
+  const envReady: Promise<AgentEnvContext> = Promise.all(
+    envVarNames.map((name) =>
+      // Bash variable expansion of the named env var; tolerates unset vars.
+      wslExec(`echo "$\{${name}:-}"`)
+        .then((o) => o.trim())
+        .catch(() => ''),
+    ),
+  )
+    .then((values) => {
+      const env: Record<string, string | undefined> = {}
+      envVarNames.forEach((name, i) => {
+        env[name] = values[i] || undefined
+      })
       cachedEnv = env
-      log.info('Resolved WSL agent env vars', { claudeConfigDir, codexHome })
+      log.info('Resolved WSL agent env vars', env)
       return env
     })
     .catch((err) => {
@@ -352,7 +342,7 @@ export function createCostTracker(
 
           if (usageChanged) {
             if (!mainWindow.isDestroyed()) {
-              mainWindow.webContents.send('cost:update', {
+              mainWindow.webContents.send(CH.costUpdate, {
                 sessionId: session.sessionId,
                 usage: { ...session.usage },
               })
