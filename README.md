@@ -2,11 +2,11 @@
 
 A desktop terminal manager for WSL AI coding agents. Launch, manage, and orchestrate sessions across multiple agents from a single interface.
 
-![Electron](https://img.shields.io/badge/Electron-41-47848F?logo=electron)
+![Electron](https://img.shields.io/badge/Electron-42-47848F?logo=electron)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript)
 ![License: Elastic-2.0](https://img.shields.io/badge/License-Elastic--2.0-blue.svg)
-![Tests](https://img.shields.io/badge/Tests-1181_passing-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-1229_passing-brightgreen)
 ![CI](https://github.com/Wintersta7e/agentdeck/actions/workflows/ci.yml/badge.svg?branch=main)
 
 ## Why AgentDeck?
@@ -151,7 +151,7 @@ All themes use CSS custom properties from `tokens.css`. Per-agent accent tokens 
 
 ### Prerequisites
 - Windows 10/11 with WSL2 (Ubuntu recommended)
-- Node.js 22 or later
+- Node.js 22.22.1 or later (see `.nvmrc`; required by `lint-staged` 17)
 - At least one AI coding agent installed in WSL
 
 ### Setup
@@ -170,7 +170,7 @@ npm run dev
 # Build for production (validates TypeScript)
 npm run build
 
-# Run tests (1181 tests)
+# Run tests (1229 tests)
 npm test
 
 # Lint code (zero-warning policy)
@@ -183,8 +183,11 @@ npm run format
 ## Building for Distribution
 
 ```bash
-# Build portable Windows executable
+# Quick build (no pre-flight checks)
 npm run dist
+
+# Gated release build — lint, typecheck, tests, clean, then build + verify
+npm run release-portable
 ```
 
 Output: `dist/AgentDeck-{version}-portable.exe` (~93 MB)
@@ -275,7 +278,7 @@ src/
 
 | Technology | Purpose |
 |------------|---------|
-| [Electron 41](https://electronjs.org) | Desktop application shell |
+| [Electron 42](https://electronjs.org) | Desktop application shell |
 | [React 19](https://react.dev) | UI framework |
 | [TypeScript 6](https://typescriptlang.org) | Type-safe development (strict mode) |
 | [electron-vite 5](https://electron-vite.org) | Build tooling |
@@ -283,7 +286,7 @@ src/
 | [node-pty](https://github.com/microsoft/node-pty) | Pseudo-terminal (WSL sessions) |
 | [Zustand](https://zustand-demo.pmnd.rs) | State management |
 | [React Flow](https://reactflow.dev) | Visual workflow node editor |
-| [Vitest 4](https://vitest.dev) | Testing framework (1181 tests) |
+| [Vitest 4](https://vitest.dev) | Testing framework (1229 tests) |
 | [ESLint 9](https://eslint.org) | Linting (flat config, zero-warning policy) |
 
 ## Documentation
