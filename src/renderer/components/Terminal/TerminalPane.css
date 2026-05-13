@@ -55,7 +55,7 @@
   justify-content: center;
   gap: var(--sp-2);
   pointer-events: none;
-  z-index: 1;
+  z-index: var(--z-raised);
   opacity: 0.25;
 }
 
@@ -85,7 +85,7 @@
   background: var(--accent);
   border-radius: var(--r);
   pointer-events: none;
-  z-index: 2;
+  z-index: calc(var(--z-raised) + 1);
   animation: copyFlashIn 1.2s ease-out forwards;
 }
 

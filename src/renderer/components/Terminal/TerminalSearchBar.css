@@ -11,7 +11,7 @@
   align-items: center;
   gap: var(--sp-2);
   box-shadow: var(--context-shadow);
-  z-index: 10;
+  z-index: var(--z-floating);
   animation: term-search-slide-in 0.15s ease;
 }
 

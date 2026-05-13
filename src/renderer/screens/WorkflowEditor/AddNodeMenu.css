@@ -4,7 +4,7 @@
   position: absolute;
   top: 100%;
   left: 0;
-  z-index: 50;
+  z-index: var(--z-menu);
   min-width: 240px;
   background: var(--bg2);
   border: 1px solid var(--border-bright);

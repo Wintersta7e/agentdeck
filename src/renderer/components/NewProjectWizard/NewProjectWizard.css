@@ -27,7 +27,7 @@
   border-right: 1px solid var(--border);
   flex-shrink: 0;
   position: relative;
-  z-index: 1;
+  z-index: var(--z-raised);
 }
 
 /* Main content */
@@ -37,7 +37,7 @@
   flex-direction: column;
   overflow: hidden;
   position: relative;
-  z-index: 1;
+  z-index: var(--z-raised);
 }
 
 .wizard-content {

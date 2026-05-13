@@ -165,7 +165,7 @@ button:not([disabled]) {
     transparent 70%
   );
   pointer-events: none;
-  z-index: 0;
+  z-index: var(--z-base);
   transform: translate(-50%, -50%);
   transition: opacity var(--duration-slow);
 }

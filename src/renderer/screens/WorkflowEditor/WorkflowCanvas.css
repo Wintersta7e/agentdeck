@@ -97,7 +97,7 @@
   justify-content: center;
   gap: var(--sp-2);
   pointer-events: none;
-  z-index: 1;
+  z-index: var(--z-raised);
 }
 
 .wf-canvas-empty-icon {

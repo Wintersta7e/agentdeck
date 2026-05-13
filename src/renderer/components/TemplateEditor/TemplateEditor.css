@@ -268,7 +268,7 @@
   padding: var(--sp-4) 0;
   overflow: hidden;
   pointer-events: none;
-  z-index: 1;
+  z-index: var(--z-raised);
 }
 
 .te-ln {

@@ -30,7 +30,7 @@
   background: var(--border);
   cursor: col-resize;
   flex-shrink: 0;
-  z-index: 5;
+  z-index: var(--z-floating);
   transition: background var(--duration-base);
   position: relative;
 }
@@ -65,7 +65,7 @@
   right: 12px;
   display: flex;
   gap: var(--sp-1);
-  z-index: 20;
+  z-index: var(--z-floating-high);
 }
 
 .lc-btn {

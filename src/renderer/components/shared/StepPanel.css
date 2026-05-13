@@ -57,7 +57,7 @@
   color: var(--text2);
   transition: all var(--duration-slow);
   position: relative;
-  z-index: 1;
+  z-index: var(--z-raised);
 }
 
 .step-dot.done {
