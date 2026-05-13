@@ -34,9 +34,14 @@ export async function initializeTemplateRuntime(
   const templateUserRoot = `${agentdeckRoot}/templates`
   let migrationComplete = false
 
+  // electron-store's typed has/delete restrict keys to keyof StoreSchema,
+  // but the migration + legacy adapters operate on arbitrary string keys (matching
+  // electron-store's actual runtime behavior). Bridge once here, share between both call sites.
+  const storeLike = appStore as unknown as MigrationStore & LegacyStore
+
   try {
     const migrationResult = await runTemplateMigration({
-      store: appStore as unknown as MigrationStore,
+      store: storeLike,
       userRoot: templateUserRoot,
       seeds: seedTemplateData,
     })
@@ -67,7 +72,7 @@ export async function initializeTemplateRuntime(
   }
 
   if (templateStore) {
-    const legacy = createLegacyStoreAdapter(appStore as unknown as LegacyStore)
+    const legacy = createLegacyStoreAdapter(storeLike)
     const templateCtx = {
       store: templateStore,
       legacy,

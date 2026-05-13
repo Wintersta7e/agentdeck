@@ -31,6 +31,9 @@ import { TerminalSearchBar } from './TerminalSearchBar'
 import './TerminalPane.css'
 
 // ─── Viewport sync helper ─────────────────────────────────────────────
+// xterm 5.5 exposes no public viewport-sync method; reaching into _core is the
+// documented workaround. Tracked as a blocker for the xterm 6 upgrade — when
+// a public replacement lands upstream, drop this cast.
 type XtermCore = { viewport?: { syncScrollArea: () => void } }
 
 function syncViewport(term: Terminal): void {

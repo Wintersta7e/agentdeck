@@ -33,10 +33,11 @@ export function registerWorkflowHandlers(
   })
   ipcMain.handle('workflows:save', (_, workflow: Workflow) => {
     if (!workflow || typeof workflow !== 'object') throw new Error('Invalid workflow')
-    const raw = workflow as unknown as Record<string, unknown>
+    // IPC bypasses TS — id can be missing at runtime despite the Workflow type.
     // Allow save for new workflows where id is absent (saveWorkflow mints one);
     // when present, enforce SAFE_ID_RE at the IPC boundary consistent with peers.
-    if (raw.id !== undefined && (typeof raw.id !== 'string' || !SAFE_ID_RE.test(raw.id))) {
+    const id: unknown = (workflow as { id?: unknown }).id
+    if (id !== undefined && (typeof id !== 'string' || !SAFE_ID_RE.test(id))) {
       throw new Error('Invalid workflow ID')
     }
     return saveWorkflow(workflow)
