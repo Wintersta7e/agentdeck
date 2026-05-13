@@ -26,7 +26,7 @@
     "desktop"
   ],
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=22.22.1"
   },
   "scripts": {
     "dev": "node node_modules/electron-vite/bin/electron-vite.js dev",
@@ -103,7 +103,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "husky": "^9.1.7",
     "jsdom": "^29.1.1",
-    "lint-staged": "^16.4.0",
+    "lint-staged": "^17.0.4",
     "prettier": "^3.8.3",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.3",
