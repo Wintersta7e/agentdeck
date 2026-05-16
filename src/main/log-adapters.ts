@@ -7,6 +7,10 @@
  */
 
 import { createLogger } from './logger'
+import {
+  getClaudePricing as lookupClaudePricing,
+  getCodexPricing as lookupCodexPricing,
+} from '../shared/model-pricing'
 
 const log = createLogger('log-adapters')
 
@@ -115,21 +119,6 @@ function anyLineContains(lines: string[], target: string): boolean {
 // ClaudeAdapter
 // ---------------------------------------------------------------------------
 
-/** Per-model pricing for Claude cost estimation. */
-const CLAUDE_PRICING: Record<string, { inputPer1M: number; outputPer1M: number }> = {
-  opus: { inputPer1M: 5.0, outputPer1M: 25.0 },
-  sonnet: { inputPer1M: 3.0, outputPer1M: 15.0 },
-  haiku: { inputPer1M: 1.0, outputPer1M: 5.0 },
-}
-
-/** Match a Claude model ID (e.g. "claude-opus-4-6") to a pricing tier. */
-function getClaudePricing(model: string): { inputPer1M: number; outputPer1M: number } | undefined {
-  for (const [tier, pricing] of Object.entries(CLAUDE_PRICING)) {
-    if (model.includes(tier)) return pricing
-  }
-  return undefined
-}
-
 export function createClaudeAdapter(): LogAdapter {
   return {
     agent: 'claude-code',
@@ -202,7 +191,7 @@ export function createClaudeAdapter(): LogAdapter {
       // Compute cost from model pricing (Claude JSONL has no costUSD field).
       // Cache writes cost 1.25× base input; cache reads cost 0.1× base input.
       const model = typeof msg['model'] === 'string' ? (msg['model'] as string) : ''
-      const pricing = getClaudePricing(model)
+      const pricing = lookupClaudePricing(model)
       const turnCost =
         pricing !== undefined
           ? (inputTokens / 1_000_000) * pricing.inputPer1M +
@@ -225,18 +214,6 @@ export function createClaudeAdapter(): LogAdapter {
 // ---------------------------------------------------------------------------
 // CodexAdapter
 // ---------------------------------------------------------------------------
-
-/** Per-model pricing for cost estimation. */
-const CODEX_PRICING: Record<string, { inputPer1M: number; outputPer1M: number }> = {
-  'gpt-4o': { inputPer1M: 2.5, outputPer1M: 10.0 },
-  'gpt-4o-mini': { inputPer1M: 0.15, outputPer1M: 0.6 },
-  o3: { inputPer1M: 2.0, outputPer1M: 8.0 },
-  'o4-mini': { inputPer1M: 1.1, outputPer1M: 4.4 },
-  'codex-mini': { inputPer1M: 1.5, outputPer1M: 6.0 },
-  'gpt-5.3': { inputPer1M: 2.0, outputPer1M: 8.0 },
-  'gpt-5.4': { inputPer1M: 2.0, outputPer1M: 8.0 },
-  'gpt-5.3-codex': { inputPer1M: 2.0, outputPer1M: 8.0 },
-}
 
 export function createCodexAdapter(): LogAdapter {
   // Track model per-session via the accumulator reference.
@@ -319,7 +296,7 @@ export function createCodexAdapter(): LogAdapter {
       // Normalize to non-cached input only (matches Claude adapter semantics).
       const nonCachedInput = rawInputTokens - cachedInputTokens
       const model = modelBySession.get(accumulator) ?? ''
-      const pricing = CODEX_PRICING[model]
+      const pricing = lookupCodexPricing(model)
       const totalCostUsd =
         pricing !== undefined
           ? (rawInputTokens / 1_000_000) * pricing.inputPer1M +
