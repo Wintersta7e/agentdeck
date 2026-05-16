@@ -44,7 +44,7 @@ vi.mock('./workflow-run-store', () => ({
   saveRun: vi.fn().mockResolvedValue(undefined),
 }))
 
-const { createWorkflowEngine } = await import('./workflow-engine')
+const { createWorkflowEngine, AGENT_IDLE_TIMEOUT } = await import('./workflow-engine')
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -529,9 +529,12 @@ describe('error scenarios', () => {
     engine.run(wf)
     await tick()
 
-    // Advance past idle timeout: 11 idle checks (11 * 30s = 330s > 300s)
-    for (let i = 0; i < 11; i++) {
-      await tick(30_000)
+    // Advance past idle timeout. Derived from the actual constant so the
+    // test follows along if AGENT_IDLE_TIMEOUT changes in workflow-engine.ts.
+    const idleCheckMs = 30_000
+    const ticksNeeded = Math.ceil(AGENT_IDLE_TIMEOUT / idleCheckMs) + 1
+    for (let i = 0; i < ticksNeeded; i++) {
+      await tick(idleCheckMs)
     }
 
     // forceKillTree should have called execFile('taskkill', ...)

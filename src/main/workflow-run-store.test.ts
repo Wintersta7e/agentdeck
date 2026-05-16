@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 vi.mock('fs', () => {
   const store = new Map<string, string>()
   const stats = new Map<string, { mtimeMs: number }>()
+  let mtimeCounter = 0
   return {
     mkdirSync: vi.fn(),
     promises: {
@@ -19,7 +20,10 @@ vi.mock('fs', () => {
       }),
       writeFile: vi.fn(async (filepath: string, data: string) => {
         store.set(filepath, data)
-        stats.set(filepath, { mtimeMs: Date.now() })
+        // Monotonic per-write mtimeMs so the prune-by-mtime path is actually
+        // tested. `Date.now()` would otherwise yield identical values for
+        // bursts and pruning would silently fall back to filename sort.
+        stats.set(filepath, { mtimeMs: ++mtimeCounter })
       }),
       rename: vi.fn(async (src: string, dest: string) => {
         const data = store.get(src)
