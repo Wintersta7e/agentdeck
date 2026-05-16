@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { CH } from '../../shared/ipc-channels'
 import { makeHandlersMap, makeIpcCall, makeIpcElectronMock } from '../../__test__/ipc-harness'
 
 const handlers = makeHandlersMap()
@@ -62,9 +63,22 @@ describe('ipc-agents', () => {
     )
   })
 
-  it('registers the expected channels', () => {
-    expect(handlers.has('agents:check')).toBe(true)
-    expect(handlers.has('agents:setVisible')).toBe(true)
+  it('registers every CH.agents* channel via the shared constants', () => {
+    // Pin the contract through the constants file: renaming a CH key without
+    // updating the handler dispatcher fails this check, not just the
+    // individual handler call below.
+    const expected = [
+      CH.agentsCheck,
+      CH.agentsSetVisible,
+      CH.agentsGetEffectiveContext,
+      CH.agentsGetEffectiveContextForLaunch,
+      CH.agentsGetEffectiveContextForModel,
+      CH.agentsSetContextOverride,
+      CH.agentsGetOverrides,
+    ]
+    for (const ch of expected) {
+      expect(handlers.has(ch)).toBe(true)
+    }
   })
 
   it('agents:setVisible filters unknown agent ids before persisting', () => {
@@ -88,10 +102,6 @@ describe('agents:getEffectiveContext', () => {
       () => null,
       store as unknown as Parameters<typeof registerAgentHandlers>[1],
     )
-  })
-
-  it('registers the handler', () => {
-    expect(handlers.has('agents:getEffectiveContext')).toBe(true)
   })
 
   it('validates agentId — unknown string returns error', async () => {
@@ -123,10 +133,6 @@ describe('agents:getEffectiveContextForLaunch', () => {
     )
   })
 
-  it('registers the handler', () => {
-    expect(handlers.has('agents:getEffectiveContextForLaunch')).toBe(true)
-  })
-
   it('validates agentId', async () => {
     const fn = handlers.get('agents:getEffectiveContextForLaunch')!
     const r = await fn({}, 'not-a-real-agent')
@@ -144,10 +150,6 @@ describe('agents:getEffectiveContextForModel', () => {
       () => null,
       store as unknown as Parameters<typeof registerAgentHandlers>[1],
     )
-  })
-
-  it('registers the handler', () => {
-    expect(handlers.has('agents:getEffectiveContextForModel')).toBe(true)
   })
 
   it('validates agentId', async () => {
@@ -181,10 +183,6 @@ describe('agents:setContextOverride', () => {
       () => null,
       store as unknown as Parameters<typeof registerAgentHandlers>[1],
     )
-  })
-
-  it('registers the handler', () => {
-    expect(handlers.has('agents:setContextOverride')).toBe(true)
   })
 
   it('persists per-agent override', async () => {
@@ -296,10 +294,6 @@ describe('agents:getOverrides', () => {
       () => null,
       store as unknown as Parameters<typeof registerAgentHandlers>[1],
     )
-  })
-
-  it('registers the handler', () => {
-    expect(handlers.has('agents:getOverrides')).toBe(true)
   })
 
   it('returns empty maps when no overrides set', async () => {
