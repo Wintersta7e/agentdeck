@@ -1,6 +1,10 @@
 import { useCallback, useMemo } from 'react'
+import { Plus } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import { ScreenShell } from '../../components/shared/ScreenShell'
+import { KbdHint } from '../../components/shared/KbdHint'
+import { WorkflowStarters } from './WorkflowStarters'
+import { createBlankWorkflow } from '../../utils/workflowUtils'
 import type { WorkflowMeta, WorkflowStatus } from '../../../shared/types'
 import './WorkflowsScreen.css'
 
@@ -31,6 +35,7 @@ export function WorkflowsScreen(): React.JSX.Element {
   const workflowStatuses = useAppStore((s) => s.workflowStatuses)
   const openWorkflow = useAppStore((s) => s.openWorkflow)
   const setCurrentView = useAppStore((s) => s.setCurrentView)
+  const setWorkflows = useAppStore((s) => s.setWorkflows)
 
   const handleOpen = useCallback(
     (wf: WorkflowMeta) => {
@@ -39,6 +44,10 @@ export function WorkflowsScreen(): React.JSX.Element {
     },
     [openWorkflow, setCurrentView],
   )
+
+  const handleNew = useCallback(() => {
+    void createBlankWorkflow(setWorkflows, openWorkflow)
+  }, [setWorkflows, openWorkflow])
 
   const sorted: WorkflowMeta[] = useMemo(
     () => [...workflows].sort((a, b) => b.updatedAt - a.updatedAt),
@@ -51,6 +60,16 @@ export function WorkflowsScreen(): React.JSX.Element {
       title="Workflows"
       sub="Multi-step agent + shell pipelines. Click a card to open the editor."
       className="workflows-screen"
+      actions={
+        <button
+          type="button"
+          className="workflows-screen__new-btn"
+          onClick={handleNew}
+          title="Create a new blank workflow"
+        >
+          <Plus size={14} aria-hidden="true" /> NEW WORKFLOW
+        </button>
+      }
     >
       {sorted.length === 0 ? (
         <div className="workflows-screen__empty" role="status">
@@ -59,9 +78,10 @@ export function WorkflowsScreen(): React.JSX.Element {
           </div>
           <div className="workflows-screen__empty-title">No workflows yet</div>
           <div className="workflows-screen__empty-sub">
-            Seed templates ship with AgentDeck. Open the command palette (Ctrl+K) and type
-            &ldquo;workflow&rdquo; to get started.
+            Pick a starter to spin up a workflow, or use the command palette (
+            <KbdHint keys="Ctrl+K" />) and type &ldquo;workflow&rdquo; for more options.
           </div>
+          <WorkflowStarters />
         </div>
       ) : (
         <div className="workflows-grid">

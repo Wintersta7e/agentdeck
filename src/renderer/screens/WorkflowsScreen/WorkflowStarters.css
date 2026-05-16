@@ -1,0 +1,86 @@
+.wf-starters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--sp-3);
+  width: 100%;
+  max-width: 720px;
+  margin: var(--sp-4) auto 0;
+}
+
+.wf-starter-card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  text-align: left;
+  padding: var(--sp-4);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition:
+    border-color var(--duration-base),
+    background var(--duration-base),
+    transform var(--duration-fast);
+  position: relative;
+  overflow: hidden;
+  min-height: 32px;
+}
+
+.wf-starter-card:hover {
+  border-color: var(--accent-border);
+  background: var(--bg3);
+}
+
+.wf-starter-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.wf-starter-card:active {
+  transform: translateY(1px);
+}
+
+.wf-starter-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  background: var(--accent-glow);
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+  flex-shrink: 0;
+}
+
+.wf-starter-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.wf-starter-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-base);
+  font-weight: 600;
+  color: var(--text0);
+  margin-bottom: var(--sp-half);
+  letter-spacing: -0.005em;
+}
+
+.wf-starter-desc {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text2);
+  line-height: var(--lh-relaxed);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wf-starter-card {
+    transition: none;
+  }
+  .wf-starter-card:active {
+    transform: none;
+  }
+}
