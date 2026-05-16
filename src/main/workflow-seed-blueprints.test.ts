@@ -1,5 +1,45 @@
 import { describe, it, expect } from 'vitest'
-import { SEED_WORKFLOWS } from './workflow-seed-blueprints'
+import { SEED_WORKFLOWS, type SeedWorkflowBlueprint } from './workflow-seed-blueprints'
+import { validateWorkflow } from '../shared/workflow-utils'
+import type { Workflow, WorkflowNode, AgentType } from '../shared/types'
+
+// Mirror the materialisation in workflow-seeds.ts (skip role resolution — irrelevant for validation).
+function seedToWorkflow(b: SeedWorkflowBlueprint): Workflow {
+  const nodes: WorkflowNode[] = b.nodes.map((n): WorkflowNode => {
+    const base = { id: n.id, name: n.name, x: n.x, y: n.y }
+    switch (n.type) {
+      case 'agent': {
+        const node: WorkflowNode = { ...base, type: 'agent' }
+        if (n.agent !== undefined) node.agent = n.agent as AgentType
+        if (n.agentFlags !== undefined) node.agentFlags = n.agentFlags
+        if (n.prompt !== undefined) node.prompt = n.prompt
+        return node
+      }
+      case 'shell': {
+        const node: WorkflowNode = { ...base, type: 'shell' }
+        if (n.command !== undefined) node.command = n.command
+        return node
+      }
+      case 'checkpoint': {
+        const node: WorkflowNode = { ...base, type: 'checkpoint' }
+        if (n.message !== undefined) node.message = n.message
+        return node
+      }
+      case 'condition':
+        return { ...base, type: 'condition' }
+    }
+  })
+  return {
+    id: b.id,
+    name: b.name,
+    description: b.description,
+    nodes,
+    edges: b.edges,
+    variables: b.variables,
+    createdAt: 0,
+    updatedAt: 0,
+  }
+}
 
 describe('SEED_WORKFLOWS blueprints', () => {
   it('exports at least one blueprint', () => {
@@ -89,6 +129,19 @@ describe('SEED_WORKFLOWS blueprints', () => {
         expect(Number.isFinite(n.x)).toBe(true)
         expect(Number.isFinite(n.y)).toBe(true)
       }
+    }
+  })
+
+  it('every blueprint passes validateWorkflow when materialised', () => {
+    // Catches orphan edges, malformed conditions, missing agent fields, etc.
+    // that would otherwise only surface at seed-time on a user's machine.
+    for (const blueprint of SEED_WORKFLOWS) {
+      const wf = seedToWorkflow(blueprint)
+      const result = validateWorkflow(wf)
+      expect(
+        result.errors,
+        `seed ${blueprint.id} should validate clean: ${result.errors.join('; ')}`,
+      ).toEqual([])
     }
   })
 })
