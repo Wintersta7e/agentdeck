@@ -1,14 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { makeHandlersMap, makeIpcCall, makeIpcElectronMock } from '../../__test__/ipc-harness'
 
-const handlers = new Map<string, (...args: unknown[]) => unknown>()
-
-vi.mock('electron', () => ({
-  ipcMain: {
-    handle: (channel: string, fn: (...args: unknown[]) => unknown) => {
-      handlers.set(channel, fn)
-    },
-  },
-}))
+const handlers = makeHandlersMap()
+vi.mock('electron', () => makeIpcElectronMock(handlers))
 
 vi.mock('../logger', () => ({
   createLogger: () => ({ info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() }),
@@ -31,11 +25,7 @@ vi.mock('../active-model-cache', () => ({
 
 const { registerAgentHandlers } = await import('./ipc-agents')
 
-function call(channel: string, ...args: unknown[]): unknown {
-  const fn = handlers.get(channel)
-  if (!fn) throw new Error(`no handler for ${channel}`)
-  return fn(null, ...args)
-}
+const call = makeIpcCall(handlers)
 
 interface MiniPrefs {
   visibleAgents: string[] | null

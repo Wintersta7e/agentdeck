@@ -1,15 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { makeHandlersMap, makeIpcCall, makeIpcElectronMock } from '../../__test__/ipc-harness'
 
-const handlers = new Map<string, (...args: unknown[]) => unknown>()
-
-vi.mock('electron', () => ({
-  app: { getPath: () => '/tmp' },
-  ipcMain: {
-    handle: (channel: string, fn: (...args: unknown[]) => unknown) => {
-      handlers.set(channel, fn)
-    },
-  },
-}))
+const handlers = makeHandlersMap()
+vi.mock('electron', () => makeIpcElectronMock(handlers, { app: { getPath: () => '/tmp' } }))
 
 vi.mock('../git-status', () => ({
   getGitStatus: vi.fn(() => Promise.resolve(null)),
@@ -35,11 +28,7 @@ vi.mock('../cost-history', () => ({
 
 const { registerHomeHandlers } = await import('./ipc-home')
 
-function call(channel: string, ...args: unknown[]): unknown {
-  const fn = handlers.get(channel)
-  if (!fn) throw new Error(`no handler for ${channel}`)
-  return fn(null, ...args)
-}
+const call = makeIpcCall(handlers)
 
 describe('ipc-home', () => {
   beforeEach(() => {

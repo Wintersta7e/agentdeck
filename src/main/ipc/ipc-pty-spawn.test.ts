@@ -1,18 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { PtyManager } from '../pty-manager'
+import { makeHandlersMap, makeIpcCall, makeIpcElectronMock } from '../../__test__/ipc-harness'
 
-const handlers = new Map<string, (...args: unknown[]) => unknown>()
-
-vi.mock('electron', () => ({
-  ipcMain: {
-    handle: (channel: string, fn: (...args: unknown[]) => unknown) => {
-      handlers.set(channel, fn)
-    },
-    on: (channel: string, fn: (...args: unknown[]) => unknown) => {
-      handlers.set(channel, fn)
-    },
-  },
-}))
+const handlers = makeHandlersMap()
+vi.mock('electron', () => makeIpcElectronMock(handlers))
 
 vi.mock('../git-status', () => ({
   invalidateGitCache: vi.fn(),
@@ -28,11 +19,7 @@ vi.mock('node:child_process', () => ({
 
 const { registerPtyHandlers } = await import('./ipc-pty')
 
-function call(channel: string, ...args: unknown[]): unknown {
-  const fn = handlers.get(channel)
-  if (!fn) throw new Error(`no handler for ${channel}`)
-  return fn(null, ...args)
-}
+const call = makeIpcCall(handlers)
 
 describe('pty:spawn IPC validation', () => {
   let mgr: { spawn: ReturnType<typeof vi.fn> }

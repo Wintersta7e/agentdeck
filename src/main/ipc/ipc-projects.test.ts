@@ -1,16 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { makeHandlersMap, makeIpcCall, makeIpcElectronMock } from '../../__test__/ipc-harness'
 
-const handlers = new Map<string, (...args: unknown[]) => unknown>()
-
-vi.mock('electron', () => ({
-  dialog: { showOpenDialog: vi.fn() },
-  ipcMain: {
-    handle: (channel: string, fn: (...args: unknown[]) => unknown) => {
-      handlers.set(channel, fn)
-    },
-  },
-  BrowserWindow: vi.fn(),
-}))
+const handlers = makeHandlersMap()
+vi.mock('electron', () =>
+  makeIpcElectronMock(handlers, {
+    dialog: { showOpenDialog: vi.fn() },
+    BrowserWindow: vi.fn(),
+  }),
+)
 
 vi.mock('../logger', () => ({
   createLogger: () => ({ info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() }),
@@ -32,11 +29,7 @@ vi.mock('../wsl-utils', () => ({
 
 const { registerProjectHandlers } = await import('./ipc-projects')
 
-function call(channel: string, ...args: unknown[]): unknown {
-  const fn = handlers.get(channel)
-  if (!fn) throw new Error(`no handler for ${channel}`)
-  return fn(null, ...args)
-}
+const call = makeIpcCall(handlers)
 
 describe('ipc-projects', () => {
   beforeEach(() => {

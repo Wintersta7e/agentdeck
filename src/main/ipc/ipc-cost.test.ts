@@ -1,24 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { CostTracker } from '../cost-tracker'
 import type { CostHistory } from '../cost-history'
+import { makeHandlersMap, makeIpcCall, makeIpcElectronMock } from '../../__test__/ipc-harness'
 
-const handlers = new Map<string, (...args: unknown[]) => unknown>()
-
-vi.mock('electron', () => ({
-  ipcMain: {
-    handle: (channel: string, fn: (...args: unknown[]) => unknown) => {
-      handlers.set(channel, fn)
-    },
-  },
-}))
+const handlers = makeHandlersMap()
+vi.mock('electron', () => makeIpcElectronMock(handlers))
 
 const { registerCostHandlers } = await import('./ipc-cost')
-
-function call(channel: string, ...args: unknown[]): unknown {
-  const fn = handlers.get(channel)
-  if (!fn) throw new Error(`no handler for ${channel}`)
-  return fn(null, ...args)
-}
+const call = makeIpcCall(handlers)
 
 describe('ipc-cost', () => {
   let tracker: { bindSession: ReturnType<typeof vi.fn>; unbindSession: ReturnType<typeof vi.fn> }
