@@ -6,6 +6,16 @@ on:
   pull_request:
     branches: [main]
 
+# Cancel an in-flight run when a newer commit lands on the same ref.
+# Saves Actions minutes and shortens feedback loops on PR pushes.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Default GITHUB_TOKEN to read-only; this workflow doesn't write anything.
+permissions:
+  contents: read
+
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
@@ -37,3 +47,6 @@ jobs:
 
       - name: Test
         run: npm test
+
+      - name: Build
+        run: npm run build
