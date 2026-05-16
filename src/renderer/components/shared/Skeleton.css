@@ -1,0 +1,44 @@
+.skeleton {
+  display: inline-block;
+  background: linear-gradient(90deg, var(--bg2) 0%, var(--bg3) 50%, var(--bg2) 100%);
+  background-size: 200% 100%;
+  border-radius: var(--r);
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+  vertical-align: middle;
+}
+
+.skeleton-line {
+  display: block;
+  width: 100%;
+  height: 0.85em;
+  margin: var(--sp-half) 0;
+}
+
+.skeleton-bar {
+  display: inline-block;
+  width: 80px;
+  height: 0.85em;
+}
+
+.skeleton-block {
+  display: block;
+  width: 100%;
+  height: var(--sp-9);
+  border-radius: 6px;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+    background: var(--bg3);
+  }
+}

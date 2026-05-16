@@ -1,0 +1,48 @@
+.kbd-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-half);
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+
+.kbd-hint-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg3);
+  color: var(--text2);
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: var(--r);
+  padding: 0 var(--sp-1);
+  min-width: 1.6em;
+  height: 1.5em;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.kbd-hint-sep {
+  color: var(--text3);
+  font-size: 0.9em;
+}
+
+/* Size variants */
+.kbd-hint-sm {
+  font-size: var(--fs-xs);
+}
+
+.kbd-hint-sm .kbd-hint-key {
+  min-width: 1.4em;
+  height: 1.35em;
+}
+
+.kbd-hint-md {
+  font-size: var(--fs-sm);
+}
+
+/* Tighten when nested in result-right row */
+.result-right .kbd-hint {
+  flex-shrink: 0;
+}

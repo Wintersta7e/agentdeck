@@ -1,0 +1,49 @@
+.progress-bar {
+  position: relative;
+  width: 100%;
+  height: 2px;
+  background: var(--bg3);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+  transform-origin: left center;
+  transform: scaleX(0);
+  transition: transform var(--duration-base) var(--ease-out);
+  border-radius: inherit;
+}
+
+.progress-tone-green .progress-bar-fill {
+  background: var(--green);
+}
+
+.progress-bar.is-indeterminate .progress-bar-fill {
+  width: 40%;
+  transform-origin: left center;
+  animation: progress-indeterminate 1.2s ease-in-out infinite;
+}
+
+@keyframes progress-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress-bar.is-indeterminate .progress-bar-fill {
+    animation: none;
+    width: 100%;
+    transform: none;
+    opacity: 0.35;
+  }
+  .progress-bar-fill {
+    transition: none;
+  }
+}
