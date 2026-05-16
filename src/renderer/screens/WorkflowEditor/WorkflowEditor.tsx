@@ -16,6 +16,7 @@ import WorkflowNodeEditorPanel from './WorkflowNodeEditorPanel'
 import WorkflowRunDialog from './WorkflowRunDialog'
 import WorkflowToolbar from './WorkflowToolbar'
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog'
+import { ProgressBar } from '../../components/shared/ProgressBar'
 import { useWorkflowActions } from './useWorkflowActions'
 import { handleIpcError } from '../../utils/ipcErrorHandler'
 import './WorkflowEditor.css'
@@ -295,6 +296,21 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
     [autoSave, workflowId, updateWorkflowMeta],
   )
 
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent): void {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'd' || e.shiftKey || e.altKey) return
+      const target = e.target as HTMLElement | null
+      const tag = target?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return
+      const id = selectedNodeIdRef.current
+      if (!id) return
+      e.preventDefault()
+      handleDuplicateNode(id)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [handleDuplicateNode])
+
   const handleDeleteEdge = useCallback(
     (edgeId: string) => {
       setWorkflow((prev) => {
@@ -405,6 +421,17 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
 
   const toggleAddMenu = useCallback(() => setAddMenuOpen((prev) => !prev), [])
 
+  const runProgress = useMemo(() => {
+    if (workflowStatus !== 'running' || !workflow || workflow.nodes.length === 0) return null
+    const total = workflow.nodes.length
+    let finished = 0
+    for (const n of workflow.nodes) {
+      const s = nodeStatuses[n.id]
+      if (s === 'done' || s === 'error' || s === 'skipped') finished += 1
+    }
+    return { value: finished / total, finished, total }
+  }, [workflow, nodeStatuses, workflowStatus])
+
   return (
     <div className="wf-editor">
       <WorkflowToolbar
@@ -424,6 +451,15 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
         onProjectChange={handleProjectChange}
         projects={projects}
       />
+
+      {runProgress && (
+        <ProgressBar
+          value={runProgress.value}
+          label={`Workflow progress: ${runProgress.finished} of ${runProgress.total} nodes complete`}
+          tone="green"
+          className="wf-run-progress"
+        />
+      )}
 
       {loadError && (
         <div className="wf-load-error" role="alert">

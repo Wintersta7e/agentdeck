@@ -3,6 +3,7 @@ import { useAppStore } from '../../store/appStore'
 import { AGENTS } from '../../../shared/agents'
 import { useEffectiveContext, badgeLabelFor } from '../../hooks/useEffectiveContext'
 import { ScreenShell, FilterChip } from '../../components/shared/ScreenShell'
+import { ProgressBar } from '../../components/shared/ProgressBar'
 import './AgentsScreen.css'
 
 type AgentRecord = (typeof AGENTS)[number]
@@ -107,6 +108,13 @@ function AgentTile({
           {updating ? 'Updating…' : updateAvailable ? 'Update' : 'Up to date'}
         </button>
       </div>
+      {updating && (
+        <ProgressBar
+          label={`Updating ${agent.name}`}
+          tone="accent"
+          className="agent-tile__progress"
+        />
+      )}
     </article>
   )
 }

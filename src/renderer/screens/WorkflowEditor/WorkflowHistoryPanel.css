@@ -288,3 +288,16 @@
   font-size: var(--fs-sm);
   line-height: 1.4;
 }
+
+.wf-history-loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+}
+
+.wf-history-skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}

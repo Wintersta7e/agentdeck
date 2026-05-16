@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { GitStatusRow } from './GitStatusRow'
+import { Skeleton } from '../shared/Skeleton'
 import { AGENTS } from '../../../shared/agents'
 import { getProjectAgents } from '../../../shared/agent-helpers'
 import type { Project, StackBadge } from '../../../shared/types'
@@ -102,11 +103,16 @@ export function ProjectCardV2({
         {isRunning && <div className="pcv2-dot" aria-label="Running" />}
       </div>
 
-      {gitStatus !== null && gitStatus !== undefined ? (
-        <GitStatusRow status={gitStatus} />
-      ) : gitStatus === undefined ? (
-        <div className="git-status-row git-loading">loading git status…</div>
-      ) : null}
+      {gitStatus === undefined && (
+        <div
+          className="git-status-row git-loading"
+          aria-busy="true"
+          aria-label="Loading git status"
+        >
+          <Skeleton variant="bar" width="100%" height="0.8em" />
+        </div>
+      )}
+      {gitStatus && <GitStatusRow status={gitStatus} />}
 
       {agents.length > 0 && (
         <div className="pcv2-agents">

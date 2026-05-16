@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
+import { KbdHint } from '../shared/KbdHint'
 import './ShortcutsDialog.css'
 
 interface ShortcutsDialogProps {
@@ -71,6 +72,13 @@ const SHORTCUT_SECTIONS: ShortcutSection[] = [
       { keys: 'Escape', action: 'Cancel Edit / Close Dialog' },
     ],
   },
+  {
+    title: 'Workflow Editor',
+    shortcuts: [
+      { keys: 'Ctrl+D', action: 'Duplicate Selected Node' },
+      { keys: 'Delete / Backspace', action: 'Delete Selected Node or Edge' },
+    ],
+  },
 ]
 
 export function ShortcutsDialog({ onClose }: ShortcutsDialogProps): React.JSX.Element {
@@ -115,7 +123,7 @@ export function ShortcutsDialog({ onClose }: ShortcutsDialogProps): React.JSX.El
               <div className="shortcuts-section-title">{section.title}</div>
               {section.shortcuts.map((s) => (
                 <div key={s.keys + s.action} className="shortcuts-row">
-                  <kbd className="shortcuts-kbd">{s.keys}</kbd>
+                  <KbdHint keys={s.keys} size="md" />
                   <span className="shortcuts-action">{s.action}</span>
                 </div>
               ))}
