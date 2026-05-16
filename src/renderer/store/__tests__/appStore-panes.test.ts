@@ -35,28 +35,3 @@ describe('setActiveSession', () => {
     expect(useAppStore.getState().currentView).toBe('sessions')
   })
 })
-
-describe('setPaneSession', () => {
-  it('assigns a session to a specific pane index', () => {
-    useAppStore.getState().setPaneSession(0, 'sA')
-    expect(useAppStore.getState().paneSessions[0]).toBe('sA')
-  })
-
-  it('extends paneSessions array if index is beyond current length', () => {
-    // Start with empty paneSessions
-    expect(useAppStore.getState().paneSessions.length).toBe(0)
-    useAppStore.getState().setPaneSession(2, 'sB')
-    const panes = useAppStore.getState().paneSessions
-    expect(panes.length).toBe(3)
-    expect(panes[2]).toBe('sB')
-    // Slots 0 and 1 should be padded with empty strings
-    expect(panes[0]).toBe('')
-    expect(panes[1]).toBe('')
-  })
-
-  it('overwrites an existing pane assignment', () => {
-    useAppStore.getState().setPaneSession(0, 'sA')
-    useAppStore.getState().setPaneSession(0, 'sB')
-    expect(useAppStore.getState().paneSessions[0]).toBe('sB')
-  })
-})

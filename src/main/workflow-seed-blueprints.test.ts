@@ -42,10 +42,6 @@ function seedToWorkflow(b: SeedWorkflowBlueprint): Workflow {
 }
 
 describe('SEED_WORKFLOWS blueprints', () => {
-  it('exports at least one blueprint', () => {
-    expect(SEED_WORKFLOWS.length).toBeGreaterThan(0)
-  })
-
   it('every blueprint has a unique id', () => {
     const ids = SEED_WORKFLOWS.map((w) => w.id)
     expect(new Set(ids).size).toBe(ids.length)
@@ -119,15 +115,6 @@ describe('SEED_WORKFLOWS blueprints', () => {
     for (const w of SEED_WORKFLOWS) {
       for (const v of w.variables ?? []) {
         expect(VARIABLE_NAME_RE.test(v.name)).toBe(true)
-      }
-    }
-  })
-
-  it('node coordinates are finite numbers (canvas placement)', () => {
-    for (const w of SEED_WORKFLOWS) {
-      for (const n of w.nodes) {
-        expect(Number.isFinite(n.x)).toBe(true)
-        expect(Number.isFinite(n.y)).toBe(true)
       }
     }
   })

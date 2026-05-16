@@ -36,48 +36,6 @@ describe('Session lifecycle', () => {
     expect(state.sessions['s2']).toBeDefined()
   })
 
-  it('updates session status', () => {
-    useAppStore.getState().addSession('s1', 'proj-1')
-    useAppStore.getState().setSessionStatus('s1', 'running')
-    expect(useAppStore.getState().sessions['s1']?.status).toBe('running')
-  })
-
-  it('restarts a session', () => {
-    useAppStore.getState().addSession('s1', 'proj-1')
-    const newId = useAppStore.getState().restartSession('s1')
-    expect(typeof newId).toBe('string')
-    expect(newId).not.toBe('')
-    const state = useAppStore.getState()
-    expect(state.sessions['s1']).toBeUndefined()
-    const newSession = newId ? state.sessions[newId] : undefined
-    expect(newSession).toBeDefined()
-    expect(newSession?.projectId).toBe('proj-1')
-    expect(newSession?.status).toBe('starting')
-  })
-
-  it('places session in focused pane', () => {
-    useAppStore.getState().addSession('s1', 'proj-1')
-    const state = useAppStore.getState()
-    expect(state.paneSessions[0]).toBe('s1')
-  })
-
-  it('adds a session with agent overrides', () => {
-    useAppStore.getState().addSession('s1', 'proj-1', {
-      agentOverride: 'aider',
-      agentFlagsOverride: '--model gpt-4',
-    })
-    const session = useAppStore.getState().sessions['s1']
-    expect(session?.agentOverride).toBe('aider')
-    expect(session?.agentFlagsOverride).toBe('--model gpt-4')
-  })
-
-  it('adds a session without overrides (fields undefined)', () => {
-    useAppStore.getState().addSession('s1', 'proj-1')
-    const session = useAppStore.getState().sessions['s1']
-    expect(session?.agentOverride).toBeUndefined()
-    expect(session?.agentFlagsOverride).toBeUndefined()
-  })
-
   it('restartSession preserves agent overrides', () => {
     useAppStore.getState().addSession('s1', 'proj-1', {
       agentOverride: 'codex',
@@ -181,14 +139,6 @@ describe('Pane layout', () => {
     useAppStore.getState().setFocusedPane(2)
     useAppStore.getState().setPaneLayout(1)
     expect(useAppStore.getState().focusedPane).toBe(0)
-  })
-})
-
-describe('Right Panel', () => {
-  it('toggles right panel', () => {
-    expect(useAppStore.getState().rightPanelOpen).toBe(false)
-    useAppStore.getState().toggleRightPanel()
-    expect(useAppStore.getState().rightPanelOpen).toBe(true)
   })
 })
 

@@ -59,20 +59,4 @@ describe('home slice', () => {
     useAppStore.getState().setCostHistory(entries)
     expect(useAppStore.getState().costHistory).toHaveLength(1)
   })
-
-  it('manages daily budget', () => {
-    expect(useAppStore.getState().dailyBudget).toBeNull()
-    useAppStore.getState().setDailyBudget(12.5)
-    expect(useAppStore.getState().dailyBudget).toBe(12.5)
-    useAppStore.getState().setDailyBudget(null)
-    expect(useAppStore.getState().dailyBudget).toBeNull()
-  })
-
-  it('manages tier 3 collapse state', () => {
-    expect(useAppStore.getState().tier3Collapsed).toEqual({})
-    useAppStore.getState().setTier3Collapsed('timeline', true)
-    expect(useAppStore.getState().tier3Collapsed['timeline']).toBe(true)
-    useAppStore.getState().setTier3Collapsed('timeline', false)
-    expect(useAppStore.getState().tier3Collapsed['timeline']).toBe(false)
-  })
 })

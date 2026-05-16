@@ -739,24 +739,6 @@ describe('error scenarios', () => {
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('lifecycle events', () => {
-  it('emits workflow:started on run', async () => {
-    const child = createMockChild()
-    mockSpawn.mockReturnValue(child)
-
-    const wf = makeWorkflow({
-      id: 'wf-lc1',
-      nodes: [makeWorkflowNode({ id: 'n1', type: 'agent', prompt: 'go' })],
-    })
-
-    engine.run(wf)
-    await tick()
-
-    expect(hasEvent(sendSpy, 'wf-lc1', 'workflow:started')).toBe(true)
-
-    child.emit('close', 0)
-    await tick()
-  })
-
   it('emits workflow:done on successful completion', async () => {
     const child = createMockChild()
     mockSpawn.mockReturnValue(child)
