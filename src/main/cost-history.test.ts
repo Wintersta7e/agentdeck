@@ -88,10 +88,16 @@ describe('CostHistory persistence', () => {
     history.recordCost('claude-code', 0.1, 1000)
     history.recordCost('claude-code', 0.2, 2000)
     history.recordCost('codex', 0.3, 3000)
+    // Fire the 5s debounce, which kicks off `void writeToDiskAsync()`.
     await vi.advanceTimersByTimeAsync(5_000)
-    // Drain the microtask queue so the async fs.writeFile resolves
-    await Promise.resolve()
-    await vi.runAllTimersAsync()
+    // writeFile is libuv I/O, not a microtask or timer — switch to real
+    // timers and poll for the file with a generous bound so the test
+    // doesn't race the disk write under load (was flaky on WSL).
+    vi.useRealTimers()
+    const start = Date.now()
+    while (!existsSync(storePath) && Date.now() - start < 2000) {
+      await new Promise((r) => setTimeout(r, 10))
+    }
     expect(existsSync(storePath)).toBe(true)
   })
 
