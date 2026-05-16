@@ -7,49 +7,7 @@ beforeEach(() => {
   useAppStore.setState(useAppStore.getInitialState())
 })
 
-describe('Session lifecycle', () => {
-  it('adds a session', () => {
-    useAppStore.getState().addSession('s1', 'proj-1')
-    const state = useAppStore.getState()
-    expect(state.sessions['s1']).toBeDefined()
-    expect(state.sessions['s1']?.projectId).toBe('proj-1')
-    expect(state.sessions['s1']?.status).toBe('starting')
-    expect(state.activeSessionId).toBe('s1')
-    expect(state.currentView).toBe('sessions')
-  })
-
-  it('removes a session and falls back to home', () => {
-    useAppStore.getState().addSession('s1', 'proj-1')
-    useAppStore.getState().removeSession('s1')
-    const state = useAppStore.getState()
-    // Session stays in map as exited (for cost/timeline), but view goes home
-    expect(state.sessions['s1']?.status).toBe('exited')
-    expect(state.currentView).toBe('home')
-  })
-
-  it('removes a session with others remaining', () => {
-    useAppStore.getState().addSession('s1', 'proj-1')
-    useAppStore.getState().addSession('s2', 'proj-2')
-    useAppStore.getState().removeSession('s1')
-    const state = useAppStore.getState()
-    expect(state.sessions['s1']?.status).toBe('exited')
-    expect(state.sessions['s2']).toBeDefined()
-  })
-
-  it('restartSession preserves agent overrides', () => {
-    useAppStore.getState().addSession('s1', 'proj-1', {
-      agentOverride: 'codex',
-      agentFlagsOverride: '--fast',
-    })
-    const newId = useAppStore.getState().restartSession('s1')
-    expect(typeof newId).toBe('string')
-    expect(newId).not.toBe('')
-    const newSession = newId ? useAppStore.getState().sessions[newId] : undefined
-    expect(newSession?.agentOverride).toBe('codex')
-    expect(newSession?.agentFlagsOverride).toBe('--fast')
-    expect(newSession?.status).toBe('starting')
-  })
-})
+// Session lifecycle lives in src/renderer/store/slices/sessions.test.ts
 
 describe('View navigation', () => {
   it('opens and closes wizard via viewStack', () => {
