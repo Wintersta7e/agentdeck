@@ -3,8 +3,6 @@ import { Search } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import './TitlebarBrand.css'
 
-const APP_VERSION = '6.1.0'
-
 function formatClock(d: Date): string {
   return d.toLocaleTimeString('en-US', {
     hour: '2-digit',
@@ -22,7 +20,8 @@ function formatDayOfWeek(d: Date): string {
  *
  * Search pill (click → Ctrl+K command palette), live indicator that
  * reflects the session mix (running / error / idle), clock ticking every
- * 30 s, READY status word, and a "UBUNTU · WSL · v6.1.0" trailing chip.
+ * 30 s, READY status word, and a "UBUNTU · WSL · vX.Y.Z" trailing chip
+ * (version pulled live from the main process, never hardcoded).
  * Every element reads from the store so it reflects real state.
  */
 export function TitlebarBrand(): React.JSX.Element {
@@ -39,6 +38,7 @@ export function TitlebarBrand(): React.JSX.Element {
 
   const [clock, setClock] = useState(() => formatClock(new Date()))
   const [day, setDay] = useState(() => formatDayOfWeek(new Date()))
+  const [appVersion, setAppVersion] = useState<string | null>(null)
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -47,6 +47,21 @@ export function TitlebarBrand(): React.JSX.Element {
       setDay(formatDayOfWeek(d))
     }, 30_000)
     return () => window.clearInterval(id)
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    window.agentDeck.app
+      .version()
+      .then((v: string) => {
+        if (!cancelled) setAppVersion(v)
+      })
+      .catch(() => {
+        /* leave the chip versionless if IPC fails — not load-bearing */
+      })
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const state: 'error' | 'running' | 'idle' =
@@ -100,7 +115,13 @@ export function TitlebarBrand(): React.JSX.Element {
       </div>
 
       <div className="titlebar-brand__system" aria-hidden="true">
-        {(distro || 'UBUNTU').toUpperCase()} · WSL · <span>v{APP_VERSION}</span>
+        {(distro || 'UBUNTU').toUpperCase()} · WSL
+        {appVersion && (
+          <>
+            {' · '}
+            <span>v{appVersion}</span>
+          </>
+        )}
       </div>
     </div>
   )
