@@ -92,11 +92,14 @@ export const AGENTS = [
     contextWindow: 128_000,
     versionArgs: ['version'],
     // Goose is installed via shell script (curl | bash), not pip.
-    // No reliable remote version check — leave empty to skip update notifications.
     // Project moved from block/goose to aaif-goose/goose (Linux Foundation AAIF)
     // and switched to a release-asset installer; the old block/goose URL 404s
-    // through the GitHub redirect.
-    latestCmd: '',
+    // through the GitHub redirect. latestCmd reads the GitHub releases API and
+    // returns the tag (e.g. "v1.34.1") — SEMVER_RE in agent-updater strips the
+    // "v" prefix on parse. Network failure / rate limit / missing tag_name all
+    // produce empty stdout, which the updater treats as "skip the check."
+    latestCmd:
+      "curl -fsSL https://api.github.com/repos/aaif-goose/goose/releases/latest 2>/dev/null | python3 -c \"import json,sys; print(json.load(sys.stdin).get('tag_name',''))\" 2>/dev/null",
     updateCmd:
       'curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh | bash',
     printFlags: ['run', '-t'],
