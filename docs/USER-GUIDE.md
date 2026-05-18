@@ -1,6 +1,6 @@
 # AgentDeck User Guide
 
-> **Version**: 6.5.0
+> **Version**: 6.6.0
 
 AgentDeck is a desktop command center for managing AI coding agents through WSL2 terminals. This guide covers every feature from first launch to advanced workflow automation.
 
