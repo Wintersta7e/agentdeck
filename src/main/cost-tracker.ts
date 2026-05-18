@@ -85,24 +85,41 @@ export function createCostTracker(
   /** File paths already bound to a session — prevents cross-session matching. */
   const boundFiles = new Set<string>()
 
-  // Resolve $HOME once at tracker creation so all sessions share
-  // the cached value. Eliminates repeated wsl.exe calls that fail under
-  // WSL resource contention when multiple sessions start simultaneously.
+  // Resolve $HOME lazily; the first session bind kicks it off. Multiple
+  // concurrent binds share the same in-flight promise (no stampede). On
+  // failure we leave cachedHome null so the next bind retries — caching
+  // '' here used to permanently break cost tracking for the process if
+  // the initial wsl.exe call failed (e.g. WSL transient resource error).
   let cachedHome: string | null = null
-  const homeReady: Promise<string> = wslExec('echo "$HOME"')
-    .then((out) => {
-      const home = out.trim()
-      cachedHome = home
-      log.info('Resolved WSL $HOME', { home })
-      return home
-    })
-    .catch((err) => {
-      log.warn('Failed to resolve WSL $HOME — cost tracking may not work', {
-        err: String(err),
+  let inFlightHome: Promise<string> | null = null
+
+  function resolveHome(): Promise<string> {
+    if (cachedHome) return Promise.resolve(cachedHome)
+    if (inFlightHome) return inFlightHome
+    inFlightHome = wslExec('echo "$HOME"')
+      .then((out) => {
+        const home = out.trim()
+        if (home) {
+          cachedHome = home
+          log.info('Resolved WSL $HOME', { home })
+        }
+        return home
       })
-      cachedHome = ''
-      return ''
-    })
+      .catch((err) => {
+        log.warn('Failed to resolve WSL $HOME — will retry on next session', {
+          err: String(err),
+        })
+        return ''
+      })
+      .finally(() => {
+        inFlightHome = null
+      })
+    return inFlightHome
+  }
+
+  // Kick off eager resolution so the common case (first session arrives
+  // shortly after createCostTracker) doesn't pay the wsl.exe latency.
+  void resolveHome()
 
   // Resolve agent config env vars from WSL (CLAUDE_CONFIG_DIR, CODEX_HOME).
   // These override the default ~/.claude and ~/.codex base paths.
@@ -145,7 +162,7 @@ export function createCostTracker(
     const pattern = session.adapter.getFilePattern()
 
     // Use cached values if available; otherwise wait for initial resolution.
-    const homePromise = cachedHome !== null ? Promise.resolve(cachedHome) : homeReady
+    const homePromise = resolveHome()
     const envPromise = cachedEnv !== null ? Promise.resolve(cachedEnv) : envReady
 
     Promise.all([homePromise, envPromise])

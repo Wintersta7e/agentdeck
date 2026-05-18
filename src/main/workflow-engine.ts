@@ -174,11 +174,22 @@ export function createWorkflowEngine(
         const testOutput = fullOutput.slice(0, 102400)
         try {
           return new RegExp(node.conditionPattern ?? '').test(testOutput) ? 'true' : 'false'
-        } catch {
-          // Catch regex syntax errors so they don't crash the engine
+        } catch (err) {
+          // Catch regex syntax errors so they don't crash the engine.
+          // Also surface to the run log — log.warn alone is invisible
+          // in the workflow editor and the user has no way to tell why
+          // the branch evaluated false.
+          const msg = err instanceof Error ? err.message : String(err)
           log.warn('Condition regex failed', {
             nodeId: node.id,
             pattern: node.conditionPattern,
+            err: msg,
+          })
+          push(workflow.id, {
+            type: 'node:output',
+            workflowId: workflow.id,
+            nodeId: node.id,
+            message: `⚠ Invalid regex "${node.conditionPattern ?? ''}": ${msg} — evaluating as false`,
           })
           return 'false'
         }

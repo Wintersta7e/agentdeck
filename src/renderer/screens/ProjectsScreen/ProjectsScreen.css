@@ -117,10 +117,19 @@
 }
 
 .projects-screen__menu-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: var(--accent);
   width: 20px;
   text-align: center;
   font-size: var(--fs-md);
+}
+
+.projects-screen__menu-sep {
+  height: 1px;
+  margin: var(--sp-1) calc(-1 * var(--sp-2));
+  background: var(--border);
 }
 
 .projects-screen__menu-badge {

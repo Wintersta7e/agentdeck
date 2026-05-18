@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { mkdtempSync, readFileSync, rmSync, existsSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, existsSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createCostHistory } from './cost-history'
@@ -110,5 +110,18 @@ describe('CostHistory persistence', () => {
     const second = createCostHistory(storePath)
     expect(second.getBudget()).toBe(42)
     expect(second.getHistory(7)[0]?.totalCostUsd).toBeCloseTo(1.25, 8)
+  })
+
+  it('preserves a corrupt file as .bad on load and starts fresh', () => {
+    writeFileSync(storePath, '{ this is not valid json', 'utf-8')
+    const history = createCostHistory(storePath)
+    expect(history.getHistory(7)).toEqual([])
+    expect(history.getBudget()).toBeNull()
+    expect(existsSync(`${storePath}.bad`)).toBe(true)
+    expect(existsSync(storePath)).toBe(false)
+    // Writing fresh data after the rescue should succeed
+    history.recordCost('claude-code', 0.5, 1000)
+    history.flush()
+    expect(existsSync(storePath)).toBe(true)
   })
 })

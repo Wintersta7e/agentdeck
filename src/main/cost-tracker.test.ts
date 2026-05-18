@@ -262,6 +262,49 @@ describe('file discovery', () => {
     tracker.destroy()
   })
 
+  it('retries $HOME on next bind if the initial resolution failed', async () => {
+    let homeShouldFail = true
+    mockExecFile.mockImplementation(
+      (_bin: string, args: string[], _opts: unknown, cb: ExecFileCb) => {
+        const cmd = Array.isArray(args) ? args.join(' ') : ''
+        if (cmd.includes('echo "$HOME"')) {
+          if (homeShouldFail) {
+            cb(new Error('wsl.exe transient failure'), '', '')
+          } else {
+            cb(null, '/home/testuser\n', '')
+          }
+        } else if (cmd.includes('CLAUDE_CONFIG_DIR') || cmd.includes('CODEX_HOME')) {
+          cb(null, '\n', '')
+        } else {
+          cb(null, '', '')
+        }
+      },
+    )
+
+    const win = makeMockWindow()
+    const adapter = makeTestAdapter()
+    const tracker = createCostTracker(win, [adapter])
+
+    // First eager resolution fails — empty string, nothing cached.
+    await vi.advanceTimersByTimeAsync(0)
+    tracker.bindSession('s1', BIND_OPTS)
+    await vi.advanceTimersByTimeAsync(10)
+
+    // Flip the mock so the next attempt succeeds, then bind another session.
+    homeShouldFail = false
+    tracker.bindSession('s2', { ...BIND_OPTS })
+    await vi.advanceTimersByTimeAsync(10)
+
+    const homeCalls = mockExecFile.mock.calls.filter((c: unknown[]) => {
+      const args = c[1] as string[]
+      return Array.isArray(args) && args.join(' ').includes('echo "$HOME"')
+    }).length
+    // At least two calls: the failed initial + the retry on second bind.
+    expect(homeCalls).toBeGreaterThanOrEqual(2)
+
+    tracker.destroy()
+  })
+
   it('finds a log file and begins tailing', async () => {
     makeRoutingMock()
     const win = makeMockWindow()
