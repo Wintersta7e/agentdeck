@@ -46,21 +46,13 @@ function syncViewport(term: Terminal): void {
 // (tab switch), the Terminal instance is cached here instead of being disposed.
 // The next mount for the same sessionId reclaims it, preserving scrollback
 // and full terminal state (cursor position, alternate buffer, colors, etc.).
-interface CachedTerminal {
-  term: Terminal
-  fit: FitAddon
-  webgl: WebglAddon | null
-  search: SearchAddon | null
-  hiddenBuffer: string[]
-  mirror: TerminalGridMirror
-}
-const terminalCache = new Map<string, CachedTerminal>()
+import { terminalCache, searchAddonMap, disposeCachedTerminal } from './terminal-cache'
 
-// Module-level map for render-time access to SearchAddon instances.
-// Using a module-scope Map (like terminalCache) avoids ESLint react-hooks/refs
-// (can't read useRef.current in render) and react-hooks/immutability (can't
-// mutate useMemo results). The Map is populated in useEffect and read in JSX.
-const searchAddonMap = new Map<string, SearchAddon>()
+// terminalCache and searchAddonMap live in ./terminal-cache so external close
+// handlers can dispose cached terminals without importing this component file.
+// Re-export disposeCachedTerminal so existing callers (session-close,
+// store eviction) can reach it through the cache module directly.
+export { disposeCachedTerminal }
 
 interface TerminalPaneProps {
   sessionId: string

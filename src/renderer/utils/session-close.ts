@@ -1,5 +1,6 @@
 import { useAppStore } from '../store/appStore'
 import { promptDirtyWorktree } from './prompt-dirty-worktree'
+import { disposeCachedTerminal } from '../components/Terminal/terminal-cache'
 
 const logWarn = (msg: string, data?: unknown): void => {
   window.agentDeck.log.send('warn', 'session-close', msg, data ?? undefined)
@@ -68,6 +69,12 @@ export async function closeSession(sessionId: string): Promise<void> {
     await window.agentDeck.pty.kill(sessionId).catch((err: unknown) => {
       logWarn('pty.kill failed', { err: String(err) })
     })
+
+    // Dispose any xterm cached during a prior tab-switch unmount. The
+    // TerminalPane's own onExit eviction can't help here because its exit
+    // listener was unsubscribed when the pane unmounted, so no path inside
+    // the component will fire for this sessionId again.
+    disposeCachedTerminal(sessionId)
 
     if (commit === 'discard' && commitSource === 'auto' && inspection && !inspection.hasUnmerged) {
       let reInspection: WorktreeInspection | null = null
