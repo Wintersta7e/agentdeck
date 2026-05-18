@@ -48,12 +48,6 @@ function syncViewport(term: Terminal): void {
 // and full terminal state (cursor position, alternate buffer, colors, etc.).
 import { terminalCache, searchAddonMap, disposeCachedTerminal } from './terminal-cache'
 
-// terminalCache and searchAddonMap live in ./terminal-cache so external close
-// handlers can dispose cached terminals without importing this component file.
-// Re-export disposeCachedTerminal so existing callers (session-close,
-// store eviction) can reach it through the cache module directly.
-export { disposeCachedTerminal }
-
 interface TerminalPaneProps {
   sessionId: string
   focused?: boolean | undefined
@@ -589,21 +583,7 @@ export function TerminalPane({
       // (unmounted and cached for reattachment). Without this, the cached
       // Terminal + WebGL context leak indefinitely. The session itself
       // persists in the store so the user can review before closing the tab.
-      const stale = terminalCache.get(sessionId)
-      if (stale) {
-        terminalCache.delete(sessionId)
-        searchAddonMap.delete(sessionId)
-        try {
-          stale.webgl?.dispose()
-        } catch {
-          /* WebGL context already lost */
-        }
-        try {
-          stale.term.dispose()
-        } catch {
-          /* host element already detached */
-        }
-      }
+      disposeCachedTerminal(sessionId)
     })
 
     let resizeTimeout: ReturnType<typeof setTimeout> | undefined
