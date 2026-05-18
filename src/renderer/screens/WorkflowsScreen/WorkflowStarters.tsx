@@ -15,14 +15,14 @@ interface Starter {
 
 const DEFAULT_AGENT: AgentType = 'claude-code'
 
-function singleAgentDraft(): Workflow {
+export function singleAgentDraft(): Workflow {
   const now = Date.now()
   return {
     id: '',
     name: 'Single Agent',
     nodes: [
       {
-        id: `node-${now}-1`,
+        id: crypto.randomUUID(),
         type: 'agent',
         name: 'Run an Agent',
         agent: DEFAULT_AGENT,
@@ -37,10 +37,10 @@ function singleAgentDraft(): Workflow {
   }
 }
 
-function buildAndTestDraft(): Workflow {
+export function buildAndTestDraft(): Workflow {
   const now = Date.now()
-  const buildId = `node-${now}-1`
-  const testId = `node-${now}-2`
+  const buildId = crypto.randomUUID()
+  const testId = crypto.randomUUID()
   return {
     id: '',
     name: 'Build & Test',
@@ -48,7 +48,7 @@ function buildAndTestDraft(): Workflow {
       { id: buildId, type: 'shell', name: 'Build', command: 'npm run build', x: 120, y: 120 },
       { id: testId, type: 'shell', name: 'Test', command: 'npm test', x: 380, y: 120 },
     ],
-    edges: [{ id: `edge-${now}`, fromNodeId: buildId, toNodeId: testId }],
+    edges: [{ id: crypto.randomUUID(), fromNodeId: buildId, toNodeId: testId }],
     createdAt: now,
     updatedAt: now,
   }
