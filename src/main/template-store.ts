@@ -280,6 +280,13 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
   }
 
   const userWatcherOff = setupWatcher(userRoot, rescanUser)
+  // LRU of per-project filesystem watchers. activateProject is called whenever
+  // the active project changes; without a cap, every project the user has
+  // ever opened in a session would keep an fs.watch handle (or 10s poll
+  // fallback) alive until app shutdown. We evict the least-recently-activated
+  // watcher when MAX_PROJECT_WATCHERS is exceeded; the pool of cached
+  // templates for an evicted project stays put so listAll stays correct.
+  const MAX_PROJECT_WATCHERS = 8
   const projectWatchers = new Map<string, () => void>()
 
   return {
@@ -296,9 +303,23 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
       const pPath = opts.getProjectPath(projectId)
       if (!pPath) return []
 
-      // Teardown existing watcher for this projectId before re-scanning.
+      // Teardown existing watcher for this projectId before re-scanning so
+      // we don't double-register and so the LRU re-insertion (below) moves
+      // it to the most-recent slot.
       const existingOff = projectWatchers.get(projectId)
-      if (existingOff) existingOff()
+      if (existingOff) {
+        existingOff()
+        projectWatchers.delete(projectId)
+      }
+      // LRU eviction: drop the least-recently-activated watcher when at cap.
+      // Maps preserve insertion order in JS, so the first key is the oldest.
+      while (projectWatchers.size >= MAX_PROJECT_WATCHERS) {
+        const oldest = projectWatchers.keys().next().value
+        if (oldest === undefined) break
+        const off = projectWatchers.get(oldest)
+        projectWatchers.delete(oldest)
+        if (off) off()
+      }
 
       const dir = join(pPath, '.agentdeck', 'templates')
       const pool = await scanDir(dir, 'project', projectId, emitParseError)
