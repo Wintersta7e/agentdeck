@@ -82,7 +82,13 @@ async function pruneRuns(workflowId: string): Promise<void> {
   try {
     const allFiles = await fs.promises.readdir(dir)
     files = allFiles.filter((f) => f.startsWith(prefix) && f.endsWith('.json'))
-  } catch {
+  } catch (err) {
+    if ((err as { code?: string } | null)?.code !== 'ENOENT') {
+      log.warn('pruneRuns readdir failed', {
+        dir,
+        err: err instanceof Error ? err.message : String(err),
+      })
+    }
     return
   }
 
@@ -122,7 +128,13 @@ export async function listRuns(workflowId: string): Promise<WorkflowRun[]> {
   let allFiles: string[]
   try {
     allFiles = await fs.promises.readdir(dir)
-  } catch {
+  } catch (err) {
+    if ((err as { code?: string } | null)?.code !== 'ENOENT') {
+      log.warn('listRuns readdir failed', {
+        dir,
+        err: err instanceof Error ? err.message : String(err),
+      })
+    }
     return []
   }
 
@@ -155,7 +167,13 @@ export async function deleteRun(runId: string): Promise<void> {
   let allFiles: string[]
   try {
     allFiles = await fs.promises.readdir(dir)
-  } catch {
+  } catch (err) {
+    if ((err as { code?: string } | null)?.code !== 'ENOENT') {
+      log.warn('deleteRun readdir failed', {
+        dir,
+        err: err instanceof Error ? err.message : String(err),
+      })
+    }
     return
   }
 

@@ -78,8 +78,18 @@ export function registerProjectHandlers(
       for (const filePath of candidates) {
         try {
           return await withUncFallback(filePath, (p) => fs.promises.readFile(p, 'utf-8'))
-        } catch {
-          // continue to next candidate
+        } catch (err) {
+          // ENOENT = "file just isn't there", expected — try next candidate.
+          // Any other code (EACCES, EISDIR, …) means the file is there but
+          // unreadable — log so the user doesn't see a misleading "not found"
+          // and we keep trying the rest.
+          const code = (err as { code?: string } | null)?.code
+          if (code !== 'ENOENT') {
+            log.warn(`Failed to read ${filename} candidate ${filePath}`, {
+              code,
+              err: err instanceof Error ? err.message : String(err),
+            })
+          }
         }
       }
 

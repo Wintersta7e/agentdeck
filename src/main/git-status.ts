@@ -4,8 +4,17 @@ import { readFileSync } from 'node:fs'
 import { writeFile } from 'node:fs/promises'
 import type { GitStatus } from '../shared/types'
 import { toWslPath } from './wsl-utils'
+import { createLogger } from './logger'
 
 const execFileAsync = promisify(execFile)
+const log = createLogger('git-status')
+
+/** Distinguish "expected" git errors (not-a-repo) from real failures. */
+function isNotAGitRepo(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false
+  const stderr = (err as { stderr?: unknown }).stderr
+  return typeof stderr === 'string' && /not a git repository/i.test(stderr)
+}
 
 interface ParsedPorcelain {
   branch: string
@@ -110,8 +119,14 @@ function scheduleDiskFlush(): void {
         fetchedAt: val.fetchedAt,
       })),
     }
-    writeFile(diskCachePath, JSON.stringify(file), 'utf8').catch(() => {
-      // Best-effort persistence
+    writeFile(diskCachePath, JSON.stringify(file), 'utf8').catch((err: unknown) => {
+      // Best-effort persistence — log so EACCES/ENOSPC/EROFS don't fail silently
+      // (cache never persisting silently is the symptom: every restart pays full
+      // git rescan cost and the user sees "Loading…" flicker on every tile).
+      log.warn('Failed to persist git-status disk cache', {
+        path: diskCachePath,
+        err: err instanceof Error ? err.message : String(err),
+      })
     })
   }, 5000)
 }
@@ -155,7 +170,18 @@ async function refreshGitStatus(key: string, projectPath: string): Promise<GitSt
       }
       scheduleDiskFlush()
       return status
-    } catch {
+    } catch (err) {
+      // Return null preserves the existing callers' "no git info" UX, but log
+      // so real failures (wsl.exe crash, timeout, permission denied) don't
+      // look identical to the legitimate not-a-repo case.
+      if (isNotAGitRepo(err)) {
+        log.debug('Path is not a git repository', { projectPath })
+      } else {
+        log.warn('Failed to fetch git status', {
+          projectPath,
+          err: err instanceof Error ? err.message : String(err),
+        })
+      }
       return null
     } finally {
       inFlight.delete(key)
