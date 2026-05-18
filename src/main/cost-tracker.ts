@@ -18,13 +18,22 @@ const log = createLogger('cost-tracker')
 // ── Constants ───────────────────────────────────────────────────────
 
 /** How often to poll for the log file during discovery (ms). */
-const DISCOVERY_INTERVAL_MS = 2000
+export const DISCOVERY_INTERVAL_MS = 2000
 
 /** How often to poll the log file for new content once bound (ms). */
-const TAIL_INTERVAL_MS = 3000
+export const TAIL_INTERVAL_MS = 5000
 
 /** Timeout for individual WSL exec calls (ms). */
 const WSL_TIMEOUT_MS = 5000
+
+/**
+ * Hard cap on how long discovery may poll for a log file. Agents typically
+ * write their log within seconds of the first prompt; if 10 min pass with
+ * nothing matching, the session likely won't produce a log this run
+ * (user never sent a prompt, agent crashed, log path overridden, etc.).
+ * Capping prevents idle terminals from burning wsl.exe forever.
+ */
+const DISCOVERY_MAX_AGE_MS = 10 * 60 * 1000
 
 /**
  * Minimum cost delta (USD) we'll record. Chosen well below legitimate
@@ -159,6 +168,16 @@ export function createCostTracker(
   // ── Discovery ───────────────────────────────────────────────────
 
   function startDiscovery(session: BoundSession): void {
+    // Stop polling once the discovery window has elapsed. The session stays
+    // bound (so an explicit unbind on PTY exit still releases its file), but
+    // we no longer spawn wsl.exe for it.
+    if (Date.now() - session.spawnAt > DISCOVERY_MAX_AGE_MS) {
+      log.info('Discovery age limit reached, giving up on log file', {
+        sessionId: session.sessionId,
+        ageMs: Date.now() - session.spawnAt,
+      })
+      return
+    }
     const pattern = session.adapter.getFilePattern()
 
     // resolveHome() handles its own caching + retry; envPromise still falls
