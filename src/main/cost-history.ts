@@ -1,7 +1,8 @@
-import { writeFile } from 'node:fs/promises'
-import { writeFileSync, readFileSync, existsSync } from 'node:fs'
+import { renameSync } from 'node:fs'
+import { readFileSync, existsSync } from 'node:fs'
 import type { DailyCostEntry } from '../shared/types'
 import { todayIsoKey, isoKeyFromTs } from '../shared/date-keys'
+import { atomicWrite, atomicWriteSync } from './fs-atomic'
 import { createLogger } from './logger'
 
 const log = createLogger('cost-history')
@@ -44,7 +45,18 @@ function loadFromDisk(storePath: string): {
     }
     const entries = new Map<string, DailyCostEntry>((data.entries ?? []).map((e) => [e.date, e]))
     return { entries, budget: data.budget ?? null }
-  } catch {
+  } catch (err) {
+    // Corrupt file — preserve the bad copy for forensics so a parse bug
+    // isn't silently masked, then start fresh.
+    try {
+      renameSync(storePath, `${storePath}.bad`)
+      log.error('cost-history file unreadable; preserved as .bad', { err: String(err) })
+    } catch (renameErr) {
+      log.error('cost-history file unreadable AND rename to .bad failed', {
+        err: String(err),
+        renameErr: String(renameErr),
+      })
+    }
     return { entries: new Map(), budget: null }
   }
 }
@@ -78,7 +90,7 @@ export function createCostHistory(storePath?: string): CostHistory {
   async function writeToDiskAsync(): Promise<void> {
     if (!storePath) return
     try {
-      await writeFile(storePath, serialize(), 'utf-8')
+      await atomicWrite(storePath, serialize())
     } catch (err) {
       log.warn('async flush failed', { err: String(err) })
     }
@@ -87,7 +99,7 @@ export function createCostHistory(storePath?: string): CostHistory {
   function writeToDiskSync(): void {
     if (!storePath) return
     try {
-      writeFileSync(storePath, serialize(), 'utf-8')
+      atomicWriteSync(storePath, serialize())
     } catch (err) {
       log.warn('sync flush failed', { err: String(err) })
     }
