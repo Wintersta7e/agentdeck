@@ -1,7 +1,38 @@
 import { Component } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
 import { AlertTriangle } from 'lucide-react'
+import { useAppStore } from '../../store/appStore'
 import './ErrorBoundary.css'
+
+/**
+ * Build a privacy-conscious snapshot of app state at crash time. Captures
+ * only counts, enum values, and ID hashes — no paths, no names, no
+ * usernames, no full UUIDs. Production logs ship to a local file
+ * (`app.getPath('logs')/agentdeck.log`) that the user controls; this
+ * payload is safe to share when filing a bug report.
+ */
+function captureCrashContext(): string {
+  try {
+    const s = useAppStore.getState()
+    const sessions = Object.values(s.sessions ?? {})
+    const tail = (id: string | null | undefined): string => (id ? id.slice(-8) : 'none')
+    const ctx = {
+      view: s.currentView ?? 'unknown',
+      activeSession: tail(s.activeSessionId),
+      activeWorkflow: tail(s.activeWorkflowId),
+      sessionsTotal: sessions.length,
+      sessionsRunning: sessions.filter((sess) => sess.status === 'running').length,
+      sessionsExited: sessions.filter((sess) => sess.status === 'exited').length,
+      workflowsOpen: (s.openWorkflowIds ?? []).length,
+      notifications: (s.notifications ?? []).length,
+    }
+    return `\n[crash-ctx] ${JSON.stringify(ctx)}`
+  } catch {
+    // Store may be partially initialised at very-early crashes — never let
+    // diagnostic capture itself derail the error log path.
+    return '\n[crash-ctx] unavailable'
+  }
+}
 
 interface Props {
   children: ReactNode
@@ -23,7 +54,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   override componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    const message = `${error.name}: ${error.message}\n${errorInfo.componentStack ?? ''}`
+    const message = `${error.name}: ${error.message}\n${errorInfo.componentStack ?? ''}${captureCrashContext()}`
     window.agentDeck?.log?.send('error', 'ErrorBoundary', message).catch(() => {})
   }
 
