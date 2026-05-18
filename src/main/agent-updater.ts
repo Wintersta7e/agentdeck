@@ -118,17 +118,22 @@ async function logBinDiagnostics(binary: string): Promise<void> {
     ],
     [`npm ls -g ${binary}`, `npm ls -g ${safeBin} 2>&1 || true`],
   ]
-  for (const [label, cmd] of cmds) {
-    try {
-      const out = (await runWslCmd(cmd)).slice(0, 800)
-      log.warn(`bin diagnostic: ${label}`, { binary, output: out })
-    } catch (err) {
-      log.warn(`bin diagnostic failed: ${label}`, {
-        binary,
-        err: err instanceof Error ? err.message : String(err),
-      })
-    }
-  }
+  // Each wsl.exe spawn round-trips through VM init; running them in parallel
+  // cuts the post-failure log dump from ~4x one-spawn-latency to ~1x. Order
+  // is irrelevant because every line carries its own label.
+  await Promise.all(
+    cmds.map(async ([label, cmd]) => {
+      try {
+        const out = (await runWslCmd(cmd)).slice(0, 800)
+        log.warn(`bin diagnostic: ${label}`, { binary, output: out })
+      } catch (err) {
+        log.warn(`bin diagnostic failed: ${label}`, {
+          binary,
+          err: err instanceof Error ? err.message : String(err),
+        })
+      }
+    }),
+  )
 }
 
 /** Extract the npm package name from an updateCmd like "npm install -g @openai/codex@latest" */
