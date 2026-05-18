@@ -128,6 +128,11 @@ export const createTemplatesSlice: StateCreator<AppState, [], [], TemplatesSlice
           path: e.path,
           error: e.error,
         })
+        // Surface to the user so a malformed template doesn't silently
+        // vanish from the picker. Name only (not full path) to keep the
+        // toast readable; full path + reason are in the main-process log.
+        const file = e.path.split(/[\\/]/).pop() ?? e.path
+        get().addNotification('warning', `Template "${file}" could not be loaded: ${e.error}`)
       })
     },
 
