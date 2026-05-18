@@ -54,7 +54,7 @@ export interface AgentDeckBridge {
       env?: Record<string, string>,
       agent?: string,
       agentFlags?: string,
-    ) => Promise<void>
+    ) => Promise<{ ok: boolean; error?: string }>
     write: (sessionId: string, data: string) => Promise<{ ok: boolean; error?: string }>
     resize: (sessionId: string, cols: number, rows: number) => void
     kill: (sessionId: string) => Promise<void>

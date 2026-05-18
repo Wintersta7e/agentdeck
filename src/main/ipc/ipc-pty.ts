@@ -150,7 +150,16 @@ export function registerPtyHandlers(
       }
       const mgr = getPtyManager()
       if (!mgr) throw new Error('PTY manager not initialized')
-      mgr.spawn(sessionId, cols, rows, projectPath, startupCommands, safeEnv, agent, agentFlags)
+      const spawnResult = mgr.spawn(
+        sessionId,
+        cols,
+        rows,
+        projectPath,
+        startupCommands,
+        safeEnv,
+        agent,
+        agentFlags,
+      )
 
       // Track session metadata and register a one-shot exit listener for review detection.
       // ptyBus emits `exit:${sessionId}` from pty-manager.ts onExit handler.
@@ -206,6 +215,8 @@ export function registerPtyHandlers(
           })
         }
       }
+
+      return spawnResult
     },
   )
 

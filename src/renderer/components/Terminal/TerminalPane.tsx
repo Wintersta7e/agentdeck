@@ -457,7 +457,7 @@ export function TerminalPane({
             : startupRef.current
 
         try {
-          await window.agentDeck.pty.spawn(
+          const result = await window.agentDeck.pty.spawn(
             sessionId,
             cols,
             rows,
@@ -468,6 +468,20 @@ export function TerminalPane({
             agentFlagsRef.current,
           )
           if (cancelled) return
+          if (!result.ok) {
+            window.agentDeck.log.send('error', 'terminal-pane', 'pty.spawn failed', {
+              sessionId,
+              error: result.error,
+            })
+            useAppStore
+              .getState()
+              .addNotification(
+                'error',
+                `Failed to start session: ${result.error ?? 'unknown error'}`,
+              )
+            applySessionStatus(sessionId, 'error')
+            return
+          }
           // Bind cost tracking (best-effort, fire-and-forget)
           window.agentDeck.cost
             .bind(sessionId, {

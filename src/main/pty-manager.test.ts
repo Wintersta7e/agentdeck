@@ -157,6 +157,29 @@ describe('createPtyManager', () => {
       )
     })
 
+    it('returns {ok:true} on a successful spawn', () => {
+      const win = makeMockWindow()
+      const mgr = createPtyManager(win)
+
+      const result = mgr.spawn('s1', 80, 24)
+      expect(result).toEqual({ ok: true })
+    })
+
+    it('returns {ok:false,error} when pty.spawn throws and still sends exit -1', () => {
+      vi.mocked(pty.spawn).mockImplementationOnce(() => {
+        throw new Error('wsl.exe not on PATH')
+      })
+      const win = makeMockWindow()
+      const sendSpy = vi.mocked(win.webContents.send)
+      const mgr = createPtyManager(win)
+
+      const result = mgr.spawn('s1', 80, 24)
+      expect(result).toEqual({ ok: false, error: 'wsl.exe not on PATH' })
+      // Backward-compat: existing listeners on the exit channel still see a
+      // signal so the renderer doesn't have to subscribe to two paths.
+      expect(sendSpy).toHaveBeenCalledWith(expect.stringContaining('pty:exit:s1'), -1)
+    })
+
     it('sends data to renderer via webContents (batched per tick)', () => {
       const win = makeMockWindow()
       const mgr = createPtyManager(win)
