@@ -98,12 +98,15 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
       if (saveTimerRef.current) {
         clearTimeout(saveTimerRef.current)
         saveTimerRef.current = null
-        // Flush pending save on unmount (fire-and-forget)
+        // Flush pending save on unmount (fire-and-forget). Surface failure
+        // via the notification system so the user knows their last edit
+        // didn't make it to disk — log.send alone is invisible to them.
         if (latestWorkflowRef.current) {
           window.agentDeck.workflows.save(latestWorkflowRef.current).catch((err: unknown) => {
             window.agentDeck.log.send('error', 'workflow-editor', 'Unmount flush failed', {
               err: String(err),
             })
+            handleIpcError(err, 'Workflow auto-save failed on close')
           })
         }
       }
