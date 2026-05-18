@@ -163,7 +163,10 @@ export function registerPtyHandlers(
 
       // Track session metadata and register a one-shot exit listener for review detection.
       // ptyBus emits `exit:${sessionId}` from pty-manager.ts onExit handler.
-      if (projectPath) {
+      // Skip listener registration when spawn failed — pty-manager never emits
+      // ptyBus.exit on a failed spawn (only the renderer-side exit channel),
+      // so a `once` listener registered here would leak.
+      if (projectPath && spawnResult.ok) {
         const projectId = deps.getProjectId(projectPath)
         if (projectId) {
           const meta: SessionMeta = {

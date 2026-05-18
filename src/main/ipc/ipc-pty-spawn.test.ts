@@ -26,7 +26,7 @@ describe('pty:spawn IPC validation', () => {
 
   beforeEach(() => {
     handlers.clear()
-    mgr = { spawn: vi.fn() }
+    mgr = { spawn: vi.fn(() => ({ ok: true })) }
     registerPtyHandlers(() => mgr as unknown as PtyManager, {
       getMainWindow: () => null,
       getProjectId: () => null,
@@ -152,7 +152,7 @@ describe('pty:spawn review-detection wiring', () => {
     const onceSpy = vi.mocked(ptyBus.once)
     onceSpy.mockClear()
 
-    const mgr = { spawn: vi.fn() }
+    const mgr = { spawn: vi.fn(() => ({ ok: true })) }
     registerPtyHandlers(() => mgr as unknown as PtyManager, {
       getMainWindow: () => null,
       getProjectId: (path) => (path === '/known/path' ? 'proj-42' : null),
@@ -174,7 +174,7 @@ describe('pty:spawn review-detection wiring', () => {
     const onceSpy = vi.mocked(ptyBus.once)
     onceSpy.mockClear()
 
-    const mgr = { spawn: vi.fn() }
+    const mgr = { spawn: vi.fn(() => ({ ok: true })) }
     registerPtyHandlers(() => mgr as unknown as PtyManager, {
       getMainWindow: () => null,
       getProjectId: () => null,
@@ -196,7 +196,7 @@ describe('pty:spawn review-detection wiring', () => {
     const onceSpy = vi.mocked(ptyBus.once)
     onceSpy.mockClear()
 
-    const mgr = { spawn: vi.fn() }
+    const mgr = { spawn: vi.fn(() => ({ ok: true })) }
     registerPtyHandlers(() => mgr as unknown as PtyManager, {
       getMainWindow: () => null,
       getProjectId: () => 'should-not-be-called',
