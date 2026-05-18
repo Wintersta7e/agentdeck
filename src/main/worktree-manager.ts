@@ -310,8 +310,14 @@ export async function createWorktreeManager(
     // Prune git's internal worktree list so the branch is no longer locked
     try {
       await git.pruneWorktrees(entry.repoRoot)
-    } catch {
-      // Best-effort — branch delete below may still succeed
+    } catch (err) {
+      // Best-effort — branch delete below may still succeed. Log so an
+      // orphan-branch collision later has a trail tying it back here.
+      log.warn('Failed to prune worktrees', {
+        sessionId,
+        repoRoot: entry.repoRoot,
+        err: err instanceof Error ? err.message : String(err),
+      })
     }
 
     try {

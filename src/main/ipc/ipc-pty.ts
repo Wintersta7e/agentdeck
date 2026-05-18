@@ -11,8 +11,10 @@ import { invalidateGitCache } from '../git-status'
 import { toWslPath } from '../wsl-utils'
 import type { ReviewFile } from '../../shared/types'
 import type { ReviewTracker } from '../review-tracker'
+import { createLogger } from '../logger'
 
 const execFileAsync = promisify(execFile)
+const log = createLogger('ipc-pty')
 
 /**
  * PTY IPC handlers: spawn, write, resize, kill.
@@ -191,8 +193,14 @@ export function registerPtyHandlers(
                   // cross-project file paths in the broadcast payload.
                   win.webContents.send(CH.homeReviewsUpdated, [])
                 }
-              } catch {
-                // Best-effort: swallow all errors so PTY exit is never blocked
+              } catch (err) {
+                // PTY exit must never block — but log so a silently broken
+                // Pending Reviews panel has a trail in the main-process log
+                // instead of looking like "nothing happened on exit".
+                log.warn('Review-tracker exit handler failed', {
+                  sessionId: capturedSessionId,
+                  err: err instanceof Error ? err.message : String(err),
+                })
               }
             })()
           })
