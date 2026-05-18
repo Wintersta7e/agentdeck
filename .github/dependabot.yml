@@ -5,6 +5,16 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
+    # Skip majors that are blocked on upstream peer-dep / framework lag.
+    # Revisit manually when the blocker clears (peer dep widens, electron-vite
+    # picks up Vite 8, xterm exposes a public viewport API).
+    ignore:
+      - dependency-name: 'eslint'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@vitejs/plugin-react'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@xterm/xterm'
+        update-types: ['version-update:semver-major']
     # Group related ecosystem bumps so a single weekly run produces one PR
     # per logical cluster instead of N flaky-rebased dependabot PRs.
     groups:
