@@ -263,9 +263,12 @@ describe('updateAgent', () => {
       { stdout: '2.3.0\n' }, // pre-flight: latest
       { stdout: '2.3.0\n' }, // resolve latest
       { stdout: 'added 1 package\n' }, // update cmd
-      { stdout: '', err: new Error('not found') }, // binary check: GONE!
+      // isBinaryAvailable retries 3x before giving up
+      { stdout: '', err: new Error('not found') }, // binary check 1: GONE!
+      { stdout: '', err: new Error('not found') }, // binary check 2 (retry)
+      { stdout: '', err: new Error('not found') }, // binary check 3 (retry)
       { stdout: 'repaired\n' }, // bin link repair: success
-      { stdout: '/usr/local/bin/claude\n' }, // re-check binary: found
+      { stdout: '/usr/local/bin/claude\n' }, // re-check binary: found on first try
       { stdout: '2.3.0\n' }, // post-flight: version
       { stdout: '2.3.0\n' }, // post-flight: latest
     )
@@ -282,10 +285,18 @@ describe('updateAgent', () => {
       { stdout: '2.3.0\n' }, // pre-flight: latest
       { stdout: '2.3.0\n' }, // resolve latest
       { stdout: 'added 1 package\n' }, // update cmd
-      { stdout: '', err: new Error('not found') }, // binary check: GONE!
+      // isBinaryAvailable retries 3x before giving up
+      { stdout: '', err: new Error('not found') }, // binary check 1: GONE!
+      { stdout: '', err: new Error('not found') }, // binary check 2 (retry)
+      { stdout: '', err: new Error('not found') }, // binary check 3 (retry)
       { stdout: '', err: new Error('src missing') }, // bin link repair (node -e): fails
+      // logBinDiagnostics fires before rollback: 4 best-effort diagnostic commands
+      { stdout: '/usr/local\n' }, // npm prefix -g
+      { stdout: 'no such file\n' }, // ls -la bin/claude
+      { stdout: 'no match\n' }, // ls bin/ (filtered)
+      { stdout: '(empty)\n' }, // npm ls -g
       { stdout: 'added 1 package\n' }, // rollback install
-      { stdout: '/usr/local/bin/claude\n' }, // rollback binary check: recovered
+      { stdout: '/usr/local/bin/claude\n' }, // rollback binary check: recovered on first try
     )
 
     const result = await updateAgent('claude-code')
@@ -302,12 +313,23 @@ describe('updateAgent', () => {
       { stdout: '2.3.0\n' }, // pre-flight: latest
       { stdout: '2.3.0\n' }, // resolve latest
       { stdout: 'added 1 package\n' }, // update cmd
-      { stdout: '', err: new Error('not found') }, // binary check: GONE!
+      // isBinaryAvailable retries 3x before giving up (post-install check)
+      { stdout: '', err: new Error('not found') }, // binary check 1: GONE!
+      { stdout: '', err: new Error('not found') }, // binary check 2 (retry)
+      { stdout: '', err: new Error('not found') }, // binary check 3 (retry)
       { stdout: '', err: new Error('src missing') }, // bin link repair: fails (0.118.0 broken)
+      // logBinDiagnostics fires before rollback
+      { stdout: '/usr/local\n' }, // npm prefix -g
+      { stdout: 'no such file\n' }, // ls -la bin/claude
+      { stdout: 'no match\n' }, // ls bin/ (filtered)
+      { stdout: '(empty)\n' }, // npm ls -g
       { stdout: 'added 1 package\n' }, // rollback install
-      { stdout: '', err: new Error('not found') }, // rollback binary check: STILL GONE!
+      // isBinaryAvailable retries 3x on rollback check too
+      { stdout: '', err: new Error('not found') }, // rollback binary check 1: STILL GONE!
+      { stdout: '', err: new Error('not found') }, // rollback binary check 2 (retry)
+      { stdout: '', err: new Error('not found') }, // rollback binary check 3 (retry)
       { stdout: 'repaired\n' }, // post-rollback bin link repair: succeeds (0.117.0 has codex.js)
-      { stdout: '/usr/local/bin/claude\n' }, // post-rollback binary verify: found
+      { stdout: '/usr/local/bin/claude\n' }, // post-rollback binary verify: found on first try
     )
 
     const result = await updateAgent('claude-code')
@@ -323,8 +345,16 @@ describe('updateAgent', () => {
       { stdout: '2.3.0\n' }, // pre-flight: latest
       { stdout: '2.3.0\n' }, // resolve latest
       { stdout: 'added 1 package\n' }, // update cmd
-      { stdout: '', err: new Error('not found') }, // binary check: GONE!
+      // isBinaryAvailable retries 3x before giving up
+      { stdout: '', err: new Error('not found') }, // binary check 1: GONE!
+      { stdout: '', err: new Error('not found') }, // binary check 2 (retry)
+      { stdout: '', err: new Error('not found') }, // binary check 3 (retry)
       { stdout: '', err: new Error('src missing') }, // bin link repair: fails
+      // logBinDiagnostics fires before rollback
+      { stdout: '/usr/local\n' }, // npm prefix -g
+      { stdout: 'no such file\n' }, // ls -la bin/claude
+      { stdout: 'no match\n' }, // ls bin/ (filtered)
+      { stdout: '(empty)\n' }, // npm ls -g
       { stdout: '', err: new Error('npm error') }, // rollback install also fails
     )
 

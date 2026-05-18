@@ -83,6 +83,54 @@ async function isBinaryOnPath(binary: string): Promise<boolean> {
   }
 }
 
+/**
+ * Retry binary visibility check a few times with a short delay. npm
+ * occasionally returns from `install -g` before the new bin symlink is
+ * visible to subprocess `command -v` (Windows/WSL filesystem caches, slow
+ * fsync on networked installs, etc.). A handful of cheap retries closes
+ * that window without changing the eventual outcome on a real failure.
+ */
+async function isBinaryAvailable(binary: string): Promise<boolean> {
+  const ATTEMPTS = 3
+  const DELAY_MS = 500
+  for (let i = 0; i < ATTEMPTS; i++) {
+    if (await isBinaryOnPath(binary)) return true
+    if (i < ATTEMPTS - 1) await new Promise((r) => setTimeout(r, DELAY_MS))
+  }
+  return false
+}
+
+/**
+ * Logged-only diagnostic snapshot for persistent post-install bin
+ * failures — captures npm prefix layout, bin directory listing, and
+ * `ls -l` on the missing symlink path so investigations have something
+ * to look at later. Best-effort: any per-command failure is swallowed
+ * so we never derail the caller's error path.
+ */
+async function logBinDiagnostics(binary: string): Promise<void> {
+  const safeBin = shellQuote(binary)
+  const cmds: Array<[string, string]> = [
+    ['npm prefix -g', 'npm prefix -g 2>&1'],
+    [`ls -la bin/${binary}`, `ls -la "$(npm prefix -g 2>/dev/null)/bin/${safeBin}" 2>&1`],
+    [
+      'ls bin/ (filtered)',
+      `ls "$(npm prefix -g 2>/dev/null)/bin/" 2>&1 | grep -i ${safeBin} || echo "no match"`,
+    ],
+    [`npm ls -g ${binary}`, `npm ls -g ${safeBin} 2>&1 || true`],
+  ]
+  for (const [label, cmd] of cmds) {
+    try {
+      const out = (await runWslCmd(cmd)).slice(0, 800)
+      log.warn(`bin diagnostic: ${label}`, { binary, output: out })
+    } catch (err) {
+      log.warn(`bin diagnostic failed: ${label}`, {
+        binary,
+        err: err instanceof Error ? err.message : String(err),
+      })
+    }
+  }
+}
+
 /** Extract the npm package name from an updateCmd like "npm install -g @openai/codex@latest" */
 function extractNpmPackage(updateCmd: string): string | null {
   const match = /npm install\s+-g\s+((?:@[\w-]+\/)?[\w-]+)/.exec(updateCmd)
@@ -202,7 +250,9 @@ export async function updateAgent(agentId: string): Promise<UpdateResult> {
   // Critical safety check: verify the binary still exists after update.
   // npm install -g can remove the old binary before installing the new one.
   // If the new install fails or changes the bin mapping, the binary is gone.
-  let binaryStillExists = await isBinaryOnPath(binary)
+  // Use the retrying variant — npm sometimes returns before the bin symlink
+  // is visible to subprocesses (filesystem cache, slow fsync).
+  let binaryStillExists = await isBinaryAvailable(binary)
 
   // Auto-repair: npm packages with platform-specific optional deps (e.g. @openai/codex)
   // can install successfully but fail to create the bin symlink.
@@ -210,7 +260,7 @@ export async function updateAgent(agentId: string): Promise<UpdateResult> {
     log.warn(`Binary '${binary}' missing after update — attempting bin link repair`)
     const repaired = await repairNpmBinLink(binary, updateCmd)
     if (repaired) {
-      binaryStillExists = await isBinaryOnPath(binary)
+      binaryStillExists = await isBinaryAvailable(binary)
     }
   }
 
@@ -219,6 +269,9 @@ export async function updateAgent(agentId: string): Promise<UpdateResult> {
       previousVersion: preInfo.current,
       targetVersion,
     })
+    // Snapshot npm state for post-hoc investigation; this only fires on the
+    // hot path when both the install and the manual repair have failed.
+    await logBinDiagnostics(binary)
 
     // Attempt rollback for npm agents (those with @latest in updateCmd)
     let rollbackAttempted = false
@@ -228,7 +281,7 @@ export async function updateAgent(agentId: string): Promise<UpdateResult> {
       log.warn(`Attempting rollback: ${rollbackCmd}`)
       try {
         await runWslCmd(rollbackCmd, 120_000)
-        let recovered = await isBinaryOnPath(binary)
+        let recovered = await isBinaryAvailable(binary)
 
         // npm can reinstall the package but still fail to create the bin link.
         // Attempt repair after rollback — this is the common case.
@@ -236,7 +289,7 @@ export async function updateAgent(agentId: string): Promise<UpdateResult> {
           log.warn(`Binary '${binary}' still missing after rollback — attempting bin link repair`)
           const repaired = await repairNpmBinLink(binary, rollbackCmd)
           if (repaired) {
-            recovered = await isBinaryOnPath(binary)
+            recovered = await isBinaryAvailable(binary)
           }
         }
 
