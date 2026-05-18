@@ -123,6 +123,29 @@ app
       log.warn('Worktree prune failed', { err: String(err) })
     })
 
+    // If WSL was slow at startup and worktreeManager couldn't initialize,
+    // retry once after a delay — by then WSL has usually warmed up from
+    // other operations (agent detection, project listing). One retry only;
+    // if it still fails the user is missing WSL2 or has a broken distro.
+    if (!worktreeManager && appStore) {
+      const capturedStore = appStore
+      setTimeout(() => {
+        void (async () => {
+          if (worktreeManager) return
+          const retryHome = await resolveWslHome()
+          if (!retryHome) return
+          const retryMgr = await initializeWorktreeManager(capturedStore, retryHome)
+          if (retryMgr) {
+            worktreeManager = retryMgr
+            log.info('Worktree manager initialised on retry (WSL $HOME resolved late)')
+            retryMgr.pruneOrphans().catch((err: unknown) => {
+              log.warn('Worktree prune failed (late init)', { err: String(err) })
+            })
+          }
+        })()
+      }, 15_000)
+    }
+
     if (mainWindow) {
       publishWslAvailability(mainWindow)
     }
