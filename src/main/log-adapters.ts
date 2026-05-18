@@ -14,10 +14,13 @@ import {
 
 const log = createLogger('log-adapters')
 
-// Future adapter env vars:
-// Goose: GOOSE_CONFIG_DIR (config), data at ~/.local/share/goose/
-// OpenCode: OPENCODE_DATA_DIR (data), OPENCODE_CONFIG_DIR (config)
-// Gemini CLI: no env var yet (requested: github.com/google-gemini/gemini-cli/issues/2815)
+// Future adapter env vars (verified 2026-05-18):
+// Goose: XDG-respecting via `directories` crate; source does NOT define a
+//   GOOSE_CONFIG_DIR override. Default ~/.config/goose/ , data ~/.local/share/goose/.
+// OpenCode: OPENCODE_CONFIG (single file path), OPENCODE_CONFIG_DIR (directory),
+//   OPENCODE_CONFIG_CONTENT (inline). No OPENCODE_DATA_DIR.
+// Gemini CLI: no env var override; #2815 closed (dup'd to #1825 "respect XDG",
+//   deprioritized by maintainers in 2025). Path is hardcoded ~/.gemini/.
 // Amazon Q: no env var, free service (no cost tracking needed)
 
 /** Track which schema warnings have already been emitted (avoid flooding). */

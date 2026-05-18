@@ -93,8 +93,12 @@ export const AGENTS = [
     versionArgs: ['version'],
     // Goose is installed via shell script (curl | bash), not pip.
     // No reliable remote version check — leave empty to skip update notifications.
+    // Project moved from block/goose to aaif-goose/goose (Linux Foundation AAIF)
+    // and switched to a release-asset installer; the old block/goose URL 404s
+    // through the GitHub redirect.
     latestCmd: '',
-    updateCmd: 'curl -fsSL https://github.com/block/goose/raw/main/download.sh | bash',
+    updateCmd:
+      'curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh | bash',
     printFlags: ['run', '-t'],
     colorVar: '--agent-goose',
     short: 'GS',
