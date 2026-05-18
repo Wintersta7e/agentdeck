@@ -161,7 +161,8 @@ export function createCostTracker(
   function startDiscovery(session: BoundSession): void {
     const pattern = session.adapter.getFilePattern()
 
-    // Use cached values if available; otherwise wait for initial resolution.
+    // resolveHome() handles its own caching + retry; envPromise still falls
+    // back to the in-flight initial resolution when no cached value exists.
     const homePromise = resolveHome()
     const envPromise = cachedEnv !== null ? Promise.resolve(cachedEnv) : envReady
 

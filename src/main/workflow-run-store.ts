@@ -3,6 +3,7 @@ import * as path from 'path'
 import { randomBytes } from 'node:crypto'
 import { app } from 'electron'
 import { createLogger } from './logger'
+import { isEnoent } from './fs-errors'
 import type { WorkflowRun } from '../shared/types'
 import { validateId } from '../shared/validation'
 
@@ -83,7 +84,7 @@ async function pruneRuns(workflowId: string): Promise<void> {
     const allFiles = await fs.promises.readdir(dir)
     files = allFiles.filter((f) => f.startsWith(prefix) && f.endsWith('.json'))
   } catch (err) {
-    if ((err as { code?: string } | null)?.code !== 'ENOENT') {
+    if (!isEnoent(err)) {
       log.warn('pruneRuns readdir failed', {
         dir,
         err: err instanceof Error ? err.message : String(err),
@@ -129,7 +130,7 @@ export async function listRuns(workflowId: string): Promise<WorkflowRun[]> {
   try {
     allFiles = await fs.promises.readdir(dir)
   } catch (err) {
-    if ((err as { code?: string } | null)?.code !== 'ENOENT') {
+    if (!isEnoent(err)) {
       log.warn('listRuns readdir failed', {
         dir,
         err: err instanceof Error ? err.message : String(err),
@@ -168,7 +169,7 @@ export async function deleteRun(runId: string): Promise<void> {
   try {
     allFiles = await fs.promises.readdir(dir)
   } catch (err) {
-    if ((err as { code?: string } | null)?.code !== 'ENOENT') {
+    if (!isEnoent(err)) {
       log.warn('deleteRun readdir failed', {
         dir,
         err: err instanceof Error ? err.message : String(err),

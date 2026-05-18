@@ -9,6 +9,7 @@ import { detectStack } from '../detect-stack'
 import { scanSkillDirectory, invalidateProjectCache } from '../skill-scanner'
 import { getDefaultDistroAsync, wslPathToWindows, withUncFallback } from '../wsl-utils'
 import { createLogger } from '../logger'
+import { isEnoent } from '../fs-errors'
 import { validateId } from '../validation'
 
 const log = createLogger('ipc-projects')
@@ -79,14 +80,11 @@ export function registerProjectHandlers(
         try {
           return await withUncFallback(filePath, (p) => fs.promises.readFile(p, 'utf-8'))
         } catch (err) {
-          // ENOENT = "file just isn't there", expected — try next candidate.
-          // Any other code (EACCES, EISDIR, …) means the file is there but
-          // unreadable — log so the user doesn't see a misleading "not found"
-          // and we keep trying the rest.
-          const code = (err as { code?: string } | null)?.code
-          if (code !== 'ENOENT') {
+          // ENOENT just means "try next candidate"; anything else (EACCES,
+          // EISDIR, …) is a real read failure worth surfacing in the log.
+          if (!isEnoent(err)) {
             log.warn(`Failed to read ${filename} candidate ${filePath}`, {
-              code,
+              code: (err as { code?: string } | null)?.code,
               err: err instanceof Error ? err.message : String(err),
             })
           }
