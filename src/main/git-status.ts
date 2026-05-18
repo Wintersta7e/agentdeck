@@ -5,6 +5,7 @@ import { writeFile } from 'node:fs/promises'
 import type { GitStatus } from '../shared/types'
 import { toWslPath } from './wsl-utils'
 import { createLogger } from './logger'
+import { evictOldestFromMap } from './map-utils'
 
 const execFileAsync = promisify(execFile)
 const log = createLogger('git-status')
@@ -164,10 +165,7 @@ async function refreshGitStatus(key: string, projectPath: string): Promise<GitSt
       }
 
       cache.set(key, { status, fetchedAt: Date.now() })
-      if (cache.size > MAX_CACHE) {
-        const oldest = cache.keys().next().value
-        if (oldest !== undefined) cache.delete(oldest)
-      }
+      evictOldestFromMap(cache, MAX_CACHE)
       scheduleDiskFlush()
       return status
     } catch (err) {

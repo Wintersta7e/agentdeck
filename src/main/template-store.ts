@@ -4,6 +4,7 @@ import type { Template, TemplateFile, TemplateDraft, TemplateScope } from '../sh
 import { createLogger } from './logger'
 import { atomicWrite } from './fs-atomic'
 import { generateTemplateId } from './template-id'
+import { evictOldestFromMap } from './map-utils'
 
 const log = createLogger('template-store')
 
@@ -316,21 +317,12 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
       if (!pPath) return []
 
       // Teardown existing watcher for this projectId before re-scanning so
-      // we don't double-register and so the LRU re-insertion (below) moves
-      // it to the most-recent slot.
+      // we don't double-register and so re-insertion below moves it to the
+      // most-recent slot in the LRU.
       const existingOff = projectWatchers.get(projectId)
       if (existingOff) {
         existingOff()
         projectWatchers.delete(projectId)
-      }
-      // LRU eviction: drop the least-recently-activated watcher when at cap.
-      // Maps preserve insertion order in JS, so the first key is the oldest.
-      while (projectWatchers.size >= MAX_PROJECT_WATCHERS) {
-        const oldest = projectWatchers.keys().next().value
-        if (oldest === undefined) break
-        const off = projectWatchers.get(oldest)
-        projectWatchers.delete(oldest)
-        if (off) off()
       }
 
       const dir = join(pPath, '.agentdeck', 'templates')
@@ -343,6 +335,7 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
         projectPools.set(projectId, next)
       }
       projectWatchers.set(projectId, setupWatcher(dir, rescan))
+      evictOldestFromMap(projectWatchers, MAX_PROJECT_WATCHERS, (_id, off) => off())
 
       return pool
     },
