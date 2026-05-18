@@ -1,4 +1,4 @@
-import { promises as fs, watch } from 'node:fs'
+import { promises as fs, watch, existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import type { Template, TemplateFile, TemplateDraft, TemplateScope } from '../shared/types'
 import { createLogger } from './logger'
@@ -228,6 +228,18 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
         void rescan()
       }, 10_000)
       pollTimer.unref?.()
+    }
+
+    // Most projects don't have a per-project template dir; fs.watch throws
+    // ENOENT immediately on missing paths and the 10s polling fallback then
+    // re-scans a still-missing dir forever. Skip both when the dir is absent
+    // — new templates appear the next time activateProject runs for the
+    // project (i.e. on switch-away-and-back), which is the only meaningful
+    // event for a feature that has to be opted into via file creation.
+    if (!existsSync(dir)) {
+      return () => {
+        disposed = true
+      }
     }
 
     try {
