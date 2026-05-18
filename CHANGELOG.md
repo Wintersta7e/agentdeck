@@ -5,6 +5,121 @@ All notable changes to AgentDeck will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.6.0] - 2026-05-16
+
+User-visible UX polish, an externalised pricing config, plus a
+test-suite audit and CI/automation hardening pass. Also fixes a latent
+bug where the "+ NEW WORKFLOW" path failed for new draft workflows.
+
+### Added
+
+- **Workflow starter cards** in the empty WorkflowsScreen: Blank /
+  Single Agent / Build then test. Each card creates the workflow and
+  opens the editor on click. (UX-11)
+- **"+ NEW WORKFLOW" button** in the WorkflowsScreen header — primary
+  action so users can create a workflow without going through the
+  command palette. (UX-11)
+- **Ctrl+D in the workflow editor** duplicates the selected node;
+  documented in the keyboard-shortcuts dialog under a new "Workflow
+  Editor" section. Skips when an input/textarea/contentEditable has
+  focus so node-rename / shell-command typing isn't interrupted. (UX-13)
+- **Loading skeletons** with shimmer animation: ProjectCard git-status
+  row while gitStatus is undefined, WorkflowHistoryPanel rows during
+  initial fetch. Respects `prefers-reduced-motion`. (UX-17)
+- **Determinate + indeterminate progress bars**: agent tile during an
+  update, AgentStrip chip during update (now using the shared component
+  instead of the per-component animation), workflow editor between
+  toolbar and canvas during runs (finished-node count). (UX-18)
+- **Key-pill shortcut rendering** via new `KbdHint` component:
+  splits "Ctrl+Shift+F" / "Ctrl+1 / 2 / 3" into individual key boxes.
+  Applied to the command palette and the shortcuts dialog. (UX-23)
+- **Externalised model pricing** to `src/shared/model-pricing.json`
+  with a typed loader. Refreshing rates no longer requires a code
+  change; a `lastUpdated` field makes staleness visible. (FRAG-8)
+- **Three new shared UI primitives**: `Skeleton`, `ProgressBar`,
+  `KbdHint` in `src/renderer/components/shared/`.
+- **Test coverage** for previously-untested IPC handlers:
+  `workflows:import` (10 cases — format version, role remapping,
+  conflict strategies), `workflow:run` (11 cases — VAR_NAME_RE,
+  variable size cap, projectPath traversal/length), `pty:spawn`
+  (6 cases — projectPath bounds, manager null, ptyBus.once wiring).
+- `src/shared/validation.test.ts` (43 cases) centralises
+  `SAFE_ID_RE` / `validateId` / `MAX_SAFE_ID_LEN` coverage.
+- `src/__test__/ipc-harness.ts` — shared `makeHandlersMap` /
+  `makeIpcElectronMock` / `makeIpcCall` helpers; 9 IPC test files
+  migrated.
+- CI workflow: `concurrency` group cancels in-flight runs on the same
+  ref, explicit `permissions: contents: read`, new `npm run build`
+  step so electron-vite build regressions are caught at PR time.
+- Dependabot grouping: `vitest`, `eslint`, `vite`, `react`, `types`,
+  and `github-actions` ecosystems now produce one PR per cluster per
+  weekly run.
+- `.github/PULL_REQUEST_TEMPLATE.md` (short self-review checklist) and
+  `.github/ISSUE_TEMPLATE/config.yml` (blank issues disabled).
+- Branch protection on `main` now also requires
+  `Analyze (javascript-typescript)` (CodeQL) and
+  `required_conversation_resolution`. Repo settings:
+  `delete_branch_on_merge`, `allow_auto_merge`, `allow_update_branch`
+  all enabled.
+
+### Fixed
+
+- **`workflows:save` IPC handler now accepts an empty-string `id`** as a
+  new-workflow signal (matches `saveWorkflow`'s `id || uuid()` logic).
+  Was rejecting it as an unsafe id, breaking the "+ NEW WORKFLOW"
+  button, command palette "New Workflow", and the starter cards.
+- **Titlebar version chip** no longer shows a stale hardcoded `v6.1.0`.
+  Now reads live from `app.getVersion()` via the existing IPC, so the
+  trailing `UBUNTU · WSL · vX.Y.Z` chip always matches `package.json`.
+- **`cost-history` debounced-write test** no longer races the libuv
+  disk I/O under load. The previous version relied on
+  `vi.runAllTimersAsync` to wait for `fs.writeFile`, which doesn't.
+  Test switches to real timers post-debounce and polls with a 2s bound.
+
+### Changed
+
+- `workflow-engine-execution.test.ts` idle/absolute timeout tests now
+  import `AGENT_IDLE_TIMEOUT` instead of hardcoding `11 * 30s > 300s`;
+  the loop count derives from the constant.
+- `workflow-run-store.test.ts` writeFile mock uses a monotonic
+  counter for `mtimeMs` instead of `Date.now()` so the prune-by-mtime
+  path is actually exercised.
+- `appStore` session lifecycle tests moved into the now-renamed
+  `sessions.test.ts` (was `sessions-v6-1-0.test.ts`); the version
+  pin in the filename was dead naming.
+- `ipc-agents.test.ts` per-handler `handlers.has(...)` cases collapsed
+  into a single `CH.agents*` smoke test that pins the contract through
+  the constants file.
+- Theme description in the command palette updated from "8 dark and
+  light themes" (pre-v6) to "dark and light themes".
+
+### Removed
+
+- ~45 redundant/trivial test cases: entire `appStore-misc.test.ts`
+  (Zustand-setter trivia), entire `shared/types.test.ts` (compile-time
+  no-ops that `tsc --noEmit` already covers), cross-file duplicates
+  between `workflow-engine.test.ts`, `workflow-utils-condition.test.ts`,
+  and `edge-scheduler.test.ts`, plus several `setWorkflowStatus` /
+  `setPaneSession` / right-panel-toggle micro-tests.
+- Per-component `.agent-chip-progress` `::after` animation in AgentStrip
+  — replaced by the shared `ProgressBar`.
+- Stale "v6.1.0" hardcoded string in `TitlebarBrand.tsx`.
+
+### Dependencies
+
+- `@types/node` 25.7.0 → 25.8.0 (#64, dependabot)
+- Three more dependabot PRs auto-merge queued at release time:
+  `electron 42.1.0` (#65), `lucide-react 1.16` (#66),
+  `lint-staged 17.0.5` (#67). Two blocked majors were closed: eslint 10
+  (#62), `@vitejs/plugin-react` 6 (#63).
+- `npm audit` reports 0 vulnerabilities at release.
+
+### Notes
+
+- Test count: 1229 → 1270 (122 files passing).
+- Test-suite audit findings documented in
+  `docs/plans/2026-05-16-test-suite-audit.md`.
+
 ## [6.5.0] - 2026-05-13
 
 Tech-debt audit closure plus a dependency-refresh pass. The user-visible
