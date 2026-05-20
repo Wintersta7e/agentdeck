@@ -50,6 +50,7 @@ vi.mock('electron-store', () => {
 import {
   createProjectStore,
   registerStoreHandlers,
+  normalizeProjectPaths,
   __resetStoreHandlersForTests,
 } from './project-store'
 
@@ -140,6 +141,44 @@ describe('createProjectStore', () => {
   it('rejects null project on save', async () => {
     setupStore()
     await expect(callHandler('store:saveProject', null)).rejects.toThrow('non-null object')
+  })
+
+  it('normalises Windows-style paths to WSL form on save', async () => {
+    setupStore()
+    const saved = (await callHandler('store:saveProject', {
+      name: 'Win',
+      path: 'C:\\P\\foo',
+    })) as Project
+    expect(saved.path).toBe('/mnt/c/P/foo')
+
+    const fromForwardSlash = (await callHandler('store:saveProject', {
+      name: 'WinFwd',
+      path: 'D:/bar/baz',
+    })) as Project
+    expect(fromForwardSlash.path).toBe('/mnt/d/bar/baz')
+  })
+
+  it('leaves already-WSL paths unchanged on save', async () => {
+    setupStore()
+    const saved = (await callHandler('store:saveProject', {
+      name: 'Wsl',
+      path: '/home/user/proj',
+    })) as Project
+    expect(saved.path).toBe('/home/user/proj')
+  })
+
+  it('normalizeProjectPaths converts legacy Windows paths in the store', () => {
+    const store = setupStore()
+    store.set('projects', [
+      { id: 'p1', name: 'Legacy', path: 'C:\\code\\alpha', agents: [] },
+      { id: 'p2', name: 'Already-WSL', path: '/home/u/proj', agents: [] },
+    ] as Project[])
+
+    normalizeProjectPaths(store as unknown as AppStore)
+
+    const projects = store.get('projects') as Project[]
+    expect(projects[0]?.path).toBe('/mnt/c/code/alpha')
+    expect(projects[1]?.path).toBe('/home/u/proj')
   })
 
   it('encrypts secret env vars on save', async () => {

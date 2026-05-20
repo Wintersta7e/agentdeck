@@ -132,14 +132,13 @@ export function runPrefsMigrations(store: AppStore): void {
 export type AppStore = Store<StoreSchema>
 
 /**
- * One-shot normalisation of legacy `project.path` values so every project
- * ends up with a WSL-style path (e.g. `/home/user/proj`, `/mnt/c/foo`).
- * Guarded by `appPrefs.pathsNormalized`. On failure the flag stays false so
- * the next boot retries.
+ * Normalise `project.path` values so every project ends up with a WSL-style
+ * path (e.g. `/home/user/proj`, `/mnt/c/foo`). Runs on every startup so that
+ * any Windows-format paths that slipped past the create boundary (older
+ * builds, manual edits) get cleaned before IPC handlers reject them.
+ * No-op when nothing changes.
  */
-function normalizeProjectPaths(store: AppStore): void {
-  const prefs = store.get('appPrefs') ?? ({} as StoreSchema['appPrefs'])
-  if (prefs.pathsNormalized === true) return
+export function normalizeProjectPaths(store: AppStore): void {
   try {
     const projects = store.get('projects') ?? []
     let changed = 0
@@ -155,9 +154,8 @@ function normalizeProjectPaths(store: AppStore): void {
       store.set('projects', next)
       log.info('normalized project.path values', { count: changed })
     }
-    store.set('appPrefs', { ...prefs, pathsNormalized: true })
   } catch (err) {
-    log.warn('project path normalization failed; will retry', { err: String(err) })
+    log.warn('project path normalization failed', { err: String(err) })
   }
 }
 
@@ -207,9 +205,8 @@ export function createProjectStore(): Store<StoreSchema> {
   // entry instead of yet another ad-hoc boolean flag.
   runPrefsMigrations(store)
 
-  // One-shot normalisation of legacy Windows-style project.path values to WSL
-  // form. Idempotent via `appPrefs.pathsNormalized` — runs exactly once per
-  // install. On failure, the flag is NOT set so the next boot retries.
+  // Normalise any Windows-style project.path values to WSL form. Runs on every
+  // boot — idempotent, only writes when something actually changed.
   normalizeProjectPaths(store)
 
   return store
@@ -286,7 +283,16 @@ export function registerStoreHandlers(store: AppStore): void {
       const p = project as Partial<Project>
       const projects = store.get('projects')
       const id = p.id ?? randomUUID()
-      const withId = { ...p, id, envVars: encryptEnvVars(p.envVars) } as Project
+      // Normalise path at the write boundary so renderer code paths that skip
+      // windowsToWsl (e.g. an older PathInput, a manual store edit) can't leak
+      // Windows-style paths into the store and trip files:listDir validation.
+      const normalizedPath = typeof p.path === 'string' ? toWslPath(p.path) : p.path
+      const withId = {
+        ...p,
+        id,
+        ...(normalizedPath !== undefined && { path: normalizedPath }),
+        envVars: encryptEnvVars(p.envVars),
+      } as Project
       const idx = projects.findIndex((existing) => existing.id === id)
       const existing = idx >= 0 ? projects[idx] : undefined
       if (existing !== undefined) {
