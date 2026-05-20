@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useAppStore } from '../../store/appStore'
-import { AGENT_BY_ID, agentColorVar } from '../../utils/agent-ui'
+import { AGENT_BY_ID, agentColorVar, getSessionAgentId } from '../../utils/agent-ui'
 import type { Session } from '../../../shared/types'
 import './SessionTimelineB1.css'
 
@@ -47,9 +47,9 @@ export function SessionTimelineB1({ now }: { now: number }): React.JSX.Element {
         const startPct = Math.max(0, ((clampedStart - windowStart) / WINDOW_MS) * 100)
         const endPct = Math.max(startPct + 2, ((endTs - windowStart) / WINDOW_MS) * 100)
         const widthPct = Math.min(100 - startPct, endPct - startPct)
-        const agentId = s.agentOverride ?? 'claude-code'
-        const agent = AGENT_BY_ID.get(agentId)
         const project = projectById.get(s.projectId)
+        const agentId = getSessionAgentId(s, project)
+        const agent = AGENT_BY_ID.get(agentId)
         const usage = sessionUsage[s.id]
         return {
           id: s.id,

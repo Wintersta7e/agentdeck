@@ -3,7 +3,7 @@ import { useAppStore } from '../../store/appStore'
 import { GitStatusRow } from './GitStatusRow'
 import { Skeleton } from '../shared/Skeleton'
 import { AGENTS } from '../../../shared/agents'
-import { getProjectAgents } from '../../../shared/agent-helpers'
+import { getDefaultAgent, getProjectAgents } from '../../../shared/agent-helpers'
 import type { Project, StackBadge } from '../../../shared/types'
 import './ProjectCardV2.css'
 
@@ -59,11 +59,14 @@ export function ProjectCardV2({
   )
 
   // Serialize running agent IDs to a stable string to avoid new Set reference each render.
+  // Sessions without an explicit `agentOverride` inherit the project default — count
+  // those too so pills light up even when no specific agent was picked.
+  const defaultAgentId = useMemo(() => getDefaultAgent(project).agent, [project])
   const runningAgentStr = useAppStore((s) => {
     const ids: string[] = []
     for (const sess of Object.values(s.sessions)) {
-      if (sess.projectId === project.id && sess.status === 'running' && sess.agentOverride) {
-        ids.push(sess.agentOverride)
+      if (sess.projectId === project.id && sess.status === 'running') {
+        ids.push(sess.agentOverride ?? defaultAgentId)
       }
     }
     return ids.sort().join(',')

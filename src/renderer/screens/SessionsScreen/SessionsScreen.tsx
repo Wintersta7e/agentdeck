@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { ScreenShell, FilterChip } from '../../components/shared/ScreenShell'
 import { AGENTS } from '../../../shared/agents'
+import { getSessionAgentId } from '../../utils/agent-ui'
 import type { Session, SessionStatus } from '../../../shared/types'
 import './SessionsScreen.css'
 
@@ -211,7 +212,7 @@ export function SessionsScreen(): React.JSX.Element {
         ) : (
           filtered.map((session) => {
             const project = projectById.get(session.projectId)
-            const agentId = session.agentOverride ?? 'claude-code'
+            const agentId = getSessionAgentId(session, project)
             const agent = AGENT_META_MAP.get(agentId)
             const usage = sessionUsage[session.id]
             const totalTokens = (usage?.inputTokens ?? 0) + (usage?.outputTokens ?? 0)

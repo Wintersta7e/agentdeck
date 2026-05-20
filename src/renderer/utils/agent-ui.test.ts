@@ -1,6 +1,14 @@
 import { describe, it, expect } from 'vitest'
 import { AGENTS } from '../../shared/agents'
-import { AGENT_BY_ID, AGENT_IDS, agentColor, agentColorVar, agentShort } from './agent-ui'
+import type { Project } from '../../shared/types'
+import {
+  AGENT_BY_ID,
+  AGENT_IDS,
+  agentColor,
+  agentColorVar,
+  agentShort,
+  getSessionAgentId,
+} from './agent-ui'
 
 describe('agentColor / agentColorVar', () => {
   it('returns a var() expression for known agents', () => {
@@ -54,5 +62,42 @@ describe('AGENT_BY_ID / AGENT_IDS', () => {
   it('AGENT_IDS length matches AGENTS length and preserves order', () => {
     expect(AGENT_IDS).toHaveLength(AGENTS.length)
     AGENT_IDS.forEach((id, i) => expect(id).toBe(AGENTS[i]?.id))
+  })
+})
+
+describe('getSessionAgentId', () => {
+  const legacyClaudeProject = {
+    id: 'p-legacy',
+    name: 'legacy',
+    path: '/p',
+    agent: 'claude-code',
+  } as unknown as Project
+
+  const multiCodexProject = {
+    id: 'p-codex',
+    name: 'codex',
+    path: '/p',
+    agents: [{ agent: 'codex', isDefault: true }],
+  } as unknown as Project
+
+  it('returns the session override when present', () => {
+    expect(getSessionAgentId({ agentOverride: 'aider' }, multiCodexProject)).toBe('aider')
+  })
+
+  it('falls back to the project default from agents[] when override is missing', () => {
+    // This is the regression case for the multi-agent migration: project.agent
+    // is undefined but project.agents[0].agent === 'codex'. A naive
+    // `session.agentOverride ?? project.agent ?? 'claude-code'` would mislabel
+    // this as claude-code; getDefaultAgent reads the agents[] array instead.
+    expect(getSessionAgentId({}, multiCodexProject)).toBe('codex')
+  })
+
+  it('falls back to the legacy project.agent field when agents[] is absent', () => {
+    expect(getSessionAgentId({}, legacyClaudeProject)).toBe('claude-code')
+  })
+
+  it('falls back to claude-code when project is missing', () => {
+    expect(getSessionAgentId({}, null)).toBe('claude-code')
+    expect(getSessionAgentId(null, null)).toBe('claude-code')
   })
 })

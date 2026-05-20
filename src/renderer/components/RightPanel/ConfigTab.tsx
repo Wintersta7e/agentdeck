@@ -1,6 +1,5 @@
 import { useAppStore } from '../../store/appStore'
-import { AGENT_BY_ID } from '../../utils/agent-ui'
-import type { AgentType } from '../../../shared/types'
+import { AGENT_BY_ID, getSessionAgentId } from '../../utils/agent-ui'
 import './ConfigTab.css'
 
 /**
@@ -22,7 +21,7 @@ export function ConfigTab(): React.JSX.Element {
     return <div className="ri-tab__empty">Open a session to see its config.</div>
   }
 
-  const agentId = (session.agentOverride ?? 'claude-code') as AgentType
+  const agentId = getSessionAgentId(session, project)
   const agent = AGENT_BY_ID.get(agentId)
 
   const rows: Array<{ label: string; value: string; kind?: 'mono' | 'accent' }> = [

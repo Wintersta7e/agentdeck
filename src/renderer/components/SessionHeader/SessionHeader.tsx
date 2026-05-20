@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import { useAppStore } from '../../store/appStore'
-import { AGENT_BY_ID, agentColorVar } from '../../utils/agent-ui'
+import { AGENT_BY_ID, agentColorVar, getSessionAgentId } from '../../utils/agent-ui'
 import { getActionButtons } from '../../selectors/session-actions'
 import { rerunSession } from '../../utils/rerun-session'
 import type { Session } from '../../../shared/types'
@@ -28,7 +28,7 @@ export const SessionHeader = memo(function SessionHeader(): React.JSX.Element | 
 
   if (!session || !project) return null
 
-  const agentId = session.agentOverride ?? project.agent ?? 'claude-code'
+  const agentId = getSessionAgentId(session, project)
   const agent = AGENT_BY_ID.get(agentId)
   const buttons = getActionButtons(session)
   const dirtyCount = gitStatus

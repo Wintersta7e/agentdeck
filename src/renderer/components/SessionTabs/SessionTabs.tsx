@@ -3,7 +3,7 @@ import { LayoutGrid, Plus, X } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import { closeSession } from '../../utils/session-close'
 import type { Session, Project } from '../../../shared/types'
-import { AGENT_BY_ID, agentColorVar } from '../../utils/agent-ui'
+import { AGENT_BY_ID, agentColorVar, getSessionAgentId } from '../../utils/agent-ui'
 import './SessionTabs.css'
 
 function shortBranch(branch?: string): string {
@@ -49,7 +49,7 @@ export const SessionTabs = memo(function SessionTabs(): React.JSX.Element {
         const session = sessions[id]
         if (!session) return null
         const project = projectById.get(session.projectId)
-        const agentId = session.agentOverride ?? project?.agent ?? 'claude-code'
+        const agentId = getSessionAgentId(session, project)
         const agent = AGENT_BY_ID.get(agentId)
         const tone = statusTone(session)
         const isActive = activeSessionId === id
