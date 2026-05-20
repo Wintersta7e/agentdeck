@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import type { WorkflowVariable } from '../../../shared/types'
 import { FolderOpen } from 'lucide-react'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
+import { windowsToWsl } from '../../utils/path-conversion'
 import './WorkflowRunDialog.css'
 
 interface WorkflowRunDialogProps {
@@ -61,11 +62,7 @@ export default function WorkflowRunDialog({
     async (name: string) => {
       const result = await window.agentDeck.pickFolder()
       if (result !== null) {
-        // WF-3: Convert Windows paths (C:\...) to WSL format (/mnt/c/...)
-        const wslPath = result
-          .replace(/^([A-Za-z]):[/\\]/, (_, d: string) => `/mnt/${d.toLowerCase()}/`)
-          .replace(/\\/g, '/')
-        setValue(name, wslPath)
+        setValue(name, windowsToWsl(result))
       }
     },
     [setValue],
