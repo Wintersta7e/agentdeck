@@ -240,8 +240,9 @@ export function validateWorkflow(w: unknown): ValidationResult {
       if (fromNode && fromNode.type !== 'condition') {
         errors.push(`Edge ${e.id} has branch but fromNodeId is not a condition node`)
       }
-      // Track for fan-out warning
-      if (fromNode && fromNode.type === 'condition') {
+      // Track for fan-out warning — loop edges are intentionally co-located
+      // with a normal escape edge on the same branch, so exclude them here.
+      if (fromNode && fromNode.type === 'condition' && e.edgeType !== 'loop') {
         if (!branchesPerCondition.has(e.fromNodeId)) {
           branchesPerCondition.set(e.fromNodeId, new Map())
         }

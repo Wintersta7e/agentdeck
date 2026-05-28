@@ -129,6 +129,57 @@ describe('validateWorkflow — outputMatch condition', () => {
   })
 })
 
+describe('validateWorkflow — branch fan-out warning', () => {
+  it('does not warn when a condition false-branch has a loop edge plus a normal escape edge', () => {
+    const wf = {
+      id: 'w',
+      name: 'w',
+      createdAt: 0,
+      updatedAt: 0,
+      nodes: [
+        { id: 'C', name: 'C', type: 'condition', x: 0, y: 0, conditionMode: 'exitCode' },
+        { id: 'L', name: 'L', type: 'agent', x: 0, y: 0 },
+        { id: 'E', name: 'E', type: 'checkpoint', x: 0, y: 0 },
+        { id: 'T', name: 'T', type: 'agent', x: 0, y: 0 },
+      ],
+      edges: [
+        { id: 'e1', fromNodeId: 'C', toNodeId: 'T', branch: 'true' },
+        {
+          id: 'e2',
+          fromNodeId: 'C',
+          toNodeId: 'L',
+          branch: 'false',
+          edgeType: 'loop',
+          maxIterations: 3,
+        },
+        { id: 'e3', fromNodeId: 'C', toNodeId: 'E', branch: 'false' },
+      ],
+    }
+    const result = validateWorkflow(wf)
+    expect(result.warnings.some((w) => /edges with branch/i.test(w))).toBe(false)
+  })
+
+  it('still warns when a condition has two NORMAL edges on the same branch', () => {
+    const wf = {
+      id: 'w',
+      name: 'w',
+      createdAt: 0,
+      updatedAt: 0,
+      nodes: [
+        { id: 'C', name: 'C', type: 'condition', x: 0, y: 0, conditionMode: 'exitCode' },
+        { id: 'A', name: 'A', type: 'agent', x: 0, y: 0 },
+        { id: 'B', name: 'B', type: 'agent', x: 0, y: 0 },
+      ],
+      edges: [
+        { id: 'e1', fromNodeId: 'C', toNodeId: 'A', branch: 'false' },
+        { id: 'e2', fromNodeId: 'C', toNodeId: 'B', branch: 'false' },
+      ],
+    }
+    const result = validateWorkflow(wf)
+    expect(result.warnings.some((w) => /edges with branch/i.test(w))).toBe(true)
+  })
+})
+
 describe('validateWorkflow — loop edge uniqueness', () => {
   it('flags two loop edges from the same condition on the same branch', () => {
     const wf = {
