@@ -329,13 +329,13 @@ describe('seedRoles', () => {
     return { store, setSpy }
   }
 
-  it('seeds 8 built-in roles on fresh install', () => {
+  it('seeds 9 built-in roles on fresh install', () => {
     const { store, setSpy } = makeMockStore()
     seedRoles(store)
 
     const setCall = setSpy.mock.calls.find((c) => c[0] === 'roles')
     const roles = setCall?.[1] as Role[]
-    expect(roles).toHaveLength(8)
+    expect(roles).toHaveLength(9)
     expect(roles.every((r) => r.id.startsWith('seed-role-'))).toBe(true)
     expect(roles.every((r) => r.builtin)).toBe(true)
   })
@@ -356,8 +356,8 @@ describe('seedRoles', () => {
 
     const setCall = setSpy.mock.calls.find((c) => c[0] === 'roles')
     const roles = setCall?.[1] as Role[]
-    // 8 new seeds + 1 user role
-    expect(roles).toHaveLength(9)
+    // 9 new seeds + 1 user role
+    expect(roles).toHaveLength(10)
     expect(roles.some((r) => r.id === 'custom-role-1')).toBe(true)
   })
 })

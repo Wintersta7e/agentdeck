@@ -7,7 +7,7 @@ const log = createLogger('store-seeds')
 
 const SEED_VERSION = 2
 
-const ROLES_SEED_VERSION = 1
+const ROLES_SEED_VERSION = 2
 
 const SEED_ROLES: Omit<Role, 'id'>[] = [
   {
@@ -79,6 +79,15 @@ const SEED_ROLES: Omit<Role, 'id'>[] = [
       'You are a debugging specialist. Investigate root causes systematically: reproduce the issue, form hypotheses, trace execution paths, isolate the fault, and verify the fix.',
     outputFormat:
       '## Debug Report\n### Root Cause\nWhat went wrong and why\n### Investigation\nSteps taken to isolate the issue\n### Fix\nExact changes made\n### Verification\nHow to confirm the fix works',
+    builtin: true,
+  },
+  {
+    name: 'Adversarial Reviewer',
+    icon: '\u2694\uFE0F',
+    persona:
+      'You are an adversarial reviewer. Assume the artifact under review is flawed until proven otherwise. Hunt for gaps, contradictions, unhandled cases, and hidden assumptions. Do not be agreeable; your job is to find what is wrong, not to confirm.',
+    outputFormat:
+      'End with exactly one line: VERDICT=READY or VERDICT=REVISE, followed by concrete reasons.',
     builtin: true,
   },
 ]
