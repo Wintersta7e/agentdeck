@@ -1052,3 +1052,82 @@ describe('retry on failure then success', () => {
     expect(hasEvent(sendSpy, 'wf-retry2', 'workflow:stopped')).toBe(true)
   })
 })
+
+// ═══════════════════════════════════════════════════════════════════════
+// Loop escape: maxIterations exhaustion routes to the escape checkpoint
+// ═══════════════════════════════════════════════════════════════════════
+
+describe('loop escape on maxIterations exhaustion', () => {
+  it('exhausted loop routes to the escape checkpoint and logs, not a silent done', async () => {
+    // Shell node that always fails (non-zero exit) so the condition always
+    // evaluates false, driving the loop until maxIterations is hit.
+    mockExecFile.mockImplementation(
+      (cmd: string, _args: string[], _opts: unknown, cb?: (...a: unknown[]) => void) => {
+        if (cmd === 'wsl.exe' && typeof cb === 'function') {
+          const err = new Error('exit 1') as NodeJS.ErrnoException
+          err.code = '1'
+          process.nextTick(() => cb(err, '', 'error output'))
+        } else if (typeof cb === 'function') {
+          cb(null, '', '')
+        }
+        return { pid: 999, kill: vi.fn() }
+      },
+    )
+    buildEngine()
+
+    const fail = makeWorkflowNode({
+      id: 'F',
+      name: 'fail',
+      type: 'shell',
+      command: 'exit 1',
+      continueOnError: true,
+    })
+    const cond = makeWorkflowNode({
+      id: 'C',
+      name: 'cond',
+      type: 'condition',
+      conditionMode: 'exitCode',
+    })
+    const escape = makeWorkflowNode({
+      id: 'E',
+      name: 'escape',
+      type: 'checkpoint',
+      message: 'did not converge',
+    })
+
+    const wf = makeWorkflow({
+      id: 'wf-loop-escape',
+      nodes: [fail, cond, escape],
+      edges: [
+        makeWorkflowEdge('F', 'C'),
+        // Loop edge back to F; maxIterations:2 means the loop fires on
+        // iterations 1 and 2, then on iteration 3 the engine exhausts
+        // the budget and routes to the escape instead.
+        makeWorkflowEdge('C', 'F', { branch: 'false', edgeType: 'loop', maxIterations: 2 }),
+        // Non-loop false edge: the escape path
+        makeWorkflowEdge('C', 'E', { branch: 'false' }),
+      ],
+    })
+
+    // Run the engine; give enough async ticks for all three shell executions
+    // (iterations 1 & 2 loop, iteration 3 escapes) plus the checkpoint pause.
+    engine.run(wf)
+    await tick(500)
+
+    // 1. A node:output warning containing "did not converge" must have been emitted.
+    const outputs = getEvents(sendSpy, 'wf-loop-escape', 'node:output')
+    expect(outputs).toContainEqual(
+      expect.objectContaining({ message: expect.stringMatching(/did not converge/) }),
+    )
+
+    // 2. The escape checkpoint E must have been reached (emits node:paused).
+    expect(getEvents(sendSpy, 'wf-loop-escape', 'node:paused').some((e) => e.nodeId === 'E')).toBe(
+      true,
+    )
+
+    // Clean up: resume the checkpoint so the workflow can finish.
+    engine.resume('wf-loop-escape', 'E')
+    await tick()
+    expect(hasEvent(sendSpy, 'wf-loop-escape', 'workflow:done')).toBe(true)
+  })
+})
