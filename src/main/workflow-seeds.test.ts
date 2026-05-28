@@ -67,6 +67,37 @@ vi.mock('./workflow-seed-blueprints', () => ({
       ],
       edges: [],
     },
+    {
+      id: 'seed-wf-fieldtest',
+      name: 'Field Test Workflow',
+      description: 'Round-trip test for extended SeedNode fields',
+      nodes: [
+        {
+          id: 'a',
+          type: 'agent',
+          name: 'Agent Node',
+          x: 0,
+          y: 0,
+          agent: 'claude-code',
+          prompt: 'do something',
+          continueOnError: true,
+          timeout: 600000,
+          retryCount: 1,
+          retryDelayMs: 2000,
+          skillId: 'global:lint-fix',
+        },
+        {
+          id: 'c',
+          type: 'condition',
+          name: 'Condition Node',
+          x: 100,
+          y: 0,
+          conditionMode: 'exitCode',
+          conditionPattern: 'PASS',
+        },
+      ],
+      edges: [{ id: 'e1', fromNodeId: 'a', toNodeId: 'c' }],
+    },
   ],
 }))
 
@@ -104,7 +135,7 @@ describe('seedWorkflows', () => {
     const store = makeStore({}) // no version set
     await seedWorkflows(store as never)
 
-    expect(saveWorkflowMock).toHaveBeenCalledTimes(2)
+    expect(saveWorkflowMock).toHaveBeenCalledTimes(3)
     // Old-seed cleanup must not run when there's no prior version.
     expect(readdirMock).not.toHaveBeenCalled()
   })
@@ -131,7 +162,7 @@ describe('seedWorkflows', () => {
 
     await seedWorkflows(store as never)
 
-    expect(saveWorkflowMock).toHaveBeenCalledTimes(2)
+    expect(saveWorkflowMock).toHaveBeenCalledTimes(3)
   })
 
   it('cleans up old seed workflows on upgrade (currentVersion > 0)', async () => {
@@ -199,6 +230,26 @@ describe('seedWorkflows', () => {
 
     // Should NOT throw — orchestrator logs and continues.
     await expect(seedWorkflows(store as never)).resolves.toBeUndefined()
-    expect(saveWorkflowMock).toHaveBeenCalledTimes(2)
+    expect(saveWorkflowMock).toHaveBeenCalledTimes(3)
+  })
+
+  it('materializes continueOnError, timeout, retry, skillId, and condition fields', async () => {
+    const store = makeStore({})
+    await seedWorkflows(store as never)
+
+    const saved = saveWorkflowMock.mock.calls.map(
+      (c) => c[0] as { id: string; nodes: Array<Record<string, unknown>> },
+    )
+    const wf = saved.find((w) => w.id === 'seed-wf-fieldtest')!
+    const agent = wf.nodes.find((n) => n['id'] === 'a')!
+    const cond = wf.nodes.find((n) => n['id'] === 'c')!
+
+    expect(agent['continueOnError']).toBe(true)
+    expect(agent['timeout']).toBe(600000)
+    expect(agent['retryCount']).toBe(1)
+    expect(agent['retryDelayMs']).toBe(2000)
+    expect((agent as { skillId?: string }).skillId).toBe('global:lint-fix')
+    expect((cond as { conditionMode?: string }).conditionMode).toBe('exitCode')
+    expect((cond as { conditionPattern?: string }).conditionPattern).toBe('PASS')
   })
 })

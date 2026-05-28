@@ -12,6 +12,16 @@ export interface SeedNode {
   message?: string | undefined
   command?: string | undefined
   _roleName?: string | undefined
+  // base fields
+  continueOnError?: boolean | undefined
+  timeout?: number | undefined
+  retryCount?: number | undefined
+  retryDelayMs?: number | undefined
+  // agent
+  skillId?: string | undefined
+  // condition
+  conditionMode?: 'exitCode' | 'outputMatch' | undefined
+  conditionPattern?: string | undefined
 }
 
 export interface SeedWorkflowBlueprint {

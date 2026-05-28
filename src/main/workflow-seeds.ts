@@ -45,13 +45,25 @@ export async function seedWorkflows(store: AppStore): Promise<void> {
   let count = 0
   for (const blueprint of SEED_WORKFLOWS) {
     const nodes: WorkflowNode[] = blueprint.nodes.map((n): WorkflowNode => {
-      const base = { id: n.id, name: n.name, x: n.x, y: n.y }
+      const base: Pick<WorkflowNode, 'id' | 'name' | 'x' | 'y'> &
+        Partial<Pick<WorkflowNode, 'continueOnError' | 'timeout' | 'retryCount' | 'retryDelayMs'>> =
+        {
+          id: n.id,
+          name: n.name,
+          x: n.x,
+          y: n.y,
+        }
+      if (n.continueOnError !== undefined) base.continueOnError = n.continueOnError
+      if (n.timeout !== undefined) base.timeout = n.timeout
+      if (n.retryCount !== undefined) base.retryCount = n.retryCount
+      if (n.retryDelayMs !== undefined) base.retryDelayMs = n.retryDelayMs
       switch (n.type) {
         case 'agent': {
           const node: WorkflowNode = { ...base, type: 'agent' }
           if (n.agent !== undefined) node.agent = n.agent as AgentType
           if (n.agentFlags !== undefined) node.agentFlags = n.agentFlags
           if (n.prompt !== undefined) node.prompt = n.prompt
+          if (n.skillId !== undefined) node.skillId = n.skillId
           if (n._roleName !== undefined) {
             const roleId = roleMap.get(n._roleName)
             if (roleId) node.roleId = roleId
@@ -73,8 +85,12 @@ export async function seedWorkflows(store: AppStore): Promise<void> {
           if (n.message !== undefined) node.message = n.message
           return node
         }
-        case 'condition':
-          return { ...base, type: 'condition' }
+        case 'condition': {
+          const node: WorkflowNode = { ...base, type: 'condition' }
+          if (n.conditionMode !== undefined) node.conditionMode = n.conditionMode
+          if (n.conditionPattern !== undefined) node.conditionPattern = n.conditionPattern
+          return node
+        }
       }
     })
 
