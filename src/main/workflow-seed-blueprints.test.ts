@@ -25,8 +25,12 @@ function seedToWorkflow(b: SeedWorkflowBlueprint): Workflow {
         if (n.message !== undefined) node.message = n.message
         return node
       }
-      case 'condition':
-        return { ...base, type: 'condition' }
+      case 'condition': {
+        const node: WorkflowNode = { ...base, type: 'condition' }
+        if (n.conditionMode !== undefined) node.conditionMode = n.conditionMode
+        if (n.conditionPattern !== undefined) node.conditionPattern = n.conditionPattern
+        return node
+      }
     }
   })
   return {
