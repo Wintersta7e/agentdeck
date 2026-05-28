@@ -6,13 +6,24 @@ import type { Workflow, WorkflowNode, AgentType } from '../shared/types'
 // Mirror the materialisation in workflow-seeds.ts (skip role resolution — irrelevant for validation).
 function seedToWorkflow(b: SeedWorkflowBlueprint): Workflow {
   const nodes: WorkflowNode[] = b.nodes.map((n): WorkflowNode => {
-    const base = { id: n.id, name: n.name, x: n.x, y: n.y }
+    const base: Pick<WorkflowNode, 'id' | 'name' | 'x' | 'y'> &
+      Partial<Pick<WorkflowNode, 'continueOnError' | 'timeout' | 'retryCount' | 'retryDelayMs'>> = {
+      id: n.id,
+      name: n.name,
+      x: n.x,
+      y: n.y,
+    }
+    if (n.continueOnError !== undefined) base.continueOnError = n.continueOnError
+    if (n.timeout !== undefined) base.timeout = n.timeout
+    if (n.retryCount !== undefined) base.retryCount = n.retryCount
+    if (n.retryDelayMs !== undefined) base.retryDelayMs = n.retryDelayMs
     switch (n.type) {
       case 'agent': {
         const node: WorkflowNode = { ...base, type: 'agent' }
         if (n.agent !== undefined) node.agent = n.agent as AgentType
         if (n.agentFlags !== undefined) node.agentFlags = n.agentFlags
         if (n.prompt !== undefined) node.prompt = n.prompt
+        if (n.skillId !== undefined) node.skillId = n.skillId
         return node
       }
       case 'shell': {
@@ -132,6 +143,11 @@ describe('SEED_WORKFLOWS blueprints', () => {
       expect(
         result.errors,
         `seed ${blueprint.id} should validate clean: ${result.errors.join('; ')}`,
+      ).toEqual([])
+      const fanOutWarnings = result.warnings.filter((w) => /edges with branch/i.test(w))
+      expect(
+        fanOutWarnings,
+        `seed ${blueprint.id} should not produce branch fan-out warnings: ${fanOutWarnings.join('; ')}`,
       ).toEqual([])
     }
   })
