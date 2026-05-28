@@ -218,6 +218,9 @@ export function validateWorkflow(w: unknown): ValidationResult {
   // ── Edge validation ──────────────────────────────────────────
   const nodeIds = new Set(nodeMap.keys())
 
+  // Track loop edge count per (fromNodeId, branch) to catch duplicates
+  const loopEdgeKey = new Map<string, number>()
+
   // Track branch values per condition node for fan-out warning
   const branchesPerCondition = new Map<string, Map<string, number>>()
 
@@ -264,6 +267,16 @@ export function validateWorkflow(w: unknown): ValidationResult {
       }
       if (fromNode && fromNode.type !== 'condition') {
         errors.push(`Loop edge ${e.id} fromNodeId must be a condition node`)
+      }
+      // Duplicate loop edge per (condition, branch) — engine picks only the
+      // first, so a second one would be silently ignored.
+      const key = `${e.fromNodeId}:${e.branch ?? 'none'}`
+      const n = (loopEdgeKey.get(key) ?? 0) + 1
+      loopEdgeKey.set(key, n)
+      if (n === 2) {
+        errors.push(
+          `Node ${e.fromNodeId} has more than one loop edge per branch "${e.branch ?? 'none'}"`,
+        )
       }
     }
   }

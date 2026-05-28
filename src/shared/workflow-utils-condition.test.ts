@@ -128,3 +128,39 @@ describe('validateWorkflow — outputMatch condition', () => {
     expect(result.errors.filter((e) => /ReDoS/.test(e))).toHaveLength(0)
   })
 })
+
+describe('validateWorkflow — loop edge uniqueness', () => {
+  it('flags two loop edges from the same condition on the same branch', () => {
+    const wf = {
+      id: 'w',
+      name: 'w',
+      createdAt: 0,
+      updatedAt: 0,
+      nodes: [
+        { id: 'C', name: 'C', type: 'condition', x: 0, y: 0 },
+        { id: 'A', name: 'A', type: 'agent', x: 0, y: 0 },
+        { id: 'B', name: 'B', type: 'agent', x: 0, y: 0 },
+      ],
+      edges: [
+        {
+          id: 'e1',
+          fromNodeId: 'C',
+          toNodeId: 'A',
+          branch: 'false',
+          edgeType: 'loop',
+          maxIterations: 3,
+        },
+        {
+          id: 'e2',
+          fromNodeId: 'C',
+          toNodeId: 'B',
+          branch: 'false',
+          edgeType: 'loop',
+          maxIterations: 3,
+        },
+      ],
+    }
+    const result = validateWorkflow(wf)
+    expect(result.errors.some((e) => /one loop edge per/i.test(e))).toBe(true)
+  })
+})
