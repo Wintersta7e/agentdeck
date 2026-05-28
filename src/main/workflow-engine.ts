@@ -367,7 +367,32 @@ export function createWorkflowEngine(
           message: `Condition: ${branch}`,
           branch,
         })
-        scheduler.resolveCondition(node.id, branch)
+        // Decide loop vs escape BEFORE routing, so the escape edge can stay
+        // dormant while iterating (see resolveConditionLooping).
+        const condLoops = loopEdgesByCondition.get(node.id) ?? []
+        const matchingLoop = condLoops.find((le) => le.branch === branch)
+        let willLoop = false
+        let loopCount = 0
+        if (matchingLoop) {
+          loopCount = (loopCounters.get(matchingLoop.id) ?? 0) + 1
+          loopCounters.set(matchingLoop.id, loopCount)
+          willLoop = loopCount <= (matchingLoop.maxIterations ?? 1)
+          if (!willLoop) {
+            push(workflow.id, {
+              type: 'node:output',
+              workflowId: workflow.id,
+              nodeId: node.id,
+              message: `⚠ Loop did not converge after ${String(loopCount - 1)} iterations — routing to escape`,
+            })
+            log.warn('Loop did not converge', { edgeId: matchingLoop.id, count: loopCount - 1 })
+          }
+        }
+
+        if (willLoop) {
+          scheduler.resolveConditionLooping(node.id, branch)
+        } else {
+          scheduler.resolveCondition(node.id, branch)
+        }
 
         const condFinishTime = Date.now()
         const condNodeRun: WorkflowNodeRun = {
@@ -383,43 +408,33 @@ export function createWorkflowEngine(
         if (condExecN > 1) condNodeRun.loopIterations = condExecN
         recorder.recordNode(condNodeRun)
 
-        // Handle loop edges
-        const condLoops = loopEdgesByCondition.get(node.id) ?? []
-        for (const le of condLoops) {
-          if (le.branch === branch) {
-            const count = (loopCounters.get(le.id) ?? 0) + 1
-            loopCounters.set(le.id, count)
-            if (count <= (le.maxIterations ?? 1)) {
-              push(workflow.id, {
-                type: 'node:loopIteration',
-                workflowId: workflow.id,
-                nodeId: node.id,
-                iteration: count,
-                maxIterations: le.maxIterations,
-                message: `Loop iteration ${String(count)}/${String(le.maxIterations)}`,
-              })
-              const resetIds = scheduler.resetLoopSubgraph(le.toNodeId, node.id)
-              // Clear loop counters for inner loop edges within the reset subgraph
-              // so nested loops restart correctly on each outer iteration.
-              // BUG-5/CDX-5: Also check toNodeId is in resetIds — prevents sibling loop
-              // edges from the same condition node from having their counters cleared
-              for (const innerLoops of loopEdgesByCondition.values()) {
-                for (const innerLe of innerLoops) {
-                  if (
-                    innerLe.id !== le.id &&
-                    resetIds.has(innerLe.fromNodeId) &&
-                    resetIds.has(innerLe.toNodeId)
-                  ) {
-                    loopCounters.delete(innerLe.id)
-                  }
-                }
-              }
-              // Clear output maps for re-executing nodes to prevent unbounded growth
-              for (const nid of resetIds) {
-                nodeOutputs.delete(nid)
-                conditionOutputs.delete(nid)
+        if (willLoop && matchingLoop) {
+          push(workflow.id, {
+            type: 'node:loopIteration',
+            workflowId: workflow.id,
+            nodeId: node.id,
+            iteration: loopCount,
+            maxIterations: matchingLoop.maxIterations,
+            message: `Loop iteration ${String(loopCount)}/${String(matchingLoop.maxIterations)}`,
+          })
+          const resetIds = scheduler.resetLoopSubgraph(matchingLoop.toNodeId, node.id)
+          // Clear inner loop counters within the reset subgraph (guard against
+          // sibling loop edges from the same condition).
+          for (const innerLoops of loopEdgesByCondition.values()) {
+            for (const innerLe of innerLoops) {
+              if (
+                innerLe.id !== matchingLoop.id &&
+                resetIds.has(innerLe.fromNodeId) &&
+                resetIds.has(innerLe.toNodeId)
+              ) {
+                loopCounters.delete(innerLe.id)
               }
             }
+          }
+          // Clear output maps for re-executing nodes to prevent unbounded growth.
+          for (const nid of resetIds) {
+            nodeOutputs.delete(nid)
+            conditionOutputs.delete(nid)
           }
         }
         return
