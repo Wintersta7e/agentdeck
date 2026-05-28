@@ -18,6 +18,11 @@ export interface EdgeScheduler {
   skipNode(nodeId: string): void
   /** Condition node completed: activate matching branch, skip unmatched branch. */
   resolveCondition(nodeId: string, branch: 'true' | 'false'): void
+  /** Like resolveCondition, but for a condition used inside a loop: the loop
+   *  branch's forward (escape) edge is left dormant rather than activated, so
+   *  the escape node is not enqueued until maxIterations is exhausted. The
+   *  opposite branch is activated as skipped. */
+  resolveConditionLooping(nodeId: string, branch: 'true' | 'false'): void
   /** Get current status of a node. */
   getNodeStatus(nodeId: string): WorkflowNodeStatus
   /** True when all nodes are done, skipped, or errored (nothing running or pending). */
@@ -221,6 +226,26 @@ export function createScheduler(
         } else {
           // Unconditional edge from condition: activate normally
           activateEdge(edge, false)
+        }
+      }
+    },
+
+    resolveConditionLooping(nodeId: string, branch: 'true' | 'false'): void {
+      const state = getState(nodeId)
+      if (state.status !== 'running') return // WF-5: guard against double-resolve
+      state.status = 'done'
+      activeCount--
+
+      const edges = outgoing.get(nodeId) ?? []
+      for (const edge of edges) {
+        if (edge.branch === branch) {
+          // Loop-branch forward edge (the escape): leave dormant — do not
+          // touch its pending count, so it never becomes ready while looping.
+          continue
+        } else if (edge.branch !== undefined) {
+          activateEdge(edge, true) // non-matching branch → skipped
+        } else {
+          activateEdge(edge, false) // unconditional → normal
         }
       }
     },

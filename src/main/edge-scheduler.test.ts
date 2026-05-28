@@ -567,6 +567,40 @@ describe('edge-scheduler', () => {
     })
   })
 
+  // ── resolveConditionLooping ────────────────────────────
+
+  describe('resolveConditionLooping', () => {
+    it('skips the non-loop branch and leaves the loop-branch (escape) edge dormant', () => {
+      const c = makeWorkflowNode({ id: 'C', name: 'C', type: 'condition' })
+      const nonLoopBranch = makeWorkflowNode({ id: 'S', name: 'S' })
+      const escape = makeWorkflowNode({ id: 'E', name: 'E', type: 'checkpoint' })
+      const sched = createScheduler(
+        [c, nonLoopBranch, escape],
+        [
+          makeWorkflowEdge('C', 'S', { branch: 'true' }),
+          makeWorkflowEdge('C', 'E', { branch: 'false' }),
+        ],
+      )
+
+      sched.getReady() // C is a root → running
+      sched.resolveConditionLooping('C', 'false')
+
+      expect(sched.getNodeStatus('S')).toBe('skipped') // non-loop branch skipped
+      expect(sched.getNodeStatus('E')).toBe('idle') // escape dormant, not enqueued
+      expect(sched.getReady()).toHaveLength(0) // escape did NOT become ready
+      expect(sched.isDone()).toBe(false) // condition done, but escape still idle
+    })
+
+    it('contrast: plain resolveCondition would make the escape ready', () => {
+      const c = makeWorkflowNode({ id: 'C', name: 'C', type: 'condition' })
+      const escape = makeWorkflowNode({ id: 'E', name: 'E', type: 'checkpoint' })
+      const sched = createScheduler([c, escape], [makeWorkflowEdge('C', 'E', { branch: 'false' })])
+      sched.getReady()
+      sched.resolveCondition('C', 'false')
+      expect(sched.getReady().map((n) => n.id)).toEqual(['E'])
+    })
+  })
+
   // ── Additional edge cases (from scheduler review) ────────
 
   describe('additional edge cases', () => {
