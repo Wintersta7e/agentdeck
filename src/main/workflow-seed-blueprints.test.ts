@@ -1,54 +1,18 @@
 import { describe, it, expect } from 'vitest'
 import { SEED_WORKFLOWS, type SeedWorkflowBlueprint } from './workflow-seed-blueprints'
+import { materializeSeedNode } from './workflow-seed-materialize'
 import { validateWorkflow } from '../shared/workflow-utils'
-import type { Workflow, WorkflowNode, AgentType } from '../shared/types'
+import type { Workflow } from '../shared/types'
 
-// Mirror the materialisation in workflow-seeds.ts (skip role resolution — irrelevant for validation).
+// Materialise via the shared helper (workflow-seed-materialize) so this test
+// validates exactly what the production seeder writes to disk. Role resolution
+// is skipped (no roleMap) — irrelevant for structural validation.
 function seedToWorkflow(b: SeedWorkflowBlueprint): Workflow {
-  const nodes: WorkflowNode[] = b.nodes.map((n): WorkflowNode => {
-    const base: Pick<WorkflowNode, 'id' | 'name' | 'x' | 'y'> &
-      Partial<Pick<WorkflowNode, 'continueOnError' | 'timeout' | 'retryCount' | 'retryDelayMs'>> = {
-      id: n.id,
-      name: n.name,
-      x: n.x,
-      y: n.y,
-    }
-    if (n.continueOnError !== undefined) base.continueOnError = n.continueOnError
-    if (n.timeout !== undefined) base.timeout = n.timeout
-    if (n.retryCount !== undefined) base.retryCount = n.retryCount
-    if (n.retryDelayMs !== undefined) base.retryDelayMs = n.retryDelayMs
-    switch (n.type) {
-      case 'agent': {
-        const node: WorkflowNode = { ...base, type: 'agent' }
-        if (n.agent !== undefined) node.agent = n.agent as AgentType
-        if (n.agentFlags !== undefined) node.agentFlags = n.agentFlags
-        if (n.prompt !== undefined) node.prompt = n.prompt
-        if (n.skillId !== undefined) node.skillId = n.skillId
-        return node
-      }
-      case 'shell': {
-        const node: WorkflowNode = { ...base, type: 'shell' }
-        if (n.command !== undefined) node.command = n.command
-        return node
-      }
-      case 'checkpoint': {
-        const node: WorkflowNode = { ...base, type: 'checkpoint' }
-        if (n.message !== undefined) node.message = n.message
-        return node
-      }
-      case 'condition': {
-        const node: WorkflowNode = { ...base, type: 'condition' }
-        if (n.conditionMode !== undefined) node.conditionMode = n.conditionMode
-        if (n.conditionPattern !== undefined) node.conditionPattern = n.conditionPattern
-        return node
-      }
-    }
-  })
   return {
     id: b.id,
     name: b.name,
     description: b.description,
-    nodes,
+    nodes: b.nodes.map((n) => materializeSeedNode(n)),
     edges: b.edges,
     variables: b.variables,
     createdAt: 0,
