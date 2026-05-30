@@ -187,6 +187,34 @@ export const AGENT_ENGINE_FLAGS_MAP: Readonly<Record<string, readonly string[]>>
   Object.fromEntries(AGENTS.flatMap((a) => ('engineFlags' in a ? [[a.id, a.engineFlags]] : []))),
 )
 
+/** Sandbox/permission level for an agent node; unset ⇒ 'read'. */
+export type AgentPermission = 'read' | 'edit' | 'full'
+
+/** Agent ID → permission level → CLI flags. Only agents with a real
+ *  sandbox/permission model appear here; everything else maps to no flags. */
+export const AGENT_PERMISSION_FLAGS: Readonly<
+  Record<string, Readonly<Record<AgentPermission, readonly string[]>>>
+> = Object.freeze({
+  'claude-code': {
+    read: ['--permission-mode', 'plan'],
+    edit: ['--permission-mode', 'acceptEdits'],
+    full: ['--dangerously-skip-permissions'],
+  },
+  codex: {
+    read: ['--sandbox', 'read-only'],
+    edit: ['--sandbox', 'workspace-write'],
+    full: ['--dangerously-bypass-approvals-and-sandbox'],
+  },
+})
+
+/** Flags for an agent at a permission level. Empty for agents with no model. */
+export function getPermissionFlags(
+  agentId: string,
+  permission: AgentPermission,
+): readonly string[] {
+  return AGENT_PERMISSION_FLAGS[agentId]?.[permission] ?? []
+}
+
 /** Agent ID → CSS variable name (without `var()`) for the agent's signature color */
 export const AGENT_COLOR_VAR_MAP: Readonly<Record<string, string>> = Object.freeze(
   Object.fromEntries(AGENTS.map((a) => [a.id, a.colorVar])),

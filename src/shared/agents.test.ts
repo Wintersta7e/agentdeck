@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { AGENTS, AGENT_BINARY_MAP, KNOWN_AGENT_IDS, SAFE_FLAGS_RE } from './agents'
+import {
+  AGENTS,
+  AGENT_BINARY_MAP,
+  KNOWN_AGENT_IDS,
+  SAFE_FLAGS_RE,
+  getPermissionFlags,
+} from './agents'
 
 describe('AGENTS', () => {
   it('has 7 agents', () => {
@@ -86,5 +92,24 @@ describe('SAFE_FLAGS_RE', () => {
 
   it('accepts empty string', () => {
     expect(SAFE_FLAGS_RE.test('')).toBe(true)
+  })
+})
+
+describe('getPermissionFlags', () => {
+  it('maps codex levels to sandbox flags', () => {
+    expect(getPermissionFlags('codex', 'read')).toEqual(['--sandbox', 'read-only'])
+    expect(getPermissionFlags('codex', 'edit')).toEqual(['--sandbox', 'workspace-write'])
+    expect(getPermissionFlags('codex', 'full')).toEqual([
+      '--dangerously-bypass-approvals-and-sandbox',
+    ])
+  })
+  it('maps claude-code levels to permission-mode flags', () => {
+    expect(getPermissionFlags('claude-code', 'read')).toEqual(['--permission-mode', 'plan'])
+    expect(getPermissionFlags('claude-code', 'edit')).toEqual(['--permission-mode', 'acceptEdits'])
+    expect(getPermissionFlags('claude-code', 'full')).toEqual(['--dangerously-skip-permissions'])
+  })
+  it('returns no flags for agents without a permission model', () => {
+    expect(getPermissionFlags('aider', 'edit')).toEqual([])
+    expect(getPermissionFlags('unknown', 'read')).toEqual([])
   })
 })
