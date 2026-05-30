@@ -57,6 +57,10 @@ function seedToWorkflow(b: SeedWorkflowBlueprint): Workflow {
 }
 
 describe('SEED_WORKFLOWS blueprints', () => {
+  it('contains exactly 7 blueprints (the v5 seed set)', () => {
+    expect(SEED_WORKFLOWS.length).toBe(7)
+  })
+
   it('every blueprint has a unique id', () => {
     const ids = SEED_WORKFLOWS.map((w) => w.id)
     expect(new Set(ids).size).toBe(ids.length)
