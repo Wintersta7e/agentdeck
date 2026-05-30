@@ -102,6 +102,18 @@ describe('SEED_WORKFLOWS blueprints', () => {
     }
   })
 
+  it('write-capable seed agents are edit; review/analyze agents are read', () => {
+    const byId = Object.fromEntries(SEED_WORKFLOWS.map((w) => [w.id, w]))
+    const node = (wfId: string, nodeId: string) => byId[wfId]?.nodes.find((n) => n.id === nodeId)
+    expect(node('seed-wf-bug-fix', 'fix')?.permission).toBe('edit')
+    expect(node('seed-wf-feature-pipeline', 'build')?.permission).toBe('edit')
+    expect(node('seed-wf-coverage-loop', 'write_tests')?.permission).toBe('edit')
+    expect(node('seed-wf-refactor-campaign', 'refactor')?.permission).toBe('edit')
+    expect(node('seed-wf-design-verify', 'write_spec')?.permission).toBe('edit')
+    expect(node('seed-wf-coverage-loop', 'analyze_gaps')?.permission).toBe('read')
+    expect(node('seed-wf-feature-pipeline', 'review')?.permission).toBe('read')
+  })
+
   it('every blueprint passes validateWorkflow when materialised', () => {
     // Catches orphan edges, malformed conditions, missing agent fields, etc.
     // that would otherwise only surface at seed-time on a user's machine.

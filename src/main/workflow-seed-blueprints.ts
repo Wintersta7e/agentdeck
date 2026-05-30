@@ -47,6 +47,7 @@ export const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         x: 0,
         y: 0,
         agent: 'claude-code',
+        permission: 'read',
         continueOnError: true,
         timeout: 300000,
         prompt:
@@ -60,6 +61,7 @@ export const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 0,
         agent: 'claude-code',
         _roleName: 'Tester',
+        permission: 'edit',
         retryCount: 1,
         timeout: 300000,
         prompt:
@@ -73,6 +75,7 @@ export const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 0,
         agent: 'codex',
         _roleName: 'Developer',
+        permission: 'edit',
         retryCount: 1,
         timeout: 600000,
         prompt:
@@ -149,6 +152,7 @@ export const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 0,
         agent: 'claude-code',
         _roleName: 'Architect',
+        permission: 'read',
         timeout: 300000,
         prompt:
           'Goal: produce an implementation plan for {{FEATURE_DESC}} in {{TARGET_PATH}}.\nConstraints: list files to change, approach, and risks; no code yet.\nDone when: plan is complete.\nEnd with a ## SUMMARY (numbered plan).',
@@ -169,6 +173,7 @@ export const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 0,
         agent: 'codex',
         _roleName: 'Developer',
+        permission: 'edit',
         retryCount: 1,
         timeout: 600000,
         prompt:
@@ -182,6 +187,7 @@ export const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 0,
         agent: 'claude-code',
         _roleName: 'Reviewer',
+        permission: 'read',
         timeout: 300000,
         prompt:
           'Goal: review the implementation for correctness, bugs, and convention adherence.\nConstraints: be specific (file:line); check against the plan in context.\nDone when: reviewed.\nEnd with a ## SUMMARY and a final line REVIEW_PASS or REVIEW_FAIL: <reasons>.',
@@ -288,6 +294,7 @@ export const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: -330,
         agent: 'claude-code',
         _roleName: 'Reviewer',
+        permission: 'read',
         timeout: 300000,
         prompt:
           'Goal: review the scoped code (in context) for correctness and logic bugs.\nConstraints: be specific — cite file:line for every finding.\nDone when: reviewed.\nEnd with a ## SUMMARY: findings as "file:line — severity — issue", ≤ 2.5 KB.',
@@ -300,6 +307,7 @@ export const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: -110,
         agent: 'claude-code',
         _roleName: 'Security Auditor',
+        permission: 'read',
         timeout: 300000,
         prompt:
           'Goal: review the scoped code (in context) for security vulnerabilities — injection, path traversal, secret handling, unsafe IPC.\nConstraints: be specific — cite file:line for every finding.\nDone when: reviewed.\nEnd with a ## SUMMARY: findings as "file:line — severity — issue", ≤ 2.5 KB.',
@@ -312,6 +320,7 @@ export const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 110,
         agent: 'claude-code',
         _roleName: 'Reviewer',
+        permission: 'read',
         timeout: 300000,
         prompt:
           'Goal: review the scoped code (in context) for performance issues — hot loops, N+1 queries, memory leaks, unnecessary work.\nConstraints: be specific — cite file:line for every finding.\nDone when: reviewed.\nEnd with a ## SUMMARY: findings as "file:line — severity — issue", ≤ 2.5 KB.',
@@ -324,6 +333,7 @@ export const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 330,
         agent: 'claude-code',
         _roleName: 'Reviewer',
+        permission: 'read',
         timeout: 300000,
         prompt:
           'Goal: review the scoped code (in context) for type-safety issues and API/interface design problems.\nConstraints: be specific — cite file:line for every finding.\nDone when: reviewed.\nEnd with a ## SUMMARY: findings as "file:line — severity — issue", ≤ 2.5 KB.',
@@ -335,6 +345,7 @@ export const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         x: 440,
         y: 0,
         agent: 'claude-code',
+        permission: 'read',
         timeout: 300000,
         prompt:
           'Goal: merge the four review summaries from context (labelled by node: rev_bugs, rev_security, rev_perf, rev_types).\nConstraints: deduplicate overlapping findings, rank by severity, drop noise.\nDone when: a unified prioritized list is produced.\nEnd with a ## SUMMARY: prioritized fix list.',
@@ -355,6 +366,7 @@ export const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 0,
         agent: 'codex',
         _roleName: 'Developer',
+        permission: 'edit',
         retryCount: 1,
         timeout: 600000,
         prompt:
@@ -409,6 +421,7 @@ export const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         x: 0,
         y: 0,
         agent: 'claude-code',
+        permission: 'read',
         timeout: 300000,
         prompt:
           'Goal: identify the most valuable untested code paths in {{TARGET_PATH}}.\nConstraints: prefer high-risk / low-coverage areas; on re-entry, target gaps not yet covered (re-derive coverage state by inspecting the code or the on-disk coverage report — the loop-back edge arrives from the condition, not the coverage shell, so the report is not in context).\nDone when: ranked gaps listed.\nEnd with a ## SUMMARY: top gaps.',
@@ -421,6 +434,7 @@ export const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 0,
         agent: 'codex',
         _roleName: 'Tester',
+        permission: 'edit',
         retryCount: 1,
         timeout: 600000,
         prompt:
@@ -500,6 +514,7 @@ export const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         x: 0,
         y: 0,
         agent: 'claude-code',
+        permission: 'read',
         timeout: 300000,
         prompt:
           'Goal: find refactor opportunities in {{TARGET_PATH}} honoring {{RISK_THRESHOLD}}.\nConstraints: classify the overall scope; no code changes yet.\nDone when: the plan is ready.\nEnd with a ## SUMMARY and a final line SCOPE=LARGE (risky/broad) or SCOPE=SMALL (safe/local).',
@@ -529,6 +544,7 @@ export const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 0,
         agent: 'codex',
         _roleName: 'Refactorer',
+        permission: 'edit',
         retryCount: 1,
         timeout: 600000,
         prompt:
@@ -662,6 +678,7 @@ export const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         x: 480,
         y: 0,
         agent: 'claude-code',
+        permission: 'read',
         timeout: 300000,
         prompt:
           'Goal: read the four gate outputs from context (labelled by node: lint, test, build, audit) and report pass/fail per gate.\nConstraints: judge each gate from its output; do not re-run anything.\nDone when: reported.\nEnd with a ## SUMMARY and a final line RELEASE_READY=YES (all gates clean) or RELEASE_READY=NO: <which failed>.',
@@ -752,6 +769,7 @@ export const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         x: 240,
         y: 0,
         agent: 'claude-code',
+        permission: 'read',
         timeout: 300000,
         prompt:
           'Goal: draft (or revise, using the critique in context) a design spec for {{TOPIC}}.\nConstraints: on a revise pass, address every point the critique raised.\nDone when: the spec covers architecture, components, and edge cases.\nEnd with a ## SUMMARY: the key decisions and spec body, ≤ 3 KB.',
@@ -764,6 +782,7 @@ export const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         y: 0,
         agent: 'codex',
         _roleName: 'Adversarial Reviewer',
+        permission: 'read',
         retryCount: 1,
         timeout: 300000,
         prompt:
@@ -785,6 +804,7 @@ export const SEED_WORKFLOWS: SeedWorkflowBlueprint[] = [
         x: 960,
         y: 0,
         agent: 'claude-code',
+        permission: 'edit',
         timeout: 300000,
         prompt:
           'Goal: write the final approved spec (from context) to {{SPEC_PATH}}.\nConstraints: include only the agreed design; no unresolved critique items.\nDone when: the file is written.',
