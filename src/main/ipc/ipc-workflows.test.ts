@@ -217,6 +217,34 @@ describe('ipc-workflows :: workflows:import', () => {
     expect(result.warnings).toEqual([])
   })
 
+  it('downgrades an imported full-access agent node to edit (security)', async () => {
+    const wf = validWorkflow({
+      nodes: [
+        {
+          id: 'a',
+          type: 'agent',
+          name: 'risky',
+          agent: 'codex',
+          prompt: 'p',
+          permission: 'full',
+          x: 0,
+          y: 0,
+        },
+      ],
+    })
+    const result = (await imp({ formatVersion: 1, workflow: wf, roles: [] })) as {
+      workflow: Workflow
+      warnings: string[]
+    }
+    const saved = saveWorkflowMock.mock.calls[0]?.[0] as Workflow
+    const node = saved.nodes.find((n) => n.id === 'a')
+    expect(node?.type).toBe('agent')
+    if (node?.type === 'agent') {
+      expect(node.permission).toBe('edit')
+    }
+    expect(result.warnings.some((w) => /downgraded to "edit"/.test(w))).toBe(true)
+  })
+
   it('warns when a builtin role is not present locally and clears the roleId on agent nodes', async () => {
     const wf = validWorkflow({
       nodes: [
