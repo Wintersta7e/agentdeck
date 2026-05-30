@@ -16,6 +16,7 @@ import {
   AGENT_SUPPORTS_SKILLS_MAP,
   KNOWN_AGENT_IDS,
   SAFE_FLAGS_RE,
+  getPermissionFlags,
 } from '../shared/agents'
 import {
   AGENT_IDLE_TIMEOUT,
@@ -172,8 +173,11 @@ export function runAgentNode(
     const cdFlagStr = deps.projectPath && cdFlag ? `${cdFlag} ${shellQuote(deps.projectPath)} ` : ''
     const engineFlags = AGENT_ENGINE_FLAGS_MAP[agentName]
     const engineFlagStr = engineFlags ? engineFlags.join(' ') + ' ' : ''
+    const permission = node.type === 'agent' ? (node.permission ?? 'read') : 'read'
+    const permFlags = getPermissionFlags(agentName, permission)
+    const permFlagStr = permFlags.length > 0 ? permFlags.join(' ') + ' ' : ''
     parts.push(
-      `${shellQuote(bin)} ${flagStr}${cdFlagStr}${engineFlagStr}${shellQuote(prompt)}${sanitizedFlags}`,
+      `${shellQuote(bin)} ${flagStr}${cdFlagStr}${engineFlagStr}${permFlagStr}${shellQuote(prompt)}${sanitizedFlags}`,
     )
     const fullCmd = parts.join(' && ')
 

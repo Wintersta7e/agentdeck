@@ -482,6 +482,70 @@ describe('role persona injection', () => {
     await tick()
   })
 
+  it('injects a read claude node permission flag (--permission-mode plan)', async () => {
+    buildEngine()
+    const child = createMockChild()
+    mockSpawn.mockReturnValue(child)
+    const wf = makeWorkflow({
+      id: 'wf-perm-read',
+      nodes: [
+        makeWorkflowNode({
+          id: 'a',
+          type: 'agent',
+          agent: 'claude-code',
+          prompt: 'p',
+          permission: 'read',
+        }),
+      ],
+    })
+    engine.run(wf, '/home/rooty/proj')
+    await tick()
+    const bashCmd = (mockSpawn.mock.calls[0] as string[][])[1]?.[3] ?? ''
+    expect(bashCmd).toContain('--permission-mode plan')
+    child.emit('close', 0)
+    await tick()
+  })
+
+  it('injects an edit codex node permission flag (--sandbox workspace-write)', async () => {
+    buildEngine()
+    const child = createMockChild()
+    mockSpawn.mockReturnValue(child)
+    const wf = makeWorkflow({
+      id: 'wf-perm-edit',
+      nodes: [
+        makeWorkflowNode({
+          id: 'a',
+          type: 'agent',
+          agent: 'codex',
+          prompt: 'p',
+          permission: 'edit',
+        }),
+      ],
+    })
+    engine.run(wf, '/home/rooty/proj')
+    await tick()
+    const bashCmd = (mockSpawn.mock.calls[0] as string[][])[1]?.[3] ?? ''
+    expect(bashCmd).toContain('--sandbox workspace-write')
+    child.emit('close', 0)
+    await tick()
+  })
+
+  it('defaults an unset agent node to read-only permission flags', async () => {
+    buildEngine()
+    const child = createMockChild()
+    mockSpawn.mockReturnValue(child)
+    const wf = makeWorkflow({
+      id: 'wf-perm-default',
+      nodes: [makeWorkflowNode({ id: 'a', type: 'agent', agent: 'codex', prompt: 'p' })],
+    })
+    engine.run(wf, '/home/rooty/proj')
+    await tick()
+    const bashCmd = (mockSpawn.mock.calls[0] as string[][])[1]?.[3] ?? ''
+    expect(bashCmd).toContain('--sandbox read-only')
+    child.emit('close', 0)
+    await tick()
+  })
+
   it('resolves immediately when prompt is empty and no role', async () => {
     buildEngine()
 
