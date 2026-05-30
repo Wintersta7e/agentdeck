@@ -447,3 +447,9 @@
 .wf-ne-summary:hover {
   color: var(--text0);
 }
+
+.wf-ne-perm-warning {
+  margin: var(--sp-1) 0 0;
+  font-size: var(--fs-xs);
+  color: var(--red);
+}
