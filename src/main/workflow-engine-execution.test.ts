@@ -1114,10 +1114,13 @@ describe('loop escape on maxIterations exhaustion', () => {
     engine.run(wf)
     await tick(500)
 
-    // 1. A node:output warning containing "did not converge" must have been emitted.
+    // 1. The engine's own loop-exhaustion warning must have fired. Match its
+    //    specific "routing to escape" wording rather than "did not converge",
+    //    which also appears in the escape checkpoint's user message (so matching
+    //    that would pass even if the engine warning regressed).
     const outputs = getEvents(sendSpy, 'wf-loop-escape', 'node:output')
     expect(outputs).toContainEqual(
-      expect.objectContaining({ message: expect.stringMatching(/did not converge/) }),
+      expect.objectContaining({ message: expect.stringMatching(/routing to escape/) }),
     )
 
     // 2. The escape checkpoint E must have been reached (emits node:paused).
