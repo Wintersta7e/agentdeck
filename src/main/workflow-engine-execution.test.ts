@@ -455,6 +455,33 @@ describe('role persona injection', () => {
     await tick()
   })
 
+  it('runs a claude agent in the project dir via cd, never a --directory flag', async () => {
+    // Regression: claude-code has no --directory option (it operates on the cwd),
+    // so the runner must cd into the project, not pass an invalid flag.
+    buildEngine()
+    const child = createMockChild()
+    mockSpawn.mockReturnValue(child)
+
+    const wf = makeWorkflow({
+      id: 'wf-claude-cd',
+      nodes: [
+        makeWorkflowNode({ id: 'n1', type: 'agent', agent: 'claude-code', prompt: 'Do task' }),
+      ],
+    })
+
+    engine.run(wf, '/home/rooty/proj')
+    await tick()
+
+    const bashCmd = (mockSpawn.mock.calls[0] as string[][])[1]?.[3] ?? ''
+    expect(bashCmd).toContain('cd ')
+    expect(bashCmd).toContain('/home/rooty/proj')
+    expect(bashCmd).toContain('--print')
+    expect(bashCmd).not.toContain('--directory')
+
+    child.emit('close', 0)
+    await tick()
+  })
+
   it('resolves immediately when prompt is empty and no role', async () => {
     buildEngine()
 

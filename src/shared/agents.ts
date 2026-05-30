@@ -47,7 +47,9 @@ export const AGENTS = [
     latestCmd: 'npm view @anthropic-ai/claude-code version 2>/dev/null',
     updateCmd: 'npm install -g @anthropic-ai/claude-code@latest',
     printFlags: ['--print'],
-    cdFlag: '--directory',
+    // No cdFlag: claude-code has no working-directory option (it operates on the
+    // cwd), so the runner cd's into the project dir instead. (`--directory` does
+    // not exist and makes every agent node exit 1.)
     colorVar: '--agent-claude',
     short: 'CC',
   },
