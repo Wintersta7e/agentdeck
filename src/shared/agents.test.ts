@@ -104,7 +104,7 @@ describe('getPermissionFlags', () => {
     ])
   })
   it('maps claude-code levels to permission-mode flags', () => {
-    expect(getPermissionFlags('claude-code', 'read')).toEqual(['--permission-mode', 'plan'])
+    expect(getPermissionFlags('claude-code', 'read')).toEqual([])
     expect(getPermissionFlags('claude-code', 'edit')).toEqual(['--permission-mode', 'acceptEdits'])
     expect(getPermissionFlags('claude-code', 'full')).toEqual(['--dangerously-skip-permissions'])
   })

@@ -196,7 +196,10 @@ export const AGENT_PERMISSION_FLAGS: Readonly<
   Record<string, Readonly<Record<AgentPermission, readonly string[]>>>
 > = Object.freeze({
   'claude-code': {
-    read: ['--permission-mode', 'plan'],
+    // read: no flag. Plan mode (--permission-mode plan) makes headless claude
+    // deliberate ~2x slower, timing out analysis nodes on large projects;
+    // default mode reads/analyses fine and read nodes do not write.
+    read: [],
     edit: ['--permission-mode', 'acceptEdits'],
     full: ['--dangerously-skip-permissions'],
   },

@@ -482,7 +482,7 @@ describe('role persona injection', () => {
     await tick()
   })
 
-  it('injects a read claude node permission flag (--permission-mode plan)', async () => {
+  it('a read claude node adds no permission flag (default mode)', async () => {
     buildEngine()
     const child = createMockChild()
     mockSpawn.mockReturnValue(child)
@@ -501,7 +501,7 @@ describe('role persona injection', () => {
     engine.run(wf, '/home/rooty/proj')
     await tick()
     const bashCmd = (mockSpawn.mock.calls[0] as string[][])[1]?.[3] ?? ''
-    expect(bashCmd).toContain('--permission-mode plan')
+    expect(bashCmd).not.toContain('--permission-mode')
     child.emit('close', 0)
     await tick()
   })
