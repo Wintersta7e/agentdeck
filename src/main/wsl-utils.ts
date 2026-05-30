@@ -36,6 +36,11 @@ export const NODE_INIT =
     '[ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh" 2>/dev/null',
     'type fnm &>/dev/null && eval "$(fnm env --shell bash)" 2>/dev/null',
     '[ -d "$HOME/.volta/bin" ] && export VOLTA_HOME="$HOME/.volta" && export PATH="$VOLTA_HOME/bin:$PATH" 2>/dev/null',
+    // Native CLI installers (e.g. Claude Code) live in ~/.local/bin. Prepend it
+    // LAST so a native agent wins over a stale npm-global copy that a node
+    // version manager may have shadowed onto PATH — otherwise version checks and
+    // agent runs resolve the wrong (older) binary.
+    '[ -d "$HOME/.local/bin" ] && export PATH="$HOME/.local/bin:$PATH"',
     'true',
   ].join('; ') + '; '
 

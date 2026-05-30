@@ -15,6 +15,12 @@ describe('NODE_INIT', () => {
     expect(NODE_INIT).toContain('VOLTA_HOME')
   })
 
+  it('prepends ~/.local/bin so native CLI installs win over shadowed npm copies', () => {
+    expect(NODE_INIT).toContain('.local/bin')
+    // Must come after the version managers so it ends up at the front of PATH.
+    expect(NODE_INIT.indexOf('.local/bin')).toBeGreaterThan(NODE_INIT.indexOf('.nvm/nvm.sh'))
+  })
+
   it('ends with semicolon-space for safe command chaining', () => {
     expect(NODE_INIT).toMatch(/; $/)
   })
