@@ -311,23 +311,34 @@ export function createScheduler(
 
       // 4. Reset exit targets: nodes outside the subgraph that receive forward
       //    edges from subgraph nodes (typically the condition's exit edges).
-      //    These may have been skipped in a prior iteration and need to be
-      //    re-activatable when the condition re-resolves.
+      //    These may have been skipped — or only *partially* skip-activated — in
+      //    a prior iteration and need to be re-activatable when the condition
+      //    re-resolves. A target shared by two in-subgraph sources (e.g. one
+      //    escape checkpoint fed by two sibling loop conditions) can sit 'idle'
+      //    with a partially-decremented pending count; it must be restored too,
+      //    or the repeated skip-activations of the non-looping sibling accumulate
+      //    and fire the escape before the loop actually exhausts. Restore each
+      //    exit target at most once, and only re-increment activeCount for a
+      //    terminal (skipped/done) target — an 'idle' one never left the active set.
+      const restoredExitTargets = new Set<string>()
       for (const id of subgraphIds) {
         const edges = outgoing.get(id) ?? []
         for (const edge of edges) {
           if (subgraphIds.has(edge.toNodeId)) continue // intra-loop, already handled
           const target = stateMap.get(edge.toNodeId)
           if (!target) continue
-          if (target.status !== 'skipped' && target.status !== 'done') continue
+          // Don't disturb in-flight nodes; restore each target once per reset.
+          if (target.status === 'running' || target.status === 'paused') continue
+          if (restoredExitTargets.has(edge.toNodeId)) continue
+          restoredExitTargets.add(edge.toNodeId)
+          const wasTerminal = target.status === 'skipped' || target.status === 'done'
 
           // Restore the original incoming forward edge set and pending count
           const originalIncoming = incomingForward.get(edge.toNodeId) ?? []
           target.incomingForwardEdgeIds = new Set(originalIncoming.map((e) => e.id))
           target.pending = originalIncoming.length
           target.skippedEdgeIds = new Set()
-          // Re-increment for exit target reset (status is 'skipped' or 'done' here)
-          activeCount++
+          if (wasTerminal) activeCount++
           target.status = 'idle'
 
           // Re-apply any already-resolved edges from nodes outside the subgraph

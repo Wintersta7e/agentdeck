@@ -1131,3 +1131,88 @@ describe('loop escape on maxIterations exhaustion', () => {
     expect(hasEvent(sendSpy, 'wf-loop-escape', 'workflow:done')).toBe(true)
   })
 })
+
+// ═══════════════════════════════════════════════════════════════════════
+// Shared escape target fed by two sibling loop conditions
+// (mirrors seed-wf-feature-pipeline's escape_build, in-degree 2): the escape
+// must fire only on real loop exhaustion, never because a sibling condition
+// re-resolves and repeatedly skip-activates the shared edge.
+// ═══════════════════════════════════════════════════════════════════════
+
+describe('shared escape target (in-degree > 1)', () => {
+  it('fires the shared escape only after the loop exhausts, not when a sibling re-resolves', async () => {
+    // build(ok) -> condA(exitCode→true every pass) -> mid(fail) -> condB(false→loop)
+    // condA.false -> build (loop) AND condA.false -> escape (shared, normal)
+    // condB.false -> build (loop) AND condB.false -> escape (shared, normal)
+    // condA re-resolves true each iteration (it is inside condB's reset subgraph),
+    // repeatedly skip-activating the shared escape's edge. The escape must NOT
+    // fire until condB exhausts maxIterations (which emits "did not converge").
+    mockExecFile.mockImplementation(
+      (cmd: string, args: string[], _opts: unknown, cb?: (...a: unknown[]) => void) => {
+        if (cmd === 'wsl.exe' && typeof cb === 'function') {
+          if (JSON.stringify(args).includes('MIDFAIL')) {
+            const err = new Error('exit 1') as NodeJS.ErrnoException
+            err.code = '1'
+            process.nextTick(() => cb(err, 'mid output', 'err'))
+          } else {
+            process.nextTick(() => cb(null, 'build output', ''))
+          }
+        } else if (typeof cb === 'function') {
+          cb(null, '', '')
+        }
+        return { pid: 999, kill: vi.fn() }
+      },
+    )
+    buildEngine()
+
+    const wf = makeWorkflow({
+      id: 'wf-shared-escape',
+      nodes: [
+        makeWorkflowNode({
+          id: 'build',
+          type: 'shell',
+          command: 'echo BUILDOK',
+          continueOnError: true,
+        }),
+        makeWorkflowNode({ id: 'condA', type: 'condition', conditionMode: 'exitCode' }),
+        makeWorkflowNode({
+          id: 'mid',
+          type: 'shell',
+          command: 'echo MIDFAIL; exit 1',
+          continueOnError: true,
+        }),
+        makeWorkflowNode({ id: 'condB', type: 'condition', conditionMode: 'exitCode' }),
+        makeWorkflowNode({ id: 'ship', type: 'checkpoint', message: 'ship' }),
+        makeWorkflowNode({ id: 'escape', type: 'checkpoint', message: 'shared escape' }),
+      ],
+      edges: [
+        makeWorkflowEdge('build', 'condA'),
+        makeWorkflowEdge('condA', 'mid', { branch: 'true' }),
+        makeWorkflowEdge('condA', 'build', { branch: 'false', edgeType: 'loop', maxIterations: 4 }),
+        makeWorkflowEdge('condA', 'escape', { branch: 'false' }),
+        makeWorkflowEdge('mid', 'condB'),
+        makeWorkflowEdge('condB', 'ship', { branch: 'true' }),
+        makeWorkflowEdge('condB', 'build', { branch: 'false', edgeType: 'loop', maxIterations: 4 }),
+        makeWorkflowEdge('condB', 'escape', { branch: 'false' }),
+      ],
+    })
+
+    engine.run(wf)
+    await tick(3000)
+
+    // Events are captured in chronological order. The convergence-failure
+    // warning (emitted only at maxIterations exhaustion) must precede the
+    // escape checkpoint pausing. Before the fix, the escape fired after ~2
+    // iterations with no warning at all.
+    const events = getEvents(sendSpy, 'wf-shared-escape')
+    const firstWarn = events.findIndex(
+      (e) => e.type === 'node:output' && /did not converge/.test(String(e.message)),
+    )
+    const firstEscape = events.findIndex((e) => e.type === 'node:paused' && e.nodeId === 'escape')
+    expect(firstEscape, 'escape checkpoint should be reached on exhaustion').toBeGreaterThanOrEqual(
+      0,
+    )
+    expect(firstWarn, 'a convergence-failure warning should be logged').toBeGreaterThanOrEqual(0)
+    expect(firstWarn, 'escape must not fire before the loop exhausts').toBeLessThan(firstEscape)
+  })
+})
