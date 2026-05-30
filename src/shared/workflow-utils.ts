@@ -128,6 +128,15 @@ export function validateWorkflow(w: unknown): ValidationResult {
       }
     }
 
+    // ── Permission validation (agent-only field) ────────────
+    if (n.permission !== undefined) {
+      if (n.type !== 'agent') {
+        errors.push(`Node "${String(n.id)}": permission is only valid on agent nodes`)
+      } else if (!['read', 'edit', 'full'].includes(n.permission as string)) {
+        errors.push(`Node "${String(n.id)}": permission must be 'read', 'edit', or 'full'`)
+      }
+    }
+
     // ── Skill validation (registry-driven supportsSkills check) ─
     if (n.skillId !== undefined && typeof n.skillId === 'string' && n.skillId.length > 0) {
       if (n.type !== 'agent') {

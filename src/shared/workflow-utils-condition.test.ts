@@ -215,3 +215,26 @@ describe('validateWorkflow — loop edge uniqueness', () => {
     expect(result.errors.some((e) => /one loop edge per/i.test(e))).toBe(true)
   })
 })
+
+describe('validateWorkflow — agent permission field', () => {
+  it('permission is agent-only and must be a valid value', () => {
+    const base = { id: 'w', name: 'w', createdAt: 0, updatedAt: 0, edges: [] }
+    const onShell = validateWorkflow({
+      ...base,
+      nodes: [{ id: 's', name: 's', type: 'shell', command: 'x', x: 0, y: 0, permission: 'edit' }],
+    })
+    expect(onShell.errors.some((e) => /permission/i.test(e))).toBe(true)
+
+    const badValue = validateWorkflow({
+      ...base,
+      nodes: [{ id: 'a', name: 'a', type: 'agent', prompt: 'p', x: 0, y: 0, permission: 'sudo' }],
+    })
+    expect(badValue.errors.some((e) => /permission/i.test(e))).toBe(true)
+
+    const ok = validateWorkflow({
+      ...base,
+      nodes: [{ id: 'a', name: 'a', type: 'agent', prompt: 'p', x: 0, y: 0, permission: 'edit' }],
+    })
+    expect(ok.errors.some((e) => /permission/i.test(e))).toBe(false)
+  })
+})
