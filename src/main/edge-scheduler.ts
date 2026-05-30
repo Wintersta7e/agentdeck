@@ -202,7 +202,11 @@ export function createScheduler(
         const id = readyQueue.shift()
         if (id === undefined) break
         const state = stateMap.get(id)
-        if (state && state.status === 'idle') {
+        // Guard pending === 0: a loop reset can restore an exit target's pending
+        // count after it was already enqueued (a stale entry), so an 'idle'
+        // status alone is not enough — only run nodes whose dependencies are
+        // genuinely satisfied. The node is re-enqueued when its pending hits 0.
+        if (state && state.status === 'idle' && state.pending === 0) {
           state.status = 'running'
           result.push(state.node)
         }

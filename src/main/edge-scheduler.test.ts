@@ -715,4 +715,45 @@ describe('edge-scheduler', () => {
       expect(sched.isDone()).toBe(true)
     })
   })
+
+  // ── Stale ready-queue guard ────────────────────────────
+  describe('getReady ignores stale queue entries (pending > 0)', () => {
+    it('does not fire an exit target mid-loop after a reset restores its pending', () => {
+      // ROOT→A→B→COND ; COND --true,loop--> A ; COND --false--> EXIT ; B --> EXIT.
+      // Within one iteration EXIT (in-degree 2) is driven to pending 0 — by B
+      // completing and COND skip-activating its false edge — and stale-enqueued.
+      // resetLoopSubgraph then restores EXIT's pending, so getReady must not run
+      // it while it is still waiting on its inputs.
+      const root = makeWorkflowNode({ id: 'ROOT', name: 'ROOT' })
+      const a = makeWorkflowNode({ id: 'A', name: 'A' })
+      const b = makeWorkflowNode({ id: 'B', name: 'B' })
+      const cond = makeWorkflowNode({ id: 'COND', name: 'COND', type: 'condition' })
+      const exitNode = makeWorkflowNode({ id: 'EXIT', name: 'EXIT' })
+      const sched = createScheduler(
+        [root, a, b, cond, exitNode],
+        [
+          makeWorkflowEdge('ROOT', 'A'),
+          makeWorkflowEdge('A', 'B'),
+          makeWorkflowEdge('B', 'COND'),
+          makeWorkflowEdge('B', 'EXIT'),
+          makeWorkflowEdge('COND', 'A', { branch: 'true', edgeType: 'loop', maxIterations: 3 }),
+          makeWorkflowEdge('COND', 'EXIT', { branch: 'false' }),
+        ],
+      )
+
+      sched.getReady() // ROOT
+      sched.completeNode('ROOT')
+      sched.getReady() // A
+      sched.completeNode('A')
+      sched.getReady() // B
+      sched.completeNode('B') // B→EXIT activates: EXIT pending 2→1
+      sched.getReady() // COND
+      sched.resolveConditionLooping('COND', 'true') // COND→EXIT skip: pending 1→0, stale-enqueued
+      sched.resetLoopSubgraph('A', 'COND') // restores EXIT pending → 2
+
+      const ready = sched.getReady().map((n) => n.id)
+      expect(ready).not.toContain('EXIT') // stale entry ignored — EXIT still waiting
+      expect(ready).toContain('A') // loop re-enters cleanly at A
+    })
+  })
 })
