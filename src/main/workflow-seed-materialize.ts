@@ -35,6 +35,7 @@ export function materializeSeedNode(
       if (n.agentFlags !== undefined) node.agentFlags = n.agentFlags
       if (n.prompt !== undefined) node.prompt = n.prompt
       if (n.skillId !== undefined) node.skillId = n.skillId
+      if (n.permission !== undefined) node.permission = n.permission
       if (n._roleName !== undefined && roleMap) {
         const roleId = roleMap.get(n._roleName)
         if (roleId) node.roleId = roleId

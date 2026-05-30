@@ -85,6 +85,7 @@ vi.mock('./workflow-seed-blueprints', () => ({
           retryCount: 1,
           retryDelayMs: 2000,
           skillId: 'global:lint-fix',
+          permission: 'edit',
         },
         {
           id: 'c',
@@ -249,6 +250,7 @@ describe('seedWorkflows', () => {
     expect(agent['retryCount']).toBe(1)
     expect(agent['retryDelayMs']).toBe(2000)
     expect((agent as { skillId?: string }).skillId).toBe('global:lint-fix')
+    expect((agent as { permission?: string }).permission).toBe('edit')
     expect((cond as { conditionMode?: string }).conditionMode).toBe('exitCode')
     expect((cond as { conditionPattern?: string }).conditionPattern).toBe('PASS')
   })

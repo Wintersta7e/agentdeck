@@ -19,6 +19,7 @@ export interface SeedNode {
   retryDelayMs?: number | undefined
   // agent
   skillId?: string | undefined
+  permission?: 'read' | 'edit' | 'full' | undefined
   // condition
   conditionMode?: 'exitCode' | 'outputMatch' | undefined
   conditionPattern?: string | undefined
