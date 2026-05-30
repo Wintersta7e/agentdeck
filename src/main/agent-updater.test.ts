@@ -72,6 +72,20 @@ describe('checkAgentVersion', () => {
     })
   })
 
+  it('returns updateAvailable=false when the installed build is ahead of npm latest', async () => {
+    // A native install can lead npm's `latest` tag — must NOT offer a downgrade.
+    enqueue({ stdout: '2.1.158 (Claude Code)\n' }, { stdout: '2.1.155\n' })
+
+    const info = await checkAgentVersion('claude-code')
+
+    expect(info).toEqual({
+      agentId: 'claude-code',
+      current: '2.1.158',
+      latest: '2.1.155',
+      updateAvailable: false,
+    })
+  })
+
   it('returns all nulls for unknown agent', async () => {
     const info = await checkAgentVersion('nonexistent-agent')
 

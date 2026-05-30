@@ -27,6 +27,19 @@ async function runWslCmd(cmd: string, timeout = 15000): Promise<string> {
  * Check the current and latest versions of an agent.
  * Returns safe defaults (nulls, updateAvailable: false) on any error.
  */
+/** True iff `latest` is a strictly higher semver than `current` (both `x.y.z`). */
+function isNewerVersion(latest: string, current: string): boolean {
+  const a = latest.split('.').map((n) => Number.parseInt(n, 10))
+  const b = current.split('.').map((n) => Number.parseInt(n, 10))
+  for (let i = 0; i < 3; i++) {
+    const x = a[i] ?? 0
+    const y = b[i] ?? 0
+    if (x > y) return true
+    if (x < y) return false
+  }
+  return false
+}
+
 export async function checkAgentVersion(agentId: string): Promise<VersionInfo> {
   const agent = AGENTS.find((a) => a.id === agentId)
   if (!agent) {
@@ -62,7 +75,11 @@ export async function checkAgentVersion(agentId: string): Promise<VersionInfo> {
     }
   }
 
-  const updateAvailable = current !== null && latest !== null && current !== latest
+  // Only offer an update when `latest` is strictly newer. A bare `!==` also
+  // fired when the installed build was *ahead* of npm's `latest` tag (common
+  // now that Claude Code ships via a native installer that leads npm) — which
+  // showed a phantom "update" that would actually downgrade.
+  const updateAvailable = current !== null && latest !== null && isNewerVersion(latest, current)
 
   log.info(`Version check: ${agentId}`, { current, latest, updateAvailable })
 
