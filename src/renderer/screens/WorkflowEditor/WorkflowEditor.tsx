@@ -577,6 +577,7 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
       {showRunDialog && workflow?.variables && (
         <WorkflowRunDialog
           variables={workflow.variables}
+          projectPath={workflowProjectPath}
           onStart={(vals) => {
             setShowRunDialog(false)
             runWorkflow(vals)
