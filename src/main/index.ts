@@ -54,7 +54,7 @@ app
   .then(async () => {
     initLogger()
     initGitStatusCache(app.getPath('userData'))
-    log.info('App ready')
+    log.info('App ready', { version: app.getVersion() })
 
     appStore = createProjectStore()
     registerStoreHandlers(appStore)
