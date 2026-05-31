@@ -90,12 +90,143 @@ export interface NodeRunnerDeps {
 
 // ── Node runners ─────────────────────────────────────────────────────
 
-export function runAgentNode(
+/** Session cache of resolved PATH dir prefixes, keyed by agent binary name. */
+const agentPathCache = new Map<string, string>()
+
+/** Test-only: clear the per-session agent PATH-resolution cache. */
+export function _resetAgentPathCache(): void {
+  agentPathCache.clear()
+}
+
+/**
+ * Resolve the directories containing the agent binary and `node`, using an
+ * INTERACTIVE login shell (`bash -lic`) which sources ~/.bashrc — hence the
+ * user's nvm/fnm/volta PATH. The runner uses non-interactive `bash -lc` (clean
+ * output), which does NOT source ~/.bashrc, so nvm-installed CLIs like codex,
+ * and `node` (needed by codex's `#!/usr/bin/env node` shebang), are otherwise
+ * absent from PATH. Returns a colon-joined list of absolute dirs to prepend to
+ * PATH, or '' if unresolved. Parses only absolute paths (ignores shell-init
+ * noise / stderr). Cached per binary for the session. `bin` is a validated
+ * registry id (KNOWN_AGENT_IDS), so it is safe to interpolate.
+ */
+function resolveAgentPathPrefix(bin: string): Promise<string> {
+  const cached = agentPathCache.get(bin)
+  if (cached !== undefined) return Promise.resolve(cached)
+  return new Promise<string>((resolve) => {
+    execFile(
+      'wsl.exe',
+      ['--', 'bash', '-lic', `command -v ${bin} 2>/dev/null; command -v node 2>/dev/null`],
+      { timeout: 15_000 },
+      (_err, stdout) => {
+        const dirs: string[] = []
+        for (const line of (stdout ?? '').split('\n')) {
+          const p = line.trim()
+          if (!p.startsWith('/')) continue
+          const slash = p.lastIndexOf('/')
+          const dir = slash > 0 ? p.slice(0, slash) : ''
+          if (dir && !dirs.includes(dir)) dirs.push(dir)
+        }
+        const prefix = dirs.join(':')
+        agentPathCache.set(bin, prefix)
+        resolve(prefix)
+      },
+    )
+  })
+}
+
+export async function runAgentNode(
   node: AgentNode,
   contextSummary: string,
   roles: Map<string, Role>,
   deps: NodeRunnerDeps,
 ): Promise<void> {
+  // Build prompt: [role persona] + [task prompt] + [output format] + [context]
+  const role = node.roleId ? roles.get(node.roleId) : undefined
+  const promptParts: string[] = []
+  if (role?.persona) promptParts.push(role.persona)
+  if (node.prompt) promptParts.push(node.prompt)
+  if (role?.outputFormat) promptParts.push(`Output format:\n${role.outputFormat}`)
+  if (contextSummary) promptParts.push(`Context from previous steps:\n${contextSummary}`)
+  let prompt = promptParts.join('\n\n')
+
+  const agentName = node.agent ?? 'claude-code'
+  if (!KNOWN_AGENT_IDS.has(agentName)) {
+    // Loud-fail on unknown agents instead of falling through to '--print'
+    // and AGENT_BINARY_MAP[id] ?? id — that pair would silently invoke
+    // whatever string the renderer sent as a binary name.
+    throw new Error(`Unknown agent: ${agentName}`)
+  }
+
+  // Prepend skill invocation prefix if the agent declares supportsSkills.
+  const skillPrefix = extractSkillPrefix(node.skillId, agentName)
+  if (skillPrefix) {
+    prompt = skillPrefix + prompt
+  } else if (node.skillId && AGENT_SUPPORTS_SKILLS_MAP[agentName]) {
+    // Skill name failed validation
+    deps.push({
+      type: 'node:output',
+      workflowId: deps.workflowId,
+      nodeId: node.id,
+      message: '⚠ Skill name rejected (unsafe): ' + (node.skillId.split(':').pop() ?? ''),
+    })
+  }
+
+  if (!prompt) return
+
+  const bin = AGENT_BINARY_MAP[agentName] ?? agentName
+  const printFlags = AGENT_PRINT_FLAGS_MAP[agentName] ?? ['--print']
+
+  let sanitizedFlags = ''
+  if (node.agentFlags) {
+    if (SAFE_FLAGS_RE.test(node.agentFlags)) {
+      sanitizedFlags = ` ${node.agentFlags}`
+    } else {
+      deps.push({
+        type: 'node:output',
+        workflowId: deps.workflowId,
+        nodeId: node.id,
+        message: `⚠ Agent flags rejected (unsafe): ${node.agentFlags}`,
+      })
+    }
+  }
+
+  // Resolve the dirs containing the agent binary AND node from an interactive
+  // login shell (which sources ~/.bashrc, hence the user's nvm/fnm/volta PATH).
+  // The runner below uses non-interactive `bash -lc` (clean output) which does
+  // NOT source ~/.bashrc, so nvm-installed CLIs (codex) and node are otherwise
+  // off PATH. We inject the resolved literal dirs — simple + transport-safe.
+  const pathPrefix = await resolveAgentPathPrefix(bin)
+
+  // Build non-interactive command. The prompt is delivered over the child's
+  // stdin (below), NOT on the command line — neither shell-quoting nor base64
+  // survives the Windows spawn -> wsl.exe -> Linux argv transport intact, so the
+  // prompt's tokens would get parsed/executed by bash (exit 2/127). Keep this
+  // command simple (no globs / case / $()) for the same transport reason.
+  // For agents with native --cd (codex -C, claude --directory), the flag goes
+  // AFTER the subcommand (e.g. `codex exec -C /path`), not before it.
+  const pathExport = pathPrefix ? `export PATH="${pathPrefix}:$PATH"; ` : ''
+  const cdFlag = AGENT_CD_FLAG_MAP[agentName]
+  const flagStr = printFlags.length > 0 ? printFlags.join(' ') + ' ' : ''
+  const cdFlagStr = deps.projectPath && cdFlag ? `${cdFlag} ${shellQuote(deps.projectPath)} ` : ''
+  const engineFlags = AGENT_ENGINE_FLAGS_MAP[agentName]
+  const engineFlagStr = engineFlags ? engineFlags.join(' ') + ' ' : ''
+  const permission = node.type === 'agent' ? (node.permission ?? 'read') : 'read'
+  const permFlags = getPermissionFlags(agentName, permission)
+  const permFlagStr = permFlags.length > 0 ? permFlags.join(' ') + ' ' : ''
+  const runParts: string[] = []
+  if (deps.projectPath && !cdFlag) runParts.push(`cd ${shellQuote(deps.projectPath)}`)
+  runParts.push(
+    `${shellQuote(bin)} ${flagStr}${cdFlagStr}${engineFlagStr}${permFlagStr}${sanitizedFlags}`.trimEnd(),
+  )
+  const fullCmd = pathExport + runParts.join(' && ')
+
+  deps.push({
+    type: 'node:output',
+    workflowId: deps.workflowId,
+    nodeId: node.id,
+    message: `$ ${bin} ${flagStr}<prompt>\n`,
+  })
+
   return new Promise<void>((resolve, reject) => {
     let settled = false
     const settleResolve = (): void => {
@@ -109,95 +240,18 @@ export function runAgentNode(
       reject(err)
     }
 
-    // Build prompt: [role persona] + [task prompt] + [output format] + [context]
-    const role = node.roleId ? roles.get(node.roleId) : undefined
-    const promptParts: string[] = []
-    if (role?.persona) promptParts.push(role.persona)
-    if (node.prompt) promptParts.push(node.prompt)
-    if (role?.outputFormat) promptParts.push(`Output format:\n${role.outputFormat}`)
-    if (contextSummary) promptParts.push(`Context from previous steps:\n${contextSummary}`)
-    let prompt = promptParts.join('\n\n')
-
-    const agentName = node.agent ?? 'claude-code'
-    if (!KNOWN_AGENT_IDS.has(agentName)) {
-      // Loud-fail on unknown agents instead of falling through to '--print'
-      // and AGENT_BINARY_MAP[id] ?? id — that pair would silently invoke
-      // whatever string the renderer sent as a binary name.
-      settleReject(new Error(`Unknown agent: ${agentName}`))
-      return
-    }
-
-    // Prepend skill invocation prefix if the agent declares supportsSkills.
-    const skillPrefix = extractSkillPrefix(node.skillId, agentName)
-    if (skillPrefix) {
-      prompt = skillPrefix + prompt
-    } else if (node.skillId && AGENT_SUPPORTS_SKILLS_MAP[agentName]) {
-      // Skill name failed validation
-      deps.push({
-        type: 'node:output',
-        workflowId: deps.workflowId,
-        nodeId: node.id,
-        message: '\u26a0 Skill name rejected (unsafe): ' + (node.skillId.split(':').pop() ?? ''),
-      })
-    }
-
-    if (!prompt) {
-      settleResolve()
-      return
-    }
-
-    const bin = AGENT_BINARY_MAP[agentName] ?? agentName
-    const printFlags = AGENT_PRINT_FLAGS_MAP[agentName] ?? ['--print']
-
-    let sanitizedFlags = ''
-    if (node.agentFlags) {
-      if (SAFE_FLAGS_RE.test(node.agentFlags)) {
-        sanitizedFlags = ` ${node.agentFlags}`
-      } else {
-        deps.push({
-          type: 'node:output',
-          workflowId: deps.workflowId,
-          nodeId: node.id,
-          message: `\u26a0 Agent flags rejected (unsafe): ${node.agentFlags}`,
-        })
-      }
-    }
-
-    // Build non-interactive command: run agent in print mode with project directory
-    // For agents with native --cd (codex -C, claude --directory), the flag goes AFTER
-    // the subcommand (e.g. `codex exec -C /path '<prompt>'`), not before it.
-    const parts: string[] = []
-    const cdFlag = AGENT_CD_FLAG_MAP[agentName]
-    if (deps.projectPath && !cdFlag) parts.push(`cd ${shellQuote(deps.projectPath)}`)
-    const flagStr = printFlags.length > 0 ? printFlags.join(' ') + ' ' : ''
-    const cdFlagStr = deps.projectPath && cdFlag ? `${cdFlag} ${shellQuote(deps.projectPath)} ` : ''
-    const engineFlags = AGENT_ENGINE_FLAGS_MAP[agentName]
-    const engineFlagStr = engineFlags ? engineFlags.join(' ') + ' ' : ''
-    const permission = node.type === 'agent' ? (node.permission ?? 'read') : 'read'
-    const permFlags = getPermissionFlags(agentName, permission)
-    const permFlagStr = permFlags.length > 0 ? permFlags.join(' ') + ' ' : ''
-    parts.push(
-      `${shellQuote(bin)} ${flagStr}${cdFlagStr}${engineFlagStr}${permFlagStr}${shellQuote(prompt)}${sanitizedFlags}`,
-    )
-    const fullCmd = parts.join(' && ')
-
-    deps.push({
-      type: 'node:output',
-      workflowId: deps.workflowId,
-      nodeId: node.id,
-      message: `$ ${bin} ${flagStr}<prompt>\n`,
-    })
-
     // Use spawn (not PTY) for non-interactive agent execution — no TUI escape codes.
     // bash -lc (login, non-interactive) with explicit nvm/fnm init so WSL node
     // binaries are found instead of broken Windows npm wrappers. We can't use
     // -lic (interactive) because it dumps shell init noise into the output.
     // stdin must be 'pipe' (not 'ignore') — WSL rejects /dev/null stdin with
-    // E_UNEXPECTED. We close the pipe immediately after spawn.
+    // E_UNEXPECTED. We write the prompt to stdin (NODE_INIT does not consume it),
+    // then close the pipe so the agent sees EOF.
     const startTime = Date.now()
     const child = spawn('wsl.exe', ['--', 'bash', '-lc', NODE_INIT + fullCmd], {
       stdio: ['pipe', 'pipe', 'pipe'],
     })
+    child.stdin?.write(prompt)
     child.stdin?.end()
     deps.activeChildProcesses.add(child)
 

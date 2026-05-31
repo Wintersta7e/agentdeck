@@ -33,8 +33,23 @@ export function toWslPath(p: string): string {
  */
 export const NODE_INIT =
   [
-    '[ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh" 2>/dev/null',
-    'type fnm &>/dev/null && eval "$(fnm env --shell bash)" 2>/dev/null',
+    // wsl.exe inherits HOME from the launching Windows process (Electron is
+    // started with HOME=%USERPROFILE%), so $HOME points at the Windows profile
+    // (/mnt/c/Users/...) instead of the Linux home. Reset it to the user's real
+    // passwd home FIRST so ~/.nvm, ~/.local/bin, and agent configs (~/.codex,
+    // ~/.claude) all resolve correctly — otherwise nvm-installed CLIs like codex
+    // are never found (exit 127) and agents read the wrong config.
+    '{ [ -n "$LOGNAME" ] && [ -d "/home/$LOGNAME" ] && export HOME="/home/$LOGNAME"; } || { for __h in /home/*; do [ -d "$__h/.nvm" ] && { export HOME="$__h"; break; }; done; }',
+    // NVM_DIR is also inherited from the Windows HOME, so reset it before sourcing
+    // nvm.sh; nvm.sh then activates the default node and puts its bin (node, and
+    // npm-global CLIs like codex) on PATH. Keep this simple — NO globs / case / $():
+    // complex inline shell gets mangled by the Windows -> wsl.exe transport (the
+    // agent prompt hit the same wall, which is why it now goes over stdin).
+    'export NVM_DIR="$HOME/.nvm"',
+    '[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" 2>/dev/null',
+    'command -v nvm >/dev/null 2>&1 && nvm use default --silent >/dev/null 2>&1',
+    '[ -d "$HOME/.npm-global/bin" ] && export PATH="$HOME/.npm-global/bin:$PATH"',
+    'command -v fnm >/dev/null 2>&1 && eval "$(fnm env --shell bash)" 2>/dev/null',
     '[ -d "$HOME/.volta/bin" ] && export VOLTA_HOME="$HOME/.volta" && export PATH="$VOLTA_HOME/bin:$PATH" 2>/dev/null',
     // Native CLI installers (e.g. Claude Code) live in ~/.local/bin. Prepend it
     // LAST so a native agent wins over a stale npm-global copy that a node
