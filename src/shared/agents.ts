@@ -66,7 +66,11 @@ export const AGENTS = [
     updateCmd: 'npm install -g @openai/codex@latest',
     printFlags: ['exec'],
     cdFlag: '-C',
-    engineFlags: ['--skip-git-repo-check'],
+    // --disable hooks: workflow agent runs are headless, so the user's
+    // interactive codex hooks/plugins (UserPromptSubmit, PreToolUse, npx plugin
+    // hooks) must not fire here — they can execute prompt/context content and
+    // break the run.
+    engineFlags: ['--skip-git-repo-check', '--disable', 'hooks'],
     colorVar: '--agent-codex',
     short: 'CX',
     supportsSkills: true,
