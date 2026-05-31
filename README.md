@@ -1,125 +1,112 @@
+<div align="center">
+
 # AgentDeck
 
-A desktop terminal manager for WSL AI coding agents. Launch, manage, and orchestrate sessions across multiple agents from a single interface.
+**A desktop deck for your WSL coding agents.**
 
-![Electron](https://img.shields.io/badge/Electron-42-47848F?logo=electron)
-![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)
-![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript)
-![License: Elastic-2.0](https://img.shields.io/badge/License-Elastic--2.0-blue.svg)
-![Tests](https://img.shields.io/badge/Tests-1270_passing-brightgreen)
-![CI](https://github.com/Wintersta7e/agentdeck/actions/workflows/ci.yml/badge.svg?branch=main)
+Launch, watch, and orchestrate Claude Code, Codex, Aider, and four more agents
+from a single window — split terminals, visual workflows, and live cost
+tracking, all running through your own WSL environment.
 
-## Why AgentDeck?
+[![Electron](https://img.shields.io/badge/Electron-42-47848F?logo=electron&logoColor=white)](https://www.electronjs.org)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![License](https://img.shields.io/badge/license-Elastic--2.0-blue)](LICENSE)
+[![Status](https://img.shields.io/badge/status-personal%20%C2%B7%20actively%20developed-brightgreen)](#status)
+[![CI](https://github.com/Wintersta7e/agentdeck/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Wintersta7e/agentdeck/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/Wintersta7e/agentdeck/graph/badge.svg)](https://codecov.io/gh/Wintersta7e/agentdeck)
 
-If you work with AI coding agents, you know the pain: each agent is its own CLI, its own terminal tab, its own workflow. Switching between Claude Code, Codex, Aider, and others means juggling windows, re-typing project paths, and losing context.
+<br>
 
-AgentDeck puts all your agents in one place. Open a project, pick an agent, and you're coding. Split the screen to run two agents side-by-side. Chain agents into automated workflows with conditions, loops, and variables. Keep your prompt templates, project configs, and session history organized instead of scattered across terminals.
+<img src="screenshots/home-dashboard.png" alt="AgentDeck home dashboard — scope viz, daily digest, live activity, agent grid, and 7-day cost" width="900">
 
-It's a desktop app, not a web service — your code stays local, your API keys are encrypted at rest, and everything runs through your own WSL environment.
+</div>
 
-<p align="center">
-  <img src="screenshots/home-dashboard.png" width="820" alt="AgentDeck home screen — scope viz, KPI strip, activity graph, agent grid, cost dashboard" />
-  <br/>
-  <sub><em>Home tab — scope viz, daily digest, live activity, agent grid, and 7-day cost.</em></sub>
-</p>
+---
 
-## Overview
+## Why
 
-AgentDeck provides a unified desktop environment for working with AI coding agents through WSL terminals:
+I work across half a dozen AI coding agents, and each one is its own CLI in its
+own terminal tab. Switching between Claude Code, Codex, Aider, and the rest
+meant juggling windows, re-typing project paths, and losing track of which
+session was doing what.
 
-- **Multi-Agent Support** - 7 agents: Claude Code, Codex, Aider, Goose, Gemini CLI, Amazon Q, OpenCode
-- **Project Management** - Configure projects with paths, agents, prompt templates, and stack badges
-- **Split Terminal Views** - 1/2/3 pane layouts with independent sessions
-- **Agentic Workflows** - Visual node-graph editor with conditions, loops, variables, and execution history
-- **Cost/Token Tracking** - Live per-session cost and token usage for Claude Code and Codex
-- **Git Worktree Isolation** - Per-session git branches with Keep/Discard review flow
-- **3 Themes** - Tungsten (warm amber), Phosphor (retro CRT green), Dusk (violet/coral) — smooth view transitions, Space Grotesk display type
-- **Home Screen Dashboard** - Scope viz, KPI strip, activity graph, live session monitoring, cost dashboard, project cards, optional "Pixel" mascot
-- **Top Tab Bar Navigation** - 8 tabs (Home / Sessions / Projects / Agents / Workflows / History / Alerts / Settings) with `Alt+1..8` jump shortcuts
-- **Command Palette** - Quick access to projects, sessions, templates, and tools
+So I built AgentDeck for myself: open a project, pick an agent, and you're in a
+terminal. Split the screen to run two agents side by side. Chain them into
+visual workflows with conditions, loops, and variables. Keep prompt templates,
+project configs, and session history in one place instead of scattered across
+shells.
+
+It's a desktop app, not a web service — your code stays local, API keys are
+encrypted at rest, and everything runs through your own WSL environment with no
+telemetry. It's a personal tool under Elastic-2.0: you're welcome to clone and
+build it, but there's no adoption goal and no support guarantees.
+
+## Status
+
+Actively developed personal tool, currently at **v6.8.0**. The app is mature
+and in daily use — a large Vitest suite under a zero-warning lint + typecheck
+gate — but it's shaped around exactly one setup (Windows 11 + WSL2), so your
+mileage outside that will vary.
+
+**Implemented:**
+- 7 agents: Claude Code, Codex, Aider, Goose, Gemini CLI, Amazon Q, OpenCode
+- Split terminal sessions (up to 3 panes) with caching, search, and live
+  activity parsing
+- Visual workflow engine — agent / shell / checkpoint / condition nodes,
+  branching, loops, `{{VAR}}` variables, and per-run history
+- Per-session git worktree isolation with a Keep / Discard review flow
+- Live cost + token tracking (Claude Code and Codex)
+- Home dashboard — daily digest, live session grid, 7-day cost, project cards
+- Prompt templates, command palette, three themes
+
+**Rough edges / not done:**
+- Windows + WSL2 only — it spawns `wsl.exe`, so there's no native Linux/macOS
+  build
+- Cost / token parsing exists for Claude Code and Codex only; the other five
+  agents run fine but report no cost
+- Ships as a portable `.exe` — no installer, no auto-update
+
+**Explicitly declined (not on the roadmap):**
+- Cloud sync • multi-user / team mode • telemetry or analytics • a hosted web
+  version • plugin marketplace
 
 ## Features
 
-### Terminal Sessions
+### Terminal sessions
+- Up to 3 panes side by side with draggable dividers; bare WSL shells (`Ctrl+T`)
+- Sessions cached across tab switches — no re-render on return
+- In-terminal search (`Ctrl+Shift+F`) with regex and case-sensitive modes
+- Real-time activity parsing of agent tool use (reads, writes, commands)
+- Per-session right panel: Files, Diff (Keep / Discard), Prompts, Env, Config
+- New-session composer: pick an agent, drop in a prompt, set branch mode, launch
 
-- **Split View** - Up to 3 terminal panes side-by-side with draggable dividers
-- **Bare Terminals** - Open plain WSL shells without a project (Ctrl+T)
-- **Terminal Caching** - Sessions persist across tab switches without re-rendering
-- **Terminal Search** - Find text in terminal output (Ctrl+Shift+F) with regex and case-sensitive modes
-- **Activity Tracking** - Real-time parsing of agent tool use (file reads, writes, commands)
-- **Right Panel** - 5 tabs per session: Files (project / worktree filesystem tree), Diff (staged-vs-working with Keep / Discard), Prompts (template inspector with Inject →), Env (per-agent hooks / skills / MCP / config snapshot), Config (session settings)
-- **New Session Composer** - Dedicated screen to pick agent, drop in a prompt, set branch mode, and launch — the prompt is piped into the agent's stdin after spawn
+### Home dashboard
+- Daily digest — session count, cost, exit rate, top agent
+- Live session grid with activity pulse and token gauge
+- Cost dashboard with per-agent breakdown and a 7-day sparkline
+- Project cards with git status; proactive suggestions; quick actions
 
-### Home Screen Dashboard
-
-- **Daily Digest** — today's session count, cost, exit rate, top agent
-- **Live Session Grid** — real-time agent monitoring with activity pulse, token gauge
-- **Session Timeline** — horizontal activity bars per session
-- **Cost Dashboard** — daily cost with per-agent breakdown, 7-day sparkline
-- **Project Cards** — git status (branch, uncommitted changes), agent pills
-- **Suggestions Panel** — proactive recommendations based on project state
-- **Quick Actions** — New Session, Run Workflow, From Template, Resume Last
-
-### Project Management
-
-- **New Project Wizard** - 5-step setup with folder picker and agent configuration
-- **Multi-Agent Projects** - Assign multiple agents per project, launch with any via context menu
-- **Stack Detection** - Auto-detect project stack (React, Python, Rust, etc.) from files
-- **Pinned Projects** - Pin favorites to the home screen grid
-- **Project Settings** - 6-tab settings panel for path, agent, templates, and more
-
-### Prompt Templates
-
-- **16 Seed Templates** - Ready-to-use templates across 8 categories
-- **Template Editor** - Create and edit templates with live preview
-- **Template Attach** - Inject template content into the active session from the Prompts tab in the right panel
-- **Categories** - Code Review, Debugging, Documentation, Planning, Refactoring, Security, Testing, General
-
-### Agentic Workflows
-
-- **Visual Node Graph** - Drag-and-drop editor for agent, shell, checkpoint, and condition nodes
-- **Edge-Activation Scheduler** - Ready-queue execution with branching, skip propagation, and loop support
-- **Conditional Branching** - Route execution based on exit codes or output pattern matching
-- **Loop/Retry** - Loop-back edges with max iterations, per-node retry with configurable delay
-- **Variables** - `{{VAR}}` substitution with typed pre-run dialog (string, text, path, choice)
-- **Roles** - 8 seed roles (Architect, Reviewer, etc.) with persona injection
-- **Checkpoints** - Pause/resume execution at designated points
-- **Import/Export** - Share workflows as `.agentdeck-workflow.json` bundles with role remapping
-- **Execution History** - Per-run summaries with node timing, error tails, and a History tab
+### Workflows
+- Drag-and-drop node graph: agent, shell, checkpoint, and condition nodes
+- Edge-activation scheduler — ready queue, branching, skip propagation, loops
+- Conditional routing on exit code or output match; per-node retry with delay
+- `{{VAR}}` substitution via a typed pre-run dialog; 8 seed roles for personas
+- Import / export as `.agentdeck-workflow.json`; per-run history with timings
 
 <p align="center">
-  <img src="screenshots/workflow-editor.png" width="820" alt="Workflow editor — Bug Triage workflow with three agent nodes (Investigate, Fix, Regression Test) connected by step-elbow edges, Run Workflow / Add Node / Export / Import / Duplicate buttons in the toolbar" />
-  <br/>
-  <sub><em>Workflow editor — agent-coloured nodes, step-elbow edges, React Flow under the hood.</em></sub>
+  <img src="screenshots/workflow-editor.png" width="900" alt="Workflow editor — a Bug Triage workflow with Investigate, Fix, and Regression Test agent nodes wired by step-elbow edges" />
 </p>
 
-### Command Palette
+### Projects & templates
+- 5-step new-project wizard, multiple agents per project, auto stack detection
+- 16 seed prompt templates across 8 categories, with a live-preview editor
+- Pin favourites to the home grid
 
-- **Quick Launch** - Open projects, switch sessions, run templates (Ctrl+K / Escape)
-- **Theme Switcher** - Live-preview themes before applying
-- **Agent Visibility** - Toggle which agents appear on the home screen
-- **Keyboard Shortcuts** - Full shortcut reference (Ctrl+/)
-
-### Cost/Token Tracking
-
-- **Live Cost Badge** - Per-session USD cost and token count in the session header
-- **Claude Code Support** - Parses JSONL session logs with cache-aware pricing (write 1.25x, read 0.1x)
-- **Codex CLI Support** - Parses JSONL rollout logs with per-model pricing maps
-- **Tooltip Breakdown** - Hover for input, output, cache read, and cache write token counts
-- **Automatic Discovery** - Finds active log files via WSL polling, no configuration needed
-
-### Git Worktree Isolation
-
-- **Per-Session Branches** - Each agent session gets its own git worktree and branch
-- **Branch Badge** - Active branch shown in the session header
-- **Review Flow** - Inspect changes on close, then Keep (merge) / Discard / Cancel
-- **Automatic Cleanup** - Orphaned worktrees pruned on startup
-
-### Agent Updates
-
-- **Version Checking** - Startup notification when agent updates are available
-- **One-Click Update** - Update agents directly from the home screen (resolves exact version from registry)
-- **Automatic Detection** - Discovers installed agents via WSL PATH
+### Agents
+- A single registry drives CLI flags, colour, and capabilities for all 7 agents
+- Startup update check + one-click npm update with rollback
+- Auto-detection via the WSL `PATH`
 
 ### Theming
 
@@ -129,178 +116,109 @@ AgentDeck provides a unified desktop environment for working with AI coding agen
 | **Phosphor** | Retro CRT green on ink |
 | **Dusk** | Violet + coral on plum-black |
 
-All themes use CSS custom properties from `tokens.css`. Per-agent accent tokens (`--agent-claude`, `--agent-codex`, …) keep each agent's signature color consistent across themes. View transitions provide smooth theme switching with a circular reveal effect, and v5.x users' retired palettes are auto-migrated to the nearest successor on first boot.
+All values come from CSS custom properties in `tokens.css`; per-agent accent
+tokens keep each agent's colour consistent across every theme.
 
-## Keyboard Shortcuts
+## Keyboard shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| Ctrl+K | Command Palette |
-| Escape | Command Palette (from session) |
-| Ctrl+N | New Project |
-| Ctrl+T | New Terminal |
-| Ctrl+\\ | Toggle Right Panel |
-| Ctrl+/ | Keyboard Shortcuts |
-| Ctrl+1/2/3 | Pane Layout |
-| Ctrl++/- | Zoom In/Out |
-| Ctrl+0 | Reset Zoom |
-| Ctrl+Shift+F | Search in Terminal |
-| Ctrl+S | Save Template |
+| Shortcut | Action | | Shortcut | Action |
+|----------|--------|---|----------|--------|
+| `Ctrl+K` | Command palette | | `Ctrl+1/2/3` | Pane layout |
+| `Ctrl+N` | New project | | `Ctrl++/-` | Zoom in / out |
+| `Ctrl+T` | New terminal | | `Ctrl+0` | Reset zoom |
+| `Ctrl+\` | Toggle right panel | | `Ctrl+Shift+F` | Search in terminal |
+| `Ctrl+/` | Shortcut reference | | `Alt+1..8` | Jump to tab |
 
-## Installation
+## Quick start
 
-### Prerequisites
-- Windows 10/11 with WSL2 (Ubuntu recommended)
-- Node.js 22.22.1 or later (see `.nvmrc`; required by `lint-staged` 17)
-- At least one AI coding agent installed in WSL
-
-### Setup
+Requires Windows 10/11 with WSL2 (Ubuntu recommended), Node.js 22.22.1+ (see
+`.nvmrc`), and at least one agent CLI installed inside WSL.
 
 ```bash
-# Install dependencies (--no-bin-links required on Windows-mounted drives)
+# Install (--no-bin-links is required on Windows-mounted drives)
 npm install --no-bin-links
-```
 
-## Development
-
-```bash
-# Start development server with hot reload
+# Dev with hot reload
 npm run dev
 
-# Build for production (validates TypeScript)
-npm run build
+# Checks
+npm run lint        # ESLint, zero warnings
+npm run typecheck   # tsc on the node + web configs
+npm test            # Vitest
 
-# Run tests (1270 tests)
-npm test
-
-# Lint code (zero-warning policy)
-npm run lint
-
-# Format code
-npm run format
-```
-
-## Building for Distribution
-
-```bash
-# Quick build (no pre-flight checks)
-npm run dist
-
-# Gated release build — lint, typecheck, tests, clean, then build + verify
+# Build a portable .exe (gated: lint + typecheck + tests, then build + verify)
 npm run release-portable
 ```
 
-Output: `dist/AgentDeck-{version}-portable.exe` (~93 MB)
+Output: `dist/AgentDeck-{version}-portable.exe` (~93 MB).
 
-## Project Structure
+## Stack
+
+| Layer | Choice | Notes |
+|---|---|---|
+| Shell | [Electron 42][electron] | ConPTY; node-pty in the **main process only** |
+| UI | [React 19][react] + [TypeScript 6][ts] | Strict mode, all `.ts` / `.tsx` |
+| Build | [electron-vite 5][evite] | Vite for the renderer, esbuild for main/preload |
+| Terminal | [xterm.js 5][xterm] + [node-pty][nodepty] | WebGL renderer over WSL PTYs |
+| State | [Zustand][zustand] | One flat store composed from 7 slices |
+| Workflows | [React Flow][reactflow] | Visual DAG editor |
+| Storage | [electron-store][estore] | JSON on disk; `safeStorage` for secrets |
+| Test / lint | [Vitest 4][vitest] + [ESLint 9][eslint] | Dual workspace, zero-warning |
+
+## Layout
 
 ```
 src/
-├── main/                                  # Electron main process (Node.js)
-│   ├── index.ts                           # App lifecycle, BrowserWindow, IPC wiring
-│   ├── ipc/                               # 14 IPC modules: pty, window, agents,
-│   │                                      # projects, workflows, skills, worktree,
-│   │                                      # cost, home, templates, env, files, utils
-│   ├── pty-manager.ts / pty-bus.ts        # node-pty spawn/resize/kill + event routing
-│   ├── workflow-engine.ts                 # Edge-activation scheduler DAG execution
-│   ├── edge-scheduler.ts                  # Pure scheduler — ready queue, branching, loops
-│   ├── node-runners.ts                    # runAgentNode / runShellNode CLI invocation
-│   ├── variable-substitution.ts           # {{VAR}} replacement in workflow nodes
-│   ├── workflow-store.ts                  # Workflow CRUD with atomic writes
-│   ├── workflow-run-store.ts              # Per-run execution history
-│   ├── workflow-history.ts                # Run summaries + error tails
-│   ├── workflow-seeds.ts                  # Built-in workflow blueprints
-│   ├── project-store.ts                   # electron-store: projects + roles + appPrefs
-│   │                                      # (safeStorage for API keys; versioned migrations)
-│   ├── store-seeds.ts                     # Seed templates and roles
-│   ├── template-{store,legacy-store,
-│   │            migration,id}.ts          # Disk-backed template store + legacy compat shim
-│   ├── log-adapters.ts                    # Per-agent JSONL parsers (Claude + Codex)
-│   ├── cost-tracker.ts                    # Log discovery, tailing, IPC push
-│   ├── cost-history.ts                    # Daily cost rollups (versioned disk cache)
-│   ├── git-port.ts / git-status.ts        # Git over WSL + per-project state cache
-│   ├── worktree-manager.ts                # Per-session git worktree lifecycle
-│   ├── review-tracker.ts                  # Unreviewed commit tracking
-│   ├── agent-detector.ts                  # Agent binary discovery via WSL PATH
-│   ├── agent-updater.ts                   # Version check + npm update with rollback
-│   ├── agent-env-*.ts                     # Per-agent config-snapshot resolvers
-│   ├── active-model-detectors/            # Per-agent active-model detection (7 detectors)
-│   ├── skill-scanner.ts                   # Codex skill discovery
-│   ├── detect-stack.ts                    # Project stack detection
-│   ├── files-{lister,gitignore}.ts        # File-browser support for the Files tab
-│   ├── wsl-exec.ts                        # wslRun / wslTry — single helper for
-│   │                                      # `wsl.exe -- bash -lc <cmd>` invocations
-│   ├── wsl-paths.ts / wsl-utils.ts        # Path resolution, distro detection, UNC fallback
-│   ├── validation.ts                      # Re-exports SAFE_ID_RE / validateId from shared
-│   ├── fs-atomic.ts                       # Atomic write-then-rename
-│   └── logger.ts                          # Levelled file logger
-├── preload/
-│   └── index.ts                           # contextBridge → window.agentDeck (~65 channels)
-├── renderer/                              # React app (electron-vite)
-│   ├── main.tsx / App.tsx                 # React root, view routing, global keymap
-│   ├── components/                        # Titlebar, TopTabBar, SessionTabs, SessionHeader,
-│   │                                      # SplitView, Terminal, RightPanel, HomeScreen,
-│   │                                      # CommandPalette, NotificationToast, ...
-│   ├── screens/                           # WorkflowEditor, NewSessionScreen,
-│   │                                      # DiffReviewScreen, plus per-tab screens
-│   │                                      # (Sessions/Projects/Agents/Workflows/...)
-│   ├── store/
-│   │   ├── appStore.ts                    # Zustand root composing 7 slices
-│   │   └── slices/                        # sessions, ui, projects, workflows,
-│   │                                      # templates, notifications, home
-│   ├── selectors/                         # Cross-slice computed selectors
-│   ├── hooks/                             # useProjects, usePty, useRolesMap,
-│   │                                      # useSessionTimeline, useCostHistory, ...
-│   ├── utils/                             # agent-ui, themeObserver, pty-write, ipcErrorHandler
-│   └── styles/                            # tokens.css (design system), global.css, themes
-└── shared/                                # Shared across main / preload / renderer
-    │                                      # (no Node-only or renderer-only deps)
-    ├── agents.ts                          # Canonical 7-agent registry — single source for
-    │                                      # CLI flags, color, mnemonic, supportsSkills,
-    │                                      # plus derived AGENT_*_MAP exports
-    ├── agent-helpers.ts                   # Agent utility functions
-    ├── types.ts                           # Domain types (Session, Workflow, Project, ...)
-    ├── workflow-utils.ts                  # validateWorkflow + topoSort
-    ├── validation.ts                      # SAFE_ID_RE + validateId
-    ├── themes.ts                          # THEME_IDS + THEME_STARTUP_BG (synced with tokens.css)
-    ├── constants.ts                       # Named constants (caps, intervals, timeouts)
-    ├── context-{types,window}.ts          # Effective-context resolution types + helpers
-    ├── models.ts / model-heuristic.ts /
-    │   model-id-normalize.ts              # Per-CLI model lists, context-window heuristics
-    ├── ansi.ts                            # ANSI escape stripping
-    ├── approval-transitions.ts            # Session approval-state machine
-    └── date-keys.ts                       # Local-time date keying for cost rollups
+├── main/       # Electron main: PTY, IPC, workflow engine, WSL + git, persistence
+├── preload/    # contextBridge → window.agentDeck (~65 channels)
+├── renderer/   # React app: terminals, workflow editor, dashboard, command palette
+└── shared/     # Agent registry, domain types, workflow + id validation (no Node/DOM)
 ```
 
-`WorkflowNode` is a discriminated union — `AgentNode | ShellNode | CheckpointNode | ConditionNode` — so the engine dispatch and validator are exhaustive at compile time. Every IPC handler that accepts a caller-supplied identifier validates through `shared/validation.validateId`. New themes, agents, and workflow node types are added by extending their respective registries; consumers read derived maps and the type system surfaces missed updates.
+`WorkflowNode` is a discriminated union — `AgentNode | ShellNode | CheckpointNode
+| ConditionNode` — so engine dispatch and validation stay exhaustive at compile
+time. Every IPC handler that takes a caller-supplied id validates through
+`shared/validation`. New themes, agents, and node types are added by extending a
+single registry; the type system flags any consumer that missed the update.
 
-## Tech Stack
+## Design principles
 
-| Technology | Purpose |
-|------------|---------|
-| [Electron 42](https://electronjs.org) | Desktop application shell |
-| [React 19](https://react.dev) | UI framework |
-| [TypeScript 6](https://typescriptlang.org) | Type-safe development (strict mode) |
-| [electron-vite 5](https://electron-vite.org) | Build tooling |
-| [xterm.js 5](https://xtermjs.org) | Terminal emulator |
-| [node-pty](https://github.com/microsoft/node-pty) | Pseudo-terminal (WSL sessions) |
-| [Zustand](https://zustand-demo.pmnd.rs) | State management |
-| [React Flow](https://reactflow.dev) | Visual workflow node editor |
-| [Vitest 4](https://vitest.dev) | Testing framework (1270 tests) |
-| [ESLint 9](https://eslint.org) | Linting (flat config, zero-warning policy) |
+1. **Local-first.** No web service, no account, no telemetry. Code stays on your
+   machine, API keys are encrypted at rest, and fonts are bundled, not fetched.
+2. **One process model, done right.** node-pty lives in the main process only;
+   the renderer runs with `contextIsolation` on and `nodeIntegration` off.
+3. **Single source of truth.** Agents, themes, and node types each come from one
+   registry; the type system surfaces anything a new entry forgot to update.
+4. **No magic numbers.** Every colour, space, font size, and duration is a
+   design token in `tokens.css` — a theme is just a set of tokens.
+5. **WSL-native.** Paths, git, and agent CLIs all route through your WSL distro.
 
 ## Documentation
 
-- **[User Guide](./docs/USER-GUIDE.md)** - Detailed usage instructions
-- **[Changelog](./CHANGELOG.md)** - Version history and release notes
-- **[Contributing](./CONTRIBUTING.md)** - How to contribute
-- **[Security](./SECURITY.md)** - Reporting vulnerabilities
+- [User Guide](./docs/USER-GUIDE.md) — detailed usage
+- [Changelog](./CHANGELOG.md) — version history
+- [Contributing](./CONTRIBUTING.md) — how to contribute
+- [Security](./SECURITY.md) — reporting vulnerabilities
 
 ## License
 
-[Elastic License 2.0](./LICENSE) — free to use, modify, and share. You may not offer it as a hosted/managed service.
+[Elastic License 2.0](./LICENSE) — free to use, modify, and share. You may not
+offer it as a hosted or managed service.
 
-## Support
+---
 
-- Star this repository
-- [Report issues](../../issues) or suggest features
+<sub>AgentDeck is a personal tool — built for my own daily use across Windows +
+WSL2, with no telemetry, analytics, or growth metrics. Not chasing adoption, but
+if it looks useful you're welcome to try it.</sub>
+
+[electron]:   https://www.electronjs.org
+[react]:      https://react.dev
+[ts]:         https://www.typescriptlang.org
+[evite]:      https://electron-vite.org
+[xterm]:      https://xtermjs.org
+[nodepty]:    https://github.com/microsoft/node-pty
+[zustand]:    https://zustand-demo.pmnd.rs
+[reactflow]:  https://reactflow.dev
+[estore]:     https://github.com/sindresorhus/electron-store
+[vitest]:     https://vitest.dev
+[eslint]:     https://eslint.org
