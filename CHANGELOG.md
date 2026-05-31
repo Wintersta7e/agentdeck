@@ -5,6 +5,60 @@ All notable changes to AgentDeck will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.8.0] - 2026-05-31
+
+Workflow engine maturation: agents now run reliably in WSL from the
+packaged app, plus per-node agent permissions, a set of complex
+multi-step workflow blueprints, and a broad stability pass.
+
+### Added
+
+- **Per-node agent permissions** — Read / Edit / Full level on each agent
+  node, mapped to the right per-agent flags (codex `--sandbox`, claude
+  `--permission-mode`), with a dropdown in the node editor. Workflow
+  import downgrades `full` to `edit` defensively.
+- **Seven complex workflow blueprints** seeded out of the box: Autonomous
+  Bug Fix, Feature Pipeline, Parallel Deep Review, Coverage Loop, Refactor
+  Campaign, Release Readiness, and Cross-Agent Design Verify.
+- **Adversarial Reviewer** built-in workflow role.
+- **Graceful loop escape** — exhausted condition loops route to an escape
+  edge instead of silently completing.
+- App version is logged at startup.
+
+### Changed
+
+- **Agent-node timeouts** retuned: removed over-tight per-node caps from the
+  seed workflows and adopted a 20-minute idle window, so agents that buffer
+  all their output until done are no longer killed mid-run.
+- `~/.local/bin` is preferred on PATH so a native CLI install wins over a
+  stale npm-global copy shadowed by a node version manager.
+- Dependency refresh: Electron 42, Vitest, TypeScript, and type defs;
+  transitive security advisories patched.
+
+### Fixed
+
+- **Agent CLIs now run reliably in WSL.** Prompts are delivered over the
+  child's stdin instead of the command line (so shell-significant characters
+  can't break the WSL command); `HOME`/`NVM_DIR` are reset to the real Linux
+  home (they could inherit the Windows profile from the launching process);
+  and the agent + `node` directories are resolved from an interactive login
+  shell and injected into PATH — fixing nvm-installed agents (e.g. codex)
+  not being found (exit 127).
+- codex agent nodes run without inheriting interactive hooks.
+- claude agents change directory via `cd` rather than an invalid
+  `--directory` flag.
+- Windows folder-picker / project paths are normalised to WSL paths on save,
+  on startup, and from the picker.
+- Agent updater only flags an update when the latest version is strictly
+  newer, and retries the post-install binary check.
+- Stability: LRU caps on per-project template watchers, auto-cancel of stale
+  confirm prompts, xterm disposal on close/eviction, capped cost-tracker
+  discovery polling, and surfaced PTY spawn failures.
+
+### Security
+
+- Workflow import downgrades a `full` agent permission level to `edit`.
+
 ## [6.6.0] - 2026-05-16
 
 User-visible UX polish, an externalised pricing config, plus a
