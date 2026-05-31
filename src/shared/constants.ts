@@ -43,8 +43,16 @@ export const MAX_TIER_CONCURRENCY = 5
 /** Default absolute timeout for an agent node when no per-node value is set (ms) */
 export const DEFAULT_AGENT_TIMEOUT = 30 * MS_PER_MINUTE
 
-/** Kill an agent node after this much continuous idle time (no stdout/stderr) */
-export const AGENT_IDLE_TIMEOUT = 5 * MS_PER_MINUTE
+/**
+ * Kill an agent node after this much continuous idle time (no stdout/stderr).
+ *
+ * Deliberately generous: several agents (e.g. claude in --print mode) buffer
+ * ALL output until they finish, so a long-but-healthy run looks "idle" the
+ * whole time. A tight value killed real analysis mid-flight. This is the
+ * universal "wedged agent" guard for every agent — kept below DEFAULT_AGENT_TIMEOUT
+ * so it still catches a truly-stuck process sooner than the absolute cap.
+ */
+export const AGENT_IDLE_TIMEOUT = 20 * MS_PER_MINUTE
 
 /** Idle-check polling interval for agent nodes (ms) */
 export const IDLE_CHECK_INTERVAL = 0.5 * MS_PER_MINUTE

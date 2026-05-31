@@ -10,7 +10,7 @@ import { getWorkflowsDir, saveWorkflow } from './workflow-store'
 
 const log = createLogger('workflow-seeds')
 
-const WORKFLOW_SEED_VERSION = 6
+const WORKFLOW_SEED_VERSION = 7
 
 export async function seedWorkflows(store: AppStore): Promise<void> {
   const prefs = store.get('appPrefs')
