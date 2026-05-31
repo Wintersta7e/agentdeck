@@ -2,18 +2,31 @@ import { useState, useEffect, useCallback } from 'react'
 import type { WorkflowVariable } from '../../../shared/types'
 import { FolderOpen } from 'lucide-react'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
+import { windowsToWsl } from '../../utils/path-conversion'
 import './WorkflowRunDialog.css'
 
 interface WorkflowRunDialogProps {
   variables: WorkflowVariable[]
+  /** WSL path of the project selected for this run, used to prefill path vars. */
+  projectPath?: string | undefined
   onStart: (values: Record<string, string>) => void
   onCancel: () => void
 }
 
-function buildDefaults(variables: WorkflowVariable[]): Record<string, string> {
+export function buildDefaults(
+  variables: WorkflowVariable[],
+  projectPath?: string,
+): Record<string, string> {
   const result: Record<string, string> = {}
   for (const v of variables) {
-    result[v.name] = v.default ?? ''
+    // Prefill path variables that have no explicit default with the selected
+    // project's path, so the run dialog doesn't ask for a directory the user
+    // already chose in the run overview. An explicit default always wins.
+    if ((v.default === undefined || v.default === '') && v.type === 'path' && projectPath) {
+      result[v.name] = projectPath
+    } else {
+      result[v.name] = v.default ?? ''
+    }
   }
   return result
 }
@@ -24,10 +37,13 @@ function isRequired(v: WorkflowVariable): boolean {
 
 export default function WorkflowRunDialog({
   variables,
+  projectPath,
   onStart,
   onCancel,
 }: WorkflowRunDialogProps): React.JSX.Element {
-  const [values, setValues] = useState<Record<string, string>>(() => buildDefaults(variables))
+  const [values, setValues] = useState<Record<string, string>>(() =>
+    buildDefaults(variables, projectPath),
+  )
   const [submitted, setSubmitted] = useState(false)
   const trapRef = useFocusTrap<HTMLDivElement>()
 
@@ -61,11 +77,7 @@ export default function WorkflowRunDialog({
     async (name: string) => {
       const result = await window.agentDeck.pickFolder()
       if (result !== null) {
-        // WF-3: Convert Windows paths (C:\...) to WSL format (/mnt/c/...)
-        const wslPath = result
-          .replace(/^([A-Za-z]):[/\\]/, (_, d: string) => `/mnt/${d.toLowerCase()}/`)
-          .replace(/\\/g, '/')
-        setValue(name, wslPath)
+        setValue(name, windowsToWsl(result))
       }
     },
     [setValue],

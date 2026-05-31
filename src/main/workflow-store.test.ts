@@ -59,7 +59,6 @@ vi.mock('fs', () => {
 })
 
 import { listWorkflows, loadWorkflow, saveWorkflow, deleteWorkflow } from './workflow-store'
-import { seedWorkflows } from './workflow-seeds'
 import * as fs from 'fs'
 
 const testStore = (fs as unknown as { __testStore: Map<string, string> }).__testStore
@@ -203,110 +202,4 @@ describe('safeId (via saveWorkflow path)', () => {
   })
 })
 
-function createMockAppStore(prefs: Record<string, unknown> = {}) {
-  const data: Record<string, unknown> = {
-    appPrefs: { zoomFactor: 1.0, ...prefs },
-  }
-  return {
-    get: vi.fn((key: string) => data[key]),
-    set: vi.fn((key: string, value: unknown) => {
-      data[key] = value
-    }),
-  } as unknown as import('./project-store').AppStore
-}
-
-describe('seedWorkflows', () => {
-  it('seeds 12 workflows on fresh install', async () => {
-    const store = createMockAppStore()
-    await seedWorkflows(store)
-    const workflows = await listWorkflows()
-    expect(workflows).toHaveLength(12)
-    for (const wf of workflows) {
-      expect(wf.id).toMatch(/^seed-wf-/)
-    }
-    expect(store.set).toHaveBeenCalledWith(
-      'appPrefs',
-      expect.objectContaining({
-        workflowSeedVersion: 4,
-      }),
-    )
-  })
-
-  it('skips seeding when version is current', async () => {
-    const store = createMockAppStore({ workflowSeedVersion: 4, workflowLastRolesVersion: 0 })
-    await seedWorkflows(store)
-    const workflows = await listWorkflows()
-    expect(workflows).toHaveLength(0)
-  })
-
-  it('agent nodes with _roleName get resolved roleId after seeding', async () => {
-    const store = createMockAppStore()
-    await seedWorkflows(store)
-    const lintFix = await loadWorkflow('seed-wf-lint-fix')
-    expect(lintFix).not.toBeNull()
-    const lintFixWf = lintFix ?? { nodes: [] as { type: string; name: string; roleId?: string }[] }
-    for (const node of lintFixWf.nodes) {
-      if (node.type === 'agent') {
-        expect(node.roleId).toBeDefined()
-        expect(node.roleId).toMatch(/^role-uuid-/)
-      }
-    }
-  })
-
-  it('all agent nodes use codex with --full-auto --ephemeral', async () => {
-    const store = createMockAppStore()
-    await seedWorkflows(store)
-    const workflows = await listWorkflows()
-    for (const meta of workflows) {
-      const wf = await loadWorkflow(meta.id)
-      expect(wf).not.toBeNull()
-      const wfNodes = wf ?? { nodes: [] as { type: string; agent?: string; agentFlags?: string }[] }
-      for (const node of wfNodes.nodes) {
-        if (node.type === 'agent') {
-          expect(node.agent).toBe('codex')
-          expect(node.agentFlags).toBe('--full-auto --ephemeral')
-        }
-      }
-    }
-  })
-
-  it('checkpoint nodes use message field, not prompt', async () => {
-    const store = createMockAppStore()
-    await seedWorkflows(store)
-    const codeReview = await loadWorkflow('seed-wf-code-review')
-    expect(codeReview).not.toBeNull()
-    const checkpoint = codeReview?.nodes.find((n) => n.type === 'checkpoint')
-    expect(checkpoint).toBeDefined()
-    expect(checkpoint?.message).toBeTruthy()
-    // No `expect(checkpoint?.prompt).toBeUndefined()` — `prompt` does not
-    // exist on CheckpointNode under the discriminated union, so the absence
-    // is a compile-time guarantee.
-  })
-
-  it('replaces seed workflows on upgrade, preserves user workflows', async () => {
-    const store = createMockAppStore()
-    await seedWorkflows(store)
-    await saveWorkflow({
-      id: 'my-custom-workflow',
-      name: 'My Custom',
-      nodes: [],
-      edges: [],
-      createdAt: 0,
-      updatedAt: 0,
-    })
-    let all = await listWorkflows()
-    expect(all).toHaveLength(13)
-    const upgradeStore = createMockAppStore({ workflowSeedVersion: 0 })
-    await seedWorkflows(upgradeStore)
-    all = await listWorkflows()
-    expect(all).toHaveLength(13)
-    const custom = await loadWorkflow('my-custom-workflow')
-    expect(custom).not.toBeNull()
-    expect(custom?.name).toBe('My Custom')
-  })
-
-  it('all seed workflows pass validation', async () => {
-    const store = createMockAppStore()
-    await expect(seedWorkflows(store)).resolves.toBeUndefined()
-  })
-})
+// seedWorkflows behavior is covered in src/main/workflow-seeds.test.ts.

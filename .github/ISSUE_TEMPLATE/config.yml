@@ -1,0 +1,4 @@
+# Force a category choice instead of letting users open blank issues that
+# end up under-triaged. Existing bug_report.md and feature_request.md
+# remain the entry points.
+blank_issues_enabled: false

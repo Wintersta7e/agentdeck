@@ -32,7 +32,7 @@ export interface PtyManager {
     env?: Record<string, string>,
     agent?: string,
     agentFlags?: string,
-  ) => void
+  ) => { ok: true } | { ok: false; error: string }
   write: (sessionId: string, data: string) => void
   hasSession: (sessionId: string) => boolean
   resize: (sessionId: string, cols: number, rows: number) => void
@@ -121,11 +121,11 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
     env?: Record<string, string>,
     agent?: string,
     agentFlags?: string,
-  ): void {
+  ): { ok: true } | { ok: false; error: string } {
     // If a PTY already exists for this session (e.g. session moved from visible
     // pane to hidden section), don't kill and respawn — just reuse it.
     if (sessions.has(sessionId)) {
-      return
+      return { ok: true }
     }
 
     if (sessions.size >= MAX_CONCURRENT_SESSIONS) {
@@ -149,11 +149,14 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
         env: mergedEnv,
       })
     } catch (err) {
-      log.error(`Failed to spawn PTY for session ${sessionId}`, { err: String(err) })
+      const message = err instanceof Error ? err.message : String(err)
+      log.error(`Failed to spawn PTY for session ${sessionId}`, { err: message })
+      // Keep the exit-channel signal so any listener that only knows about
+      // the legacy void-return path still sees the failure.
       if (!mainWindow.isDestroyed()) {
         mainWindow.webContents.send(ptyExitChannel(sessionId), -1)
       }
-      return
+      return { ok: false, error: message }
     }
 
     sessions.set(sessionId, proc)
@@ -298,6 +301,8 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
       }
       ptyBus.emit(`exit:${sessionId}`, exitCode)
     })
+
+    return { ok: true }
   }
 
   function write(sessionId: string, data: string): void {

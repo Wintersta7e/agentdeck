@@ -2,16 +2,10 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { Template, TemplateDraft, TemplateScope } from '../../shared/types'
 import type { TemplateStore } from '../template-store'
 import type { LegacyStoreAdapter } from '../template-legacy-store'
+import { makeHandlersMap, makeIpcElectronMock } from '../../__test__/ipc-harness'
 
-const handlers = new Map<string, (...args: unknown[]) => unknown>()
-
-vi.mock('electron', () => ({
-  ipcMain: {
-    handle: (channel: string, fn: (...args: unknown[]) => unknown) => {
-      handlers.set(channel, fn)
-    },
-  },
-}))
+const handlers = makeHandlersMap()
+vi.mock('electron', () => makeIpcElectronMock(handlers))
 
 const { registerTemplateIpc, registerLegacyTemplateIpc } = await import('./ipc-templates')
 

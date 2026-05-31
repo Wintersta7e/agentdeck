@@ -1,15 +1,16 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import { createLogger } from './logger'
-import type { AgentType, Workflow, WorkflowNode } from '../shared/types'
+import type { Workflow, WorkflowNode } from '../shared/types'
 import type { AppStore } from './project-store'
 import { getRolesFromStore } from './project-store'
 import { SEED_WORKFLOWS } from './workflow-seed-blueprints'
+import { materializeSeedNode } from './workflow-seed-materialize'
 import { getWorkflowsDir, saveWorkflow } from './workflow-store'
 
 const log = createLogger('workflow-seeds')
 
-const WORKFLOW_SEED_VERSION = 4
+const WORKFLOW_SEED_VERSION = 7
 
 export async function seedWorkflows(store: AppStore): Promise<void> {
   const prefs = store.get('appPrefs')
@@ -44,39 +45,11 @@ export async function seedWorkflows(store: AppStore): Promise<void> {
 
   let count = 0
   for (const blueprint of SEED_WORKFLOWS) {
-    const nodes: WorkflowNode[] = blueprint.nodes.map((n): WorkflowNode => {
-      const base = { id: n.id, name: n.name, x: n.x, y: n.y }
-      switch (n.type) {
-        case 'agent': {
-          const node: WorkflowNode = { ...base, type: 'agent' }
-          if (n.agent !== undefined) node.agent = n.agent as AgentType
-          if (n.agentFlags !== undefined) node.agentFlags = n.agentFlags
-          if (n.prompt !== undefined) node.prompt = n.prompt
-          if (n._roleName !== undefined) {
-            const roleId = roleMap.get(n._roleName)
-            if (roleId) node.roleId = roleId
-            else
-              log.warn('Seed workflow references unknown role', {
-                role: n._roleName,
-                workflow: blueprint.id,
-              })
-          }
-          return node
-        }
-        case 'shell': {
-          const node: WorkflowNode = { ...base, type: 'shell' }
-          if (n.command !== undefined) node.command = n.command
-          return node
-        }
-        case 'checkpoint': {
-          const node: WorkflowNode = { ...base, type: 'checkpoint' }
-          if (n.message !== undefined) node.message = n.message
-          return node
-        }
-        case 'condition':
-          return { ...base, type: 'condition' }
-      }
-    })
+    const nodes: WorkflowNode[] = blueprint.nodes.map((n) =>
+      materializeSeedNode(n, roleMap, (role) =>
+        log.warn('Seed workflow references unknown role', { role, workflow: blueprint.id }),
+      ),
+    )
 
     const workflow: Workflow = {
       id: blueprint.id,

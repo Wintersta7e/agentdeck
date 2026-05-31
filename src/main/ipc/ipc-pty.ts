@@ -11,8 +11,10 @@ import { invalidateGitCache } from '../git-status'
 import { toWslPath } from '../wsl-utils'
 import type { ReviewFile } from '../../shared/types'
 import type { ReviewTracker } from '../review-tracker'
+import { createLogger } from '../logger'
 
 const execFileAsync = promisify(execFile)
+const log = createLogger('ipc-pty')
 
 /**
  * PTY IPC handlers: spawn, write, resize, kill.
@@ -148,11 +150,23 @@ export function registerPtyHandlers(
       }
       const mgr = getPtyManager()
       if (!mgr) throw new Error('PTY manager not initialized')
-      mgr.spawn(sessionId, cols, rows, projectPath, startupCommands, safeEnv, agent, agentFlags)
+      const spawnResult = mgr.spawn(
+        sessionId,
+        cols,
+        rows,
+        projectPath,
+        startupCommands,
+        safeEnv,
+        agent,
+        agentFlags,
+      )
 
       // Track session metadata and register a one-shot exit listener for review detection.
       // ptyBus emits `exit:${sessionId}` from pty-manager.ts onExit handler.
-      if (projectPath) {
+      // Skip listener registration when spawn failed — pty-manager never emits
+      // ptyBus.exit on a failed spawn (only the renderer-side exit channel),
+      // so a `once` listener registered here would leak.
+      if (projectPath && spawnResult.ok) {
         const projectId = deps.getProjectId(projectPath)
         if (projectId) {
           const meta: SessionMeta = {
@@ -191,13 +205,21 @@ export function registerPtyHandlers(
                   // cross-project file paths in the broadcast payload.
                   win.webContents.send(CH.homeReviewsUpdated, [])
                 }
-              } catch {
-                // Best-effort: swallow all errors so PTY exit is never blocked
+              } catch (err) {
+                // PTY exit must never block — but log so a silently broken
+                // Pending Reviews panel has a trail in the main-process log
+                // instead of looking like "nothing happened on exit".
+                log.warn('Review-tracker exit handler failed', {
+                  sessionId: capturedSessionId,
+                  err: err instanceof Error ? err.message : String(err),
+                })
               }
             })()
           })
         }
       }
+
+      return spawnResult
     },
   )
 

@@ -45,6 +45,23 @@ export function useAppIpcBridge(): void {
       })
   }, [])
 
+  // Hydrate the workflow list on startup. Without this, the Workflows screen
+  // shows "No workflows yet" until the user creates/imports/duplicates one —
+  // those paths are the only places the renderer historically called
+  // `workflows.list()`.
+  useEffect(() => {
+    window.agentDeck.workflows
+      .list()
+      .then((workflows) => {
+        useAppStore.getState().setWorkflows(workflows)
+      })
+      .catch((err: unknown) => {
+        window.agentDeck.log.send('warn', 'app', 'Failed to load workflows', {
+          err: String(err),
+        })
+      })
+  }, [])
+
   useEffect(() => {
     const unsub = window.agentDeck.wsl.onStatus((data) => {
       useAppStore.getState().setWslAvailable(data.available)

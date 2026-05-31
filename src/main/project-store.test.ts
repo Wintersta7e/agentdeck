@@ -50,6 +50,7 @@ vi.mock('electron-store', () => {
 import {
   createProjectStore,
   registerStoreHandlers,
+  normalizeProjectPaths,
   __resetStoreHandlersForTests,
 } from './project-store'
 
@@ -140,6 +141,44 @@ describe('createProjectStore', () => {
   it('rejects null project on save', async () => {
     setupStore()
     await expect(callHandler('store:saveProject', null)).rejects.toThrow('non-null object')
+  })
+
+  it('normalises Windows-style paths to WSL form on save', async () => {
+    setupStore()
+    const saved = (await callHandler('store:saveProject', {
+      name: 'Win',
+      path: 'C:\\dev\\foo',
+    })) as Project
+    expect(saved.path).toBe('/mnt/c/dev/foo')
+
+    const fromForwardSlash = (await callHandler('store:saveProject', {
+      name: 'WinFwd',
+      path: 'D:/bar/baz',
+    })) as Project
+    expect(fromForwardSlash.path).toBe('/mnt/d/bar/baz')
+  })
+
+  it('leaves already-WSL paths unchanged on save', async () => {
+    setupStore()
+    const saved = (await callHandler('store:saveProject', {
+      name: 'Wsl',
+      path: '/home/user/proj',
+    })) as Project
+    expect(saved.path).toBe('/home/user/proj')
+  })
+
+  it('normalizeProjectPaths converts legacy Windows paths in the store', () => {
+    const store = setupStore()
+    store.set('projects', [
+      { id: 'p1', name: 'Legacy', path: 'C:\\code\\alpha', agents: [] },
+      { id: 'p2', name: 'Already-WSL', path: '/home/u/proj', agents: [] },
+    ] as Project[])
+
+    normalizeProjectPaths(store as unknown as AppStore)
+
+    const projects = store.get('projects') as Project[]
+    expect(projects[0]?.path).toBe('/mnt/c/code/alpha')
+    expect(projects[1]?.path).toBe('/home/u/proj')
   })
 
   it('encrypts secret env vars on save', async () => {
@@ -290,13 +329,13 @@ describe('seedRoles', () => {
     return { store, setSpy }
   }
 
-  it('seeds 8 built-in roles on fresh install', () => {
+  it('seeds 9 built-in roles on fresh install', () => {
     const { store, setSpy } = makeMockStore()
     seedRoles(store)
 
     const setCall = setSpy.mock.calls.find((c) => c[0] === 'roles')
     const roles = setCall?.[1] as Role[]
-    expect(roles).toHaveLength(8)
+    expect(roles).toHaveLength(9)
     expect(roles.every((r) => r.id.startsWith('seed-role-'))).toBe(true)
     expect(roles.every((r) => r.builtin)).toBe(true)
   })
@@ -317,8 +356,8 @@ describe('seedRoles', () => {
 
     const setCall = setSpy.mock.calls.find((c) => c[0] === 'roles')
     const roles = setCall?.[1] as Role[]
-    // 8 new seeds + 1 user role
-    expect(roles).toHaveLength(9)
+    // 9 new seeds + 1 user role
+    expect(roles).toHaveLength(10)
     expect(roles.some((r) => r.id === 'custom-role-1')).toBe(true)
   })
 })

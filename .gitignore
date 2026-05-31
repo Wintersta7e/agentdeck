@@ -35,8 +35,9 @@ credentials.json
 # Test coverage
 coverage/
 
-# Claude Code local instructions
+# Local AI agent instructions (per-tool conventions; not shipped)
 CLAUDE.md
+AGENTS.md
 .claude/
 .superpowers/
 .codex

@@ -1,9 +1,10 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback } from 'react'
 import {
   ReactFlow,
   Background,
   Controls,
   applyNodeChanges,
+  applyEdgeChanges,
   type Edge,
   type NodeChange,
   type EdgeChange,
@@ -102,10 +103,13 @@ export function WorkflowCanvas({
   onDeleteEdge,
 }: WorkflowCanvasProps): React.JSX.Element {
   // ── Local state for React Flow ──
-  // React Flow needs to freely update positions during drag (smooth movement).
-  // We maintain local node state that React Flow can mutate via applyNodeChanges,
-  // and re-derive from parent props when they change.
+  // React Flow needs to freely update positions during drag (smooth movement)
+  // and edge-selection state (so Delete/Backspace can remove the highlighted
+  // edge). We maintain local node + edge state that React Flow mutates via
+  // applyNodeChanges / applyEdgeChanges, and re-derive from parent props when
+  // they change.
   const [localNodes, setLocalNodes] = useState<WfNode[]>([])
+  const [localEdges, setLocalEdges] = useState<Edge[]>([])
 
   // Track previous prop values to detect changes during render.
   // This is the React-recommended pattern for deriving state from props:
@@ -116,7 +120,7 @@ export function WorkflowCanvas({
     selectedId: selectedNodeId,
   }))
 
-  // Re-derive local node state when parent props change
+  // Re-derive local state when parent props change
   const workflowOrStatusesChanged = workflow !== prev.workflow || nodeStatuses !== prev.statuses
   const selectedChanged = selectedNodeId !== prev.selectedId
 
@@ -135,13 +139,13 @@ export function WorkflowCanvas({
           )
         : [],
     )
+    // Edges don't track selectedNodeId, so only re-derive when workflow/statuses
+    // change. Skipping on selectedChanged preserves any selected-edge state set
+    // by applyEdgeChanges between renders.
+    if (workflowOrStatusesChanged) {
+      setLocalEdges(workflow ? toFlowEdges(workflow, nodeStatuses) : [])
+    }
   }
-
-  // Edges are purely derived — memoize instead of setState-during-render
-  const localEdges = useMemo(
-    () => (workflow ? toFlowEdges(workflow, nodeStatuses) : []),
-    [workflow, nodeStatuses],
-  )
 
   // Apply ALL node changes to local state (smooth drag).
   // Only notify parent on significant events (drag end, select, remove).
@@ -165,9 +169,14 @@ export function WorkflowCanvas({
     [onMoveNode, onSelectNode, onDeleteNode],
   )
 
-  // Sync edge removals to parent — edges are derived via useMemo so no local state to update
+  // Apply all edge changes to local state (selection, removal). React Flow runs
+  // in controlled mode here, so the edges prop must carry `selected: true` for
+  // Delete/Backspace to find a target — without applyEdgeChanges the select
+  // event never updates state and edges can never be deleted via keyboard.
+  // Sync 'remove' changes back to the parent workflow.
   const handleEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
+      setLocalEdges((eds) => applyEdgeChanges(changes, eds))
       for (const change of changes) {
         if (change.type === 'remove') {
           onDeleteEdge(change.id)

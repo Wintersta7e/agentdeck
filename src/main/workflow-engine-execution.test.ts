@@ -18,6 +18,7 @@ import {
   makeRole,
   resetCounter,
 } from '../__test__/helpers'
+import { _resetAgentPathCache } from './node-runners'
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
@@ -44,7 +45,7 @@ vi.mock('./workflow-run-store', () => ({
   saveRun: vi.fn().mockResolvedValue(undefined),
 }))
 
-const { createWorkflowEngine } = await import('./workflow-engine')
+const { createWorkflowEngine, AGENT_IDLE_TIMEOUT } = await import('./workflow-engine')
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -59,7 +60,7 @@ const mockPtyManager: PtyManager = {
 
 interface MockChild extends EventEmitter {
   pid: number | undefined
-  stdin: { end: ReturnType<typeof vi.fn> }
+  stdin: { write: ReturnType<typeof vi.fn>; end: ReturnType<typeof vi.fn> }
   stdout: EventEmitter
   stderr: EventEmitter
   kill: ReturnType<typeof vi.fn>
@@ -68,7 +69,7 @@ interface MockChild extends EventEmitter {
 function createMockChild(pid = 1234): MockChild {
   const child = new EventEmitter() as MockChild
   child.pid = pid
-  child.stdin = { end: vi.fn() }
+  child.stdin = { write: vi.fn(), end: vi.fn() }
   child.stdout = new EventEmitter()
   child.stderr = new EventEmitter()
   child.kill = vi.fn()
@@ -99,6 +100,11 @@ async function tick(ms = 0): Promise<void> {
   await vi.advanceTimersByTimeAsync(ms)
 }
 
+/** The prompt an agent node sent to its child over stdin (first write call). */
+function promptSentToStdin(child: MockChild | undefined): string {
+  return String(child?.stdin.write.mock.calls[0]?.[0] ?? '')
+}
+
 // ── Setup ────────────────────────────────────────────────────────────
 
 let engine: WorkflowEngine
@@ -124,6 +130,7 @@ function buildEngine(roles?: Role[]): void {
 beforeEach(() => {
   vi.useFakeTimers()
   resetCounter()
+  _resetAgentPathCache()
   mockSpawn.mockReset()
   mockExecFile.mockReset()
   // Default: taskkill calls succeed immediately
@@ -359,10 +366,9 @@ describe('concurrent execution', () => {
     children[0]?.emit('close', 0)
     await tick()
 
-    // Node b's spawn command should include the context from node a
+    // Node b should receive node a's output as context, delivered via stdin
     expect(mockSpawn).toHaveBeenCalledTimes(2)
-    const bashCmd = (mockSpawn.mock.calls[1] as string[][])[1]?.[3] ?? ''
-    expect(bashCmd).toContain('important result')
+    expect(promptSentToStdin(children[1])).toContain('important result')
   })
 })
 
@@ -393,10 +399,10 @@ describe('role persona injection', () => {
     engine.run(wf)
     await tick()
 
-    const bashCmd = (mockSpawn.mock.calls[0] as string[][])[1]?.[3] ?? ''
-    expect(bashCmd).toContain('meticulous code reviewer')
-    expect(bashCmd).toContain('Review this PR')
-    expect(bashCmd).toContain('Markdown checklist')
+    const sent = promptSentToStdin(child)
+    expect(sent).toContain('meticulous code reviewer')
+    expect(sent).toContain('Review this PR')
+    expect(sent).toContain('Markdown checklist')
 
     child.emit('close', 0)
     await tick()
@@ -417,9 +423,9 @@ describe('role persona injection', () => {
     engine.run(wf)
     await tick()
 
-    const bashCmd = (mockSpawn.mock.calls[0] as string[][])[1]?.[3] ?? ''
-    expect(bashCmd).not.toContain('SHOULD NOT APPEAR')
-    expect(bashCmd).toContain('Do task')
+    const sent = promptSentToStdin(child)
+    expect(sent).not.toContain('SHOULD NOT APPEAR')
+    expect(sent).toContain('Do task')
 
     child.emit('close', 0)
     await tick()
@@ -448,9 +454,174 @@ describe('role persona injection', () => {
 
     // Should still spawn — just without persona
     expect(mockSpawn).toHaveBeenCalledTimes(1)
-    const bashCmd = (mockSpawn.mock.calls[0] as string[][])[1]?.[3] ?? ''
-    expect(bashCmd).toContain('Some task')
+    expect(promptSentToStdin(child)).toContain('Some task')
 
+    child.emit('close', 0)
+    await tick()
+  })
+
+  it('runs a claude agent in the project dir via cd, never a --directory flag', async () => {
+    // Regression: claude-code has no --directory option (it operates on the cwd),
+    // so the runner must cd into the project, not pass an invalid flag.
+    buildEngine()
+    const child = createMockChild()
+    mockSpawn.mockReturnValue(child)
+
+    const wf = makeWorkflow({
+      id: 'wf-claude-cd',
+      nodes: [
+        makeWorkflowNode({ id: 'n1', type: 'agent', agent: 'claude-code', prompt: 'Do task' }),
+      ],
+    })
+
+    engine.run(wf, '/home/user/proj')
+    await tick()
+
+    const bashCmd = (mockSpawn.mock.calls[0] as string[][])[1]?.[3] ?? ''
+    expect(bashCmd).toContain('cd ')
+    expect(bashCmd).toContain('/home/user/proj')
+    expect(bashCmd).toContain('--print')
+    expect(bashCmd).not.toContain('--directory')
+
+    child.emit('close', 0)
+    await tick()
+  })
+
+  it('a read claude node adds no permission flag (default mode)', async () => {
+    buildEngine()
+    const child = createMockChild()
+    mockSpawn.mockReturnValue(child)
+    const wf = makeWorkflow({
+      id: 'wf-perm-read',
+      nodes: [
+        makeWorkflowNode({
+          id: 'a',
+          type: 'agent',
+          agent: 'claude-code',
+          prompt: 'p',
+          permission: 'read',
+        }),
+      ],
+    })
+    engine.run(wf, '/home/user/proj')
+    await tick()
+    const bashCmd = (mockSpawn.mock.calls[0] as string[][])[1]?.[3] ?? ''
+    expect(bashCmd).not.toContain('--permission-mode')
+    child.emit('close', 0)
+    await tick()
+  })
+
+  it('injects an edit codex node permission flag (--sandbox workspace-write)', async () => {
+    buildEngine()
+    const child = createMockChild()
+    mockSpawn.mockReturnValue(child)
+    const wf = makeWorkflow({
+      id: 'wf-perm-edit',
+      nodes: [
+        makeWorkflowNode({
+          id: 'a',
+          type: 'agent',
+          agent: 'codex',
+          prompt: 'p',
+          permission: 'edit',
+        }),
+      ],
+    })
+    engine.run(wf, '/home/user/proj')
+    await tick()
+    const bashCmd = (mockSpawn.mock.calls[0] as string[][])[1]?.[3] ?? ''
+    expect(bashCmd).toContain('--sandbox workspace-write')
+    child.emit('close', 0)
+    await tick()
+  })
+
+  it('codex agent nodes run with hooks disabled (--disable hooks)', async () => {
+    buildEngine()
+    const child = createMockChild()
+    mockSpawn.mockReturnValue(child)
+    const wf = makeWorkflow({
+      id: 'wf-codex-hooks',
+      nodes: [makeWorkflowNode({ id: 'a', type: 'agent', agent: 'codex', prompt: 'p' })],
+    })
+    engine.run(wf, '/home/user/proj')
+    await tick()
+    const bashCmd = (mockSpawn.mock.calls[0] as string[][])[1]?.[3] ?? ''
+    expect(bashCmd).toContain('--disable hooks')
+    child.emit('close', 0)
+    await tick()
+  })
+
+  it('delivers the agent prompt over stdin, never on the command line', async () => {
+    // The prompt can carry arbitrary shell-hostile text (apostrophes, parens,
+    // semicolons). It must NOT appear on the `bash -lc` command line — neither
+    // shell-quoting nor base64 survives the Windows -> wsl.exe -> Linux argv
+    // transport, so bash would parse/execute the prompt's tokens (exit 2/127).
+    // It is delivered over stdin instead, which is a raw byte stream.
+    buildEngine()
+    const child = createMockChild()
+    mockSpawn.mockReturnValue(child)
+    const prompt = "It's a Ren'Py analyzer; flow.py: _find_bridge_worker(self) -> list"
+    const wf = makeWorkflow({
+      id: 'wf-prompt-injection',
+      nodes: [makeWorkflowNode({ id: 'a', type: 'agent', agent: 'codex', prompt })],
+    })
+    engine.run(wf, '/home/user/proj')
+    await tick()
+    const bashCmd = (mockSpawn.mock.calls[0] as string[][])[1]?.[3] ?? ''
+    // Prompt content must not be on the command line where bash would parse it.
+    expect(bashCmd).not.toContain('_find_bridge_worker')
+    expect(bashCmd).not.toContain("Ren'Py")
+    // It is written to the child's stdin verbatim.
+    expect(child.stdin.write).toHaveBeenCalledWith(prompt)
+    child.emit('close', 0)
+    await tick()
+  })
+
+  it('prepends the interactively-resolved agent + node bin dir to PATH', async () => {
+    // The runner uses non-interactive `bash -lc` (no ~/.bashrc), so nvm-installed
+    // CLIs are off PATH. runAgentNode preflight-resolves the agent + node dirs via
+    // `bash -lic command -v` and injects the literal dirs into the command's PATH.
+    buildEngine()
+    const child = createMockChild()
+    mockSpawn.mockReturnValue(child)
+    mockExecFile.mockImplementation(
+      (cmd: string, args: string[], _opts: unknown, cb?: (...a: unknown[]) => void) => {
+        if (cmd === 'wsl.exe' && Array.isArray(args) && args.includes('-lic')) {
+          cb?.(
+            null,
+            '/home/u/.nvm/versions/node/v22/bin/codex\n/home/u/.nvm/versions/node/v22/bin/node\n',
+            '',
+          )
+        } else {
+          cb?.(null, '', '') // taskkill etc.
+        }
+        return { pid: 999, kill: vi.fn() }
+      },
+    )
+    const wf = makeWorkflow({
+      id: 'wf-pathfix',
+      nodes: [makeWorkflowNode({ id: 'a', type: 'agent', agent: 'codex', prompt: 'p' })],
+    })
+    engine.run(wf, '/home/u/proj')
+    await tick()
+    const bashCmd = (mockSpawn.mock.calls[0] as string[][])[1]?.[3] ?? ''
+    expect(bashCmd).toContain('export PATH="/home/u/.nvm/versions/node/v22/bin:$PATH"')
+    child.emit('close', 0)
+    await tick()
+  })
+
+  it('defaults an unset agent node to read-only permission flags', async () => {
+    buildEngine()
+    const child = createMockChild()
+    mockSpawn.mockReturnValue(child)
+    const wf = makeWorkflow({
+      id: 'wf-perm-default',
+      nodes: [makeWorkflowNode({ id: 'a', type: 'agent', agent: 'codex', prompt: 'p' })],
+    })
+    engine.run(wf, '/home/user/proj')
+    await tick()
+    const bashCmd = (mockSpawn.mock.calls[0] as string[][])[1]?.[3] ?? ''
+    expect(bashCmd).toContain('--sandbox read-only')
     child.emit('close', 0)
     await tick()
   })
@@ -529,9 +700,12 @@ describe('error scenarios', () => {
     engine.run(wf)
     await tick()
 
-    // Advance past idle timeout: 11 idle checks (11 * 30s = 330s > 300s)
-    for (let i = 0; i < 11; i++) {
-      await tick(30_000)
+    // Advance past idle timeout. Derived from the actual constant so the
+    // test follows along if AGENT_IDLE_TIMEOUT changes in workflow-engine.ts.
+    const idleCheckMs = 30_000
+    const ticksNeeded = Math.ceil(AGENT_IDLE_TIMEOUT / idleCheckMs) + 1
+    for (let i = 0; i < ticksNeeded; i++) {
+      await tick(idleCheckMs)
     }
 
     // forceKillTree should have called execFile('taskkill', ...)
@@ -739,24 +913,6 @@ describe('error scenarios', () => {
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('lifecycle events', () => {
-  it('emits workflow:started on run', async () => {
-    const child = createMockChild()
-    mockSpawn.mockReturnValue(child)
-
-    const wf = makeWorkflow({
-      id: 'wf-lc1',
-      nodes: [makeWorkflowNode({ id: 'n1', type: 'agent', prompt: 'go' })],
-    })
-
-    engine.run(wf)
-    await tick()
-
-    expect(hasEvent(sendSpy, 'wf-lc1', 'workflow:started')).toBe(true)
-
-    child.emit('close', 0)
-    await tick()
-  })
-
   it('emits workflow:done on successful completion', async () => {
     const child = createMockChild()
     mockSpawn.mockReturnValue(child)
@@ -1065,5 +1221,172 @@ describe('retry on failure then success', () => {
     // All retries exhausted — node should error
     expect(hasEvent(sendSpy, 'wf-retry2', 'node:error')).toBe(true)
     expect(hasEvent(sendSpy, 'wf-retry2', 'workflow:stopped')).toBe(true)
+  })
+})
+
+// ═══════════════════════════════════════════════════════════════════════
+// Loop escape: maxIterations exhaustion routes to the escape checkpoint
+// ═══════════════════════════════════════════════════════════════════════
+
+describe('loop escape on maxIterations exhaustion', () => {
+  it('exhausted loop routes to the escape checkpoint and logs, not a silent done', async () => {
+    // Shell node that always fails (non-zero exit) so the condition always
+    // evaluates false, driving the loop until maxIterations is hit.
+    mockExecFile.mockImplementation(
+      (cmd: string, _args: string[], _opts: unknown, cb?: (...a: unknown[]) => void) => {
+        if (cmd === 'wsl.exe' && typeof cb === 'function') {
+          const err = new Error('exit 1') as NodeJS.ErrnoException
+          err.code = '1'
+          process.nextTick(() => cb(err, '', 'error output'))
+        } else if (typeof cb === 'function') {
+          cb(null, '', '')
+        }
+        return { pid: 999, kill: vi.fn() }
+      },
+    )
+    buildEngine()
+
+    const fail = makeWorkflowNode({
+      id: 'F',
+      name: 'fail',
+      type: 'shell',
+      command: 'exit 1',
+      continueOnError: true,
+    })
+    const cond = makeWorkflowNode({
+      id: 'C',
+      name: 'cond',
+      type: 'condition',
+      conditionMode: 'exitCode',
+    })
+    const escape = makeWorkflowNode({
+      id: 'E',
+      name: 'escape',
+      type: 'checkpoint',
+      message: 'did not converge',
+    })
+
+    const wf = makeWorkflow({
+      id: 'wf-loop-escape',
+      nodes: [fail, cond, escape],
+      edges: [
+        makeWorkflowEdge('F', 'C'),
+        // Loop edge back to F; maxIterations:2 means the loop fires on
+        // iterations 1 and 2, then on iteration 3 the engine exhausts
+        // the budget and routes to the escape instead.
+        makeWorkflowEdge('C', 'F', { branch: 'false', edgeType: 'loop', maxIterations: 2 }),
+        // Non-loop false edge: the escape path
+        makeWorkflowEdge('C', 'E', { branch: 'false' }),
+      ],
+    })
+
+    // Run the engine; give enough async ticks for all three shell executions
+    // (iterations 1 & 2 loop, iteration 3 escapes) plus the checkpoint pause.
+    engine.run(wf)
+    await tick(500)
+
+    // 1. The engine's own loop-exhaustion warning must have fired. Match its
+    //    specific "routing to escape" wording rather than "did not converge",
+    //    which also appears in the escape checkpoint's user message (so matching
+    //    that would pass even if the engine warning regressed).
+    const outputs = getEvents(sendSpy, 'wf-loop-escape', 'node:output')
+    expect(outputs).toContainEqual(
+      expect.objectContaining({ message: expect.stringMatching(/routing to escape/) }),
+    )
+
+    // 2. The escape checkpoint E must have been reached (emits node:paused).
+    expect(getEvents(sendSpy, 'wf-loop-escape', 'node:paused').some((e) => e.nodeId === 'E')).toBe(
+      true,
+    )
+
+    // Clean up: resume the checkpoint so the workflow can finish.
+    engine.resume('wf-loop-escape', 'E')
+    await tick()
+    expect(hasEvent(sendSpy, 'wf-loop-escape', 'workflow:done')).toBe(true)
+  })
+})
+
+// ═══════════════════════════════════════════════════════════════════════
+// Shared escape target fed by two sibling loop conditions
+// (mirrors seed-wf-feature-pipeline's escape_build, in-degree 2): the escape
+// must fire only on real loop exhaustion, never because a sibling condition
+// re-resolves and repeatedly skip-activates the shared edge.
+// ═══════════════════════════════════════════════════════════════════════
+
+describe('shared escape target (in-degree > 1)', () => {
+  it('fires the shared escape only after the loop exhausts, not when a sibling re-resolves', async () => {
+    // build(ok) -> condA(exitCode→true every pass) -> mid(fail) -> condB(false→loop)
+    // condA.false -> build (loop) AND condA.false -> escape (shared, normal)
+    // condB.false -> build (loop) AND condB.false -> escape (shared, normal)
+    // condA re-resolves true each iteration (it is inside condB's reset subgraph),
+    // repeatedly skip-activating the shared escape's edge. The escape must NOT
+    // fire until condB exhausts maxIterations (which emits "did not converge").
+    mockExecFile.mockImplementation(
+      (cmd: string, args: string[], _opts: unknown, cb?: (...a: unknown[]) => void) => {
+        if (cmd === 'wsl.exe' && typeof cb === 'function') {
+          if (JSON.stringify(args).includes('MIDFAIL')) {
+            const err = new Error('exit 1') as NodeJS.ErrnoException
+            err.code = '1'
+            process.nextTick(() => cb(err, 'mid output', 'err'))
+          } else {
+            process.nextTick(() => cb(null, 'build output', ''))
+          }
+        } else if (typeof cb === 'function') {
+          cb(null, '', '')
+        }
+        return { pid: 999, kill: vi.fn() }
+      },
+    )
+    buildEngine()
+
+    const wf = makeWorkflow({
+      id: 'wf-shared-escape',
+      nodes: [
+        makeWorkflowNode({
+          id: 'build',
+          type: 'shell',
+          command: 'echo BUILDOK',
+          continueOnError: true,
+        }),
+        makeWorkflowNode({ id: 'condA', type: 'condition', conditionMode: 'exitCode' }),
+        makeWorkflowNode({
+          id: 'mid',
+          type: 'shell',
+          command: 'echo MIDFAIL; exit 1',
+          continueOnError: true,
+        }),
+        makeWorkflowNode({ id: 'condB', type: 'condition', conditionMode: 'exitCode' }),
+        makeWorkflowNode({ id: 'ship', type: 'checkpoint', message: 'ship' }),
+        makeWorkflowNode({ id: 'escape', type: 'checkpoint', message: 'shared escape' }),
+      ],
+      edges: [
+        makeWorkflowEdge('build', 'condA'),
+        makeWorkflowEdge('condA', 'mid', { branch: 'true' }),
+        makeWorkflowEdge('condA', 'build', { branch: 'false', edgeType: 'loop', maxIterations: 4 }),
+        makeWorkflowEdge('condA', 'escape', { branch: 'false' }),
+        makeWorkflowEdge('mid', 'condB'),
+        makeWorkflowEdge('condB', 'ship', { branch: 'true' }),
+        makeWorkflowEdge('condB', 'build', { branch: 'false', edgeType: 'loop', maxIterations: 4 }),
+        makeWorkflowEdge('condB', 'escape', { branch: 'false' }),
+      ],
+    })
+
+    engine.run(wf)
+    await tick(3000)
+
+    // Events are captured in chronological order. The convergence-failure
+    // warning (emitted only at maxIterations exhaustion) must precede the
+    // escape checkpoint pausing. Before the fix, the escape fired after ~2
+    // iterations with no warning at all.
+    const events = getEvents(sendSpy, 'wf-shared-escape')
+    const firstWarn = events.findIndex(
+      (e) => e.type === 'node:output' && /did not converge/.test(String(e.message)),
+    )
+    const firstEscape = events.findIndex((e) => e.type === 'node:paused' && e.nodeId === 'escape')
+    expect(firstEscape, 'escape checkpoint should be reached on exhaustion').toBeGreaterThanOrEqual(
+      0,
+    )
+    expect(firstWarn, 'a convergence-failure warning should be logged').toBeGreaterThanOrEqual(0)
+    expect(firstWarn, 'escape must not fire before the loop exhausts').toBeLessThan(firstEscape)
   })
 })

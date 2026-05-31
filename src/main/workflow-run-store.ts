@@ -3,6 +3,7 @@ import * as path from 'path'
 import { randomBytes } from 'node:crypto'
 import { app } from 'electron'
 import { createLogger } from './logger'
+import { isEnoent } from './fs-errors'
 import type { WorkflowRun } from '../shared/types'
 import { validateId } from '../shared/validation'
 
@@ -82,7 +83,13 @@ async function pruneRuns(workflowId: string): Promise<void> {
   try {
     const allFiles = await fs.promises.readdir(dir)
     files = allFiles.filter((f) => f.startsWith(prefix) && f.endsWith('.json'))
-  } catch {
+  } catch (err) {
+    if (!isEnoent(err)) {
+      log.warn('pruneRuns readdir failed', {
+        dir,
+        err: err instanceof Error ? err.message : String(err),
+      })
+    }
     return
   }
 
@@ -122,7 +129,13 @@ export async function listRuns(workflowId: string): Promise<WorkflowRun[]> {
   let allFiles: string[]
   try {
     allFiles = await fs.promises.readdir(dir)
-  } catch {
+  } catch (err) {
+    if (!isEnoent(err)) {
+      log.warn('listRuns readdir failed', {
+        dir,
+        err: err instanceof Error ? err.message : String(err),
+      })
+    }
     return []
   }
 
@@ -155,7 +168,13 @@ export async function deleteRun(runId: string): Promise<void> {
   let allFiles: string[]
   try {
     allFiles = await fs.promises.readdir(dir)
-  } catch {
+  } catch (err) {
+    if (!isEnoent(err)) {
+      log.warn('deleteRun readdir failed', {
+        dir,
+        err: err instanceof Error ? err.message : String(err),
+      })
+    }
     return
   }
 

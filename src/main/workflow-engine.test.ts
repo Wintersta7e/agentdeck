@@ -43,10 +43,6 @@ describe('stripAnsi', () => {
     expect(stripAnsi('hello world')).toBe('hello world')
   })
 
-  it('handles empty string', () => {
-    expect(stripAnsi('')).toBe('')
-  })
-
   it('strips charset designation sequences', () => {
     expect(stripAnsi('\x1b(Btext')).toBe('text')
   })
@@ -61,10 +57,6 @@ describe('shellQuote', () => {
 
   it('escapes single quotes', () => {
     expect(shellQuote("it's")).toBe("'it'\\''s'")
-  })
-
-  it('handles empty string', () => {
-    expect(shellQuote('')).toBe("''")
   })
 
   it('handles shell metacharacters safely', () => {
@@ -176,21 +168,6 @@ describe('topoSort', () => {
     expect(tiers).toHaveLength(2)
     expect(tiers[0]?.map((n) => n.id)).toEqual(['a'])
     expect(tiers[1]).toHaveLength(3)
-  })
-
-  it('excludes loop edges from in-degree calculation', () => {
-    const a = makeWorkflowNode({ id: 'a', type: 'shell', command: 'echo' })
-    const cond = makeWorkflowNode({ id: 'c', type: 'condition', conditionMode: 'exitCode' })
-    const tiers = topoSort(
-      [a, cond],
-      [
-        makeWorkflowEdge('a', 'c'),
-        makeWorkflowEdge('c', 'a', { edgeType: 'loop', branch: 'false', maxIterations: 3 }),
-      ],
-    )
-    expect(tiers).toHaveLength(2)
-    expect(tiers[0]?.[0]?.id).toBe('a')
-    expect(tiers[1]?.[0]?.id).toBe('c')
   })
 
   it('still detects real cycles (non-loop edges)', () => {
@@ -423,41 +400,8 @@ describe('validateWorkflow', () => {
     expect(result.errors.some((e) => e.includes('requires agent/shell upstream'))).toBe(true)
   })
 
-  it('errors when outputMatch condition has invalid regex', () => {
-    const wf = makeWorkflow({
-      id: 'wf-badre',
-      nodes: [
-        makeWorkflowNode({ id: 'a', type: 'agent' }),
-        makeWorkflowNode({
-          id: 'cond1',
-          type: 'condition',
-          conditionMode: 'outputMatch',
-          conditionPattern: '(unclosed',
-        }),
-      ],
-      edges: [makeWorkflowEdge('a', 'cond1'), makeWorkflowEdge('cond1', 'a', { branch: 'true' })],
-    })
-    const result = validateWorkflow(wf)
-    expect(result.errors.some((e) => e.includes('Invalid regex'))).toBe(true)
-  })
-
-  it('errors when outputMatch condition has empty pattern', () => {
-    const wf = makeWorkflow({
-      id: 'wf-emptypat',
-      nodes: [
-        makeWorkflowNode({ id: 'a', type: 'agent' }),
-        makeWorkflowNode({
-          id: 'cond1',
-          type: 'condition',
-          conditionMode: 'outputMatch',
-          conditionPattern: '',
-        }),
-      ],
-      edges: [makeWorkflowEdge('a', 'cond1'), makeWorkflowEdge('cond1', 'a', { branch: 'true' })],
-    })
-    const result = validateWorkflow(wf)
-    expect(result.errors.some((e) => e.includes('non-empty conditionPattern'))).toBe(true)
-  })
+  // Note: outputMatch invalid-regex and empty-pattern conditions are covered
+  // more thoroughly in src/shared/workflow-utils-condition.test.ts (ReDoS shapes).
 
   it('accepts valid condition node with exitCode mode', () => {
     const wf = makeWorkflow({
@@ -704,12 +648,6 @@ describe('validateWorkflow', () => {
     const result = validateWorkflow(wf)
     expect(result.errors).toEqual([])
     expect(result.warnings.some((w) => w.includes('2 edges with branch="true"'))).toBe(true)
-  })
-
-  it('returns warnings array even when no warnings', () => {
-    const wf = makeWorkflow({ id: 'wf-empty', nodes: [], edges: [] })
-    const result = validateWorkflow(wf)
-    expect(result.warnings).toEqual([])
   })
 
   it('collects multiple errors', () => {

@@ -1,3 +1,4 @@
+import { windowsToWsl } from '../../utils/path-conversion'
 import './PathInput.css'
 
 interface PathInputProps {
@@ -25,7 +26,10 @@ export function PathInput({
   const handleBrowse = async (): Promise<void> => {
     const result = await window.agentDeck.pickFolder()
     if (result !== null) {
-      onChange(result)
+      // Electron's dialog returns a native Windows path on Windows hosts.
+      // IPC handlers (files:listDir, etc.) only accept POSIX paths, so
+      // convert before persisting.
+      onChange(windowsToWsl(result))
     }
   }
 

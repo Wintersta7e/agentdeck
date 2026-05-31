@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback, useRef, memo } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { useAppStore } from '../../../store/appStore'
-import type { AgentEnvSnapshot, AgentType } from '../../../../shared/types'
-import { AGENT_BY_ID } from '../../../utils/agent-ui'
+import type { AgentEnvSnapshot } from '../../../../shared/types'
+import { AGENT_BY_ID, getSessionAgentId } from '../../../utils/agent-ui'
 import { HooksSection } from './HooksSection'
 import { SkillsSection } from './SkillsSection'
 import { McpSection } from './McpSection'
@@ -13,11 +13,11 @@ import './EnvTab.css'
 
 /**
  * Per-agent environment snapshot for the active session. Resolves the agent via
- * `session.agentOverride ?? project.agent ?? 'claude-code'` and queries the
- * `env:getAgentSnapshot` IPC to build a hooks/skills/MCP/config view. The
- * "Paths" footer always renders (debug visibility) and a future-tier agent
- * (`gemini-cli`, `amazon-q`, `opencode`) gets a not-yet-supported placeholder
- * above the paths footer.
+ * `getSessionAgentId` (handles agentOverride + project default + multi-agent
+ * migration) and queries the `env:getAgentSnapshot` IPC to build a
+ * hooks/skills/MCP/config view. The "Paths" footer always renders (debug
+ * visibility) and a future-tier agent (`gemini-cli`, `amazon-q`, `opencode`)
+ * gets a not-yet-supported placeholder above the paths footer.
  */
 export const EnvTab = memo(function EnvTab(): React.JSX.Element {
   const activeSessionId = useAppStore((s) => s.activeSessionId)
@@ -27,8 +27,8 @@ export const EnvTab = memo(function EnvTab(): React.JSX.Element {
   )
   const agentVersions = useAppStore((s) => s.agentVersions)
 
-  const agentId = (session?.agentOverride ?? project?.agent ?? 'claude-code') as string
-  const agent = AGENT_BY_ID.get(agentId as AgentType) ?? null
+  const agentId = getSessionAgentId(session, project)
+  const agent = AGENT_BY_ID.get(agentId) ?? null
   const projectId = project?.id
 
   const [snapshot, setSnapshot] = useState<AgentEnvSnapshot | null>(null)

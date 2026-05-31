@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { ScreenShell } from '../../components/shared/ScreenShell'
-import { AGENT_BY_ID, agentColorVar } from '../../utils/agent-ui'
-import type { AgentType } from '../../../shared/types'
+import { AGENT_BY_ID, agentColorVar, getSessionAgentId } from '../../utils/agent-ui'
 import './DiffReviewScreen.css'
 
 interface WorktreeSummary {
@@ -14,6 +13,9 @@ interface WorktreeSummary {
 export function DiffReviewScreen(): React.JSX.Element {
   const activeSessionId = useAppStore((s) => s.activeSessionId)
   const session = useAppStore((s) => (activeSessionId ? s.sessions[activeSessionId] : undefined))
+  const project = useAppStore((s) =>
+    session?.projectId ? (s.projects.find((p) => p.id === session.projectId) ?? null) : null,
+  )
   const gitStatus = useAppStore((s) =>
     session?.projectId ? s.gitStatuses[session.projectId] : undefined,
   )
@@ -27,7 +29,7 @@ export function DiffReviewScreen(): React.JSX.Element {
   const [comment, setComment] = useState('')
   const [inflight, setInflight] = useState<'keep' | 'discard' | 'comment' | null>(null)
 
-  const agentId = (session?.agentOverride ?? 'claude-code') as AgentType
+  const agentId = getSessionAgentId(session, project)
   const agent = AGENT_BY_ID.get(agentId)
   const colorVar = agentColorVar(agentId)
 

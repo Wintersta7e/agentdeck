@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
-import { AGENT_BY_ID, agentColorVar } from '../../utils/agent-ui'
-import type { AgentType } from '../../../shared/types'
+import { AGENT_BY_ID, agentColorVar, getSessionAgentId } from '../../utils/agent-ui'
 import './SessionMetricsStrip.css'
 
 interface SessionMetricsStripProps {
@@ -35,6 +34,9 @@ function formatElapsed(startedAt: number, now: number): string {
  */
 export function SessionMetricsStrip({ sessionId }: SessionMetricsStripProps): React.JSX.Element {
   const session = useAppStore((s) => (sessionId ? s.sessions[sessionId] : undefined))
+  const project = useAppStore((s) =>
+    session ? (s.projects.find((p) => p.id === session.projectId) ?? null) : null,
+  )
   const usage = useAppStore((s) => (sessionId ? s.sessionUsage[sessionId] : undefined))
   const writeCount = useAppStore((s) => (sessionId ? (s.writeCountBySession[sessionId] ?? 0) : 0))
 
@@ -44,7 +46,7 @@ export function SessionMetricsStrip({ sessionId }: SessionMetricsStripProps): Re
     return () => window.clearInterval(id)
   }, [])
 
-  const agentId = (session?.agentOverride ?? 'claude-code') as AgentType
+  const agentId = getSessionAgentId(session, project)
   const agent = AGENT_BY_ID.get(agentId)
 
   const totals = useMemo(() => {

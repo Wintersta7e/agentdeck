@@ -1,6 +1,7 @@
-import type { AgentId } from './agents'
+import type { AgentId, AgentPermission } from './agents'
 
 export type AgentType = AgentId
+export type { AgentPermission }
 export type StackBadge =
   | 'Java'
   | 'JS'
@@ -260,6 +261,8 @@ export interface AgentNode extends WorkflowNodeBase {
   roleId?: string | undefined
   /** Codex skill ID (scope:name format, e.g. "global:lint-fix") */
   skillId?: string | undefined
+  /** Sandbox/permission level mapped to the agent's CLI flags. Unset ⇒ 'read'. */
+  permission?: AgentPermission | undefined
 }
 
 export interface ShellNode extends WorkflowNodeBase {

@@ -16,6 +16,7 @@ import {
   groupBySections,
 } from './paletteItems'
 import { ALL_THEMES, THEME_GROUPS, applyThemeWithTransition } from './themeUtils'
+import { KbdHint } from '../shared/KbdHint'
 import './CommandPalette.css'
 
 interface CommandPaletteProps {
@@ -452,7 +453,7 @@ function PaletteInner({
                           {item.type === 'template' && (
                             <span className="result-badge badge-template">template</span>
                           )}
-                          {item.kbd && <span className="result-kbd">{item.kbd}</span>}
+                          {item.kbd && <KbdHint keys={item.kbd} />}
                           {isSelected && (
                             <span className="result-kbd">
                               <CornerDownLeft size={12} />

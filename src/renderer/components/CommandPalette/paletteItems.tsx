@@ -198,7 +198,7 @@ export function buildPaletteItems(
     icon: <SunMoon size={14} />,
     iconClass: '',
     name: 'Change Theme',
-    detail: 'Switch between 8 dark and light themes',
+    detail: 'Switch between dark and light themes',
   })
   items.push({
     type: 'action',

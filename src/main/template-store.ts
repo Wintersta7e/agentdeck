@@ -1,9 +1,10 @@
-import { promises as fs, watch } from 'node:fs'
+import { promises as fs, watch, existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import type { Template, TemplateFile, TemplateDraft, TemplateScope } from '../shared/types'
 import { createLogger } from './logger'
 import { atomicWrite } from './fs-atomic'
 import { generateTemplateId } from './template-id'
+import { evictOldestFromMap } from './map-utils'
 
 const log = createLogger('template-store')
 
@@ -230,6 +231,18 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
       pollTimer.unref?.()
     }
 
+    // Most projects don't have a per-project template dir; fs.watch throws
+    // ENOENT immediately on missing paths and the 10s polling fallback then
+    // re-scans a still-missing dir forever. Skip both when the dir is absent
+    // — new templates appear the next time activateProject runs for the
+    // project (i.e. on switch-away-and-back), which is the only meaningful
+    // event for a feature that has to be opted into via file creation.
+    if (!existsSync(dir)) {
+      return () => {
+        disposed = true
+      }
+    }
+
     try {
       watcher = watch(dir, { persistent: false }, () => {
         trigger()
@@ -280,6 +293,13 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
   }
 
   const userWatcherOff = setupWatcher(userRoot, rescanUser)
+  // LRU of per-project filesystem watchers. activateProject is called whenever
+  // the active project changes; without a cap, every project the user has
+  // ever opened in a session would keep an fs.watch handle (or 10s poll
+  // fallback) alive until app shutdown. We evict the least-recently-activated
+  // watcher when MAX_PROJECT_WATCHERS is exceeded; the pool of cached
+  // templates for an evicted project stays put so listAll stays correct.
+  const MAX_PROJECT_WATCHERS = 8
   const projectWatchers = new Map<string, () => void>()
 
   return {
@@ -296,9 +316,14 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
       const pPath = opts.getProjectPath(projectId)
       if (!pPath) return []
 
-      // Teardown existing watcher for this projectId before re-scanning.
+      // Teardown existing watcher for this projectId before re-scanning so
+      // we don't double-register and so re-insertion below moves it to the
+      // most-recent slot in the LRU.
       const existingOff = projectWatchers.get(projectId)
-      if (existingOff) existingOff()
+      if (existingOff) {
+        existingOff()
+        projectWatchers.delete(projectId)
+      }
 
       const dir = join(pPath, '.agentdeck', 'templates')
       const pool = await scanDir(dir, 'project', projectId, emitParseError)
@@ -310,6 +335,7 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
         projectPools.set(projectId, next)
       }
       projectWatchers.set(projectId, setupWatcher(dir, rescan))
+      evictOldestFromMap(projectWatchers, MAX_PROJECT_WATCHERS, (_id, off) => off())
 
       return pool
     },

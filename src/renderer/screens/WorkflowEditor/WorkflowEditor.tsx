@@ -16,6 +16,7 @@ import WorkflowNodeEditorPanel from './WorkflowNodeEditorPanel'
 import WorkflowRunDialog from './WorkflowRunDialog'
 import WorkflowToolbar from './WorkflowToolbar'
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog'
+import { ProgressBar } from '../../components/shared/ProgressBar'
 import { useWorkflowActions } from './useWorkflowActions'
 import { handleIpcError } from '../../utils/ipcErrorHandler'
 import './WorkflowEditor.css'
@@ -97,12 +98,15 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
       if (saveTimerRef.current) {
         clearTimeout(saveTimerRef.current)
         saveTimerRef.current = null
-        // Flush pending save on unmount (fire-and-forget)
+        // Flush pending save on unmount (fire-and-forget). Surface failure
+        // via the notification system so the user knows their last edit
+        // didn't make it to disk — log.send alone is invisible to them.
         if (latestWorkflowRef.current) {
           window.agentDeck.workflows.save(latestWorkflowRef.current).catch((err: unknown) => {
             window.agentDeck.log.send('error', 'workflow-editor', 'Unmount flush failed', {
               err: String(err),
             })
+            handleIpcError(err, 'Workflow auto-save failed on close')
           })
         }
       }
@@ -295,6 +299,21 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
     [autoSave, workflowId, updateWorkflowMeta],
   )
 
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent): void {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'd' || e.shiftKey || e.altKey) return
+      const target = e.target as HTMLElement | null
+      const tag = target?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return
+      const id = selectedNodeIdRef.current
+      if (!id) return
+      e.preventDefault()
+      handleDuplicateNode(id)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [handleDuplicateNode])
+
   const handleDeleteEdge = useCallback(
     (edgeId: string) => {
       setWorkflow((prev) => {
@@ -405,6 +424,17 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
 
   const toggleAddMenu = useCallback(() => setAddMenuOpen((prev) => !prev), [])
 
+  const runProgress = useMemo(() => {
+    if (workflowStatus !== 'running' || !workflow || workflow.nodes.length === 0) return null
+    const total = workflow.nodes.length
+    let finished = 0
+    for (const n of workflow.nodes) {
+      const s = nodeStatuses[n.id]
+      if (s === 'done' || s === 'error' || s === 'skipped') finished += 1
+    }
+    return { value: finished / total, finished, total }
+  }, [workflow, nodeStatuses, workflowStatus])
+
   return (
     <div className="wf-editor">
       <WorkflowToolbar
@@ -424,6 +454,15 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
         onProjectChange={handleProjectChange}
         projects={projects}
       />
+
+      {runProgress && (
+        <ProgressBar
+          value={runProgress.value}
+          label={`Workflow progress: ${runProgress.finished} of ${runProgress.total} nodes complete`}
+          tone="green"
+          className="wf-run-progress"
+        />
+      )}
 
       {loadError && (
         <div className="wf-load-error" role="alert">
@@ -538,6 +577,7 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
       {showRunDialog && workflow?.variables && (
         <WorkflowRunDialog
           variables={workflow.variables}
+          projectPath={workflowProjectPath}
           onStart={(vals) => {
             setShowRunDialog(false)
             runWorkflow(vals)

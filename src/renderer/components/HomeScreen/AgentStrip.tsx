@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { AGENTS } from '../../../shared/agents'
 import { CollapsibleSection } from '../shared/CollapsibleSection'
+import { ProgressBar } from '../shared/ProgressBar'
 import './AgentStrip.css'
 
 export function AgentStrip(): React.JSX.Element {
@@ -85,7 +86,9 @@ export function AgentStrip(): React.JSX.Element {
               <div className={`agent-chip-badge ${statusClass}`}>
                 {updating ? 'UPD…' : statusLabel}
               </div>
-              {updating && <div className="agent-chip-progress" />}
+              {updating && (
+                <ProgressBar label={`Updating ${agent.name}`} className="agent-chip-progress" />
+              )}
             </button>
           )
         })}

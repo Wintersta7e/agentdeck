@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { RefreshCw, Trash2, ChevronRight } from 'lucide-react'
 import { handleIpcError } from '../../utils/ipcErrorHandler'
+import { Skeleton } from '../../components/shared/Skeleton'
 import type { WorkflowRun, WorkflowNodeRun } from '../../../shared/types'
 import './WorkflowHistoryPanel.css'
 
@@ -226,6 +227,18 @@ export default function WorkflowHistoryPanel({
           <RefreshCw /> Refresh
         </button>
       </div>
+
+      {loading && runs.length === 0 && (
+        <div className="wf-history-loading" aria-busy="true">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="wf-history-skeleton-row">
+              <Skeleton variant="bar" width="10px" height="10px" />
+              <Skeleton variant="bar" width="120px" />
+              <Skeleton variant="bar" width="40px" />
+            </div>
+          ))}
+        </div>
+      )}
 
       {!loading && runs.length === 0 && (
         <div className="wf-history-empty">

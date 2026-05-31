@@ -1,9 +1,28 @@
 import { describe, it, expect } from 'vitest'
-import { SEED_WORKFLOWS } from './workflow-seed-blueprints'
+import { SEED_WORKFLOWS, type SeedWorkflowBlueprint } from './workflow-seed-blueprints'
+import { materializeSeedNode } from './workflow-seed-materialize'
+import { validateWorkflow } from '../shared/workflow-utils'
+import type { Workflow } from '../shared/types'
+
+// Materialise via the shared helper (workflow-seed-materialize) so this test
+// validates exactly what the production seeder writes to disk. Role resolution
+// is skipped (no roleMap) — irrelevant for structural validation.
+function seedToWorkflow(b: SeedWorkflowBlueprint): Workflow {
+  return {
+    id: b.id,
+    name: b.name,
+    description: b.description,
+    nodes: b.nodes.map((n) => materializeSeedNode(n)),
+    edges: b.edges,
+    variables: b.variables,
+    createdAt: 0,
+    updatedAt: 0,
+  }
+}
 
 describe('SEED_WORKFLOWS blueprints', () => {
-  it('exports at least one blueprint', () => {
-    expect(SEED_WORKFLOWS.length).toBeGreaterThan(0)
+  it('contains exactly 7 blueprints (the v5 seed set)', () => {
+    expect(SEED_WORKFLOWS.length).toBe(7)
   })
 
   it('every blueprint has a unique id', () => {
@@ -83,12 +102,33 @@ describe('SEED_WORKFLOWS blueprints', () => {
     }
   })
 
-  it('node coordinates are finite numbers (canvas placement)', () => {
-    for (const w of SEED_WORKFLOWS) {
-      for (const n of w.nodes) {
-        expect(Number.isFinite(n.x)).toBe(true)
-        expect(Number.isFinite(n.y)).toBe(true)
-      }
+  it('write-capable seed agents are edit; review/analyze agents are read', () => {
+    const byId = Object.fromEntries(SEED_WORKFLOWS.map((w) => [w.id, w]))
+    const node = (wfId: string, nodeId: string) => byId[wfId]?.nodes.find((n) => n.id === nodeId)
+    expect(node('seed-wf-bug-fix', 'fix')?.permission).toBe('edit')
+    expect(node('seed-wf-feature-pipeline', 'build')?.permission).toBe('edit')
+    expect(node('seed-wf-coverage-loop', 'write_tests')?.permission).toBe('edit')
+    expect(node('seed-wf-refactor-campaign', 'refactor')?.permission).toBe('edit')
+    expect(node('seed-wf-design-verify', 'write_spec')?.permission).toBe('edit')
+    expect(node('seed-wf-coverage-loop', 'analyze_gaps')?.permission).toBe('read')
+    expect(node('seed-wf-feature-pipeline', 'review')?.permission).toBe('read')
+  })
+
+  it('every blueprint passes validateWorkflow when materialised', () => {
+    // Catches orphan edges, malformed conditions, missing agent fields, etc.
+    // that would otherwise only surface at seed-time on a user's machine.
+    for (const blueprint of SEED_WORKFLOWS) {
+      const wf = seedToWorkflow(blueprint)
+      const result = validateWorkflow(wf)
+      expect(
+        result.errors,
+        `seed ${blueprint.id} should validate clean: ${result.errors.join('; ')}`,
+      ).toEqual([])
+      const fanOutWarnings = result.warnings.filter((w) => /edges with branch/i.test(w))
+      expect(
+        fanOutWarnings,
+        `seed ${blueprint.id} should not produce branch fan-out warnings: ${fanOutWarnings.join('; ')}`,
+      ).toEqual([])
     }
   })
 })

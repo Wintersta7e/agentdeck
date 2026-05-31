@@ -41,6 +41,14 @@ export interface NotificationsSlice {
 
 const MAX_NOTIFICATIONS = 50
 
+/**
+ * Hard ceiling on how long a confirm prompt may wait for resolution before
+ * auto-cancelling. Confirm-kind notifications are not currently rendered by
+ * any UI; without this timeout, awaiting callers (e.g. closeSession via
+ * promptDirtyWorktree) would block their inFlight guard forever.
+ */
+const CONFIRM_TIMEOUT_MS = 60_000
+
 export const createNotificationsSlice: StateCreator<AppState, [], [], NotificationsSlice> = (
   set,
 ) => ({
@@ -64,17 +72,35 @@ export const createNotificationsSlice: StateCreator<AppState, [], [], Notificati
   addConfirmNotification: (payload) => {
     return new Promise((resolve) => {
       const id = `n-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      let settled = false
+      const settle = (value: string): void => {
+        if (settled) return
+        settled = true
+        clearTimeout(timeoutHandle)
+        set((s) => ({ notifications: s.notifications.filter((n) => n.id !== id) }))
+        resolve(value)
+      }
+      // Safety net: if no UI ever resolves this prompt (e.g. no renderer
+      // mounts a confirm-dialog consumer), auto-resolve as 'cancel' after
+      // CONFIRM_TIMEOUT_MS so callers like closeSession can't deadlock and
+      // leak their inFlight guard forever.
+      const timeoutHandle = setTimeout(() => {
+        if (settled) return
+        void window.agentDeck.log.send(
+          'warn',
+          'notifications',
+          `confirm "${payload.title}" timed out after ${CONFIRM_TIMEOUT_MS}ms — resolving as cancel`,
+        )
+        settle('cancel')
+      }, CONFIRM_TIMEOUT_MS)
       const notification: ConfirmNotification = {
         id,
         kind: 'confirm',
         title: payload.title,
         options: payload.options,
-        resolve: (value) => {
-          set((s) => ({ notifications: s.notifications.filter((n) => n.id !== id) }))
-          resolve(value)
-        },
+        resolve: settle,
       }
-      set((s) => ({ notifications: [...s.notifications, notification] }))
+      set((s) => ({ notifications: [...s.notifications, notification].slice(-MAX_NOTIFICATIONS) }))
     })
   },
 

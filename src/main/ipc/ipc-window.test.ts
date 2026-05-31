@@ -1,23 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { makeHandlersMap, makeIpcCall, makeIpcElectronMock } from '../../__test__/ipc-harness'
 
-const handlers = new Map<string, (...args: unknown[]) => unknown>()
-
-vi.mock('electron', () => ({
-  app: { getVersion: () => '5.0.1' },
-  ipcMain: {
-    handle: (channel: string, fn: (...args: unknown[]) => unknown) => {
-      handlers.set(channel, fn)
-    },
-  },
-}))
+const handlers = makeHandlersMap()
+vi.mock('electron', () => makeIpcElectronMock(handlers, { app: { getVersion: () => '5.0.1' } }))
 
 const { registerWindowHandlers } = await import('./ipc-window')
 
-function call(channel: string, ...args: unknown[]): unknown {
-  const fn = handlers.get(channel)
-  if (!fn) throw new Error(`no handler for ${channel}`)
-  return fn(null, ...args)
-}
+const call = makeIpcCall(handlers)
 
 interface MiniPrefs {
   zoomFactor?: number

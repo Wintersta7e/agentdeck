@@ -47,7 +47,9 @@ export const AGENTS = [
     latestCmd: 'npm view @anthropic-ai/claude-code version 2>/dev/null',
     updateCmd: 'npm install -g @anthropic-ai/claude-code@latest',
     printFlags: ['--print'],
-    cdFlag: '--directory',
+    // No cdFlag: claude-code has no working-directory option (it operates on the
+    // cwd), so the runner cd's into the project dir instead. (`--directory` does
+    // not exist and makes every agent node exit 1.)
     colorVar: '--agent-claude',
     short: 'CC',
   },
@@ -64,7 +66,11 @@ export const AGENTS = [
     updateCmd: 'npm install -g @openai/codex@latest',
     printFlags: ['exec'],
     cdFlag: '-C',
-    engineFlags: ['--skip-git-repo-check'],
+    // --disable hooks: workflow agent runs are headless, so the user's
+    // interactive codex hooks/plugins (UserPromptSubmit, PreToolUse, npx plugin
+    // hooks) must not fire here — they can execute prompt/context content and
+    // break the run.
+    engineFlags: ['--skip-git-repo-check', '--disable', 'hooks'],
     colorVar: '--agent-codex',
     short: 'CX',
     supportsSkills: true,
@@ -92,9 +98,16 @@ export const AGENTS = [
     contextWindow: 128_000,
     versionArgs: ['version'],
     // Goose is installed via shell script (curl | bash), not pip.
-    // No reliable remote version check — leave empty to skip update notifications.
-    latestCmd: '',
-    updateCmd: 'curl -fsSL https://github.com/block/goose/raw/main/download.sh | bash',
+    // Project moved from block/goose to aaif-goose/goose (Linux Foundation AAIF)
+    // and switched to a release-asset installer; the old block/goose URL 404s
+    // through the GitHub redirect. latestCmd reads the GitHub releases API and
+    // returns the tag (e.g. "v1.34.1") — SEMVER_RE in agent-updater strips the
+    // "v" prefix on parse. Network failure / rate limit / missing tag_name all
+    // produce empty stdout, which the updater treats as "skip the check."
+    latestCmd:
+      "curl -fsSL https://api.github.com/repos/aaif-goose/goose/releases/latest 2>/dev/null | python3 -c \"import json,sys; print(json.load(sys.stdin).get('tag_name',''))\" 2>/dev/null",
+    updateCmd:
+      'curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh | bash',
     printFlags: ['run', '-t'],
     colorVar: '--agent-goose',
     short: 'GS',
@@ -177,6 +190,37 @@ export const AGENT_CD_FLAG_MAP: Readonly<Record<string, string>> = Object.freeze
 export const AGENT_ENGINE_FLAGS_MAP: Readonly<Record<string, readonly string[]>> = Object.freeze(
   Object.fromEntries(AGENTS.flatMap((a) => ('engineFlags' in a ? [[a.id, a.engineFlags]] : []))),
 )
+
+/** Sandbox/permission level for an agent node; unset ⇒ 'read'. */
+export type AgentPermission = 'read' | 'edit' | 'full'
+
+/** Agent ID → permission level → CLI flags. Only agents with a real
+ *  sandbox/permission model appear here; everything else maps to no flags. */
+export const AGENT_PERMISSION_FLAGS: Readonly<
+  Record<string, Readonly<Record<AgentPermission, readonly string[]>>>
+> = Object.freeze({
+  'claude-code': {
+    // read: no flag. Plan mode (--permission-mode plan) makes headless claude
+    // deliberate ~2x slower, timing out analysis nodes on large projects;
+    // default mode reads/analyses fine and read nodes do not write.
+    read: [],
+    edit: ['--permission-mode', 'acceptEdits'],
+    full: ['--dangerously-skip-permissions'],
+  },
+  codex: {
+    read: ['--sandbox', 'read-only'],
+    edit: ['--sandbox', 'workspace-write'],
+    full: ['--dangerously-bypass-approvals-and-sandbox'],
+  },
+})
+
+/** Flags for an agent at a permission level. Empty for agents with no model. */
+export function getPermissionFlags(
+  agentId: string,
+  permission: AgentPermission,
+): readonly string[] {
+  return AGENT_PERMISSION_FLAGS[agentId]?.[permission] ?? []
+}
 
 /** Agent ID → CSS variable name (without `var()`) for the agent's signature color */
 export const AGENT_COLOR_VAR_MAP: Readonly<Record<string, string>> = Object.freeze(

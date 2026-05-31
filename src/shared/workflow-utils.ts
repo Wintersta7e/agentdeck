@@ -128,6 +128,15 @@ export function validateWorkflow(w: unknown): ValidationResult {
       }
     }
 
+    // ── Permission validation (agent-only field) ────────────
+    if (n.permission !== undefined) {
+      if (n.type !== 'agent') {
+        errors.push(`Node "${String(n.id)}": permission is only valid on agent nodes`)
+      } else if (!['read', 'edit', 'full'].includes(n.permission as string)) {
+        errors.push(`Node "${String(n.id)}": permission must be 'read', 'edit', or 'full'`)
+      }
+    }
+
     // ── Skill validation (registry-driven supportsSkills check) ─
     if (n.skillId !== undefined && typeof n.skillId === 'string' && n.skillId.length > 0) {
       if (n.type !== 'agent') {
@@ -218,6 +227,9 @@ export function validateWorkflow(w: unknown): ValidationResult {
   // ── Edge validation ──────────────────────────────────────────
   const nodeIds = new Set(nodeMap.keys())
 
+  // Track loop edge count per (fromNodeId, branch) to catch duplicates
+  const loopEdgeKey = new Map<string, number>()
+
   // Track branch values per condition node for fan-out warning
   const branchesPerCondition = new Map<string, Map<string, number>>()
 
@@ -237,8 +249,9 @@ export function validateWorkflow(w: unknown): ValidationResult {
       if (fromNode && fromNode.type !== 'condition') {
         errors.push(`Edge ${e.id} has branch but fromNodeId is not a condition node`)
       }
-      // Track for fan-out warning
-      if (fromNode && fromNode.type === 'condition') {
+      // Track for fan-out warning — loop edges are intentionally co-located
+      // with a normal escape edge on the same branch, so exclude them here.
+      if (fromNode && fromNode.type === 'condition' && e.edgeType !== 'loop') {
         if (!branchesPerCondition.has(e.fromNodeId)) {
           branchesPerCondition.set(e.fromNodeId, new Map())
         }
@@ -264,6 +277,16 @@ export function validateWorkflow(w: unknown): ValidationResult {
       }
       if (fromNode && fromNode.type !== 'condition') {
         errors.push(`Loop edge ${e.id} fromNodeId must be a condition node`)
+      }
+      // Duplicate loop edge per (condition, branch) — engine picks only the
+      // first, so a second one would be silently ignored.
+      const key = `${e.fromNodeId}:${e.branch ?? 'none'}`
+      const n = (loopEdgeKey.get(key) ?? 0) + 1
+      loopEdgeKey.set(key, n)
+      if (n === 2) {
+        errors.push(
+          `Node ${e.fromNodeId} has more than one loop edge per branch "${e.branch ?? 'none'}"`,
+        )
       }
     }
   }

@@ -46,21 +46,7 @@ function syncViewport(term: Terminal): void {
 // (tab switch), the Terminal instance is cached here instead of being disposed.
 // The next mount for the same sessionId reclaims it, preserving scrollback
 // and full terminal state (cursor position, alternate buffer, colors, etc.).
-interface CachedTerminal {
-  term: Terminal
-  fit: FitAddon
-  webgl: WebglAddon | null
-  search: SearchAddon | null
-  hiddenBuffer: string[]
-  mirror: TerminalGridMirror
-}
-const terminalCache = new Map<string, CachedTerminal>()
-
-// Module-level map for render-time access to SearchAddon instances.
-// Using a module-scope Map (like terminalCache) avoids ESLint react-hooks/refs
-// (can't read useRef.current in render) and react-hooks/immutability (can't
-// mutate useMemo results). The Map is populated in useEffect and read in JSX.
-const searchAddonMap = new Map<string, SearchAddon>()
+import { terminalCache, searchAddonMap, disposeCachedTerminal } from './terminal-cache'
 
 interface TerminalPaneProps {
   sessionId: string
@@ -457,7 +443,7 @@ export function TerminalPane({
             : startupRef.current
 
         try {
-          await window.agentDeck.pty.spawn(
+          const result = await window.agentDeck.pty.spawn(
             sessionId,
             cols,
             rows,
@@ -468,6 +454,20 @@ export function TerminalPane({
             agentFlagsRef.current,
           )
           if (cancelled) return
+          if (!result.ok) {
+            window.agentDeck.log.send('error', 'terminal-pane', 'pty.spawn failed', {
+              sessionId,
+              error: result.error,
+            })
+            useAppStore
+              .getState()
+              .addNotification(
+                'error',
+                `Failed to start session: ${result.error ?? 'unknown error'}`,
+              )
+            applySessionStatus(sessionId, 'error')
+            return
+          }
           // Bind cost tracking (best-effort, fire-and-forget)
           window.agentDeck.cost
             .bind(sessionId, {
@@ -583,21 +583,7 @@ export function TerminalPane({
       // (unmounted and cached for reattachment). Without this, the cached
       // Terminal + WebGL context leak indefinitely. The session itself
       // persists in the store so the user can review before closing the tab.
-      const stale = terminalCache.get(sessionId)
-      if (stale) {
-        terminalCache.delete(sessionId)
-        searchAddonMap.delete(sessionId)
-        try {
-          stale.webgl?.dispose()
-        } catch {
-          /* WebGL context already lost */
-        }
-        try {
-          stale.term.dispose()
-        } catch {
-          /* host element already detached */
-        }
-      }
+      disposeCachedTerminal(sessionId)
     })
 
     let resizeTimeout: ReturnType<typeof setTimeout> | undefined

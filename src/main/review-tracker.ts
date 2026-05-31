@@ -1,4 +1,5 @@
 import type { ReviewItem, ReviewFile } from '../shared/types'
+import { evictOldestFromMap } from './map-utils'
 
 const MAX_REVIEWS = 100
 
@@ -38,10 +39,7 @@ export function createReviewTracker(): ReviewTracker {
         status: 'pending',
       }
       items.set(id, item)
-      if (items.size > MAX_REVIEWS) {
-        const oldest = items.keys().next().value
-        if (oldest !== undefined) items.delete(oldest)
-      }
+      evictOldestFromMap(items, MAX_REVIEWS)
       return item
     },
 

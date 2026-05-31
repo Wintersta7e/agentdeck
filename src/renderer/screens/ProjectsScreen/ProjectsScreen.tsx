@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Plus } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { Pin, PinOff, Plus, Settings } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import { useProjects } from '../../hooks/useProjects'
 import { useGitStatusBatch } from '../../hooks/useGitStatus'
@@ -26,6 +26,7 @@ export function ProjectsScreen({
   const projects = useAppStore((s) => s.projects)
   const gitStatusesByProject = useAppStore((s) => s.gitStatuses)
   const openWizard = useAppStore((s) => s.openWizard)
+  const openSettings = useAppStore((s) => s.openSettings)
 
   const { updateProject } = useProjects()
   const [filter, setFilter] = useState<FilterId>('all')
@@ -83,9 +84,21 @@ export function ProjectsScreen({
       })
   }, [projects, filter, query, dirtyIds])
 
-  // Pin toggling currently lives in the Home screen + ProjectSettings. Kept
-  // here as a private helper in case we surface it via context menu later.
-  void updateProject
+  useEffect(() => {
+    if (!cardMenu) return
+    function onOutside(): void {
+      setCardMenu(null)
+    }
+    function onKey(e: KeyboardEvent): void {
+      if (e.key === 'Escape') setCardMenu(null)
+    }
+    window.addEventListener('click', onOutside)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('click', onOutside)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [cardMenu])
 
   return (
     <ScreenShell
@@ -177,11 +190,11 @@ export function ProjectsScreen({
             <div
               className="projects-screen__menu"
               style={{
-                top: Math.min(cardMenu.y, window.innerHeight - 240),
-                left: Math.min(cardMenu.x, window.innerWidth - 200),
+                top: Math.min(cardMenu.y, window.innerHeight - 280),
+                left: Math.min(cardMenu.x, window.innerWidth - 220),
               }}
               role="menu"
-              onMouseLeave={() => setCardMenu(null)}
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="projects-screen__menu-head">Launch with…</div>
               {projectAgents.map((ac) => {
@@ -191,6 +204,7 @@ export function ProjectsScreen({
                     key={ac.agent}
                     type="button"
                     className="projects-screen__menu-item"
+                    role="menuitem"
                     onClick={() => {
                       onOpenProjectWithAgent(project, ac)
                       setCardMenu(null)
@@ -202,6 +216,38 @@ export function ProjectsScreen({
                   </button>
                 )
               })}
+
+              <div className="projects-screen__menu-sep" role="separator" />
+
+              <button
+                type="button"
+                className="projects-screen__menu-item"
+                role="menuitem"
+                onClick={() => {
+                  openSettings(project.id)
+                  setCardMenu(null)
+                }}
+              >
+                <span className="projects-screen__menu-icon" aria-hidden="true">
+                  <Settings size={14} />
+                </span>
+                <span>Edit project…</span>
+              </button>
+
+              <button
+                type="button"
+                className="projects-screen__menu-item"
+                role="menuitem"
+                onClick={() => {
+                  void updateProject({ ...project, pinned: !project.pinned })
+                  setCardMenu(null)
+                }}
+              >
+                <span className="projects-screen__menu-icon" aria-hidden="true">
+                  {project.pinned ? <PinOff size={14} /> : <Pin size={14} />}
+                </span>
+                <span>{project.pinned ? 'Unpin' : 'Pin'}</span>
+              </button>
             </div>
           )
         })()}

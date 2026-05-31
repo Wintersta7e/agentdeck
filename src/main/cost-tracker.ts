@@ -18,13 +18,22 @@ const log = createLogger('cost-tracker')
 // ── Constants ───────────────────────────────────────────────────────
 
 /** How often to poll for the log file during discovery (ms). */
-const DISCOVERY_INTERVAL_MS = 2000
+export const DISCOVERY_INTERVAL_MS = 2000
 
 /** How often to poll the log file for new content once bound (ms). */
-const TAIL_INTERVAL_MS = 3000
+export const TAIL_INTERVAL_MS = 5000
 
 /** Timeout for individual WSL exec calls (ms). */
 const WSL_TIMEOUT_MS = 5000
+
+/**
+ * Hard cap on how long discovery may poll for a log file. Agents typically
+ * write their log within seconds of the first prompt; if 10 min pass with
+ * nothing matching, the session likely won't produce a log this run
+ * (user never sent a prompt, agent crashed, log path overridden, etc.).
+ * Capping prevents idle terminals from burning wsl.exe forever.
+ */
+const DISCOVERY_MAX_AGE_MS = 10 * 60 * 1000
 
 /**
  * Minimum cost delta (USD) we'll record. Chosen well below legitimate
@@ -85,24 +94,41 @@ export function createCostTracker(
   /** File paths already bound to a session — prevents cross-session matching. */
   const boundFiles = new Set<string>()
 
-  // Resolve $HOME once at tracker creation so all sessions share
-  // the cached value. Eliminates repeated wsl.exe calls that fail under
-  // WSL resource contention when multiple sessions start simultaneously.
+  // Resolve $HOME lazily; the first session bind kicks it off. Multiple
+  // concurrent binds share the same in-flight promise (no stampede). On
+  // failure we leave cachedHome null so the next bind retries — caching
+  // '' here used to permanently break cost tracking for the process if
+  // the initial wsl.exe call failed (e.g. WSL transient resource error).
   let cachedHome: string | null = null
-  const homeReady: Promise<string> = wslExec('echo "$HOME"')
-    .then((out) => {
-      const home = out.trim()
-      cachedHome = home
-      log.info('Resolved WSL $HOME', { home })
-      return home
-    })
-    .catch((err) => {
-      log.warn('Failed to resolve WSL $HOME — cost tracking may not work', {
-        err: String(err),
+  let inFlightHome: Promise<string> | null = null
+
+  function resolveHome(): Promise<string> {
+    if (cachedHome) return Promise.resolve(cachedHome)
+    if (inFlightHome) return inFlightHome
+    inFlightHome = wslExec('echo "$HOME"')
+      .then((out) => {
+        const home = out.trim()
+        if (home) {
+          cachedHome = home
+          log.info('Resolved WSL $HOME', { home })
+        }
+        return home
       })
-      cachedHome = ''
-      return ''
-    })
+      .catch((err) => {
+        log.warn('Failed to resolve WSL $HOME — will retry on next session', {
+          err: String(err),
+        })
+        return ''
+      })
+      .finally(() => {
+        inFlightHome = null
+      })
+    return inFlightHome
+  }
+
+  // Kick off eager resolution so the common case (first session arrives
+  // shortly after createCostTracker) doesn't pay the wsl.exe latency.
+  void resolveHome()
 
   // Resolve agent config env vars from WSL (CLAUDE_CONFIG_DIR, CODEX_HOME).
   // These override the default ~/.claude and ~/.codex base paths.
@@ -142,10 +168,21 @@ export function createCostTracker(
   // ── Discovery ───────────────────────────────────────────────────
 
   function startDiscovery(session: BoundSession): void {
+    // Stop polling once the discovery window has elapsed. The session stays
+    // bound (so an explicit unbind on PTY exit still releases its file), but
+    // we no longer spawn wsl.exe for it.
+    if (Date.now() - session.spawnAt > DISCOVERY_MAX_AGE_MS) {
+      log.info('Discovery age limit reached, giving up on log file', {
+        sessionId: session.sessionId,
+        ageMs: Date.now() - session.spawnAt,
+      })
+      return
+    }
     const pattern = session.adapter.getFilePattern()
 
-    // Use cached values if available; otherwise wait for initial resolution.
-    const homePromise = cachedHome !== null ? Promise.resolve(cachedHome) : homeReady
+    // resolveHome() handles its own caching + retry; envPromise still falls
+    // back to the in-flight initial resolution when no cached value exists.
+    const homePromise = resolveHome()
     const envPromise = cachedEnv !== null ? Promise.resolve(cachedEnv) : envReady
 
     Promise.all([homePromise, envPromise])

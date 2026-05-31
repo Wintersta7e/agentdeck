@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { AGENTS } from '../../../shared/agents'
-import { AGENT_BY_ID, agentColorVar, agentShort } from '../../utils/agent-ui'
+import { AGENT_BY_ID, agentColorVar, agentShort, getSessionAgentId } from '../../utils/agent-ui'
 import { useEffectiveContext, badgeLabelFor } from '../../hooks/useEffectiveContext'
 import type { AgentType } from '../../../shared/types'
 import './AgentChipB1.css'
@@ -22,17 +22,19 @@ interface AgentChipProps {
  */
 export function AgentChipB1({ agentId }: AgentChipProps): React.JSX.Element {
   const sessions = useAppStore((s) => s.sessions)
+  const projects = useAppStore((s) => s.projects)
   const agent = AGENT_BY_ID.get(agentId)
 
   const ctx = useEffectiveContext(agentId)
 
-  const runningCount = useMemo(
-    () =>
-      Object.values(sessions).filter(
-        (sess) => sess.status === 'running' && (sess.agentOverride ?? 'claude-code') === agentId,
-      ).length,
-    [sessions, agentId],
-  )
+  const runningCount = useMemo(() => {
+    const projectById = new Map(projects.map((p) => [p.id, p]))
+    return Object.values(sessions).filter(
+      (sess) =>
+        sess.status === 'running' &&
+        getSessionAgentId(sess, projectById.get(sess.projectId)) === agentId,
+    ).length
+  }, [sessions, projects, agentId])
 
   if (!agent) return <></>
 

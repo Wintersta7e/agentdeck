@@ -1,7 +1,54 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useAppStore } from '../appStore'
 
-describe('openSession + pruneSessionFromTabs (§7.1)', () => {
+describe('sessions slice — addSession lifecycle', () => {
+  beforeEach(() => {
+    useAppStore.setState(useAppStore.getInitialState())
+  })
+
+  it('adds a session and makes it active + switches view to sessions', () => {
+    useAppStore.getState().addSession('s1', 'proj-1')
+    const state = useAppStore.getState()
+    expect(state.sessions['s1']).toBeDefined()
+    expect(state.sessions['s1']?.projectId).toBe('proj-1')
+    expect(state.sessions['s1']?.status).toBe('starting')
+    expect(state.activeSessionId).toBe('s1')
+    expect(state.currentView).toBe('sessions')
+  })
+
+  it('removeSession marks session exited and falls back to home when last', () => {
+    useAppStore.getState().addSession('s1', 'proj-1')
+    useAppStore.getState().removeSession('s1')
+    const state = useAppStore.getState()
+    expect(state.sessions['s1']?.status).toBe('exited')
+    expect(state.currentView).toBe('home')
+  })
+
+  it('removeSession with siblings preserves the others', () => {
+    useAppStore.getState().addSession('s1', 'proj-1')
+    useAppStore.getState().addSession('s2', 'proj-2')
+    useAppStore.getState().removeSession('s1')
+    const state = useAppStore.getState()
+    expect(state.sessions['s1']?.status).toBe('exited')
+    expect(state.sessions['s2']).toBeDefined()
+  })
+
+  it('restartSession preserves agent overrides', () => {
+    useAppStore.getState().addSession('s1', 'proj-1', {
+      agentOverride: 'codex',
+      agentFlagsOverride: '--fast',
+    })
+    const newId = useAppStore.getState().restartSession('s1')
+    expect(typeof newId).toBe('string')
+    expect(newId).not.toBe('')
+    const newSession = newId ? useAppStore.getState().sessions[newId] : undefined
+    expect(newSession?.agentOverride).toBe('codex')
+    expect(newSession?.agentFlagsOverride).toBe('--fast')
+    expect(newSession?.status).toBe('starting')
+  })
+})
+
+describe('sessions slice — openSession + pruneSessionFromTabs', () => {
   beforeEach(() => {
     useAppStore.setState({
       sessions: {},

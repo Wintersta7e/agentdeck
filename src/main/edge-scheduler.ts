@@ -18,6 +18,11 @@ export interface EdgeScheduler {
   skipNode(nodeId: string): void
   /** Condition node completed: activate matching branch, skip unmatched branch. */
   resolveCondition(nodeId: string, branch: 'true' | 'false'): void
+  /** Like resolveCondition, but for a condition used inside a loop: the loop
+   *  branch's forward (escape) edge is left dormant rather than activated, so
+   *  the escape node is not enqueued until maxIterations is exhausted. The
+   *  opposite branch is activated as skipped. */
+  resolveConditionLooping(nodeId: string, branch: 'true' | 'false'): void
   /** Get current status of a node. */
   getNodeStatus(nodeId: string): WorkflowNodeStatus
   /** True when all nodes are done, skipped, or errored (nothing running or pending). */
@@ -45,16 +50,12 @@ export function createScheduler(
   nodes: ReadonlyArray<WorkflowNode>,
   edges: ReadonlyArray<WorkflowEdge>,
 ): EdgeScheduler {
-  // Partition edges: forward vs loop
+  // Only forward edges drive the ready-queue / pending model. Loop edges
+  // (edgeType === 'loop') are handled by the engine via resetLoopSubgraph, so
+  // they are excluded from the scheduler's adjacency entirely.
   const forwardEdges: WorkflowEdge[] = []
-  const loopEdges: WorkflowEdge[] = []
-
   for (const edge of edges) {
-    if (edge.edgeType === 'loop') {
-      loopEdges.push(edge)
-    } else {
-      forwardEdges.push(edge)
-    }
+    if (edge.edgeType !== 'loop') forwardEdges.push(edge)
   }
 
   // Build adjacency: outgoing forward edges per node
@@ -161,6 +162,37 @@ export function createScheduler(
     }
   }
 
+  /**
+   * Shared condition resolution: mark the condition done and activate its
+   * outgoing forward edges by branch. When `keepMatchingDormant` is true (a
+   * looping condition), the matching (loop) branch's forward edge — the escape —
+   * is left dormant: its pending count is untouched so it never becomes ready
+   * while iterating. The escape fires only when the engine resolves the
+   * condition normally (keepMatchingDormant=false) at maxIterations exhaustion.
+   */
+  function resolveConditionEdges(
+    nodeId: string,
+    branch: 'true' | 'false',
+    keepMatchingDormant: boolean,
+  ): void {
+    const state = getState(nodeId)
+    if (state.status !== 'running') return // WF-5: guard against double-resolve
+    state.status = 'done'
+    activeCount--
+
+    const edges = outgoing.get(nodeId) ?? []
+    for (const edge of edges) {
+      if (edge.branch === branch) {
+        if (keepMatchingDormant) continue // loop branch: leave forward edge dormant
+        activateEdge(edge, false) // matching branch: activate as non-skipped
+      } else if (edge.branch !== undefined) {
+        activateEdge(edge, true) // non-matching branch: activate as skipped
+      } else {
+        activateEdge(edge, false) // unconditional edge from condition: activate normally
+      }
+    }
+  }
+
   // ── Scheduler interface ─────────────────────────────────
 
   return {
@@ -170,7 +202,11 @@ export function createScheduler(
         const id = readyQueue.shift()
         if (id === undefined) break
         const state = stateMap.get(id)
-        if (state && state.status === 'idle') {
+        // Guard pending === 0: a loop reset can restore an exit target's pending
+        // count after it was already enqueued (a stale entry), so an 'idle'
+        // status alone is not enough — only run nodes whose dependencies are
+        // genuinely satisfied. The node is re-enqueued when its pending hits 0.
+        if (state && state.status === 'idle' && state.pending === 0) {
           state.status = 'running'
           result.push(state.node)
         }
@@ -205,24 +241,11 @@ export function createScheduler(
     },
 
     resolveCondition(nodeId: string, branch: 'true' | 'false'): void {
-      const state = getState(nodeId)
-      if (state.status !== 'running') return // WF-5: guard against double-resolve
-      state.status = 'done'
-      activeCount--
+      resolveConditionEdges(nodeId, branch, false)
+    },
 
-      const edges = outgoing.get(nodeId) ?? []
-      for (const edge of edges) {
-        if (edge.branch === branch) {
-          // Matching branch: activate as non-skipped
-          activateEdge(edge, false)
-        } else if (edge.branch !== undefined) {
-          // Non-matching branch: activate as skipped
-          activateEdge(edge, true)
-        } else {
-          // Unconditional edge from condition: activate normally
-          activateEdge(edge, false)
-        }
-      }
+    resolveConditionLooping(nodeId: string, branch: 'true' | 'false'): void {
+      resolveConditionEdges(nodeId, branch, true)
     },
 
     getNodeStatus(nodeId: string): WorkflowNodeStatus {
@@ -286,23 +309,34 @@ export function createScheduler(
 
       // 4. Reset exit targets: nodes outside the subgraph that receive forward
       //    edges from subgraph nodes (typically the condition's exit edges).
-      //    These may have been skipped in a prior iteration and need to be
-      //    re-activatable when the condition re-resolves.
+      //    These may have been skipped — or only *partially* skip-activated — in
+      //    a prior iteration and need to be re-activatable when the condition
+      //    re-resolves. A target shared by two in-subgraph sources (e.g. one
+      //    escape checkpoint fed by two sibling loop conditions) can sit 'idle'
+      //    with a partially-decremented pending count; it must be restored too,
+      //    or the repeated skip-activations of the non-looping sibling accumulate
+      //    and fire the escape before the loop actually exhausts. Restore each
+      //    exit target at most once, and only re-increment activeCount for a
+      //    terminal (skipped/done) target — an 'idle' one never left the active set.
+      const restoredExitTargets = new Set<string>()
       for (const id of subgraphIds) {
         const edges = outgoing.get(id) ?? []
         for (const edge of edges) {
           if (subgraphIds.has(edge.toNodeId)) continue // intra-loop, already handled
           const target = stateMap.get(edge.toNodeId)
           if (!target) continue
-          if (target.status !== 'skipped' && target.status !== 'done') continue
+          // Don't disturb in-flight nodes; restore each target once per reset.
+          if (target.status === 'running' || target.status === 'paused') continue
+          if (restoredExitTargets.has(edge.toNodeId)) continue
+          restoredExitTargets.add(edge.toNodeId)
+          const wasTerminal = target.status === 'skipped' || target.status === 'done'
 
           // Restore the original incoming forward edge set and pending count
           const originalIncoming = incomingForward.get(edge.toNodeId) ?? []
           target.incomingForwardEdgeIds = new Set(originalIncoming.map((e) => e.id))
           target.pending = originalIncoming.length
           target.skippedEdgeIds = new Set()
-          // Re-increment for exit target reset (status is 'skipped' or 'done' here)
-          activeCount++
+          if (wasTerminal) activeCount++
           target.status = 'idle'
 
           // Re-apply any already-resolved edges from nodes outside the subgraph

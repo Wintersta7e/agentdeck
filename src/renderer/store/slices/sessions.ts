@@ -12,6 +12,7 @@ import type {
 } from '../../../shared/types'
 import { ACTIVITY_FEED_CAP, MAX_EXITED_SESSIONS, MAX_PANE_COUNT } from '../../../shared/constants'
 import { nextApprovalState } from '../../../shared/approval-transitions'
+import { disposeCachedTerminal } from '../../components/Terminal/terminal-cache'
 
 export interface SessionsSlice {
   sessions: Record<string, Session>
@@ -286,6 +287,9 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
       if (exitedByAge.length > MAX_EXITED_SESSIONS) {
         const evictCount = exitedByAge.length - MAX_EXITED_SESSIONS
         const evictIds = new Set(exitedByAge.slice(0, evictCount).map(([id]) => id))
+        // Free any xterm + WebGL that was cached during a prior tab-switch
+        // unmount for these now-evicted sessions.
+        for (const id of evictIds) disposeCachedTerminal(id)
         const nextSessions: typeof sessions = {}
         for (const [id, s] of Object.entries(sessions)) {
           if (!evictIds.has(id)) nextSessions[id] = s

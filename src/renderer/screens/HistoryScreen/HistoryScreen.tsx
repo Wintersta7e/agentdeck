@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { useMidnight } from '../../hooks/useMidnight'
 import { AGENTS } from '../../../shared/agents'
+import { getSessionAgentId } from '../../utils/agent-ui'
 import { ScreenShell, FilterChip } from '../../components/shared/ScreenShell'
 import type { Session } from '../../../shared/types'
 import './HistoryScreen.css'
@@ -163,7 +164,8 @@ export function HistoryScreen(): React.JSX.Element {
               const usage = sessionUsage[session.id]
               const cost = usage?.totalCostUsd ?? 0
               const project = projectById.get(session.projectId)
-              const agent = AGENT_META_MAP.get(session.agentOverride ?? 'claude-code')
+              const agentId = getSessionAgentId(session, project)
+              const agent = AGENT_META_MAP.get(agentId)
               return (
                 <li key={session.id} className="history-log__row">
                   <button
@@ -174,7 +176,7 @@ export function HistoryScreen(): React.JSX.Element {
                     <span className="history-log__time">{formatTs(session.startedAt)}</span>
                     <span className="history-log__agent">
                       <span aria-hidden="true">{agent?.icon ?? '◈'}</span>
-                      {agent?.name ?? session.agentOverride ?? 'agent'}
+                      {agent?.name ?? agentId}
                     </span>
                     <span className="history-log__project">
                       {project?.name ?? (session.projectId || 'ad-hoc')}

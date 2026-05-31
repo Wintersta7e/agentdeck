@@ -64,7 +64,7 @@ export function AppRoutes({
         />
       )}
       {currentView === 'agents' && <AgentsScreen />}
-      {currentView === 'workflows' && !activeWorkflowId && <WorkflowsScreen />}
+      {currentView === 'workflows' && <WorkflowsScreen />}
       {currentView === 'history' && <HistoryScreen />}
       {currentView === 'alerts' && <AlertsScreen />}
       {currentView === 'app-settings' && <AppSettingsScreen />}
@@ -74,10 +74,9 @@ export function AppRoutes({
         {currentView === 'wizard' && <NewProjectWizard onCreateProject={onOpenProject} />}
         {currentView === 'settings' && <ProjectSettings key={settingsProjectId} />}
         {currentView === 'template-editor' && <TemplateEditor />}
-        {(currentView === 'workflow' || (currentView === 'workflows' && activeWorkflowId)) &&
-          activeWorkflowId && (
-            <WorkflowEditor key={activeWorkflowId} workflowId={activeWorkflowId} />
-          )}
+        {currentView === 'workflow' && activeWorkflowId && (
+          <WorkflowEditor key={activeWorkflowId} workflowId={activeWorkflowId} />
+        )}
       </Suspense>
     </>
   )

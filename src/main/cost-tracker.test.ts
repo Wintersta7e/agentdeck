@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { LogAdapter, TokenUsage } from './log-adapters'
+import { TAIL_INTERVAL_MS } from './cost-tracker'
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -262,6 +263,49 @@ describe('file discovery', () => {
     tracker.destroy()
   })
 
+  it('retries $HOME on next bind if the initial resolution failed', async () => {
+    let homeShouldFail = true
+    mockExecFile.mockImplementation(
+      (_bin: string, args: string[], _opts: unknown, cb: ExecFileCb) => {
+        const cmd = Array.isArray(args) ? args.join(' ') : ''
+        if (cmd.includes('echo "$HOME"')) {
+          if (homeShouldFail) {
+            cb(new Error('wsl.exe transient failure'), '', '')
+          } else {
+            cb(null, '/home/testuser\n', '')
+          }
+        } else if (cmd.includes('CLAUDE_CONFIG_DIR') || cmd.includes('CODEX_HOME')) {
+          cb(null, '\n', '')
+        } else {
+          cb(null, '', '')
+        }
+      },
+    )
+
+    const win = makeMockWindow()
+    const adapter = makeTestAdapter()
+    const tracker = createCostTracker(win, [adapter])
+
+    // First eager resolution fails — empty string, nothing cached.
+    await vi.advanceTimersByTimeAsync(0)
+    tracker.bindSession('s1', BIND_OPTS)
+    await vi.advanceTimersByTimeAsync(10)
+
+    // Flip the mock so the next attempt succeeds, then bind another session.
+    homeShouldFail = false
+    tracker.bindSession('s2', { ...BIND_OPTS })
+    await vi.advanceTimersByTimeAsync(10)
+
+    const homeCalls = mockExecFile.mock.calls.filter((c: unknown[]) => {
+      const args = c[1] as string[]
+      return Array.isArray(args) && args.join(' ').includes('echo "$HOME"')
+    }).length
+    // At least two calls: the failed initial + the retry on second bind.
+    expect(homeCalls).toBeGreaterThanOrEqual(2)
+
+    tracker.destroy()
+  })
+
   it('finds a log file and begins tailing', async () => {
     makeRoutingMock()
     const win = makeMockWindow()
@@ -276,7 +320,7 @@ describe('file discovery', () => {
     await vi.advanceTimersByTimeAsync(2000)
 
     // Tailing poll at 3s after discovery
-    await vi.advanceTimersByTimeAsync(3000)
+    await vi.advanceTimersByTimeAsync(TAIL_INTERVAL_MS)
 
     expect(win.webContents.send).toHaveBeenCalledWith(
       'cost:update',
@@ -412,7 +456,7 @@ describe('file discovery', () => {
     // Session 2 should now be able to claim the same file
     tracker.bindSession('s2', BIND_OPTS)
     await vi.advanceTimersByTimeAsync(2000)
-    await vi.advanceTimersByTimeAsync(3000) // tail poll
+    await vi.advanceTimersByTimeAsync(TAIL_INTERVAL_MS) // tail poll
 
     expect(win.webContents.send).toHaveBeenCalledWith(
       'cost:update',
@@ -453,7 +497,7 @@ describe('file tailing', () => {
     await vi.advanceTimersByTimeAsync(2000)
 
     // Tail poll
-    await vi.advanceTimersByTimeAsync(3000)
+    await vi.advanceTimersByTimeAsync(TAIL_INTERVAL_MS)
 
     // parseUsage should have been called for each complete line
     expect(parseUsage).toHaveBeenCalledTimes(2)
@@ -501,11 +545,11 @@ describe('file tailing', () => {
 
     // Discovery (find + head) + first tail
     await vi.advanceTimersByTimeAsync(2000)
-    await vi.advanceTimersByTimeAsync(3000)
+    await vi.advanceTimersByTimeAsync(TAIL_INTERVAL_MS)
     expect(parseUsage).toHaveBeenCalledTimes(1)
 
     // Second tail — completes the partial line
-    await vi.advanceTimersByTimeAsync(3000)
+    await vi.advanceTimersByTimeAsync(TAIL_INTERVAL_MS)
     expect(parseUsage).toHaveBeenCalledTimes(2)
 
     tracker.destroy()
@@ -539,11 +583,11 @@ describe('file tailing', () => {
 
     // Discovery + first tail
     await vi.advanceTimersByTimeAsync(2000)
-    await vi.advanceTimersByTimeAsync(3000)
+    await vi.advanceTimersByTimeAsync(TAIL_INTERVAL_MS)
     expect(parseUsage).toHaveBeenCalledTimes(1)
 
     // Truncation tail — re-polls immediately after reset, then the re-read
-    await vi.advanceTimersByTimeAsync(3000)
+    await vi.advanceTimersByTimeAsync(TAIL_INTERVAL_MS)
     expect(parseUsage).toHaveBeenCalledTimes(2)
 
     tracker.destroy()
@@ -560,7 +604,7 @@ describe('file tailing', () => {
 
     tracker.bindSession('s1', BIND_OPTS)
     await vi.advanceTimersByTimeAsync(2000)
-    await vi.advanceTimersByTimeAsync(3000)
+    await vi.advanceTimersByTimeAsync(TAIL_INTERVAL_MS)
 
     expect(send).not.toHaveBeenCalled()
 
@@ -581,7 +625,7 @@ describe('file tailing', () => {
 
     tracker.bindSession('s1', BIND_OPTS)
     await vi.advanceTimersByTimeAsync(2000)
-    await vi.advanceTimersByTimeAsync(3000)
+    await vi.advanceTimersByTimeAsync(TAIL_INTERVAL_MS)
 
     expect(parseUsage).not.toHaveBeenCalled()
 
@@ -626,9 +670,9 @@ describe('cost history persistence', () => {
     // Discovery (find + head)
     await vi.advanceTimersByTimeAsync(2000)
     // Tail poll 1
-    await vi.advanceTimersByTimeAsync(3000)
+    await vi.advanceTimersByTimeAsync(TAIL_INTERVAL_MS)
     // Tail poll 2
-    await vi.advanceTimersByTimeAsync(3000)
+    await vi.advanceTimersByTimeAsync(TAIL_INTERVAL_MS)
 
     expect(recordCost).toHaveBeenCalledTimes(2)
     // Poll 1 delta: $0.02, 300 tokens
@@ -664,7 +708,7 @@ describe('cost history persistence', () => {
 
     tracker.bindSession('s1', BIND_OPTS)
     await vi.advanceTimersByTimeAsync(2000)
-    await vi.advanceTimersByTimeAsync(3000)
+    await vi.advanceTimersByTimeAsync(TAIL_INTERVAL_MS)
 
     expect(recordCost).not.toHaveBeenCalled()
 
@@ -683,7 +727,7 @@ describe('cost history persistence', () => {
 
     tracker.bindSession('s1', BIND_OPTS)
     await vi.advanceTimersByTimeAsync(2000)
-    await vi.advanceTimersByTimeAsync(3000)
+    await vi.advanceTimersByTimeAsync(TAIL_INTERVAL_MS)
 
     // IPC still fires — back-compat guaranteed
     expect(win.webContents.send).toHaveBeenCalledWith(
@@ -718,7 +762,7 @@ describe('cost history persistence', () => {
     await vi.advanceTimersByTimeAsync(0)
     tracker.bindSession('s1', BIND_OPTS)
     await vi.advanceTimersByTimeAsync(2000)
-    await vi.advanceTimersByTimeAsync(3000)
+    await vi.advanceTimersByTimeAsync(TAIL_INTERVAL_MS)
 
     expect(recordCost).not.toHaveBeenCalled()
 

@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { WorkflowNode, WorkflowNodeStatus, AgentType, SkillInfo } from '../../../shared/types'
+import type {
+  WorkflowNode,
+  WorkflowNodeStatus,
+  AgentType,
+  AgentPermission,
+  SkillInfo,
+} from '../../../shared/types'
 import { AGENTS } from '../../../shared/agents'
 import { MS_PER_MINUTE } from '../../../shared/constants'
 import { useAppStore } from '../../store/appStore'
@@ -207,6 +213,27 @@ export default function WorkflowNodeEditorPanel({
                 </option>
               ))}
             </select>
+          </div>
+        )}
+
+        {/* Permissions dropdown (agent nodes only) */}
+        {node.type === 'agent' && (
+          <div className="wf-ne-field">
+            <label className="wf-ne-label">Permissions</label>
+            <select
+              className="wf-ne-select"
+              value={node.permission ?? 'read'}
+              onChange={(e) => update({ permission: e.target.value as AgentPermission })}
+            >
+              <option value="read">Read-only</option>
+              <option value="edit">Edit (read + write files)</option>
+              <option value="full">Full access</option>
+            </select>
+            {node.permission === 'full' && (
+              <p className="wf-ne-perm-warning">
+                Agent can write files and run any command autonomously.
+              </p>
+            )}
           </div>
         )}
 

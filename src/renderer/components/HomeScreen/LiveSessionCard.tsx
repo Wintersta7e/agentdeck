@@ -7,6 +7,7 @@ import {
   badgeLabelFor,
 } from '../../hooks/useEffectiveContext'
 import { AGENTS } from '../../../shared/agents'
+import { getSessionAgentId } from '../../utils/agent-ui'
 import type { ActivityEvent, ContextSource } from '../../../shared/types'
 import './LiveSessionCard.css'
 
@@ -62,8 +63,7 @@ export function LiveSessionCard({ sessionId }: LiveSessionCardProps): React.JSX.
     [projects, session?.projectId],
   )
 
-  const defaultAgent = project?.agents?.find((a) => a.isDefault)?.agent ?? project?.agent
-  const agentId = session?.agentOverride ?? defaultAgent ?? 'claude-code'
+  const agentId = getSessionAgentId(session, project)
   const meta = AGENT_META.get(agentId)
   const pulseClass = getPulseClass(latestActivity ?? undefined)
 
