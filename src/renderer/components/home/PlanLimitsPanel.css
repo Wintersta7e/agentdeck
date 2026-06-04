@@ -1,0 +1,68 @@
+.plan-limits {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+.plan-limits__agent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.plan-limits__agent-name {
+  font-size: var(--fs-sm);
+  color: var(--text1);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.plan-limits__gauges {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.plan-gauge {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+.plan-gauge__head {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--fs-sm);
+}
+.plan-gauge__label {
+  color: var(--text2);
+}
+.plan-gauge__pct {
+  color: var(--text0);
+  font-variant-numeric: tabular-nums;
+}
+.plan-gauge__track {
+  height: 8px;
+  background: var(--bg2);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+.plan-gauge__fill {
+  display: block;
+  height: 100%;
+  background: var(--blue);
+}
+.plan-gauge__fill--warn {
+  background: var(--red);
+}
+.plan-gauge__sub {
+  font-size: var(--fs-xs);
+  color: var(--text3);
+}
+.plan-limits__claude {
+  font-size: var(--fs-base);
+  color: var(--text0);
+}
+.plan-limits__note {
+  font-size: var(--fs-xs);
+  color: var(--text3);
+}
+.plan-limits__empty {
+  font-size: var(--fs-sm);
+  color: var(--text3);
+}
