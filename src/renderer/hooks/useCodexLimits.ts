@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAppStore } from '../store/appStore'
 import type { CodexLimits, PlanWindow, Session } from '../../shared/types'
 import { USAGE_REFRESH_INTERVAL_MS } from '../../shared/constants'
@@ -73,12 +73,15 @@ export function useCodexLimits(): CodexLimitsData {
     }
   }, [])
 
-  // `now` is captured once at render time; matches useProductivity pattern
-  // eslint-disable-next-line react-hooks/purity
-  const now = Date.now()
-  const claudeSessions = Object.fromEntries(
-    Object.entries(sessions).filter(([, s]) => resolveSessionAgent(s, projects) === 'claude-code'),
-  )
-  const claude = computeActivityWindow({ sessions: claudeSessions, now })
+  const claude = useMemo(() => {
+    // eslint-disable-next-line react-hooks/purity -- render-time snapshot; matches useProductivity
+    const now = Date.now()
+    const claudeSessions = Object.fromEntries(
+      Object.entries(sessions).filter(
+        ([, s]) => resolveSessionAgent(s, projects) === 'claude-code',
+      ),
+    )
+    return computeActivityWindow({ sessions: claudeSessions, now })
+  }, [sessions, projects])
   return { codex, claude }
 }

@@ -26,7 +26,7 @@ export function computeDailyDigest(
   let errorCount = 0
 
   for (const s of todaySessions) {
-    const agent = s.agentOverride ?? 'session'
+    const agent = s.agentOverride ?? 'claude-code'
     agentCounts[agent] = (agentCounts[agent] ?? 0) + 1
 
     if (s.status === 'exited') exitCount++

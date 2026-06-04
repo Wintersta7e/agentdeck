@@ -16,6 +16,15 @@ export function recordSessionUsage(sessionId: string): void {
     return
   }
 
+  if (!session.projectId) {
+    // Ad-hoc terminal sessions (no project) are not tracked — main-side IPC
+    // validation rejects empty projectId and there is no meaningful project bucket.
+    window.agentDeck.log.send('debug', 'usage', 'recordSessionUsage: skipping ad-hoc session', {
+      sessionId,
+    })
+    return
+  }
+
   const agent = resolveSessionAgent(session, state.projects)
 
   void window.agentDeck.usage

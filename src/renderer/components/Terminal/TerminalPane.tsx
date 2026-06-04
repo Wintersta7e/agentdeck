@@ -650,7 +650,7 @@ export function TerminalPane({
 
       const state = useAppStore.getState()
       const storedSession = state.sessions[sessionId]
-      if (storedSession && storedSession.status !== 'exited') {
+      if (storedSession && storedSession.status !== 'exited' && storedSession.status !== 'error') {
         // Session still alive (tab switch) → cache terminal for reattachment.
         // Detach the xterm DOM tree so React doesn't destroy it with the container.
         if (term.element?.parentElement) {

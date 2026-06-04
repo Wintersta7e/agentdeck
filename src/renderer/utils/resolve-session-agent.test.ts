@@ -52,4 +52,10 @@ describe('resolveSessionAgent', () => {
     const project = makeProject({ id: 'p1' }) // no agents or agent field
     expect(resolveSessionAgent(session, [project])).toBe('claude-code')
   })
+
+  it('resolves to project default when no override and default is codex', () => {
+    const session = makeSession({ projectId: 'p1', agentOverride: undefined })
+    const project = makeProject({ id: 'p1', agents: [{ agent: 'codex', isDefault: true }] })
+    expect(resolveSessionAgent(session, [project])).toBe('codex')
+  })
 })
