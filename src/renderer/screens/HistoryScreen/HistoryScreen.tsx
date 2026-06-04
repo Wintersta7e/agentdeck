@@ -73,14 +73,16 @@ export function HistoryScreen(): React.JSX.Element {
   }, [sessions])
 
   const totals = useMemo(() => {
+    const gridStart = todayStart - (DAYS - 1) * DAY_MS
     let count = 0
     let filesChanged = 0
     for (const session of Object.values(sessions) as Session[]) {
+      if (session.startedAt < gridStart) continue
       count += 1
       filesChanged += writeCounts[session.id] ?? 0
     }
     return { count, filesChanged }
-  }, [sessions, writeCounts])
+  }, [sessions, writeCounts, todayStart])
 
   const handleOpenSession = (session: Session): void => {
     setActiveSession(session.id)

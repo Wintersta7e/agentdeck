@@ -54,6 +54,29 @@ describe('computeTodayProductivity', () => {
     expect(r.activeMs).toBe(120000 + 60000)
   })
 
+  it('does not double-count an exited session already in persisted history', () => {
+    const persistedWithExited: DailyUsageEntry[] = [
+      {
+        date: todayIsoKey(),
+        sessions: 1,
+        activeMs: 59000,
+        filesChanged: 3,
+        perProject: {},
+        perAgent: {},
+      },
+    ]
+    const r = computeTodayProductivity({
+      usageHistory: persistedWithExited,
+      sessions: { done: session({ id: 'done', startedAt: midnight + 1000, status: 'exited' }) },
+      writeCounts: { done: 3 },
+      midnight,
+      now: midnight + 60000,
+    })
+    expect(r.sessions).toBe(1)
+    expect(r.filesChanged).toBe(3)
+    expect(r.activeMs).toBe(59000)
+  })
+
   it('ignores live sessions started before midnight (already persisted)', () => {
     const sessions = { old: session({ id: 'old', startedAt: midnight - 5000 }) }
     const r = computeTodayProductivity({

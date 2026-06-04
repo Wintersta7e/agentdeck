@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAppStore } from '../store/appStore'
 import type { CodexLimits, PlanWindow, Session } from '../../shared/types'
 import { USAGE_REFRESH_INTERVAL_MS } from '../../shared/constants'
+import { resolveSessionAgent } from '../utils/resolve-session-agent'
 
 export interface ResolvedWindow {
   usedPercent: number
@@ -52,6 +53,7 @@ export interface CodexLimitsData {
 export function useCodexLimits(): CodexLimitsData {
   const [codex, setCodex] = useState<CodexLimits | null>(null)
   const sessions = useAppStore((s) => s.sessions)
+  const projects = useAppStore((s) => s.projects)
 
   useEffect(() => {
     let cancelled = false
@@ -74,6 +76,9 @@ export function useCodexLimits(): CodexLimitsData {
   // `now` is captured once at render time; matches useProductivity pattern
   // eslint-disable-next-line react-hooks/purity
   const now = Date.now()
-  const claude = computeActivityWindow({ sessions, now })
+  const claudeSessions = Object.fromEntries(
+    Object.entries(sessions).filter(([, s]) => resolveSessionAgent(s, projects) === 'claude-code'),
+  )
+  const claude = computeActivityWindow({ sessions: claudeSessions, now })
   return { codex, claude }
 }

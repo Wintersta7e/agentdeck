@@ -1,6 +1,6 @@
 import { renameSync, readFileSync, existsSync } from 'node:fs'
 import type { DailyUsageEntry, SessionUsageRecord, UsageTotals } from '../shared/types'
-import { todayIsoKey, isoKeyFromTs } from '../shared/date-keys'
+import { isoKeyFromTs } from '../shared/date-keys'
 import { atomicWrite, atomicWriteSync } from './fs-atomic'
 import { createLogger } from './logger'
 
@@ -93,7 +93,7 @@ export function createUsageHistory(storePath?: string): UsageHistory {
 
   return {
     recordSession(rec) {
-      const date = todayIsoKey()
+      const date = isoKeyFromTs(rec.startedAt)
       const entry = entries.get(date) ?? emptyEntry(date)
       const activeMs = Math.max(0, rec.endedAt - rec.startedAt)
       const files = Math.max(0, rec.filesChanged)

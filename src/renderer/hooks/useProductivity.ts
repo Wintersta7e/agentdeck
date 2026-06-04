@@ -41,6 +41,7 @@ export function computeTodayProductivity({
 
   for (const [id, s] of Object.entries(sessions)) {
     if (s.startedAt < midnight) continue
+    if (s.status !== 'running' && s.status !== 'starting') continue // exited/error already in persisted rollup
     sessionCount += 1
     activeMs += Math.max(0, now - s.startedAt)
     filesChanged += writeCounts[id] ?? 0
