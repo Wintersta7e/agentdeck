@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
 import { useCodexLimits, resolveWindow, type ResolvedWindow } from '../../hooks/useCodexLimits'
+import { formatDuration } from '../../utils/format-duration'
 import './PlanLimitsPanel.css'
 
 function formatResetIn(sec: number): string {
@@ -7,11 +7,6 @@ function formatResetIn(sec: number): string {
   const h = Math.floor(sec / 3600)
   const m = Math.floor((sec % 3600) / 60)
   return h > 0 ? `resets in ${h}h ${m}m` : `resets in ${m}m`
-}
-
-function formatActive(ms: number): string {
-  const min = Math.round(ms / 60000)
-  return min < 60 ? `${min}m` : `${Math.floor(min / 60)}h ${min % 60}m`
 }
 
 function Gauge({ label, w }: { label: string; w: ResolvedWindow }): React.JSX.Element {
@@ -38,8 +33,8 @@ export function PlanLimitsPanel(): React.JSX.Element {
   // render-time snapshot (see useCodexLimits for the convention)
   // eslint-disable-next-line react-hooks/purity
   const now = Date.now()
-  const primary = useMemo(() => resolveWindow(codex?.primary ?? null, now), [codex, now])
-  const weekly = useMemo(() => resolveWindow(codex?.weekly ?? null, now), [codex, now])
+  const primary = resolveWindow(codex?.primary ?? null, now)
+  const weekly = resolveWindow(codex?.weekly ?? null, now)
 
   return (
     <div className="plan-limits">
@@ -61,7 +56,7 @@ export function PlanLimitsPanel(): React.JSX.Element {
         <span className="plan-limits__agent-name">Claude</span>
         <span className="plan-limits__claude">
           {claude.sessions} session{claude.sessions === 1 ? '' : 's'} ·{' '}
-          {formatActive(claude.activeMs)} · last 5h
+          {formatDuration(claude.activeMs)} · last 5h
         </span>
         <span className="plan-limits__note">Claude doesn&apos;t expose plan limits.</span>
       </div>

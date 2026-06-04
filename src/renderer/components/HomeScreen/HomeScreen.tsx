@@ -4,6 +4,8 @@ import { useTemplates } from '../../hooks/useTemplates'
 import { useGitStatusBatch } from '../../hooks/useGitStatus'
 import { useDailyDigest } from '../../hooks/useDailyDigest'
 import { useProductivity } from '../../hooks/useProductivity'
+import { useMidnight } from '../../hooks/useMidnight'
+import { formatDuration } from '../../utils/format-duration'
 import { ScopeViz } from '../home/ScopeViz'
 import { Panel } from '../home/Panel'
 import { KpiTile } from '../home/KpiTile'
@@ -46,11 +48,6 @@ function formatClock(d: Date): string {
   })
 }
 
-function formatActive(ms: number): string {
-  const min = Math.round(ms / 60000)
-  return min < 60 ? `${min}m` : `${Math.floor(min / 60)}h${String(min % 60).padStart(2, '0')}`
-}
-
 interface HomeScreenProps {
   onOpenProject: (project: Project) => void
   onOpenProjectWithAgent: (project: Project, agentConfig: AgentConfig) => void
@@ -80,6 +77,7 @@ export function HomeScreen({
 
   const digest = useDailyDigest()
   const prod = useProductivity()
+  const midnight = useMidnight()
   const cleanExitPct = digest.cleanExitRate !== null ? `${Math.round(digest.cleanExitRate)}%` : '—'
 
   // Live clock — ticks every 15s, keeps "now" stable across children
@@ -213,7 +211,7 @@ export function HomeScreen({
             />
             <KpiTile
               label="ACTIVE TIME"
-              value={formatActive(prod.activeMs)}
+              value={formatDuration(prod.activeMs)}
               sub="today"
               tone="purple"
             />
@@ -317,7 +315,7 @@ export function HomeScreen({
         )}
 
         <Panel title="ACTIVITY / WK" sub="7-DAY ROLLUP" className="home-metrics-panel">
-          <ProductivityPanel />
+          <ProductivityPanel data={prod} midnight={midnight} />
         </Panel>
         <Panel title="PLAN LIMITS" sub="ROLLING WINDOWS" className="home-metrics-panel">
           <PlanLimitsPanel />

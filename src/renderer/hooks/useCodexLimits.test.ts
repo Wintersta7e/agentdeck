@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeClaudeWindow, resolveWindow } from './useCodexLimits'
+import { computeActivityWindow, resolveWindow } from './useCodexLimits'
 import type { Session, PlanWindow } from '../../shared/types'
 
 const session = (over: Partial<Session>): Session =>
@@ -43,7 +43,7 @@ describe('resolveWindow', () => {
   })
 })
 
-describe('computeClaudeWindow', () => {
+describe('computeActivityWindow', () => {
   const now = 10 * 3_600_000 // 10h in ms
   const fiveHAgo = now - 5 * 3_600_000
   it('counts claude sessions active within the last 5h and sums their time', () => {
@@ -51,7 +51,7 @@ describe('computeClaudeWindow', () => {
       a: session({ id: 'a', startedAt: fiveHAgo + 3_600_000 }), // 4h ago → 4h active
       old: session({ id: 'old', startedAt: fiveHAgo - 3_600_000 }), // 6h ago → excluded
     }
-    const r = computeClaudeWindow({ sessions, now })
+    const r = computeActivityWindow({ sessions, now })
     expect(r.sessions).toBe(1)
     expect(r.activeMs).toBe(4 * 3_600_000)
   })

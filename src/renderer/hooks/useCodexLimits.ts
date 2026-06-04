@@ -10,7 +10,7 @@ export interface ResolvedWindow {
   resetsInSec: number
 }
 
-export interface ClaudeWindow {
+export interface ActivityWindow {
   sessions: number
   activeMs: number
 }
@@ -26,13 +26,13 @@ export function resolveWindow(w: PlanWindow | null, now: number): ResolvedWindow
 }
 
 /** Honest fallback for agents without limit data: activity in the last 5h. */
-export function computeClaudeWindow({
+export function computeActivityWindow({
   sessions,
   now,
 }: {
   sessions: Record<string, Session>
   now: number
-}): ClaudeWindow {
+}): ActivityWindow {
   const cutoff = now - FIVE_HOURS_MS
   let count = 0
   let activeMs = 0
@@ -46,7 +46,7 @@ export function computeClaudeWindow({
 
 export interface CodexLimitsData {
   codex: CodexLimits | null
-  claude: ClaudeWindow
+  claude: ActivityWindow
 }
 
 export function useCodexLimits(): CodexLimitsData {
@@ -74,6 +74,6 @@ export function useCodexLimits(): CodexLimitsData {
   // `now` is captured once at render time; matches useProductivity pattern
   // eslint-disable-next-line react-hooks/purity
   const now = Date.now()
-  const claude = computeClaudeWindow({ sessions, now })
+  const claude = computeActivityWindow({ sessions, now })
   return { codex, claude }
 }

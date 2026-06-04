@@ -7,7 +7,7 @@ import type { CodexLimits, PlanWindow } from '../shared/types'
  */
 const FIND_LATEST_RATE_LIMITS =
   'f=$(find "$HOME/.codex/sessions" -name "rollout-*.jsonl" -type f -printf "%T@ %p\\n" 2>/dev/null | sort -n | tail -1 | cut -d" " -f2-); ' +
-  '[ -n "$f" ] && grep "\\"rate_limits\\"" "$f" | tail -1'
+  '[ -n "$f" ] && tac "$f" | grep -m1 "\\"rate_limits\\""'
 
 function toWindow(raw: unknown): PlanWindow | null {
   if (!raw || typeof raw !== 'object') return null

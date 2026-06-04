@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
-import { useProductivity } from '../../hooks/useProductivity'
-import { useMidnight } from '../../hooks/useMidnight'
 import { useAppStore } from '../../store/appStore'
+import { isoKeyFromTs } from '../../../shared/date-keys'
+import { formatDuration } from '../../utils/format-duration'
+import type { ProductivityData } from '../../hooks/useProductivity'
 import './ProductivityPanel.css'
 
 const WEEKDAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
@@ -11,28 +12,23 @@ function dowIndex(dateKey: string): number {
   return (d.getDay() + 6) % 7
 }
 
-function formatDuration(ms: number): string {
-  const min = Math.round(ms / 60000)
-  if (min < 60) return `${min}m`
-  return `${Math.floor(min / 60)}h ${min % 60}m`
-}
-
-export function ProductivityPanel(): React.JSX.Element {
-  const { history, sessions, activeMs, filesChanged } = useProductivity()
-  const midnight = useMidnight()
+export function ProductivityPanel({
+  data,
+  midnight,
+}: {
+  data: ProductivityData
+  midnight: number
+}): React.JSX.Element {
+  const { history, sessions, activeMs, filesChanged } = data
   const projects = useAppStore((s) => s.projects)
   const projectName = useMemo(() => new Map(projects.map((p) => [p.id, p.name])), [projects])
 
-  const todayIso = useMemo(() => {
-    const d = new Date(midnight)
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-  }, [midnight])
+  const todayIso = isoKeyFromTs(midnight)
 
   const series = useMemo(() => {
     const days: Array<{ iso: string; files: number; dow: string }> = []
     for (let i = 6; i >= 0; i -= 1) {
-      const d = new Date(midnight - i * 86_400_000)
-      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      const iso = isoKeyFromTs(midnight - i * 86_400_000)
       const entry = history.find((e) => e.date === iso)
       const files = iso === todayIso ? filesChanged : (entry?.filesChanged ?? 0)
       days.push({ iso, files, dow: WEEKDAYS[dowIndex(iso)] ?? '' })

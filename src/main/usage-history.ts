@@ -24,7 +24,7 @@ function emptyTotals(): UsageTotals {
 }
 
 function emptyEntry(date: string): DailyUsageEntry {
-  return { date, sessions: 0, activeMs: 0, filesChanged: 0, perProject: {}, perAgent: {} }
+  return { date, ...emptyTotals(), perProject: {}, perAgent: {} }
 }
 
 function addInto(target: UsageTotals, activeMs: number, files: number): void {
