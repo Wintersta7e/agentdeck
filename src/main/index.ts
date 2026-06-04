@@ -159,10 +159,12 @@ app
 
 app.on('before-quit', () => {
   log.info('App quitting')
-  usageHistory.flush()
-  sessionHistory.flush()
+  // killAll synchronously finalizes session records via the ptyBus exit listener
+  // (FIX 2) — run it first so the subsequent flush persists completed records.
   workflowEngine?.stopAll()
   ptyManager?.killAll()
+  sessionHistory.flush()
+  usageHistory.flush()
   templateEventsOff?.()
   templateStore?.dispose()
   closeLogger()

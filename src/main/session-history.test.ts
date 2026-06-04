@@ -147,4 +147,37 @@ describe('session-history', () => {
     h.startSession(makeRec())
     expect(() => h.flush()).not.toThrow()
   })
+
+  it('finalizes dangling endedAt:null records on load (crash recovery)', () => {
+    const store = tmpStore()
+
+    // Write a store file that contains a record with endedAt:null (simulating a
+    // hard crash before the exit handler ran).
+    const raw = {
+      version: 1,
+      records: [
+        {
+          sessionId: 's-dangling',
+          projectId: 'p1',
+          agent: 'claude-code',
+          startedAt: NOW - 120_000,
+          endedAt: null,
+          status: 'exited',
+          filesChanged: 3,
+        },
+      ],
+    }
+    writeFileSync(store, JSON.stringify(raw))
+
+    const h = createSessionHistory(store)
+    const rows = h.getHistory(1)
+    expect(rows).toHaveLength(1)
+    const row = rows[0]!
+    // endedAt must be set (not null) so the record doesn't render as "running"
+    expect(row.endedAt).not.toBeNull()
+    // status must be 'error' to indicate an unclean shutdown
+    expect(row.status).toBe('error')
+
+    rmSync(store, { force: true })
+  })
 })

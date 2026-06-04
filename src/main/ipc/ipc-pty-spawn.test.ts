@@ -163,6 +163,85 @@ describe('pty:spawn IPC validation', () => {
   })
 })
 
+describe('pty:spawn exit-code → session recording', () => {
+  // These cases exercise the ptyBus.once exit listener registered in registerPtyHandlers.
+  // We capture the callback registered via ptyBus.once and invoke it directly.
+
+  async function makeSetup(exitCode: number | null) {
+    handlers.clear()
+    const { ptyBus } = await import('../pty-bus')
+    const onceSpy = vi.mocked(ptyBus.once)
+    onceSpy.mockClear()
+
+    const sessionHistoryStub = stubSessionHistory()
+    const rec = {
+      sessionId: 'sess-exit',
+      projectId: 'proj-1',
+      agent: 'claude-code',
+      startedAt: Date.now() - 5000,
+      endedAt: null as number | null,
+      status: 'exited' as 'exited' | 'error',
+      filesChanged: 2,
+    }
+    ;(sessionHistoryStub.endSession as ReturnType<typeof vi.fn>).mockReturnValue(rec)
+
+    const usageHistoryStub = stubUsageHistory()
+
+    const mgr = { spawn: vi.fn(() => ({ ok: true })) }
+    registerPtyHandlers(() => mgr as unknown as PtyManager, {
+      getMainWindow: () => null,
+      getProjectId: (path) => (path === '/proj' ? 'proj-1' : null),
+      reviewTracker: {
+        addReview: vi.fn(),
+        getReviews: vi.fn(() => []),
+        dismissReview: vi.fn(),
+      } as unknown as Parameters<typeof registerPtyHandlers>[1]['reviewTracker'],
+      sessionHistory: sessionHistoryStub,
+      usageHistory: usageHistoryStub,
+    })
+
+    call('pty:spawn', 'sess-exit', 80, 24, '/proj', undefined, undefined, 'claude-code')
+
+    // Find the once callback registered for this session's exit event
+    const exitCall = onceSpy.mock.calls.find((c) => c[0] === 'exit:sess-exit')
+    expect(exitCall).toBeDefined()
+    const exitCb = exitCall![1] as (code: number | null) => void
+
+    // Invoke the exit callback with the given exitCode
+    exitCb(exitCode)
+
+    return { sessionHistoryStub, usageHistoryStub }
+  }
+
+  it('records session when exitCode is 0 (clean exit)', async () => {
+    const { sessionHistoryStub, usageHistoryStub } = await makeSetup(0)
+    expect(sessionHistoryStub.endSession).toHaveBeenCalledWith('sess-exit', {
+      endedAt: expect.any(Number),
+      status: 'exited',
+    })
+    expect(usageHistoryStub.recordSession).toHaveBeenCalledTimes(1)
+  })
+
+  it('records session when exitCode is null (SIGTERM / user kill)', async () => {
+    const { sessionHistoryStub, usageHistoryStub } = await makeSetup(null)
+    expect(sessionHistoryStub.endSession).toHaveBeenCalledWith('sess-exit', {
+      endedAt: expect.any(Number),
+      status: 'exited',
+    })
+    expect(usageHistoryStub.recordSession).toHaveBeenCalledTimes(1)
+  })
+
+  it('records session even when exitCode is non-zero (maps to error status)', async () => {
+    const { sessionHistoryStub, usageHistoryStub } = await makeSetup(1)
+    expect(sessionHistoryStub.endSession).toHaveBeenCalledWith('sess-exit', {
+      endedAt: expect.any(Number),
+      status: 'error',
+    })
+    // All sessions are recorded regardless of status
+    expect(usageHistoryStub.recordSession).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('pty:spawn review-detection wiring', () => {
   it('registers a one-shot exit listener when projectPath resolves to a projectId', async () => {
     handlers.clear()

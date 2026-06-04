@@ -189,14 +189,18 @@ export function registerPtyHandlers(
 
           const { getMainWindow, reviewTracker: tracker } = deps
           const capturedSessionId = sessionId
-          ptyBus.once(`exit:${capturedSessionId}`, (exitCode: number) => {
-            const status = exitCode === 0 ? 'exited' : 'error'
+          ptyBus.once(`exit:${capturedSessionId}`, (exitCode: number | null) => {
+            // null = SIGTERM/user-kill; 0 = clean exit. Both are normal session ends —
+            // the session did real work and should count toward productivity.
+            const status: 'exited' | 'error' =
+              exitCode === null || exitCode === 0 ? 'exited' : 'error'
             const rec = deps.sessionHistory.endSession(capturedSessionId, {
               endedAt: Date.now(),
               status,
             })
-            // Productivity counts only successful sessions (errors = failed launches).
-            if (rec && rec.status === 'exited') {
+            // Record all ended sessions — status is informational for the history
+            // display, not a gate on whether the session gets counted.
+            if (rec) {
               deps.usageHistory.recordSession({
                 sessionId: rec.sessionId,
                 agent: rec.agent,

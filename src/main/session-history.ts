@@ -51,6 +51,17 @@ function loadFromDisk(storePath: string): Map<string, SessionRecord> {
 
 export function createSessionHistory(storePath?: string): SessionHistory {
   const records = storePath ? loadFromDisk(storePath) : new Map<string, SessionRecord>()
+
+  // Recover dangling records from an unclean shutdown — a null endedAt means the
+  // app exited before the session's exit was recorded. Finalize so the record
+  // never renders as a perpetual "running" row in the session history UI.
+  for (const rec of records.values()) {
+    if (rec.endedAt === null) {
+      rec.endedAt = rec.startedAt
+      rec.status = 'error'
+    }
+  }
+
   let flushTimer: ReturnType<typeof setTimeout> | null = null
 
   function scheduleFlush(): void {

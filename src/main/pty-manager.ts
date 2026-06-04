@@ -345,10 +345,12 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
       } catch (err) {
         log.error(`Error killing PTY for session ${sessionId}`, { err: String(err) })
       }
-      // Emit a synthetic exit so any `ptyBus.once('exit:*')` listeners (e.g. the
-      // review-tracker registration in ipc-pty) don't linger. node-pty's onExit
-      // usually fires too, but the `once` semantics collapse duplicate emissions.
-      if (!killed) ptyBus.emit(`exit:${sessionId}`, -1)
+      // Emit a synthetic exit NOW so the `ptyBus.once('exit:*')` listener in
+      // ipc-pty finalizes the session record synchronously before any quit-time
+      // flush. User-initiated kill = clean close, so emit 0 (not -1).
+      // node-pty's async onExit may also fire later; the `once` semantics
+      // consume only the first emission and ignore duplicates.
+      ptyBus.emit(`exit:${sessionId}`, killed ? 0 : -1)
     } else {
       // No live process; still emit so any stale `once` listener is consumed.
       ptyBus.emit(`exit:${sessionId}`, -1)
