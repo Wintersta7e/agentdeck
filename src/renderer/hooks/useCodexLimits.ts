@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAppStore } from '../store/appStore'
 import type { CodexLimits, PlanWindow, Session } from '../../shared/types'
 import { USAGE_REFRESH_INTERVAL_MS } from '../../shared/constants'
@@ -40,7 +40,11 @@ export function computeActivityWindow({
   for (const s of Object.values(sessions)) {
     if (s.startedAt < cutoff) continue
     count += 1
-    activeMs += Math.max(0, now - s.startedAt)
+    // Only live sessions have a measurable elapsed time; exited sessions don't
+    // record an end time in the store, so `now - startedAt` would overstate them.
+    if (s.status === 'running' || s.status === 'starting') {
+      activeMs += Math.max(0, now - s.startedAt)
+    }
   }
   return { sessions: count, activeMs }
 }
@@ -73,17 +77,14 @@ export function useCodexLimits(): CodexLimitsData {
     }
   }, [])
 
-  const claude = useMemo(() => {
-    // eslint-disable-next-line react-hooks/purity -- render-time snapshot; matches useProductivity
-    const now = Date.now()
-    return computeActivityWindow({
-      sessions: Object.fromEntries(
-        Object.entries(sessions).filter(
-          ([, s]) => resolveSessionAgent(s, projects) === 'claude-code',
-        ),
-      ),
-      now,
-    })
-  }, [sessions, projects])
+  // Computed per render (not memoized) so the rolling-5h window stays current on
+  // every 30s poll re-render — `codex` is the polled state, not `sessions`, so a
+  // [sessions, projects] memo would freeze `now` between session changes.
+  // eslint-disable-next-line react-hooks/purity -- render-time snapshot
+  const now = Date.now()
+  const claudeSessions = Object.fromEntries(
+    Object.entries(sessions).filter(([, s]) => resolveSessionAgent(s, projects) === 'claude-code'),
+  )
+  const claude = computeActivityWindow({ sessions: claudeSessions, now })
   return { codex, claude }
 }

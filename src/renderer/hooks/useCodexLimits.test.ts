@@ -55,4 +55,14 @@ describe('computeActivityWindow', () => {
     expect(r.sessions).toBe(1)
     expect(r.activeMs).toBe(4 * 3_600_000)
   })
+
+  it('counts an exited session in the window but does not add its unmeasurable active time', () => {
+    const sessions = {
+      live: session({ id: 'live', startedAt: now - 600_000, status: 'running' }), // 10m, live
+      done: session({ id: 'done', startedAt: fiveHAgo + 600_000, status: 'exited' }), // within 5h, exited
+    }
+    const r = computeActivityWindow({ sessions, now })
+    expect(r.sessions).toBe(2) // both started within the last 5h
+    expect(r.activeMs).toBe(600_000) // only the live session contributes elapsed time
+  })
 })

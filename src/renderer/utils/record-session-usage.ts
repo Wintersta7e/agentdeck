@@ -16,6 +16,15 @@ export function recordSessionUsage(sessionId: string): void {
     return
   }
 
+  if (session.status === 'error') {
+    // Spawn-failed sessions never ran real work — recording them would log
+    // phantom active time (startedAt → close), so exclude them from productivity.
+    window.agentDeck.log.send('debug', 'usage', 'recordSessionUsage: skipping errored session', {
+      sessionId,
+    })
+    return
+  }
+
   if (!session.projectId) {
     // Ad-hoc terminal sessions (no project) are not tracked — main-side IPC
     // validation rejects empty projectId and there is no meaningful project bucket.

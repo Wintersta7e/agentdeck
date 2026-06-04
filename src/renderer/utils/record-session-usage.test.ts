@@ -82,6 +82,20 @@ describe('recordSessionUsage', () => {
     )
   })
 
+  it('does NOT record an errored (spawn-failed) session', async () => {
+    useAppStore.setState({
+      sessions: { s1: { ...baseSession, status: 'error' as const } },
+      projects: [baseProject],
+      writeCountBySession: { s1: 3 },
+    } as never)
+
+    const { recordSessionUsage } = await import('./record-session-usage')
+    recordSessionUsage('s1')
+    await new Promise((r) => setTimeout(r, 0))
+
+    expect(recordSession).not.toHaveBeenCalled()
+  })
+
   it('does NOT call usage.recordSession and DOES warn when sessionId is not found', async () => {
     // sessions is empty — 'missing' not found
     const { recordSessionUsage } = await import('./record-session-usage')
