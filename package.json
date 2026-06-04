@@ -82,7 +82,7 @@
     "react-window": "^2.2.7",
     "smol-toml": "^1.6.1",
     "yaml": "^2.9.0",
-    "zustand": "^5.0.13"
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@electron/rebuild": "^4.0.4",
