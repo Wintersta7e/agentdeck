@@ -11,6 +11,8 @@ import { invalidateGitCache } from '../git-status'
 import { toWslPath } from '../wsl-utils'
 import type { ReviewFile } from '../../shared/types'
 import type { ReviewTracker } from '../review-tracker'
+import type { SessionHistory } from '../session-history'
+import type { UsageHistory } from '../usage-history'
 import { createLogger } from '../logger'
 
 const execFileAsync = promisify(execFile)
@@ -49,6 +51,8 @@ interface PtyHandlerDeps {
   getMainWindow: () => BrowserWindow | null
   getProjectId: (projectPath: string) => string | null
   reviewTracker: ReviewTracker
+  sessionHistory: SessionHistory
+  usageHistory: UsageHistory
 }
 
 /**
@@ -175,9 +179,38 @@ export function registerPtyHandlers(
             agentId: agent ?? 'unknown',
           }
 
+          const startedAt = Date.now()
+          deps.sessionHistory.startSession({
+            sessionId,
+            projectId,
+            agent: agent ?? 'unknown',
+            startedAt,
+          })
+
           const { getMainWindow, reviewTracker: tracker } = deps
           const capturedSessionId = sessionId
-          ptyBus.once(`exit:${capturedSessionId}`, () => {
+          ptyBus.once(`exit:${capturedSessionId}`, (exitCode: number | null) => {
+            // null = SIGTERM/user-kill; 0 = clean exit. Both are normal session ends —
+            // the session did real work and should count toward productivity.
+            const status: 'exited' | 'error' =
+              exitCode === null || exitCode === 0 ? 'exited' : 'error'
+            const rec = deps.sessionHistory.endSession(capturedSessionId, {
+              endedAt: Date.now(),
+              status,
+            })
+            // Record all ended sessions — status is informational for the history
+            // display, not a gate on whether the session gets counted.
+            if (rec) {
+              deps.usageHistory.recordSession({
+                sessionId: rec.sessionId,
+                agent: rec.agent,
+                projectId: rec.projectId,
+                startedAt: rec.startedAt,
+                endedAt: rec.endedAt ?? Date.now(),
+                filesChanged: rec.filesChanged,
+              })
+            }
+
             void (async () => {
               try {
                 invalidateGitCache(meta.projectPath)

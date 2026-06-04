@@ -10,13 +10,15 @@ import { initLogger, createLogger, closeLogger } from './logger'
 import { seedWorkflows } from './workflow-seeds'
 import type { WorkflowEngine } from './workflow-engine'
 import type { WorktreeManager } from './worktree-manager'
-import { createCostTracker, type CostTracker } from './cost-tracker'
-import { createCostHistory } from './cost-history'
+import { createUsageHistory } from './usage-history'
+import { createSessionHistory } from './session-history'
+import { ptyBus } from './pty-bus'
 import { createAppWindow } from './app-window'
 import { registerAppIpcHandlers } from './app-ipc'
-import { createClaudeAdapter, createCodexAdapter } from './log-adapters'
 import {
-  registerCostHandlers,
+  registerUsageHandlers,
+  registerLimitsHandlers,
+  registerSessionHistoryHandlers,
   wireTemplateWindowEvents,
   registerEnvIpc,
   registerFilesIpc,
@@ -25,15 +27,20 @@ import { initializeTemplateRuntime } from './template-runtime'
 import { initializeWorktreeManager } from './worktree-runtime'
 import { publishWslAvailability, resolveWslHome } from './wsl-runtime'
 
-const costHistory = createCostHistory(join(app.getPath('userData'), 'cost-history.json'))
+const usageHistory = createUsageHistory(join(app.getPath('userData'), 'usage-history.json'))
+const sessionHistory = createSessionHistory(join(app.getPath('userData'), 'session-history.json'))
 const log = createLogger('app')
+
+// Count file-write activity events for the per-session history record.
+ptyBus.on('activity', (payload: { sessionId: string; type: string }) => {
+  if (payload.type === 'write') sessionHistory.noteWrite(payload.sessionId)
+})
 
 let mainWindow: BrowserWindow | null = null
 let ptyManager: PtyManager | null = null
 let workflowEngine: WorkflowEngine | null = null
 let appStore: AppStore | null = null
 let worktreeManager: WorktreeManager | null = null
-let costTracker: CostTracker | null = null
 let templateStore: TemplateStore | null = null
 let templateEventsOff: (() => void) | null = null
 
@@ -86,6 +93,8 @@ app
       getPtyManager: () => ptyManager,
       getWorkflowEngine: () => workflowEngine,
       getWorktreeManager: () => worktreeManager,
+      sessionHistory,
+      usageHistory,
     })
 
     const windowRuntime = createAppWindow(appStore, () => {
@@ -100,15 +109,9 @@ app
       templateEventsOff = wireTemplateWindowEvents(templateStore, () => mainWindow)
     }
 
-    if (mainWindow) {
-      costTracker = createCostTracker(
-        mainWindow,
-        [createClaudeAdapter(), createCodexAdapter()],
-        costHistory,
-      )
-    }
-
-    registerCostHandlers(() => costTracker, costHistory)
+    registerUsageHandlers(usageHistory)
+    registerLimitsHandlers()
+    registerSessionHistoryHandlers(sessionHistory)
 
     // Warn renderer if encryption is unavailable (secrets stored as plaintext)
     if (!safeStorage.isEncryptionAvailable() && mainWindow) {
@@ -156,10 +159,12 @@ app
 
 app.on('before-quit', () => {
   log.info('App quitting')
-  costHistory.flush()
-  costTracker?.destroy()
+  // killAll synchronously finalizes session records via the ptyBus exit listener
+  // (FIX 2) — run it first so the subsequent flush persists completed records.
   workflowEngine?.stopAll()
   ptyManager?.killAll()
+  sessionHistory.flush()
+  usageHistory.flush()
   templateEventsOff?.()
   templateStore?.dispose()
   closeLogger()

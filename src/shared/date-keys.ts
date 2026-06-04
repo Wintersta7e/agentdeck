@@ -1,6 +1,6 @@
 /**
  * Local-time ISO date key (YYYY-MM-DD) for a given epoch timestamp.
- * Matches how `useMidnight` computes the day boundary, so cost history
+ * Matches how `useMidnight` computes the day boundary, so usage history
  * entries align with the user's perception of "today" rather than UTC.
  */
 export function isoKeyFromTs(ts: number): string {
@@ -11,7 +11,7 @@ export function isoKeyFromTs(ts: number): string {
   return `${y}-${m}-${day}`
 }
 
-/** Today's local-time ISO date key. Matches the `DailyCostEntry.date` format. */
+/** Today's local-time ISO date key. Matches the `DailyUsageEntry.date` format. */
 export function todayIsoKey(): string {
   return isoKeyFromTs(Date.now())
 }

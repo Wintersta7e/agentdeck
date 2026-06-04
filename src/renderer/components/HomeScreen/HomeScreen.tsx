@@ -3,13 +3,17 @@ import { useAppStore } from '../../store/appStore'
 import { useTemplates } from '../../hooks/useTemplates'
 import { useGitStatusBatch } from '../../hooks/useGitStatus'
 import { useDailyDigest } from '../../hooks/useDailyDigest'
+import { useProductivity } from '../../hooks/useProductivity'
+import { useMidnight } from '../../hooks/useMidnight'
+import { formatDuration } from '../../utils/format-duration'
 import { ScopeViz } from '../home/ScopeViz'
 import { Panel } from '../home/Panel'
 import { KpiTile } from '../home/KpiTile'
 import { SessionTimelineB1 } from '../home/SessionTimelineB1'
 import { AgentChipStripB1 } from '../home/AgentChipB1'
 import { ProjectCardB1 } from '../home/ProjectCardB1'
-import { CostReadoutB1 } from '../home/CostReadoutB1'
+import { ProductivityPanel } from '../home/ProductivityPanel'
+import { PlanLimitsPanel } from '../home/PlanLimitsPanel'
 import { Mascot } from '../Mascot/Mascot'
 import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
 import { getProjectAgents } from '../../../shared/agent-helpers'
@@ -44,16 +48,6 @@ function formatClock(d: Date): string {
   })
 }
 
-function formatTokens(n: number): string {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
-  if (n >= 1000) return (n / 1000).toFixed(1) + 'k'
-  return String(n)
-}
-
-function formatCost(n: number): string {
-  return `$${n.toFixed(2)}`
-}
-
 interface HomeScreenProps {
   onOpenProject: (project: Project) => void
   onOpenProjectWithAgent: (project: Project, agentConfig: AgentConfig) => void
@@ -79,17 +73,11 @@ export function HomeScreen({
   const errorCount = useAppStore(
     (s) => Object.values(s.sessions).filter((sess) => sess.status === 'error').length,
   )
-  const totalTokens = useAppStore((s) => {
-    let total = 0
-    for (const usage of Object.values(s.sessionUsage)) {
-      total += usage?.inputTokens ?? 0
-      total += usage?.outputTokens ?? 0
-    }
-    return total
-  })
   const alertCount = useAppStore((s) => s.notifications.filter((n) => n.kind === 'basic').length)
 
   const digest = useDailyDigest()
+  const prod = useProductivity()
+  const midnight = useMidnight()
   const cleanExitPct = digest.cleanExitRate !== null ? `${Math.round(digest.cleanExitRate)}%` : '—'
 
   // Live clock — ticks every 15s, keeps "now" stable across children
@@ -222,12 +210,12 @@ export function HomeScreen({
               sub={`${runningCount} live`}
             />
             <KpiTile
-              label="COST TODAY"
-              value={formatCost(digest.costToday)}
+              label="ACTIVE TIME"
+              value={formatDuration(prod.activeMs)}
               sub="today"
               tone="purple"
             />
-            <KpiTile label="TOKENS" value={formatTokens(totalTokens)} sub="input+output" />
+            <KpiTile label="FILES CHANGED" value={String(prod.filesChanged)} sub="today" />
             <KpiTile label="EXIT RATE" value={cleanExitPct} sub="clean" tone="green" />
             <KpiTile
               label="ALERTS"
@@ -251,7 +239,7 @@ export function HomeScreen({
         <AgentChipStripB1 />
       </Panel>
 
-      {/* ── Row 4 · Projects + Cost ─────────────────────────── */}
+      {/* ── Row 4 · Projects + Metrics ──────────────────────── */}
       <section className="home-projects-row">
         {hasProjects ? (
           <Panel
@@ -326,8 +314,11 @@ export function HomeScreen({
           </Panel>
         )}
 
-        <Panel title="COST / WK" sub="7-DAY ROLLUP" className="home-cost-panel">
-          <CostReadoutB1 />
+        <Panel title="ACTIVITY / WK" sub="7-DAY ROLLUP" className="home-metrics-panel">
+          <ProductivityPanel data={prod} midnight={midnight} />
+        </Panel>
+        <Panel title="USAGE" sub="LAST 5H · CODEX LIMITS" className="home-metrics-panel">
+          <PlanLimitsPanel />
         </Panel>
       </section>
 

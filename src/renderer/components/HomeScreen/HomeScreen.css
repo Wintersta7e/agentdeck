@@ -1,7 +1,7 @@
 /* ─────────────────────────────────────────────────────────────
  * Home screen (Option B redesign layout)
  * Dense editorial grid: greeting · hero (scope + KPI + timeline) ·
- * live sessions · agents · projects + cost · extras · context menu.
+ * live sessions · agents · projects + metrics · extras · context menu.
  * All colors via design tokens — works in amber / tungsten / phosphor /
  * dusk / etc.
  * ───────────────────────────────────────────────────────────── */
@@ -229,7 +229,7 @@
   padding: 0;
 }
 
-/* ─── Projects + Cost row ─── */
+/* ─── Projects + Metrics row ─── */
 .home-projects-row {
   display: grid;
   grid-template-columns: 1.4fr 1fr;
@@ -247,7 +247,7 @@
   min-height: 240px;
 }
 
-.home-cost-panel {
+.home-metrics-panel {
   min-height: 240px;
 }
 

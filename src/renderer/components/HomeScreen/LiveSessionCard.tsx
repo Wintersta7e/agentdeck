@@ -1,25 +1,12 @@
 import { useMemo } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { useElapsedTime } from '../../hooks/useElapsedTime'
-import {
-  useEffectiveContext,
-  useEffectiveContextForModel,
-  badgeLabelFor,
-} from '../../hooks/useEffectiveContext'
 import { AGENTS } from '../../../shared/agents'
 import { getSessionAgentId } from '../../utils/agent-ui'
-import type { ActivityEvent, ContextSource } from '../../../shared/types'
+import type { ActivityEvent } from '../../../shared/types'
 import './LiveSessionCard.css'
 
 const AGENT_META = new Map(AGENTS.map((a) => [a.id, a]))
-
-const DEFAULT_CONTEXT = 128_000
-
-function formatTokens(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
-  if (n >= 1_000) return `${Math.round(n / 1_000)}K`
-  return String(n)
-}
 
 function getPulseClass(event: ActivityEvent | undefined): string {
   if (!event || event.status !== 'active') return 'idle'
@@ -53,7 +40,6 @@ export function LiveSessionCard({ sessionId }: LiveSessionCardProps): React.JSX.
   // Write counter is maintained by the store; O(1) lookup, unaffected by the
   // 500-event feed cap and doesn't iterate events on every mutation.
   const filesChanged = useAppStore((s) => s.writeCountBySession[sessionId] ?? 0)
-  const usage = useAppStore((s) => s.sessionUsage[sessionId])
   const projects = useAppStore((s) => s.projects)
 
   const elapsed = useElapsedTime(session?.startedAt)
@@ -66,53 +52,6 @@ export function LiveSessionCard({ sessionId }: LiveSessionCardProps): React.JSX.
   const agentId = getSessionAgentId(session, project)
   const meta = AGENT_META.get(agentId)
   const pulseClass = getPulseClass(latestActivity ?? undefined)
-
-  const totalTokens = (usage?.inputTokens ?? 0) + (usage?.outputTokens ?? 0)
-
-  // Primary: stored snapshot (immutable, captured at spawn)
-  const snapshotValue = session?.resolvedContextWindow
-  const snapshotSource = session?.resolvedContextSource ?? null
-
-  // Fallbacks — only fetched when no immutable launch snapshot is present
-  const snapshotMissing = snapshotValue === undefined
-  const byModel = useEffectiveContextForModel(agentId, session?.model ?? '', {
-    enabled: snapshotMissing && Boolean(session?.model),
-  })
-  const byAgent = useEffectiveContext(agentId, { enabled: snapshotMissing })
-
-  // Resolve display value + source with priority
-  const { contextWindow, ctxSource, stale } = (() => {
-    if (snapshotValue !== undefined) {
-      return {
-        contextWindow: snapshotValue,
-        ctxSource: snapshotSource,
-        stale: false,
-      }
-    }
-    // Pre-v6.0.1 fallback tree
-    if (session?.model && byModel.value !== null) {
-      return {
-        contextWindow: byModel.value,
-        ctxSource: byModel.source,
-        stale: true,
-      }
-    }
-    if (byAgent.value !== null) {
-      return {
-        contextWindow: byAgent.value,
-        ctxSource: byAgent.source,
-        stale: true,
-      }
-    }
-    // Truly nothing — use registry default to keep the gauge from dividing by zero
-    return {
-      contextWindow: meta?.contextWindow ?? DEFAULT_CONTEXT,
-      ctxSource: null as ContextSource | null,
-      stale: true,
-    }
-  })()
-
-  const tokenPct = Math.min(100, (totalTokens / contextWindow) * 100)
 
   if (!session) return <div className="live-card live-card-empty" />
 
@@ -132,39 +71,7 @@ export function LiveSessionCard({ sessionId }: LiveSessionCardProps): React.JSX.
         </span>
       </div>
 
-      <div className="live-card-gauge">
-        <span className="live-card-gauge-label">Tokens</span>
-        <div
-          className="live-card-gauge-bar"
-          role="progressbar"
-          aria-valuenow={totalTokens}
-          aria-valuemin={0}
-          aria-valuemax={contextWindow}
-        >
-          <div className="live-card-gauge-fill" style={{ width: `${tokenPct}%` }} />
-        </div>
-        <span className="live-card-gauge-val">
-          {formatTokens(totalTokens)} / {formatTokens(contextWindow)}
-          {badgeLabelFor(ctxSource, session?.model ?? null) !== null && (
-            <span
-              className={`live-card-gauge-badge${stale ? ' is-stale' : ''}`}
-              aria-label={
-                stale
-                  ? 'Context value is stale — session spawned before snapshot was introduced'
-                  : undefined
-              }
-            >
-              {' '}
-              {badgeLabelFor(ctxSource, session?.model ?? null)}
-            </span>
-          )}
-        </span>
-      </div>
-
       <div className="live-card-footer">
-        <span className="live-card-cost">
-          Cost: <strong>${(usage?.totalCostUsd ?? 0).toFixed(2)}</strong>
-        </span>
         <span className="live-card-files">
           {filesChanged} file{filesChanged !== 1 ? 's' : ''} changed
         </span>

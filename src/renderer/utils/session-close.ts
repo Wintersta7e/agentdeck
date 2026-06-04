@@ -60,10 +60,6 @@ export async function closeSession(sessionId: string): Promise<void> {
       }
     }
 
-    await window.agentDeck.cost?.unbind?.(sessionId).catch((err: unknown) => {
-      logWarn('cost.unbind failed', { err: String(err) })
-    })
-
     useAppStore.getState().applySessionStatus(sessionId, 'exited', 'user-kill')
 
     await window.agentDeck.pty.kill(sessionId).catch((err: unknown) => {

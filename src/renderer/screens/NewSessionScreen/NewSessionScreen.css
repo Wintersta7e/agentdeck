@@ -278,29 +278,9 @@
   text-transform: uppercase;
 }
 
-.ns-field__row {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-}
-
-.ns-field__value {
-  font-family: var(--font-display);
-  font-size: var(--fs-sm);
-  font-weight: 700;
-  color: var(--purple);
-  min-width: 48px;
-  text-align: right;
-}
-
 .ns-field__buttons {
   display: flex;
   gap: var(--sp-1);
-}
-
-.ns-slider {
-  flex: 1;
-  accent-color: var(--accent);
 }
 
 .ns-toggle {
@@ -496,7 +476,7 @@
 
 .ns-estimate {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: var(--sp-3);
 }
 
@@ -514,10 +494,6 @@
   color: var(--text0);
   font-variant-numeric: tabular-nums;
   margin-top: var(--sp-1);
-}
-
-.ns-estimate__value--cost {
-  color: var(--purple);
 }
 
 /* Launch */

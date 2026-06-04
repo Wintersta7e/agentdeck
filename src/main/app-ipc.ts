@@ -3,6 +3,8 @@ import type { PtyManager } from './pty-manager'
 import type { AppStore } from './project-store'
 import type { WorkflowEngine } from './workflow-engine'
 import type { WorktreeManager } from './worktree-manager'
+import type { SessionHistory } from './session-history'
+import type { UsageHistory } from './usage-history'
 import {
   registerPtyHandlers,
   registerWindowHandlers,
@@ -23,6 +25,8 @@ interface RegisterAppIpcHandlersOptions {
   getPtyManager: () => PtyManager | null
   getWorkflowEngine: () => WorkflowEngine | null
   getWorktreeManager: () => WorktreeManager | null
+  sessionHistory: SessionHistory
+  usageHistory: UsageHistory
 }
 
 export function registerAppIpcHandlers({
@@ -32,6 +36,8 @@ export function registerAppIpcHandlers({
   getPtyManager,
   getWorkflowEngine,
   getWorktreeManager,
+  sessionHistory,
+  usageHistory,
 }: RegisterAppIpcHandlersOptions): void {
   registerPtyHandlers(getPtyManager, {
     getMainWindow,
@@ -40,6 +46,8 @@ export function registerAppIpcHandlers({
       return projects.find((project) => project.path === projectPath)?.id ?? null
     },
     reviewTracker,
+    sessionHistory,
+    usageHistory,
   })
   registerWindowHandlers(getMainWindow, store)
   registerAgentHandlers(getMainWindow, store)

@@ -44,10 +44,6 @@
   color: var(--text1);
 }
 
-.daily-digest-cost {
-  color: var(--accent);
-}
-
 .daily-digest-rate {
   color: var(--green);
 }

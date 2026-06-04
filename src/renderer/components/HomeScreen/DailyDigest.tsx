@@ -17,10 +17,6 @@ export function DailyDigest(): React.JSX.Element {
         <span className="daily-digest-value">{digest.filesChanged}</span>
       </div>
       <div className="daily-digest-row">
-        <span className="daily-digest-label">Cost</span>
-        <span className="daily-digest-value daily-digest-cost">${digest.costToday.toFixed(2)}</span>
-      </div>
-      <div className="daily-digest-row">
         <span className="daily-digest-label">Clean exits</span>
         <span className="daily-digest-value daily-digest-rate">
           {digest.cleanExitRate !== null ? `${Math.round(digest.cleanExitRate)}%` : '\u2014'}

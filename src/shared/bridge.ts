@@ -2,7 +2,8 @@ import type { ContextResult, SetContextOverrideArgs } from './context-types'
 import type {
   ActivityEvent,
   AgentEnvSnapshot,
-  DailyCostEntry,
+  CodexLimits,
+  DailyUsageEntry,
   DetectedStack,
   GitStatus,
   LegacyTemplate,
@@ -10,11 +11,11 @@ import type {
   ProjectMeta,
   ReviewItem,
   Role,
+  SessionRecord,
   SkillInfo,
   Template,
   TemplateDraft,
   TemplateScope,
-  TokenUsage,
   Workflow,
   WorkflowEvent,
   WorkflowExport,
@@ -146,21 +147,19 @@ export interface AgentDeckBridge {
     keep: (sessionId: string) => Promise<void>
     releasePrimary: (projectId: string, sessionId: string) => Promise<void>
   }
-  cost: {
-    bind: (
-      sessionId: string,
-      opts: { agent: string; projectPath: string; cwd: string; spawnAt: number },
-    ) => Promise<void>
-    unbind: (sessionId: string) => Promise<void>
-    onUpdate: (cb: (data: { sessionId: string; usage: TokenUsage }) => void) => BridgeUnsubscribe
+  usage: {
+    getHistory: (days: number) => Promise<DailyUsageEntry[]>
+  }
+  sessions: {
+    getHistory: (days: number) => Promise<SessionRecord[]>
+  }
+  limits: {
+    getCodex: () => Promise<CodexLimits | null>
   }
   home: {
     gitStatus: (projectId: string) => Promise<GitStatus | null>
     pendingReviews: (projectId: string) => Promise<ReviewItem[]>
     dismissReview: (reviewId: string) => Promise<void>
-    costHistory: (days: number) => Promise<DailyCostEntry[]>
-    getBudget: () => Promise<number | null>
-    setBudget: (amount: number | null) => Promise<void>
     onReviewsUpdated: (cb: (items: ReviewItem[]) => void) => BridgeUnsubscribe
   }
   pickFolder: () => Promise<string | null>

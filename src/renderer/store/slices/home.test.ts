@@ -45,18 +45,4 @@ describe('home slice', () => {
     useAppStore.getState().dismissReview('r1')
     expect(useAppStore.getState().reviewItems).toHaveLength(0)
   })
-
-  it('manages cost history', () => {
-    const entries = [
-      {
-        date: '2026-04-07',
-        totalCostUsd: 4.82,
-        perAgent: { 'claude-code': 3.2 },
-        sessionCount: 14,
-        tokenCount: 142000,
-      },
-    ]
-    useAppStore.getState().setCostHistory(entries)
-    expect(useAppStore.getState().costHistory).toHaveLength(1)
-  })
 })

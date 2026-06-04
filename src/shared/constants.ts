@@ -16,8 +16,8 @@ export const TIMELINE_EVENT_DURATION_MS = 30_000
 /** Minimum session span for timeline segment width computation (ms) */
 export const TIMELINE_MIN_SPAN_MS = 60_000
 
-/** Cost history refresh interval while the home screen is visible (ms) */
-export const COST_REFRESH_INTERVAL_MS = 30_000
+/** Productivity history refresh interval while the home screen is visible (ms) */
+export const USAGE_REFRESH_INTERVAL_MS = 30_000
 
 /** Default terminal font size (px) */
 export const TERMINAL_DEFAULT_FONT_SIZE = 12

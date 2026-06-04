@@ -183,8 +183,8 @@
   text-align: right;
 }
 
-.history-log__cost {
-  color: var(--purple);
+.history-log__files {
+  color: var(--text2);
   text-align: right;
   font-variant-numeric: tabular-nums;
 }

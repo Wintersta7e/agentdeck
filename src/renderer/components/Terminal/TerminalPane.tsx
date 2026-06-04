@@ -468,17 +468,6 @@ export function TerminalPane({
             applySessionStatus(sessionId, 'error')
             return
           }
-          // Bind cost tracking (best-effort, fire-and-forget)
-          window.agentDeck.cost
-            .bind(sessionId, {
-              agent: agentRef.current ?? '',
-              projectPath: projectPathRef.current ?? '',
-              cwd: spawnPath ?? projectPathRef.current ?? '',
-              spawnAt: spawnTimestamp,
-            })
-            .catch(() => {
-              /* cost tracking is best-effort */
-            })
           applySessionStatus(sessionId, 'running')
 
           // Pipe the launch prompt into the agent's stdin after a short grace
@@ -660,7 +649,7 @@ export function TerminalPane({
 
       const state = useAppStore.getState()
       const storedSession = state.sessions[sessionId]
-      if (storedSession && storedSession.status !== 'exited') {
+      if (storedSession && storedSession.status !== 'exited' && storedSession.status !== 'error') {
         // Session still alive (tab switch) → cache terminal for reattachment.
         // Detach the xterm DOM tree so React doesn't destroy it with the container.
         if (term.element?.parentElement) {
@@ -707,12 +696,6 @@ export function TerminalPane({
             })
         }
         clearWorktreePath(sessionId)
-        window.agentDeck.cost.unbind(sessionId).catch((err: unknown) => {
-          window.agentDeck.log.send('debug', 'cost', 'unbind failed', {
-            sessionId,
-            err: String(err),
-          })
-        })
         try {
           webglAddon?.dispose()
         } catch {

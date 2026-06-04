@@ -5,6 +5,74 @@ All notable changes to AgentDeck will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.8.0] - 2026-05-31
+
+A large release covering everything since 6.6.0 (6.7.x was never published).
+Headline: workflow agents now run reliably in WSL from the packaged app.
+Plus per-node agent permissions, seven complex workflow blueprints, a
+graceful loop-escape engine, a broad error-surfacing and stability pass, and
+a dependency refresh.
+
+### Added
+
+- **Per-node agent permissions** — Read / Edit / Full on each agent node,
+  mapped to per-agent flags (codex `--sandbox`, claude `--permission-mode`),
+  with a node-editor dropdown and seed annotations.
+- **Seven complex workflow blueprints** seeded out of the box: Autonomous
+  Bug Fix, Feature Pipeline, Parallel Deep Review, Coverage Loop, Refactor
+  Campaign, Release Readiness, and Cross-Agent Design Verify.
+- **Adversarial Reviewer** built-in workflow role.
+- **Graceful loop escape** — exhausted condition loops route to an escape
+  edge instead of silently completing.
+- **Edit project + Pin** actions in the project right-click menu.
+- App version is logged at startup.
+
+### Changed
+
+- **Agent-node timeouts** retuned: dropped over-tight per-node caps from the
+  seed workflows and adopted a 20-minute idle window, so agents that buffer
+  all their output until done aren't killed mid-run.
+- `~/.local/bin` is preferred on PATH so a native CLI install wins over a
+  stale npm-global copy shadowed by a node version manager.
+- Workflow scheduler hardened: dedup condition resolution, restore shared
+  loop-exit targets on reset, and ignore stale ready-queue entries after a
+  loop reset.
+- Dependency refresh: Electron 42, Vitest, TypeScript, type defs,
+  lucide-react, lint-staged; transitive advisories (tmp, brace-expansion)
+  patched; dependabot set to ignore blocked majors.
+
+### Fixed
+
+- **Agent CLIs now run reliably in WSL.** Prompts go over the child's stdin
+  instead of the command line (shell-significant characters can no longer
+  break the WSL command); `HOME`/`NVM_DIR` are reset to the real Linux home
+  (they could inherit the Windows profile from the launching process); and
+  the agent + `node` directories are resolved from an interactive login shell
+  and injected into PATH — fixing nvm-installed agents (e.g. codex) not being
+  found (exit 127).
+- codex agent nodes run without inheriting interactive hooks; claude agents
+  change directory via `cd` rather than an invalid `--directory` flag.
+- Windows folder-picker / project paths are normalised to WSL paths on save,
+  on startup, and from the picker; `$HOME` resolution is retried after
+  transient WSL failures (cost-tracker, worktree late-init).
+- Agent updater only flags an update when the latest version is strictly
+  newer, retries the post-install binary check, parallelises its failure
+  diagnostics, and uses the refreshed goose installer URL.
+- **No more silent failures** — surface template parse errors, workflow
+  save/unmount failures, invalid-regex conditions, PTY spawn failures, and
+  previously-swallowed background errors; distinguish ENOENT from real fs
+  errors.
+- Cost history writes are atomic and preserve a corrupt file as `.bad`.
+- Stability: LRU caps on per-project template watchers, auto-cancel of stale
+  confirm prompts, xterm disposal on close/eviction, capped cost-tracker
+  discovery polling, `crypto.randomUUID` for starter node ids, correct
+  session agent labels for migrated projects, and edge deletion in the
+  workflow editor.
+
+### Security
+
+- Workflow import downgrades a `full` agent permission level to `edit`.
+
 ## [6.6.0] - 2026-05-16
 
 User-visible UX polish, an externalised pricing config, plus a

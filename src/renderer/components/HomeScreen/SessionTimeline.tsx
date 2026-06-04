@@ -1,5 +1,8 @@
+import { useMemo } from 'react'
 import { CollapsibleSection } from '../shared/CollapsibleSection'
 import { useSessionTimeline } from '../../hooks/useSessionTimeline'
+import { useSessionHistory } from '../../hooks/useSessionHistory'
+import { useMidnight } from '../../hooks/useMidnight'
 import './SessionTimeline.css'
 
 const LEGEND = [
@@ -18,14 +21,31 @@ const SEG_COLORS: Record<string, string> = {
   command: 'tl-tool',
 }
 
-// Inner component — only mounted when CollapsibleSection is open, so the hook
-// only runs when the section is actually visible.
+// Inner component — only mounted when CollapsibleSection is open, so the hooks
+// only run when the section is actually visible.
 function SessionTimelineContent(): React.JSX.Element {
   const rows = useSessionTimeline()
+  const historyRows = useSessionHistory(1)
+  const midnight = useMidnight()
 
-  return rows.length === 0 ? (
+  // A session counts as "today" if it started at or after midnight.
+  // Persisted records are authoritative — if any ran today we don't show empty.
+  const hasTodaySessions = useMemo(
+    () => historyRows.some((r) => r.startedAt >= midnight),
+    [historyRows, midnight],
+  )
+
+  const isEmpty = rows.length === 0 && !hasTodaySessions
+
+  return isEmpty ? (
     <div className="tl-empty">
       No agent activity recorded today. Start an agent session to see the timeline.
+    </div>
+  ) : rows.length === 0 ? (
+    // Sessions ran today (persisted) but activityFeeds aren't available (e.g. after
+    // restart). Show a quiet placeholder so the section isn't incorrectly empty.
+    <div className="tl-empty tl-empty--has-history">
+      Session data recorded — detailed timeline available for active sessions.
     </div>
   ) : (
     <div className="tl-container">
