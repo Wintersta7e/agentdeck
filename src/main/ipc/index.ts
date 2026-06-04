@@ -16,7 +16,6 @@ export { registerSkillHandlers } from './ipc-skills'
 export { registerWorktreeHandlers } from './ipc-worktree'
 export { registerFilesIpc } from './ipc-files'
 export { registerHomeHandlers, reviewTracker } from './ipc-home'
-export { registerCostHandlers } from './ipc-cost'
 export { registerUsageHandlers } from './ipc-usage'
 export { registerLimitsHandlers } from './ipc-limits'
 export {

@@ -1,10 +1,10 @@
 import { CH } from '../../shared/ipc-channels'
 import { ipcRenderer } from 'electron'
 import type { AgentDeckBridge } from '../../shared/bridge'
-import type { ReviewItem, TokenUsage } from '../../shared/types'
+import type { ReviewItem } from '../../shared/types'
 import { onIpc } from './events'
 
-type WorkspaceBridge = Pick<AgentDeckBridge, 'worktree' | 'home' | 'cost' | 'usage' | 'limits'>
+type WorkspaceBridge = Pick<AgentDeckBridge, 'worktree' | 'home' | 'usage' | 'limits'>
 
 export function createWorkspaceBridge(): WorkspaceBridge {
   return {
@@ -21,15 +21,7 @@ export function createWorkspaceBridge(): WorkspaceBridge {
       gitStatus: (projectId) => ipcRenderer.invoke(CH.projectsGitStatus, projectId),
       pendingReviews: (projectId) => ipcRenderer.invoke(CH.projectsPendingReviews, projectId),
       dismissReview: (reviewId) => ipcRenderer.invoke(CH.projectsDismissReview, reviewId),
-      costHistory: (days) => ipcRenderer.invoke(CH.costGetHistory, days),
-      getBudget: () => ipcRenderer.invoke(CH.costGetBudget),
-      setBudget: (amount) => ipcRenderer.invoke(CH.costSetBudget, amount),
       onReviewsUpdated: (cb) => onIpc<ReviewItem[]>(CH.homeReviewsUpdated, cb),
-    },
-    cost: {
-      bind: (sessionId, opts) => ipcRenderer.invoke(CH.costBind, sessionId, opts),
-      unbind: (sessionId) => ipcRenderer.invoke(CH.costUnbind, sessionId),
-      onUpdate: (cb) => onIpc<{ sessionId: string; usage: TokenUsage }>(CH.costUpdate, cb),
     },
     usage: {
       recordSession: (rec) => ipcRenderer.invoke(CH.usageRecordSession, rec),

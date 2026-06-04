@@ -16,16 +16,6 @@ vi.mock('../review-tracker', () => ({
   }),
 }))
 
-vi.mock('../cost-history', () => ({
-  createCostHistory: () => ({
-    recordCost: vi.fn(),
-    getHistory: vi.fn(() => []),
-    getBudget: vi.fn(() => null),
-    setBudget: vi.fn(),
-    flush: vi.fn(),
-  }),
-}))
-
 const { registerHomeHandlers } = await import('./ipc-home')
 
 const call = makeIpcCall(handlers)

@@ -10,14 +10,10 @@ import { initLogger, createLogger, closeLogger } from './logger'
 import { seedWorkflows } from './workflow-seeds'
 import type { WorkflowEngine } from './workflow-engine'
 import type { WorktreeManager } from './worktree-manager'
-import { createCostTracker, type CostTracker } from './cost-tracker'
-import { createCostHistory } from './cost-history'
 import { createUsageHistory } from './usage-history'
 import { createAppWindow } from './app-window'
 import { registerAppIpcHandlers } from './app-ipc'
-import { createClaudeAdapter, createCodexAdapter } from './log-adapters'
 import {
-  registerCostHandlers,
   registerUsageHandlers,
   registerLimitsHandlers,
   wireTemplateWindowEvents,
@@ -28,7 +24,6 @@ import { initializeTemplateRuntime } from './template-runtime'
 import { initializeWorktreeManager } from './worktree-runtime'
 import { publishWslAvailability, resolveWslHome } from './wsl-runtime'
 
-const costHistory = createCostHistory(join(app.getPath('userData'), 'cost-history.json'))
 const usageHistory = createUsageHistory(join(app.getPath('userData'), 'usage-history.json'))
 const log = createLogger('app')
 
@@ -37,7 +32,6 @@ let ptyManager: PtyManager | null = null
 let workflowEngine: WorkflowEngine | null = null
 let appStore: AppStore | null = null
 let worktreeManager: WorktreeManager | null = null
-let costTracker: CostTracker | null = null
 let templateStore: TemplateStore | null = null
 let templateEventsOff: (() => void) | null = null
 
@@ -104,15 +98,6 @@ app
       templateEventsOff = wireTemplateWindowEvents(templateStore, () => mainWindow)
     }
 
-    if (mainWindow) {
-      costTracker = createCostTracker(
-        mainWindow,
-        [createClaudeAdapter(), createCodexAdapter()],
-        costHistory,
-      )
-    }
-
-    registerCostHandlers(() => costTracker, costHistory)
     registerUsageHandlers(usageHistory)
     registerLimitsHandlers()
 
@@ -162,9 +147,7 @@ app
 
 app.on('before-quit', () => {
   log.info('App quitting')
-  costHistory.flush()
   usageHistory.flush()
-  costTracker?.destroy()
   workflowEngine?.stopAll()
   ptyManager?.killAll()
   templateEventsOff?.()

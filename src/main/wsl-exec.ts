@@ -2,7 +2,7 @@
  * Single source of truth for `wsl.exe -- bash -lc <cmd>` invocations.
  *
  * Replaces the four near-identical `wslExec` / `runWslCmd` helpers that
- * previously lived in cost-tracker, skill-scanner, wsl-paths, and
+ * previously lived in skill-scanner, wsl-paths, and
  * agent-updater. Each caller picks an error mode (`throw` or `nullable`)
  * and an optional distro / timeout / NODE_INIT prefix; everything else is
  * shared.
@@ -57,7 +57,7 @@ function buildArgs(cmd: string, opts: WslExecCommonOptions): string[] {
 /**
  * Run a command in WSL bash. Resolves with raw stdout on success; rejects
  * on error. Callers that just want a single line trim themselves; callers
- * that parse multi-line output (cost tracker tail/stat) need the trailing
+ * that parse multi-line output need the trailing
  * newline preserved. Use `wslTry` if you'd rather treat failures as `null`.
  *
  * The `fallbackStderrAsOutput` branch trims because that path always

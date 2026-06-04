@@ -3,7 +3,6 @@ import type {
   ActivityEvent,
   AgentEnvSnapshot,
   CodexLimits,
-  DailyCostEntry,
   DailyUsageEntry,
   DetectedStack,
   GitStatus,
@@ -17,7 +16,6 @@ import type {
   Template,
   TemplateDraft,
   TemplateScope,
-  TokenUsage,
   Workflow,
   WorkflowEvent,
   WorkflowExport,
@@ -149,14 +147,6 @@ export interface AgentDeckBridge {
     keep: (sessionId: string) => Promise<void>
     releasePrimary: (projectId: string, sessionId: string) => Promise<void>
   }
-  cost: {
-    bind: (
-      sessionId: string,
-      opts: { agent: string; projectPath: string; cwd: string; spawnAt: number },
-    ) => Promise<void>
-    unbind: (sessionId: string) => Promise<void>
-    onUpdate: (cb: (data: { sessionId: string; usage: TokenUsage }) => void) => BridgeUnsubscribe
-  }
   usage: {
     recordSession: (rec: SessionUsageRecord) => Promise<void>
     getHistory: (days: number) => Promise<DailyUsageEntry[]>
@@ -168,9 +158,6 @@ export interface AgentDeckBridge {
     gitStatus: (projectId: string) => Promise<GitStatus | null>
     pendingReviews: (projectId: string) => Promise<ReviewItem[]>
     dismissReview: (reviewId: string) => Promise<void>
-    costHistory: (days: number) => Promise<DailyCostEntry[]>
-    getBudget: () => Promise<number | null>
-    setBudget: (amount: number | null) => Promise<void>
     onReviewsUpdated: (cb: (items: ReviewItem[]) => void) => BridgeUnsubscribe
   }
   pickFolder: () => Promise<string | null>

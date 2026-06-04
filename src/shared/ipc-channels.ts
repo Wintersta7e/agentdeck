@@ -33,14 +33,6 @@ export const CH = {
   clipboardReadFilePaths: 'clipboard:readFilePaths',
   dialogPickFolder: 'dialog:pickFolder',
 
-  // ── Cost tracking ──────────────────────────────────────────────────
-  costBind: 'cost:bind',
-  costGetBudget: 'cost:getBudget',
-  costGetHistory: 'cost:getHistory',
-  costSetBudget: 'cost:setBudget',
-  costUnbind: 'cost:unbind',
-  costUpdate: 'cost:update',
-
   // ── Usage / productivity tracking ──────────────────────────────────
   usageGetHistory: 'usage:getHistory',
   usageRecordSession: 'usage:recordSession',
