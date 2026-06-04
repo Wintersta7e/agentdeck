@@ -571,3 +571,20 @@ export interface AgentEnvSnapshot {
   config: ConfigEntry[]
   paths: AgentEnvPaths
 }
+
+/** One subscription rate-limit window (Codex exposes these; Claude does not). */
+export interface PlanWindow {
+  usedPercent: number
+  windowMinutes: number
+  /** Unix seconds when this window resets. */
+  resetsAt: number
+}
+
+/** Codex account-wide rate-limit standing, read from the newest rollout log. */
+export interface CodexLimits {
+  primary: PlanWindow | null
+  weekly: PlanWindow | null
+  planType: string | null
+  /** Event timestamp (ms) of the rate-limit snapshot, or null if unknown. */
+  asOf: number | null
+}
