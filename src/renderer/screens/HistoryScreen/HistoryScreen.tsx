@@ -1,15 +1,15 @@
 import { useMemo, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { useMidnight } from '../../hooks/useMidnight'
+import { useSessionHistory } from '../../hooks/useSessionHistory'
 import { AGENTS } from '../../../shared/agents'
-import { getSessionAgentId } from '../../utils/agent-ui'
+import type { AgentType } from '../../../shared/types'
 import { ScreenShell, FilterChip } from '../../components/shared/ScreenShell'
-import type { Session } from '../../../shared/types'
+import { DAYS as HISTORY_DAYS } from './constants'
 import './HistoryScreen.css'
 
 type Metric = 'count' | 'filesChanged'
 
-const DAYS = 14
 const HOURS = 24
 const DAY_MS = 24 * 60 * 60 * 1000
 const AGENT_META_MAP = new Map(AGENTS.map((a) => [a.id, a]))
@@ -32,59 +32,61 @@ function formatTs(ts: number): string {
 }
 
 export function HistoryScreen(): React.JSX.Element {
-  const sessions = useAppStore((s) => s.sessions)
-  const writeCounts = useAppStore((s) => s.writeCountBySession)
   const projects = useAppStore((s) => s.projects)
   const setActiveSession = useAppStore((s) => s.setActiveSession)
   const setCurrentView = useAppStore((s) => s.setCurrentView)
 
   const [metric, setMetric] = useState<Metric>('count')
   const todayStart = useMidnight()
-  const gridStart = todayStart - (DAYS - 1) * DAY_MS
+  const gridStart = todayStart - (HISTORY_DAYS - 1) * DAY_MS
+
+  const rows = useSessionHistory(HISTORY_DAYS)
 
   const projectById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects])
 
   const heatmap = useMemo(() => {
-    const cells: number[][] = Array.from({ length: DAYS }, () =>
+    const cells: number[][] = Array.from({ length: HISTORY_DAYS }, () =>
       Array.from({ length: HOURS }, () => 0),
     )
     let max = 0
-    for (const session of Object.values(sessions) as Session[]) {
-      if (session.startedAt < gridStart) continue
-      const dayIdx = Math.floor((session.startedAt - gridStart) / DAY_MS)
-      if (dayIdx < 0 || dayIdx >= DAYS) continue
-      const row = cells[dayIdx]
-      if (!row) continue
-      const hour = new Date(session.startedAt).getHours()
-      const current = row[hour] ?? 0
-      const delta = metric === 'count' ? 1 : (writeCounts[session.id] ?? 0)
+    for (const row of rows) {
+      if (row.startedAt < gridStart) continue
+      const dayIdx = Math.floor((row.startedAt - gridStart) / DAY_MS)
+      if (dayIdx < 0 || dayIdx >= HISTORY_DAYS) continue
+      const dayRow = cells[dayIdx]
+      if (!dayRow) continue
+      const hour = new Date(row.startedAt).getHours()
+      const current = dayRow[hour] ?? 0
+      const delta = metric === 'count' ? 1 : row.filesChanged
       const next = current + delta
-      row[hour] = next
+      dayRow[hour] = next
       if (next > max) max = next
     }
     return { cells, max }
-  }, [sessions, writeCounts, metric, gridStart])
+  }, [rows, metric, gridStart])
 
-  const sortedSessions = useMemo(() => {
-    return (Object.values(sessions) as Session[])
-      .slice()
-      .sort((a, b) => b.startedAt - a.startedAt)
-      .slice(0, 60)
-  }, [sessions])
+  const sortedRows = useMemo(
+    () =>
+      rows
+        .slice()
+        .sort((a, b) => b.startedAt - a.startedAt)
+        .slice(0, 60),
+    [rows],
+  )
 
   const totals = useMemo(() => {
     let count = 0
     let filesChanged = 0
-    for (const session of Object.values(sessions) as Session[]) {
-      if (session.startedAt < gridStart) continue
+    for (const row of rows) {
+      if (row.startedAt < gridStart) continue
       count += 1
-      filesChanged += writeCounts[session.id] ?? 0
+      filesChanged += row.filesChanged
     }
     return { count, filesChanged }
-  }, [sessions, writeCounts, gridStart])
+  }, [rows, gridStart])
 
-  const handleOpenSession = (session: Session): void => {
-    setActiveSession(session.id)
+  const handleOpenSession = (sessionId: string): void => {
+    setActiveSession(sessionId)
     setCurrentView('sessions')
   }
 
@@ -152,31 +154,30 @@ export function HistoryScreen(): React.JSX.Element {
 
       <section className="history-log" aria-label="Recent sessions">
         <header className="history-log__head">Recent sessions</header>
-        {sortedSessions.length === 0 ? (
+        {sortedRows.length === 0 ? (
           <div className="history-log__empty">No sessions archived yet.</div>
         ) : (
           <ul className="history-log__list">
-            {sortedSessions.map((session) => {
-              const files = writeCounts[session.id] ?? 0
-              const project = projectById.get(session.projectId)
-              const agentId = getSessionAgentId(session, project)
-              const agent = AGENT_META_MAP.get(agentId)
+            {sortedRows.map((row) => {
+              const project = projectById.get(row.projectId)
+              const agent = AGENT_META_MAP.get(row.agent as AgentType)
+              const files = row.filesChanged
               return (
-                <li key={session.id} className="history-log__row">
+                <li key={row.sessionId} className="history-log__row">
                   <button
                     type="button"
                     className="history-log__btn"
-                    onClick={() => handleOpenSession(session)}
+                    onClick={() => handleOpenSession(row.sessionId)}
                   >
-                    <span className="history-log__time">{formatTs(session.startedAt)}</span>
+                    <span className="history-log__time">{formatTs(row.startedAt)}</span>
                     <span className="history-log__agent">
                       <span aria-hidden="true">{agent?.icon ?? '◈'}</span>
-                      {agent?.name ?? agentId}
+                      {agent?.name ?? row.agent}
                     </span>
                     <span className="history-log__project">
-                      {project?.name ?? (session.projectId || 'ad-hoc')}
+                      {project?.name ?? (row.projectId || 'ad-hoc')}
                     </span>
-                    <span className="history-log__status">{session.status.toUpperCase()}</span>
+                    <span className="history-log__status">{row.status.toUpperCase()}</span>
                     <span className="history-log__files">{files > 0 ? String(files) : '—'}</span>
                   </button>
                 </li>

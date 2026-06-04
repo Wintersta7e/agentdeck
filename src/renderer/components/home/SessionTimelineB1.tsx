@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
 import { useAppStore } from '../../store/appStore'
-import { AGENT_BY_ID, agentColorVar, getSessionAgentId } from '../../utils/agent-ui'
-import type { Session } from '../../../shared/types'
+import { useSessionHistory } from '../../hooks/useSessionHistory'
+import { AGENT_BY_ID, agentColorVar } from '../../utils/agent-ui'
+import type { AgentType } from '../../../shared/types'
 import './SessionTimelineB1.css'
 
 const WINDOW_MS = 60 * 60 * 1000 // last 60 minutes
@@ -23,39 +24,39 @@ interface Row {
  * min/$cost. Running sessions show a blinking leading edge.
  */
 export function SessionTimelineB1({ now }: { now: number }): React.JSX.Element {
-  const sessions = useAppStore((s) => s.sessions)
   const projects = useAppStore((s) => s.projects)
+  const sessionRows = useSessionHistory(1)
 
   const projectById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects])
 
   const rows: Row[] = useMemo(() => {
     const windowStart = now - WINDOW_MS
-    return (Object.values(sessions) as Session[])
-      .filter((s) => s.startedAt >= windowStart || s.status === 'running')
+    return sessionRows
+      .filter((r) => r.startedAt >= windowStart || r.endedAt === null)
       .slice()
       .sort((a, b) => a.startedAt - b.startedAt)
       .slice(0, 6)
-      .map((s) => {
-        const clampedStart = Math.max(s.startedAt, windowStart)
-        const endTs = s.status === 'running' ? now : Math.min(s.startedAt + WINDOW_MS, now)
+      .map((r) => {
+        const running = r.endedAt === null
+        const endTs = running ? now : Math.min(r.endedAt ?? now, now)
+        const clampedStart = Math.max(r.startedAt, windowStart)
         const startPct = Math.max(0, ((clampedStart - windowStart) / WINDOW_MS) * 100)
         const endPct = Math.max(startPct + 2, ((endTs - windowStart) / WINDOW_MS) * 100)
         const widthPct = Math.min(100 - startPct, endPct - startPct)
-        const project = projectById.get(s.projectId)
-        const agentId = getSessionAgentId(s, project)
-        const agent = AGENT_BY_ID.get(agentId)
+        const projectName = projectById.get(r.projectId)?.name ?? (r.projectId || 'ad-hoc')
+        const agent = AGENT_BY_ID.get(r.agent as AgentType)
         return {
-          id: s.id,
-          projectName: project?.name ?? (s.projectId || 'ad-hoc'),
-          agentId,
+          id: r.sessionId,
+          projectName,
+          agentId: r.agent,
           glyph: agent?.icon ?? '◈',
           startPct,
           widthPct,
-          running: s.status === 'running',
-          mins: Math.max(0, Math.floor((now - s.startedAt) / 60000)),
+          running,
+          mins: Math.max(0, Math.floor((now - r.startedAt) / 60000)),
         }
       })
-  }, [sessions, projectById, now])
+  }, [sessionRows, projectById, now])
 
   return (
     <div className="st-b1">
