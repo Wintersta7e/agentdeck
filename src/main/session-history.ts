@@ -21,7 +21,10 @@ export interface SessionHistory {
     startedAt: number
   }) => void
   noteWrite: (sessionId: string) => void
-  endSession: (sessionId: string, end: { endedAt: number; status: 'exited' | 'error' }) => void
+  endSession: (
+    sessionId: string,
+    end: { endedAt: number; status: 'exited' | 'error' },
+  ) => SessionRecord | null
   getHistory: (days: number) => SessionRecord[]
   flush: () => void
 }
@@ -108,10 +111,11 @@ export function createSessionHistory(storePath?: string): SessionHistory {
     },
     endSession(sessionId, end) {
       const r = records.get(sessionId)
-      if (!r) return
+      if (!r) return null
       r.endedAt = end.endedAt
       r.status = end.status
       scheduleFlush()
+      return r
     },
     getHistory(days) {
       const cutoff = Date.now() - days * 24 * 60 * 60 * 1000

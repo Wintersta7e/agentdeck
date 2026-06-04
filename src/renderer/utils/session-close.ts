@@ -1,7 +1,6 @@
 import { useAppStore } from '../store/appStore'
 import { promptDirtyWorktree } from './prompt-dirty-worktree'
 import { disposeCachedTerminal } from '../components/Terminal/terminal-cache'
-import { recordSessionUsage } from './record-session-usage'
 
 const logWarn = (msg: string, data?: unknown): void => {
   window.agentDeck.log.send('warn', 'session-close', msg, data ?? undefined)
@@ -60,8 +59,6 @@ export async function closeSession(sessionId: string): Promise<void> {
         commitSource = 'auto'
       }
     }
-
-    recordSessionUsage(sessionId)
 
     useAppStore.getState().applySessionStatus(sessionId, 'exited', 'user-kill')
 

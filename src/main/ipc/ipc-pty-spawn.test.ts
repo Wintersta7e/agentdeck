@@ -21,6 +21,20 @@ const { registerPtyHandlers } = await import('./ipc-pty')
 
 const call = makeIpcCall(handlers)
 
+const stubSessionHistory = (): Parameters<typeof registerPtyHandlers>[1]['sessionHistory'] => ({
+  startSession: vi.fn(),
+  noteWrite: vi.fn(),
+  endSession: vi.fn(() => null),
+  getHistory: vi.fn(() => []),
+  flush: vi.fn(),
+})
+
+const stubUsageHistory = (): Parameters<typeof registerPtyHandlers>[1]['usageHistory'] => ({
+  recordSession: vi.fn(),
+  getHistory: vi.fn(() => []),
+  flush: vi.fn(),
+})
+
 describe('pty:spawn IPC validation', () => {
   let mgr: { spawn: ReturnType<typeof vi.fn> }
 
@@ -35,6 +49,8 @@ describe('pty:spawn IPC validation', () => {
         getReviews: vi.fn(() => []),
         dismissReview: vi.fn(),
       } as unknown as Parameters<typeof registerPtyHandlers>[1]['reviewTracker'],
+      sessionHistory: stubSessionHistory(),
+      usageHistory: stubUsageHistory(),
     })
   })
 
@@ -140,6 +156,8 @@ describe('pty:spawn IPC validation', () => {
         getReviews: vi.fn(() => []),
         dismissReview: vi.fn(),
       } as unknown as Parameters<typeof registerPtyHandlers>[1]['reviewTracker'],
+      sessionHistory: stubSessionHistory(),
+      usageHistory: stubUsageHistory(),
     })
     expect(() => call('pty:spawn', 'sess-1', 80, 24, '/p')).toThrow(/PTY manager not initialized/)
   })
@@ -161,6 +179,8 @@ describe('pty:spawn review-detection wiring', () => {
         getReviews: vi.fn(() => []),
         dismissReview: vi.fn(),
       } as unknown as Parameters<typeof registerPtyHandlers>[1]['reviewTracker'],
+      sessionHistory: stubSessionHistory(),
+      usageHistory: stubUsageHistory(),
     })
 
     call('pty:spawn', 'sess-known', 80, 24, '/known/path', undefined, undefined, 'claude-code')
@@ -183,6 +203,8 @@ describe('pty:spawn review-detection wiring', () => {
         getReviews: vi.fn(() => []),
         dismissReview: vi.fn(),
       } as unknown as Parameters<typeof registerPtyHandlers>[1]['reviewTracker'],
+      sessionHistory: stubSessionHistory(),
+      usageHistory: stubUsageHistory(),
     })
 
     call('pty:spawn', 'sess-orphan', 80, 24, '/unknown/path', undefined, undefined, 'claude-code')
@@ -205,6 +227,8 @@ describe('pty:spawn review-detection wiring', () => {
         getReviews: vi.fn(() => []),
         dismissReview: vi.fn(),
       } as unknown as Parameters<typeof registerPtyHandlers>[1]['reviewTracker'],
+      sessionHistory: stubSessionHistory(),
+      usageHistory: stubUsageHistory(),
     })
 
     call('pty:spawn', 'sess-no-project', 80, 24)

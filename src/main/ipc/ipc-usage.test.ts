@@ -10,40 +10,8 @@ const { CH } = await import('../../shared/ipc-channels')
 
 const call = (ch: string, ...args: unknown[]) => handlers.get(ch)!(null, ...args)
 
-const validRec = {
-  sessionId: 'session-abc',
-  agent: 'claude-code',
-  projectId: 'p1',
-  startedAt: 1000,
-  endedAt: 2000,
-  filesChanged: 2,
-}
-
 describe('ipc-usage', () => {
   beforeEach(() => handlers.clear())
-
-  it('records a valid session once and dedups repeats', () => {
-    const recordSession = vi.fn()
-    registerUsageHandlers({ recordSession, getHistory: vi.fn(() => []), flush: vi.fn() })
-    call(CH.usageRecordSession, validRec)
-    call(CH.usageRecordSession, validRec) // duplicate sessionId
-    expect(recordSession).toHaveBeenCalledTimes(1)
-  })
-
-  it('rejects an invalid record', () => {
-    const recordSession = vi.fn()
-    registerUsageHandlers({ recordSession, getHistory: vi.fn(() => []), flush: vi.fn() })
-    expect(() => call(CH.usageRecordSession, { ...validRec, sessionId: 'bad id!' })).toThrow()
-    expect(() => call(CH.usageRecordSession, { ...validRec, startedAt: 'x' })).toThrow()
-    expect(recordSession).not.toHaveBeenCalled()
-  })
-
-  it('rejects a projectId failing SAFE_ID_RE', () => {
-    const recordSession = vi.fn()
-    registerUsageHandlers({ recordSession, getHistory: vi.fn(() => []), flush: vi.fn() })
-    expect(() => call(CH.usageRecordSession, { ...validRec, projectId: '../etc/passwd' })).toThrow()
-    expect(recordSession).not.toHaveBeenCalled()
-  })
 
   it('validates the days param on getHistory', () => {
     const getHistory = vi.fn(() => [])

@@ -12,6 +12,7 @@ import type { WorkflowEngine } from './workflow-engine'
 import type { WorktreeManager } from './worktree-manager'
 import { createUsageHistory } from './usage-history'
 import { createSessionHistory } from './session-history'
+import { ptyBus } from './pty-bus'
 import { createAppWindow } from './app-window'
 import { registerAppIpcHandlers } from './app-ipc'
 import {
@@ -29,6 +30,11 @@ import { publishWslAvailability, resolveWslHome } from './wsl-runtime'
 const usageHistory = createUsageHistory(join(app.getPath('userData'), 'usage-history.json'))
 const sessionHistory = createSessionHistory(join(app.getPath('userData'), 'session-history.json'))
 const log = createLogger('app')
+
+// Count file-write activity events for the per-session history record.
+ptyBus.on('activity', (payload: { sessionId: string; type: string }) => {
+  if (payload.type === 'write') sessionHistory.noteWrite(payload.sessionId)
+})
 
 let mainWindow: BrowserWindow | null = null
 let ptyManager: PtyManager | null = null
@@ -87,6 +93,8 @@ app
       getPtyManager: () => ptyManager,
       getWorkflowEngine: () => workflowEngine,
       getWorktreeManager: () => worktreeManager,
+      sessionHistory,
+      usageHistory,
     })
 
     const windowRuntime = createAppWindow(appStore, () => {

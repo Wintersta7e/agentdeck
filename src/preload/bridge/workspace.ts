@@ -24,7 +24,6 @@ export function createWorkspaceBridge(): WorkspaceBridge {
       onReviewsUpdated: (cb) => onIpc<ReviewItem[]>(CH.homeReviewsUpdated, cb),
     },
     usage: {
-      recordSession: (rec) => ipcRenderer.invoke(CH.usageRecordSession, rec),
       getHistory: (days) => ipcRenderer.invoke(CH.usageGetHistory, days),
     },
     sessions: {

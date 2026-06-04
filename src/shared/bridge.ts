@@ -12,7 +12,6 @@ import type {
   ReviewItem,
   Role,
   SessionRecord,
-  SessionUsageRecord,
   SkillInfo,
   Template,
   TemplateDraft,
@@ -149,7 +148,6 @@ export interface AgentDeckBridge {
     releasePrimary: (projectId: string, sessionId: string) => Promise<void>
   }
   usage: {
-    recordSession: (rec: SessionUsageRecord) => Promise<void>
     getHistory: (days: number) => Promise<DailyUsageEntry[]>
   }
   sessions: {

@@ -11,6 +11,8 @@ import { invalidateGitCache } from '../git-status'
 import { toWslPath } from '../wsl-utils'
 import type { ReviewFile } from '../../shared/types'
 import type { ReviewTracker } from '../review-tracker'
+import type { SessionHistory } from '../session-history'
+import type { UsageHistory } from '../usage-history'
 import { createLogger } from '../logger'
 
 const execFileAsync = promisify(execFile)
@@ -49,6 +51,8 @@ interface PtyHandlerDeps {
   getMainWindow: () => BrowserWindow | null
   getProjectId: (projectPath: string) => string | null
   reviewTracker: ReviewTracker
+  sessionHistory: SessionHistory
+  usageHistory: UsageHistory
 }
 
 /**
@@ -175,9 +179,34 @@ export function registerPtyHandlers(
             agentId: agent ?? 'unknown',
           }
 
+          const startedAt = Date.now()
+          deps.sessionHistory.startSession({
+            sessionId,
+            projectId,
+            agent: agent ?? 'unknown',
+            startedAt,
+          })
+
           const { getMainWindow, reviewTracker: tracker } = deps
           const capturedSessionId = sessionId
-          ptyBus.once(`exit:${capturedSessionId}`, () => {
+          ptyBus.once(`exit:${capturedSessionId}`, (exitCode: number) => {
+            const status = exitCode === 0 ? 'exited' : 'error'
+            const rec = deps.sessionHistory.endSession(capturedSessionId, {
+              endedAt: Date.now(),
+              status,
+            })
+            // Productivity counts only successful sessions (errors = failed launches).
+            if (rec && rec.status === 'exited') {
+              deps.usageHistory.recordSession({
+                sessionId: rec.sessionId,
+                agent: rec.agent,
+                projectId: rec.projectId,
+                startedAt: rec.startedAt,
+                endedAt: rec.endedAt ?? Date.now(),
+                filesChanged: rec.filesChanged,
+              })
+            }
+
             void (async () => {
               try {
                 invalidateGitCache(meta.projectPath)

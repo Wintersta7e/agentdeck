@@ -35,7 +35,6 @@ export const CH = {
 
   // ── Usage / productivity tracking ──────────────────────────────────
   usageGetHistory: 'usage:getHistory',
-  usageRecordSession: 'usage:recordSession',
   limitsGetCodex: 'limits:getCodex',
   sessionsGetHistory: 'sessions:getHistory',
 

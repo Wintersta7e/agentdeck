@@ -283,6 +283,7 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
                 status: 'done',
                 timestamp: Date.now(),
               })
+              ptyBus.emit('activity', { sessionId, type: parsed.type })
             }
           }
         })
