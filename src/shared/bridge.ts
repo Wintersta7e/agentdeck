@@ -2,6 +2,7 @@ import type { ContextResult, SetContextOverrideArgs } from './context-types'
 import type {
   ActivityEvent,
   AgentEnvSnapshot,
+  CodexLimits,
   DailyCostEntry,
   DailyUsageEntry,
   DetectedStack,
@@ -159,6 +160,9 @@ export interface AgentDeckBridge {
   usage: {
     recordSession: (rec: SessionUsageRecord) => Promise<void>
     getHistory: (days: number) => Promise<DailyUsageEntry[]>
+  }
+  limits: {
+    getCodex: () => Promise<CodexLimits | null>
   }
   home: {
     gitStatus: (projectId: string) => Promise<GitStatus | null>

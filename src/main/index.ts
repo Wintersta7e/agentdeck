@@ -19,6 +19,7 @@ import { createClaudeAdapter, createCodexAdapter } from './log-adapters'
 import {
   registerCostHandlers,
   registerUsageHandlers,
+  registerLimitsHandlers,
   wireTemplateWindowEvents,
   registerEnvIpc,
   registerFilesIpc,
@@ -113,6 +114,7 @@ app
 
     registerCostHandlers(() => costTracker, costHistory)
     registerUsageHandlers(usageHistory)
+    registerLimitsHandlers()
 
     // Warn renderer if encryption is unavailable (secrets stored as plaintext)
     if (!safeStorage.isEncryptionAvailable() && mainWindow) {
