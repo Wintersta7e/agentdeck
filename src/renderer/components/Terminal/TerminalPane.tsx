@@ -27,6 +27,7 @@ import {
   type ScrollGuardTerminal,
 } from '../../utils/terminal-utils'
 import { TerminalGridMirror } from '../../utils/terminal-grid-mirror'
+import { recordSessionUsage } from '../../utils/record-session-usage'
 import { TerminalSearchBar } from './TerminalSearchBar'
 import './TerminalPane.css'
 
@@ -707,6 +708,7 @@ export function TerminalPane({
             })
         }
         clearWorktreePath(sessionId)
+        recordSessionUsage(sessionId)
         window.agentDeck.cost.unbind(sessionId).catch((err: unknown) => {
           window.agentDeck.log.send('debug', 'cost', 'unbind failed', {
             sessionId,

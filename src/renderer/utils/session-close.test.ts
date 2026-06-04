@@ -30,6 +30,9 @@ const makeMock = () => {
         invocations.push('cost.unbind')
       }),
     },
+    usage: {
+      recordSession: vi.fn(async () => undefined),
+    },
     log: {
       send: vi.fn(),
     },
