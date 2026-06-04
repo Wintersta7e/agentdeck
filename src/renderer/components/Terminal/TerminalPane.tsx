@@ -469,17 +469,6 @@ export function TerminalPane({
             applySessionStatus(sessionId, 'error')
             return
           }
-          // Bind cost tracking (best-effort, fire-and-forget)
-          window.agentDeck.cost
-            .bind(sessionId, {
-              agent: agentRef.current ?? '',
-              projectPath: projectPathRef.current ?? '',
-              cwd: spawnPath ?? projectPathRef.current ?? '',
-              spawnAt: spawnTimestamp,
-            })
-            .catch(() => {
-              /* cost tracking is best-effort */
-            })
           applySessionStatus(sessionId, 'running')
 
           // Pipe the launch prompt into the agent's stdin after a short grace
@@ -709,12 +698,6 @@ export function TerminalPane({
         }
         clearWorktreePath(sessionId)
         recordSessionUsage(sessionId)
-        window.agentDeck.cost.unbind(sessionId).catch((err: unknown) => {
-          window.agentDeck.log.send('debug', 'cost', 'unbind failed', {
-            sessionId,
-            err: String(err),
-          })
-        })
         try {
           webglAddon?.dispose()
         } catch {

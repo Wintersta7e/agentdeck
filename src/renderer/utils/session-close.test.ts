@@ -68,14 +68,7 @@ describe('closeSession orchestrator', () => {
   it('clean-worktree path: inspect -> applySessionStatus -> kill -> re-inspect -> discard -> releasePrimary -> prune', async () => {
     const { closeSession } = await import('./session-close')
     await closeSession('s1')
-    expect(invocations).toEqual([
-      'inspect',
-      'cost.unbind',
-      'pty.kill',
-      'inspect',
-      'discard',
-      'releasePrimary',
-    ])
+    expect(invocations).toEqual(['inspect', 'pty.kill', 'inspect', 'discard', 'releasePrimary'])
     expect(useAppStore.getState().sessions['s1']).toBeUndefined()
     // H3: worktreePaths entry cleared before prune
     expect(useAppStore.getState().worktreePaths['s1']).toBeUndefined()

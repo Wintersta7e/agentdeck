@@ -70,13 +70,6 @@ export function useAppIpcBridge(): void {
   }, [])
 
   useEffect(() => {
-    const unsub = window.agentDeck.cost.onUpdate((data) => {
-      useAppStore.getState().setSessionUsage(data.sessionId, data.usage)
-    })
-    return unsub
-  }, [])
-
-  useEffect(() => {
     const unsub = window.agentDeck.security.onEncryptionUnavailable(() => {
       useAppStore
         .getState()

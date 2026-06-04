@@ -1,6 +1,6 @@
 import type { StateCreator } from 'zustand'
 import type { AppState } from '../appStore'
-import type { GitStatus, ReviewItem, DailyCostEntry, DailyUsageEntry } from '../../../shared/types'
+import type { GitStatus, ReviewItem, DailyUsageEntry } from '../../../shared/types'
 
 export interface HomeSlice {
   // Git status cache
@@ -14,12 +14,6 @@ export interface HomeSlice {
   reviewItems: ReviewItem[]
   setReviewItems: (items: ReviewItem[]) => void
   dismissReview: (id: string) => void
-
-  // Cost history
-  costHistory: DailyCostEntry[]
-  setCostHistory: (entries: DailyCostEntry[]) => void
-  dailyBudget: number | null
-  setDailyBudget: (amount: number | null) => void
 
   // Productivity history (7-day rollup)
   usageHistory: DailyUsageEntry[]
@@ -57,14 +51,6 @@ export const createHomeSlice: StateCreator<AppState, [], [], HomeSlice> = (set) 
     set((state) => ({
       reviewItems: state.reviewItems.filter((item) => item.id !== id),
     })),
-
-  costHistory: [],
-
-  setCostHistory: (entries) => set({ costHistory: entries }),
-
-  dailyBudget: null,
-
-  setDailyBudget: (amount) => set({ dailyBudget: amount }),
 
   usageHistory: [],
 

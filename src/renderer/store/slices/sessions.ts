@@ -8,7 +8,6 @@ import type {
   SessionLaunchConfig,
   SessionStatus,
   ActivityEvent,
-  TokenUsage,
 } from '../../../shared/types'
 import { ACTIVITY_FEED_CAP, MAX_EXITED_SESSIONS, MAX_PANE_COUNT } from '../../../shared/constants'
 import { nextApprovalState } from '../../../shared/approval-transitions'
@@ -59,10 +58,6 @@ export interface SessionsSlice {
   // "Files Changed" counters stay accurate for long heavy sessions.
   writeCountBySession: Record<string, number>
 
-  // Usage tracking (per-session)
-  sessionUsage: Record<string, TokenUsage>
-  setSessionUsage: (sessionId: string, usage: TokenUsage) => void
-
   // Worktree isolation paths (per-session)
   worktreePaths: Record<string, { path: string; isolated: boolean; branch?: string | undefined }>
   setWorktreePath: (
@@ -76,7 +71,6 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
   sessions: {},
   activeSessionId: null,
   openSessionIds: [],
-  sessionUsage: {},
 
   // Cross-slice note: every session-mutating action below
   // (addSession / openSession / setActiveSession / removeSession /
@@ -108,7 +102,6 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
         initialPrompt: overrides?.initialPrompt,
         branchMode: overrides?.branchMode,
         initialBranch: overrides?.initialBranch,
-        costCap: overrides?.costCap,
         runMode: overrides?.runMode,
         approve: overrides?.approve,
       }
@@ -269,14 +262,13 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
 
   removeSession: (sessionId) =>
     set((state) => {
-      // Keep the session in the sessions map (for cost/timeline/digest after close)
+      // Keep the session in the sessions map (for timeline/digest after close)
       // but mark it as exited. Only remove from pane slots and tab navigation.
       const session = state.sessions[sessionId]
       let sessions = session
         ? { ...state.sessions, [sessionId]: { ...session, status: 'exited' as SessionStatus } }
         : state.sessions
       let activityFeeds = state.activityFeeds
-      let sessionUsage = state.sessionUsage
       let writeCountBySession = state.writeCountBySession
       let worktreePaths = state.worktreePaths
       let openSessionIds = state.openSessionIds
@@ -300,11 +292,6 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
           if (!evictIds.has(id)) nextFeeds[id] = feed
         }
         activityFeeds = nextFeeds
-        const nextUsage: typeof sessionUsage = {}
-        for (const [id, u] of Object.entries(sessionUsage)) {
-          if (!evictIds.has(id)) nextUsage[id] = u
-        }
-        sessionUsage = nextUsage
         const nextWrites: typeof writeCountBySession = {}
         for (const [id, count] of Object.entries(writeCountBySession)) {
           if (!evictIds.has(id)) nextWrites[id] = count
@@ -353,7 +340,6 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
       return {
         sessions,
         activityFeeds,
-        sessionUsage,
         writeCountBySession,
         worktreePaths,
         openSessionIds,
@@ -380,8 +366,6 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
       // Remove old session
       const { [oldSessionId]: _, ...rest } = s.sessions
       const { [oldSessionId]: _feed, ...remainingFeeds } = s.activityFeeds
-      // Clean up sessionUsage for the old session
-      const { [oldSessionId]: _usage, ...remainingUsage } = s.sessionUsage
       const { [oldSessionId]: _writes, ...remainingWrites } = s.writeCountBySession
 
       // Find which pane slot the old session occupies (read from live state)
@@ -419,13 +403,11 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
             agentFlagsOverride: oldSession.agentFlagsOverride,
             branchMode: oldSession.branchMode,
             initialBranch: oldSession.initialBranch,
-            costCap: oldSession.costCap,
             runMode: oldSession.runMode,
             approve: oldSession.approve,
           },
         },
         activityFeeds: remainingFeeds,
-        sessionUsage: remainingUsage,
         writeCountBySession: remainingWrites,
         activeSessionId: freshId,
         paneSessions,
@@ -441,10 +423,6 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
     // Only return live sessions — exited sessions are preserved for cost/timeline only
     return Object.values(sessions).find((s) => s.projectId === projectId && s.status !== 'exited')
   },
-
-  // Usage tracking
-  setSessionUsage: (sessionId, usage) =>
-    set((s) => ({ sessionUsage: { ...s.sessionUsage, [sessionId]: usage } })),
 
   // Activity Feed
   activityFeeds: {},

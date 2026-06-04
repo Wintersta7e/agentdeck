@@ -36,13 +36,6 @@ describe('removeSession eviction (LEAK-03)', () => {
       })
       // Seed auxiliary maps so we can assert they're pruned alongside
       useAppStore.getState().addActivityEvent(id, makeActivityEvent({ type: 'write' }))
-      useAppStore.getState().setSessionUsage(id, {
-        inputTokens: 10,
-        outputTokens: 5,
-        cacheReadTokens: 0,
-        cacheWriteTokens: 0,
-        totalCostUsd: 0.01,
-      })
       useAppStore.getState().setWorktreePath(id, { path: `/tmp/${id}`, isolated: false })
       useAppStore.getState().removeSession(id)
     }
@@ -50,7 +43,6 @@ describe('removeSession eviction (LEAK-03)', () => {
     // s-0 was the oldest exited session and must have been evicted
     expect(state.sessions['s-0']).toBeUndefined()
     expect(state.activityFeeds['s-0']).toBeUndefined()
-    expect(state.sessionUsage['s-0']).toBeUndefined()
     expect(state.writeCountBySession['s-0']).toBeUndefined()
     expect(state.worktreePaths['s-0']).toBeUndefined()
     // s-1 through s-N are retained
