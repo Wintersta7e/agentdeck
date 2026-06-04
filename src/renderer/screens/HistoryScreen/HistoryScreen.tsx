@@ -40,11 +40,11 @@ export function HistoryScreen(): React.JSX.Element {
 
   const [metric, setMetric] = useState<Metric>('count')
   const todayStart = useMidnight()
+  const gridStart = todayStart - (DAYS - 1) * DAY_MS
 
   const projectById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects])
 
   const heatmap = useMemo(() => {
-    const gridStart = todayStart - (DAYS - 1) * DAY_MS
     const cells: number[][] = Array.from({ length: DAYS }, () =>
       Array.from({ length: HOURS }, () => 0),
     )
@@ -62,8 +62,8 @@ export function HistoryScreen(): React.JSX.Element {
       row[hour] = next
       if (next > max) max = next
     }
-    return { cells, max, gridStart }
-  }, [sessions, writeCounts, metric, todayStart])
+    return { cells, max }
+  }, [sessions, writeCounts, metric, gridStart])
 
   const sortedSessions = useMemo(() => {
     return (Object.values(sessions) as Session[])
@@ -73,7 +73,6 @@ export function HistoryScreen(): React.JSX.Element {
   }, [sessions])
 
   const totals = useMemo(() => {
-    const gridStart = todayStart - (DAYS - 1) * DAY_MS
     let count = 0
     let filesChanged = 0
     for (const session of Object.values(sessions) as Session[]) {
@@ -82,7 +81,7 @@ export function HistoryScreen(): React.JSX.Element {
       filesChanged += writeCounts[session.id] ?? 0
     }
     return { count, filesChanged }
-  }, [sessions, writeCounts, todayStart])
+  }, [sessions, writeCounts, gridStart])
 
   const handleOpenSession = (session: Session): void => {
     setActiveSession(session.id)
@@ -120,7 +119,7 @@ export function HistoryScreen(): React.JSX.Element {
           ))}
         </div>
         {heatmap.cells.map((row, dayIdx) => {
-          const ts = heatmap.gridStart + dayIdx * DAY_MS
+          const ts = gridStart + dayIdx * DAY_MS
           return (
             <div className="history-heatmap__row" key={dayIdx}>
               <span className="history-heatmap__day">
