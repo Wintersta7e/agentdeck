@@ -6,7 +6,6 @@ import { useMidnight } from './useMidnight'
 export interface DailyDigestData {
   sessionsToday: number
   filesChanged: number
-  costToday: number
   cleanExitRate: number | null
   topAgent: string
 }
@@ -17,21 +16,16 @@ export function computeDailyDigest(
     string,
     { id: string; status: string; startedAt: number; agentOverride?: string | undefined }
   >,
-  sessionUsage: Record<string, { totalCostUsd: number }>,
   filesChanged: number,
   midnight: number,
 ): DailyDigestData {
   const todaySessions = Object.values(sessions).filter((s) => s.startedAt >= midnight)
 
-  let costToday = 0
   const agentCounts: Record<string, number> = {}
   let exitCount = 0
   let errorCount = 0
 
   for (const s of todaySessions) {
-    const usage = sessionUsage[s.id]
-    if (usage?.totalCostUsd) costToday += usage.totalCostUsd
-
     const agent = s.agentOverride ?? 'session'
     agentCounts[agent] = (agentCounts[agent] ?? 0) + 1
 
@@ -54,7 +48,6 @@ export function computeDailyDigest(
   return {
     sessionsToday: todaySessions.length,
     filesChanged,
-    costToday,
     cleanExitRate,
     topAgent,
   }
@@ -72,7 +65,6 @@ export function useDailyDigest(): DailyDigestData {
     return parts.join(';')
   })
   const projects = useAppStore((s) => s.projects)
-  const sessionUsage = useAppStore((s) => s.sessionUsage)
 
   // Resolve actual agent names (agentOverride is empty for project-default agents)
   const resolvedSessions = useMemo(() => {
@@ -109,7 +101,7 @@ export function useDailyDigest(): DailyDigestData {
   const midnight = useMidnight()
 
   return useMemo(
-    () => computeDailyDigest(resolvedSessions, sessionUsage, writeCount, midnight),
-    [resolvedSessions, sessionUsage, writeCount, midnight],
+    () => computeDailyDigest(resolvedSessions, writeCount, midnight),
+    [resolvedSessions, writeCount, midnight],
   )
 }

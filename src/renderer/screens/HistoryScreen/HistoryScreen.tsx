@@ -7,7 +7,7 @@ import { ScreenShell, FilterChip } from '../../components/shared/ScreenShell'
 import type { Session } from '../../../shared/types'
 import './HistoryScreen.css'
 
-type Metric = 'count' | 'cost'
+type Metric = 'count' | 'filesChanged'
 
 const DAYS = 14
 const HOURS = 24
@@ -31,13 +31,9 @@ function formatTs(ts: number): string {
   })
 }
 
-function formatCost(n: number): string {
-  return `$${n.toFixed(2)}`
-}
-
 export function HistoryScreen(): React.JSX.Element {
   const sessions = useAppStore((s) => s.sessions)
-  const sessionUsage = useAppStore((s) => s.sessionUsage)
+  const writeCounts = useAppStore((s) => s.writeCountBySession)
   const projects = useAppStore((s) => s.projects)
   const setActiveSession = useAppStore((s) => s.setActiveSession)
   const setCurrentView = useAppStore((s) => s.setCurrentView)
@@ -61,13 +57,13 @@ export function HistoryScreen(): React.JSX.Element {
       if (!row) continue
       const hour = new Date(session.startedAt).getHours()
       const current = row[hour] ?? 0
-      const delta = metric === 'count' ? 1 : (sessionUsage[session.id]?.totalCostUsd ?? 0)
+      const delta = metric === 'count' ? 1 : (writeCounts[session.id] ?? 0)
       const next = current + delta
       row[hour] = next
       if (next > max) max = next
     }
     return { cells, max, gridStart }
-  }, [sessions, sessionUsage, metric, todayStart])
+  }, [sessions, writeCounts, metric, todayStart])
 
   const sortedSessions = useMemo(() => {
     return (Object.values(sessions) as Session[])
@@ -78,14 +74,13 @@ export function HistoryScreen(): React.JSX.Element {
 
   const totals = useMemo(() => {
     let count = 0
-    let cost = 0
+    let filesChanged = 0
     for (const session of Object.values(sessions) as Session[]) {
       count += 1
-      const usage = sessionUsage[session.id]
-      cost += usage?.totalCostUsd ?? 0
+      filesChanged += writeCounts[session.id] ?? 0
     }
-    return { count, cost }
-  }, [sessions, sessionUsage])
+    return { count, filesChanged }
+  }, [sessions, writeCounts])
 
   const handleOpenSession = (session: Session): void => {
     setActiveSession(session.id)
@@ -102,12 +97,12 @@ export function HistoryScreen(): React.JSX.Element {
           <FilterChip active={metric === 'count'} onClick={() => setMetric('count')}>
             By count
           </FilterChip>
-          <FilterChip active={metric === 'cost'} onClick={() => setMetric('cost')}>
-            By cost
+          <FilterChip active={metric === 'filesChanged'} onClick={() => setMetric('filesChanged')}>
+            By files
           </FilterChip>
           <div className="history-screen__spacer" />
           <span className="history-screen__total">
-            {totals.count} sessions · {formatCost(totals.cost)}
+            {totals.count} sessions · {totals.filesChanged} files
           </span>
         </>
       }
@@ -141,7 +136,7 @@ export function HistoryScreen(): React.JSX.Element {
                     title={
                       value > 0
                         ? `${weekdayLabel(ts)} ${String(hour).padStart(2, '0')}:00 · ${
-                            metric === 'count' ? `${value} sessions` : formatCost(value as number)
+                            metric === 'count' ? `${value} sessions` : `${value} files`
                           }`
                         : undefined
                     }
@@ -161,8 +156,7 @@ export function HistoryScreen(): React.JSX.Element {
         ) : (
           <ul className="history-log__list">
             {sortedSessions.map((session) => {
-              const usage = sessionUsage[session.id]
-              const cost = usage?.totalCostUsd ?? 0
+              const files = writeCounts[session.id] ?? 0
               const project = projectById.get(session.projectId)
               const agentId = getSessionAgentId(session, project)
               const agent = AGENT_META_MAP.get(agentId)
@@ -182,7 +176,7 @@ export function HistoryScreen(): React.JSX.Element {
                       {project?.name ?? (session.projectId || 'ad-hoc')}
                     </span>
                     <span className="history-log__status">{session.status.toUpperCase()}</span>
-                    <span className="history-log__cost">{cost > 0 ? formatCost(cost) : '—'}</span>
+                    <span className="history-log__files">{files > 0 ? String(files) : '—'}</span>
                   </button>
                 </li>
               )
