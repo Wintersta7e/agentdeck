@@ -38,6 +38,13 @@ describe('ipc-usage', () => {
     expect(recordSession).not.toHaveBeenCalled()
   })
 
+  it('rejects a projectId failing SAFE_ID_RE', () => {
+    const recordSession = vi.fn()
+    registerUsageHandlers({ recordSession, getHistory: vi.fn(() => []), flush: vi.fn() })
+    expect(() => call(CH.usageRecordSession, { ...validRec, projectId: '../etc/passwd' })).toThrow()
+    expect(recordSession).not.toHaveBeenCalled()
+  })
+
   it('validates the days param on getHistory', () => {
     const getHistory = vi.fn(() => [])
     registerUsageHandlers({ recordSession: vi.fn(), getHistory, flush: vi.fn() })

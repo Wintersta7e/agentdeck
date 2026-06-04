@@ -54,11 +54,20 @@ export function parseCodexLimits(line: string): CodexLimits | null {
   }
 }
 
-/** Best-effort: read current Codex limits from the newest rollout. Null if none. */
+let inFlight: Promise<CodexLimits | null> | null = null
+
+/** Best-effort: read current Codex limits from the newest rollout. Null if none.
+ * Concurrent callers share one in-flight subprocess instead of spawning duplicates. */
 export async function readCodexLimits(): Promise<CodexLimits | null> {
-  const out = await wslTry(FIND_LATEST_RATE_LIMITS, { logLevelOnError: 'debug', timeout: 5000 })
-  if (!out) return null
-  const lastLine = out.trim()
-  if (!lastLine) return null
-  return parseCodexLimits(lastLine)
+  if (inFlight) return inFlight
+  inFlight = (async () => {
+    const out = await wslTry(FIND_LATEST_RATE_LIMITS, { logLevelOnError: 'debug', timeout: 5000 })
+    if (!out) return null
+    const lastLine = out.trim()
+    if (!lastLine) return null
+    return parseCodexLimits(lastLine)
+  })().finally(() => {
+    inFlight = null
+  })
+  return inFlight
 }

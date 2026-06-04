@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron'
 import { CH } from '../../shared/ipc-channels'
-import { SAFE_ID_RE } from '../validation'
+import { SAFE_ID_RE, MAX_SAFE_ID_LEN } from '../validation'
 import { KNOWN_AGENT_IDS } from '../../shared/agents'
 import type { UsageHistory } from '../usage-history'
 import type { SessionUsageRecord } from '../../shared/types'
@@ -12,8 +12,13 @@ function parseRecord(raw: unknown): SessionUsageRecord {
     throw new Error('usage:recordSession requires a valid sessionId')
   if (typeof r.agent !== 'string' || !KNOWN_AGENT_IDS.has(r.agent))
     throw new Error('usage:recordSession requires a known agent')
-  if (typeof r.projectId !== 'string' || !r.projectId)
-    throw new Error('usage:recordSession requires a projectId')
+  if (
+    typeof r.projectId !== 'string' ||
+    !r.projectId ||
+    r.projectId.length > MAX_SAFE_ID_LEN ||
+    !SAFE_ID_RE.test(r.projectId)
+  )
+    throw new Error('usage:recordSession requires a valid projectId')
   if (typeof r.startedAt !== 'number' || !Number.isFinite(r.startedAt))
     throw new Error('usage:recordSession requires numeric startedAt')
   if (typeof r.endedAt !== 'number' || !Number.isFinite(r.endedAt))
@@ -37,6 +42,7 @@ export function registerUsageHandlers(usageHistory: UsageHistory): void {
   ipcMain.handle(CH.usageRecordSession, (_, raw: unknown) => {
     const rec = parseRecord(raw)
     if (recorded.has(rec.sessionId)) return
+    if (recorded.size > 500) recorded.clear()
     recorded.add(rec.sessionId)
     usageHistory.recordSession(rec)
   })

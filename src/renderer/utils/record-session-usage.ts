@@ -1,5 +1,5 @@
 import { useAppStore } from '../store/appStore'
-import { getDefaultAgent } from '../../shared/agent-helpers'
+import { resolveSessionAgent } from './resolve-session-agent'
 
 /**
  * Resolve a finished session's productivity stats from the store and report
@@ -9,13 +9,14 @@ import { getDefaultAgent } from '../../shared/agent-helpers'
 export function recordSessionUsage(sessionId: string): void {
   const state = useAppStore.getState()
   const session = state.sessions[sessionId]
-  if (!session) return
+  if (!session) {
+    window.agentDeck.log.send('warn', 'usage', 'recordSessionUsage: session not found', {
+      sessionId,
+    })
+    return
+  }
 
-  const project = state.projects.find((p) => p.id === session.projectId)
-  const agent =
-    session.agentOverride ??
-    (project ? getDefaultAgent(project)?.agent : undefined) ??
-    'claude-code'
+  const agent = resolveSessionAgent(session, state.projects)
 
   void window.agentDeck.usage
     .recordSession({
