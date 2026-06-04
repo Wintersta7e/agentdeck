@@ -61,7 +61,7 @@
 
 .sessions-table__head {
   display: grid;
-  grid-template-columns: 90px 160px 1.2fr 1.8fr 90px 80px 60px;
+  grid-template-columns: 90px 160px 1.2fr 1.8fr 60px;
   align-items: center;
   gap: var(--sp-3);
   padding: var(--sp-2) var(--sp-4);
@@ -90,7 +90,7 @@
 
 .sessions-table__row {
   display: grid;
-  grid-template-columns: 90px 160px 1.2fr 1.8fr 90px 80px 60px;
+  grid-template-columns: 90px 160px 1.2fr 1.8fr 60px;
   align-items: center;
   gap: var(--sp-3);
   width: 100%;
@@ -206,10 +206,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.sessions-row__cost {
-  color: var(--purple);
-}
-
 .sessions-row__ago {
   color: var(--text3);
 }
@@ -218,13 +214,11 @@
 @media (max-width: 900px) {
   .sessions-table__head,
   .sessions-table__row {
-    grid-template-columns: 80px 140px 1fr 80px 60px;
+    grid-template-columns: 80px 140px 1fr 60px;
     gap: var(--sp-2);
   }
   .sessions-table__head span:nth-child(4),
-  .sessions-row__activity,
-  .sessions-row__cost,
-  .sessions-table__head span:nth-child(6) {
+  .sessions-row__activity {
     display: none;
   }
 }

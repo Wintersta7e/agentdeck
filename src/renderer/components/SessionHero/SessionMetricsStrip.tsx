@@ -1,20 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { AGENT_BY_ID, agentColorVar, getSessionAgentId } from '../../utils/agent-ui'
 import './SessionMetricsStrip.css'
 
 interface SessionMetricsStripProps {
   sessionId: string | null
-}
-
-function formatCost(n: number): string {
-  return `$${n.toFixed(2)}`
-}
-
-function formatTokens(n: number): string {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
-  if (n >= 1000) return (n / 1000).toFixed(1) + 'k'
-  return String(n)
 }
 
 function formatElapsed(startedAt: number, now: number): string {
@@ -28,16 +18,14 @@ function formatElapsed(startedAt: number, now: number): string {
 }
 
 /**
- * Bottom metrics strip for the Session Detail hero — tokens/min ·
- * elapsed · LOC touched · cost. Values from existing cost-tracker +
- * sessions slice + writeCountBySession.
+ * Bottom metrics strip for the Session Detail hero — elapsed · writes.
+ * Values from sessions slice + writeCountBySession.
  */
 export function SessionMetricsStrip({ sessionId }: SessionMetricsStripProps): React.JSX.Element {
   const session = useAppStore((s) => (sessionId ? s.sessions[sessionId] : undefined))
   const project = useAppStore((s) =>
     session ? (s.projects.find((p) => p.id === session.projectId) ?? null) : null,
   )
-  const usage = useAppStore((s) => (sessionId ? s.sessionUsage[sessionId] : undefined))
   const writeCount = useAppStore((s) => (sessionId ? (s.writeCountBySession[sessionId] ?? 0) : 0))
 
   const [now, setNow] = useState(() => Date.now())
@@ -48,17 +36,6 @@ export function SessionMetricsStrip({ sessionId }: SessionMetricsStripProps): Re
 
   const agentId = getSessionAgentId(session, project)
   const agent = AGENT_BY_ID.get(agentId)
-
-  const totals = useMemo(() => {
-    const input = usage?.inputTokens ?? 0
-    const output = usage?.outputTokens ?? 0
-    const tokens = input + output
-    const cost = usage?.totalCostUsd ?? 0
-    const elapsedMin = session ? Math.max(1, (now - session.startedAt) / 60000) : 1
-    return { tokens, cost, input, output, elapsedMin }
-  }, [usage, session, now])
-
-  const tokensPerMin = Math.round(totals.tokens / totals.elapsedMin)
 
   return (
     <footer
@@ -87,34 +64,8 @@ export function SessionMetricsStrip({ sessionId }: SessionMetricsStripProps): Re
       <div className="session-strip__sep" aria-hidden="true" />
 
       <div className="session-strip__item">
-        <div className="session-strip__label">TOKENS</div>
-        <div className="session-strip__value">{formatTokens(totals.tokens)}</div>
-      </div>
-
-      <div className="session-strip__sep" aria-hidden="true" />
-
-      <div className="session-strip__item">
-        <div className="session-strip__label">TOK/MIN</div>
-        <div className="session-strip__value">{formatTokens(tokensPerMin)}</div>
-      </div>
-
-      <div className="session-strip__sep" aria-hidden="true" />
-
-      <div className="session-strip__item">
         <div className="session-strip__label">WRITES</div>
         <div className="session-strip__value">{writeCount}</div>
-      </div>
-
-      <div className="session-strip__sep" aria-hidden="true" />
-
-      <div className="session-strip__item">
-        <div className="session-strip__label">
-          COST{session?.costCap ? ` / CAP ${formatCost(session.costCap)}` : ''}
-        </div>
-        <div className="session-strip__value session-strip__value--cost">
-          {formatCost(totals.cost)}
-          {session?.costCap && totals.cost >= session.costCap ? ' ⚠' : ''}
-        </div>
       </div>
 
       <div className="session-strip__spacer" />

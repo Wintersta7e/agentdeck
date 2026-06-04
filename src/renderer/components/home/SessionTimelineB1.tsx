@@ -6,10 +6,6 @@ import './SessionTimelineB1.css'
 
 const WINDOW_MS = 60 * 60 * 1000 // last 60 minutes
 
-function formatCost(n: number): string {
-  return `$${n.toFixed(2)}`
-}
-
 interface Row {
   id: string
   projectName: string
@@ -19,7 +15,6 @@ interface Row {
   widthPct: number
   running: boolean
   mins: number
-  cost: number
 }
 
 /**
@@ -29,7 +24,6 @@ interface Row {
  */
 export function SessionTimelineB1({ now }: { now: number }): React.JSX.Element {
   const sessions = useAppStore((s) => s.sessions)
-  const sessionUsage = useAppStore((s) => s.sessionUsage)
   const projects = useAppStore((s) => s.projects)
 
   const projectById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects])
@@ -50,7 +44,6 @@ export function SessionTimelineB1({ now }: { now: number }): React.JSX.Element {
         const project = projectById.get(s.projectId)
         const agentId = getSessionAgentId(s, project)
         const agent = AGENT_BY_ID.get(agentId)
-        const usage = sessionUsage[s.id]
         return {
           id: s.id,
           projectName: project?.name ?? (s.projectId || 'ad-hoc'),
@@ -60,10 +53,9 @@ export function SessionTimelineB1({ now }: { now: number }): React.JSX.Element {
           widthPct,
           running: s.status === 'running',
           mins: Math.max(0, Math.floor((now - s.startedAt) / 60000)),
-          cost: usage?.totalCostUsd ?? 0,
         }
       })
-  }, [sessions, sessionUsage, projectById, now])
+  }, [sessions, projectById, now])
 
   return (
     <div className="st-b1">
@@ -99,9 +91,7 @@ export function SessionTimelineB1({ now }: { now: number }): React.JSX.Element {
                   {row.running && <span className="st-b1__edge" aria-hidden="true" />}
                 </div>
               </div>
-              <span className="st-b1__stat">
-                {row.mins}m{row.cost > 0 ? ` · ${formatCost(row.cost)}` : ''}
-              </span>
+              <span className="st-b1__stat">{row.mins}m</span>
             </li>
           ))}
         </ul>

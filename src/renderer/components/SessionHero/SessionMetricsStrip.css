@@ -47,10 +47,6 @@
   line-height: 1;
 }
 
-.session-strip__value--cost {
-  color: var(--purple);
-}
-
 .session-strip__sep {
   align-self: stretch;
   width: 1px;

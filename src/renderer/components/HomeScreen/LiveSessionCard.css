@@ -114,47 +114,6 @@
   text-overflow: ellipsis;
 }
 
-/* Token gauge */
-.live-card-gauge {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  margin-bottom: var(--sp-2);
-}
-
-.live-card-gauge-label {
-  font-size: 9px; /* mockup-specific */
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  color: var(--text3);
-  width: 48px;
-  flex-shrink: 0;
-}
-
-.live-card-gauge-bar {
-  flex: 1;
-  height: 6px;
-  background: var(--surface-kbd);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.live-card-gauge-fill {
-  height: 100%;
-  border-radius: 3px;
-  background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.3), rgba(var(--accent-rgb), 0.5));
-  transition: width var(--duration-slow) var(--ease-out);
-}
-
-.live-card-gauge-val {
-  font-size: 9px; /* mockup-specific */
-  font-family: var(--font-mono);
-  color: var(--text3);
-  width: 80px;
-  text-align: right;
-  flex-shrink: 0;
-}
-
 /* Footer */
 .live-card-footer {
   display: flex;
@@ -165,12 +124,7 @@
   color: var(--text3);
 }
 
-.live-card-cost strong {
-  color: var(--accent);
-  font-family: var(--font-mono);
-}
-
-/* Reduced motion */ /* ── LiveSessionGrid ── */
+/* ── LiveSessionGrid ── */
 .live-grid-wrapper {
   margin-bottom: var(--sp-4);
 }

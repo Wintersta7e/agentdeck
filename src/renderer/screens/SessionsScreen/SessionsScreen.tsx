@@ -24,16 +24,6 @@ function formatAgo(ts: number): string {
   return `${Math.floor(hours / 24)}d`
 }
 
-function formatTokens(n: number): string {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
-  if (n >= 1000) return (n / 1000).toFixed(1) + 'k'
-  return String(n)
-}
-
-function formatCost(n: number): string {
-  return `$${n.toFixed(2)}`
-}
-
 function statusTone(s: SessionStatus): string {
   switch (s) {
     case 'running':
@@ -81,7 +71,6 @@ function matchesFilter(status: SessionStatus, filter: FilterId): boolean {
 export function SessionsScreen(): React.JSX.Element {
   const sessions = useAppStore((s) => s.sessions)
   const projects = useAppStore((s) => s.projects)
-  const sessionUsage = useAppStore((s) => s.sessionUsage)
   const activityFeeds = useAppStore((s) => s.activityFeeds)
   const setActiveSession = useAppStore((s) => s.setActiveSession)
   const setTab = useAppStore((s) => s.setTab)
@@ -199,8 +188,6 @@ export function SessionsScreen(): React.JSX.Element {
           <span>Agent</span>
           <span>Project</span>
           <span>Activity</span>
-          <span className="sessions-table__num">Tokens</span>
-          <span className="sessions-table__num">Cost</span>
           <span className="sessions-table__num">Ago</span>
         </div>
         {filtered.length === 0 ? (
@@ -214,9 +201,6 @@ export function SessionsScreen(): React.JSX.Element {
             const project = projectById.get(session.projectId)
             const agentId = getSessionAgentId(session, project)
             const agent = AGENT_META_MAP.get(agentId)
-            const usage = sessionUsage[session.id]
-            const totalTokens = (usage?.inputTokens ?? 0) + (usage?.outputTokens ?? 0)
-            const cost = usage?.totalCostUsd ?? 0
             const feed = activityFeeds[session.id]
             const lastEvent = feed && feed.length > 0 ? feed[feed.length - 1] : undefined
             const activity = lastEvent
@@ -250,12 +234,6 @@ export function SessionsScreen(): React.JSX.Element {
                   </span>
                 </span>
                 <span className="sessions-row__activity">{activity}</span>
-                <span className="sessions-row__num">
-                  {totalTokens > 0 ? formatTokens(totalTokens) : '—'}
-                </span>
-                <span className="sessions-row__num sessions-row__cost">
-                  {cost > 0 ? formatCost(cost) : '—'}
-                </span>
                 <span className="sessions-row__num sessions-row__ago">
                   {formatAgo(session.startedAt)}
                 </span>
