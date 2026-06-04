@@ -11,7 +11,7 @@ export function isoKeyFromTs(ts: number): string {
   return `${y}-${m}-${day}`
 }
 
-/** Today's local-time ISO date key. Matches the `DailyCostEntry.date` format. */
+/** Today's local-time ISO date key. Matches the `DailyUsageEntry.date` format. */
 export function todayIsoKey(): string {
   return isoKeyFromTs(Date.now())
 }

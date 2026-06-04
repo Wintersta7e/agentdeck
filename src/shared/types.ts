@@ -152,8 +152,6 @@ export interface SessionLaunchConfig {
   branchMode?: BranchMode | undefined
   /** Branch name for the mode above. */
   initialBranch?: string | undefined
-  /** Soft cap in USD — displayed in the metrics strip, not enforced in v6.0.0. */
-  costCap?: number | undefined
   /** Run mode — stored as intent; runtime enforcement is a follow-up. */
   runMode?: 'watch' | 'auto' | 'plan-first' | undefined
   /** Permission gates — stored as intent; runtime enforcement is a follow-up. */
@@ -463,25 +461,6 @@ export interface ReviewFile {
   insertions: number
   deletions: number
   status: 'added' | 'modified' | 'deleted'
-}
-
-/** Per-session token usage totals, reported by log adapters and cached in the store. */
-export interface TokenUsage {
-  /** Non-cached input tokens (excludes cache reads). */
-  inputTokens: number
-  outputTokens: number
-  cacheReadTokens: number
-  cacheWriteTokens: number
-  totalCostUsd: number
-}
-
-/** Aggregated cost data for a single day */
-export interface DailyCostEntry {
-  date: string // YYYY-MM-DD
-  totalCostUsd: number
-  perAgent: Record<string, number>
-  sessionCount: number
-  tokenCount: number
 }
 
 /** Per-project / per-agent productivity totals for a single day. */

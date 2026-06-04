@@ -241,7 +241,7 @@ export function HomeScreen({
         <AgentChipStripB1 />
       </Panel>
 
-      {/* ── Row 4 · Projects + Cost ─────────────────────────── */}
+      {/* ── Row 4 · Projects + Metrics ──────────────────────── */}
       <section className="home-projects-row">
         {hasProjects ? (
           <Panel
@@ -316,10 +316,10 @@ export function HomeScreen({
           </Panel>
         )}
 
-        <Panel title="ACTIVITY / WK" sub="7-DAY ROLLUP" className="home-cost-panel">
+        <Panel title="ACTIVITY / WK" sub="7-DAY ROLLUP" className="home-metrics-panel">
           <ProductivityPanel />
         </Panel>
-        <Panel title="PLAN LIMITS" sub="ROLLING WINDOWS" className="home-cost-panel">
+        <Panel title="PLAN LIMITS" sub="ROLLING WINDOWS" className="home-metrics-panel">
           <PlanLimitsPanel />
         </Panel>
       </section>
