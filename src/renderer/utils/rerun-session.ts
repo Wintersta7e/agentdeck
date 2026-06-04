@@ -17,7 +17,6 @@ export function rerunSession(old: Session): string {
     initialPrompt: old.initialPrompt,
     branchMode: old.branchMode,
     initialBranch: old.initialBranch,
-    costCap: old.costCap,
     runMode: old.runMode,
     approve: old.approve,
     model: old.model,

@@ -119,7 +119,7 @@ export function AppSettingsScreen(): React.JSX.Element {
             Context windows
           </h2>
           <p className="app-settings-block__sub">
-            Override the detected or default context window sizes used for cost estimation.
+            Override the detected or default context window sizes used for context-size estimates.
           </p>
         </header>
         <ContextOverridesSection />

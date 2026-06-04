@@ -12,10 +12,6 @@ import './NewSessionScreen.css'
 type Mode = 'watch' | 'auto' | 'plan-first'
 type ApproveKey = 'reads' | 'writes' | 'commands' | 'commits'
 
-function formatCost(n: number): string {
-  return `$${n.toFixed(2)}`
-}
-
 function formatTokens(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
@@ -74,7 +70,6 @@ export function NewSessionScreen(): React.JSX.Element {
   const [prompt, setPrompt] = useState('')
   const [branch, setBranch] = useState('main')
   const [branchMode, setBranchMode] = useState<'existing' | 'new' | 'worktree'>('existing')
-  const [costCap, setCostCap] = useState(4)
   const [mode, setMode] = useState<Mode>('watch')
   const [approve, setApprove] = useState<Record<ApproveKey, boolean>>({
     reads: true,
@@ -110,7 +105,6 @@ export function NewSessionScreen(): React.JSX.Element {
 
   const approvedCount = Object.values(approve).filter(Boolean).length
   const tokenEstimate = useMemo(() => Math.max(0, Math.ceil(prompt.length / 4)), [prompt.length])
-  const perStepCost = Math.max(0.01, (tokenEstimate / 1000) * 0.01)
 
   const handlePickTemplate = useCallback(
     (t: Template) => {
@@ -133,7 +127,6 @@ export function NewSessionScreen(): React.JSX.Element {
       initialPrompt: trimmedPrompt.length > 0 ? trimmedPrompt : undefined,
       branchMode,
       initialBranch: trimmedBranch.length > 0 ? trimmedBranch : undefined,
-      costCap: costCap > 0 ? costCap : undefined,
       runMode: mode,
       approve,
     }
@@ -155,7 +148,6 @@ export function NewSessionScreen(): React.JSX.Element {
     prompt,
     branch,
     branchMode,
-    costCap,
     mode,
     approve,
     openSession,
@@ -268,22 +260,6 @@ export function NewSessionScreen(): React.JSX.Element {
 
           <Section eyebrow="03" title="Advanced" sub="optional controls">
             <div className="ns-advanced">
-              <div className="ns-field">
-                <div className="ns-field__label">COST CAP</div>
-                <div className="ns-field__row">
-                  <input
-                    type="range"
-                    min={0.5}
-                    max={15}
-                    step={0.5}
-                    value={costCap}
-                    onChange={(e) => setCostCap(Number(e.target.value))}
-                    className="ns-slider"
-                    aria-label="Cost cap"
-                  />
-                  <span className="ns-field__value">{formatCost(costCap)}</span>
-                </div>
-              </div>
               <div className="ns-field">
                 <div className="ns-field__label">AUTO-APPROVE · {approvedCount}/4</div>
                 <div className="ns-field__buttons">
@@ -442,12 +418,6 @@ export function NewSessionScreen(): React.JSX.Element {
               <div>
                 <div className="ns-estimate__caption">tokens in</div>
                 <div className="ns-estimate__value">{formatTokens(tokenEstimate)}</div>
-              </div>
-              <div>
-                <div className="ns-estimate__caption">cost / step</div>
-                <div className="ns-estimate__value ns-estimate__value--cost">
-                  {formatCost(perStepCost)}
-                </div>
               </div>
             </div>
           </section>
