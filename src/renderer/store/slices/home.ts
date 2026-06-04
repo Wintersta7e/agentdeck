@@ -1,6 +1,6 @@
 import type { StateCreator } from 'zustand'
 import type { AppState } from '../appStore'
-import type { GitStatus, ReviewItem, DailyCostEntry } from '../../../shared/types'
+import type { GitStatus, ReviewItem, DailyCostEntry, DailyUsageEntry } from '../../../shared/types'
 
 export interface HomeSlice {
   // Git status cache
@@ -20,6 +20,10 @@ export interface HomeSlice {
   setCostHistory: (entries: DailyCostEntry[]) => void
   dailyBudget: number | null
   setDailyBudget: (amount: number | null) => void
+
+  // Productivity history (7-day rollup)
+  usageHistory: DailyUsageEntry[]
+  setUsageHistory: (entries: DailyUsageEntry[]) => void
 
   // Tier 3 collapse state
   tier3Collapsed: Record<string, boolean>
@@ -61,6 +65,10 @@ export const createHomeSlice: StateCreator<AppState, [], [], HomeSlice> = (set) 
   dailyBudget: null,
 
   setDailyBudget: (amount) => set({ dailyBudget: amount }),
+
+  usageHistory: [],
+
+  setUsageHistory: (entries) => set({ usageHistory: entries }),
 
   // Persisted via localStorage so collapse choices survive restarts.
   tier3Collapsed: readTier3Collapsed(),
