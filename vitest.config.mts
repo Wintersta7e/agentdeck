@@ -33,12 +33,26 @@ export default defineConfig({
         'src/**/*.test.ts',
         'src/**/*.test.tsx',
         'src/**/*.d.ts',
+        // React render layer — rendering isn't unit-tested; the testable logic
+        // lives in .ts hooks/utils/store (which stay in scope below).
+        'src/**/*.tsx',
+        // Electron bootstrap / window / IPC-wiring glue — not unit-testable.
+        'src/main/index.ts',
+        'src/main/app-window.ts',
+        'src/main/app-ipc.ts',
+        'src/main/template-runtime.ts',
+        'src/main/worktree-runtime.ts',
+        'src/main/wsl-runtime.ts',
+        'src/main/ipc/index.ts',
       ],
+      // Scoped to testable logic (React render + Electron bootstrap excluded
+      // above). Floors sit ~10pts below current actuals (stmts 69 / br 65 /
+      // fn 62 / lines 71) to catch regressions without being brittle.
       thresholds: {
-        statements: 20,
-        branches: 15,
-        functions: 15,
-        lines: 20,
+        statements: 60,
+        branches: 55,
+        functions: 55,
+        lines: 60,
       },
     },
   },
