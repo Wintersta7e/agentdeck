@@ -11,6 +11,7 @@ import { SessionTimelineB1 } from '../home/SessionTimelineB1'
 import { AgentChipStripB1 } from '../home/AgentChipB1'
 import { ProjectCardB1 } from '../home/ProjectCardB1'
 import { ProductivityPanel } from '../home/ProductivityPanel'
+import { PlanLimitsPanel } from '../home/PlanLimitsPanel'
 import { Mascot } from '../Mascot/Mascot'
 import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
 import { getProjectAgents } from '../../../shared/agent-helpers'
@@ -317,6 +318,9 @@ export function HomeScreen({
 
         <Panel title="ACTIVITY / WK" sub="7-DAY ROLLUP" className="home-cost-panel">
           <ProductivityPanel />
+        </Panel>
+        <Panel title="PLAN LIMITS" sub="ROLLING WINDOWS" className="home-cost-panel">
+          <PlanLimitsPanel />
         </Panel>
       </section>
 
