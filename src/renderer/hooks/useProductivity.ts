@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { useAppStore } from '../store/appStore'
 import type { DailyUsageEntry, Session } from '../../shared/types'
 import { useMidnight } from './useMidnight'
-import { todayIsoKey } from '../../shared/date-keys'
+import { isoKeyFromTs } from '../../shared/date-keys'
 import { USAGE_REFRESH_INTERVAL_MS } from '../../shared/constants'
 
 export interface TodayProductivity {
@@ -34,7 +34,7 @@ export function computeTodayProductivity({
   midnight,
   now,
 }: TodayInput): TodayProductivity {
-  const today = usageHistory.find((e) => e.date === todayIsoKey())
+  const today = usageHistory.find((e) => e.date === isoKeyFromTs(midnight))
   let sessionCount = today?.sessions ?? 0
   let activeMs = today?.activeMs ?? 0
   let filesChanged = today?.filesChanged ?? 0

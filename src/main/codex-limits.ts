@@ -58,7 +58,7 @@ export function parseCodexLimits(line: string): CodexLimits | null {
 export async function readCodexLimits(): Promise<CodexLimits | null> {
   const out = await wslTry(FIND_LATEST_RATE_LIMITS, { logLevelOnError: 'debug', timeout: 5000 })
   if (!out) return null
-  const lastLine = out.trim().split('\n').pop()
+  const lastLine = out.trim()
   if (!lastLine) return null
   return parseCodexLimits(lastLine)
 }
