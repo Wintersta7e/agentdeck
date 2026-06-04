@@ -18,6 +18,7 @@ export { registerFilesIpc } from './ipc-files'
 export { registerHomeHandlers, reviewTracker } from './ipc-home'
 export { registerUsageHandlers } from './ipc-usage'
 export { registerLimitsHandlers } from './ipc-limits'
+export { registerSessionHistoryHandlers } from './ipc-sessions'
 export {
   registerTemplateIpc,
   registerLegacyTemplateIpc,

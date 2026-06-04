@@ -37,6 +37,7 @@ export const CH = {
   usageGetHistory: 'usage:getHistory',
   usageRecordSession: 'usage:recordSession',
   limitsGetCodex: 'limits:getCodex',
+  sessionsGetHistory: 'sessions:getHistory',
 
   // ── Env / Skills ───────────────────────────────────────────────────
   envGetAgentPaths: 'env:getAgentPaths',

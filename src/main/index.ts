@@ -11,11 +11,13 @@ import { seedWorkflows } from './workflow-seeds'
 import type { WorkflowEngine } from './workflow-engine'
 import type { WorktreeManager } from './worktree-manager'
 import { createUsageHistory } from './usage-history'
+import { createSessionHistory } from './session-history'
 import { createAppWindow } from './app-window'
 import { registerAppIpcHandlers } from './app-ipc'
 import {
   registerUsageHandlers,
   registerLimitsHandlers,
+  registerSessionHistoryHandlers,
   wireTemplateWindowEvents,
   registerEnvIpc,
   registerFilesIpc,
@@ -25,6 +27,7 @@ import { initializeWorktreeManager } from './worktree-runtime'
 import { publishWslAvailability, resolveWslHome } from './wsl-runtime'
 
 const usageHistory = createUsageHistory(join(app.getPath('userData'), 'usage-history.json'))
+const sessionHistory = createSessionHistory(join(app.getPath('userData'), 'session-history.json'))
 const log = createLogger('app')
 
 let mainWindow: BrowserWindow | null = null
@@ -100,6 +103,7 @@ app
 
     registerUsageHandlers(usageHistory)
     registerLimitsHandlers()
+    registerSessionHistoryHandlers(sessionHistory)
 
     // Warn renderer if encryption is unavailable (secrets stored as plaintext)
     if (!safeStorage.isEncryptionAvailable() && mainWindow) {
@@ -148,6 +152,7 @@ app
 app.on('before-quit', () => {
   log.info('App quitting')
   usageHistory.flush()
+  sessionHistory.flush()
   workflowEngine?.stopAll()
   ptyManager?.killAll()
   templateEventsOff?.()

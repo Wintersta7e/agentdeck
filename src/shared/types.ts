@@ -487,6 +487,17 @@ export interface SessionUsageRecord {
   filesChanged: number
 }
 
+/** One PTY session's lifecycle record, persisted per-session (main-side). */
+export interface SessionRecord {
+  sessionId: string
+  projectId: string
+  agent: string
+  startedAt: number
+  endedAt: number | null // null while running
+  status: 'exited' | 'error'
+  filesChanged: number
+}
+
 /** A proactive suggestion shown on the home screen */
 export interface Suggestion {
   id: string

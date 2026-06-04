@@ -11,6 +11,7 @@ import type {
   ProjectMeta,
   ReviewItem,
   Role,
+  SessionRecord,
   SessionUsageRecord,
   SkillInfo,
   Template,
@@ -150,6 +151,9 @@ export interface AgentDeckBridge {
   usage: {
     recordSession: (rec: SessionUsageRecord) => Promise<void>
     getHistory: (days: number) => Promise<DailyUsageEntry[]>
+  }
+  sessions: {
+    getHistory: (days: number) => Promise<SessionRecord[]>
   }
   limits: {
     getCodex: () => Promise<CodexLimits | null>

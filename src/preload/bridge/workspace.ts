@@ -4,7 +4,7 @@ import type { AgentDeckBridge } from '../../shared/bridge'
 import type { ReviewItem } from '../../shared/types'
 import { onIpc } from './events'
 
-type WorkspaceBridge = Pick<AgentDeckBridge, 'worktree' | 'home' | 'usage' | 'limits'>
+type WorkspaceBridge = Pick<AgentDeckBridge, 'worktree' | 'home' | 'usage' | 'sessions' | 'limits'>
 
 export function createWorkspaceBridge(): WorkspaceBridge {
   return {
@@ -26,6 +26,9 @@ export function createWorkspaceBridge(): WorkspaceBridge {
     usage: {
       recordSession: (rec) => ipcRenderer.invoke(CH.usageRecordSession, rec),
       getHistory: (days) => ipcRenderer.invoke(CH.usageGetHistory, days),
+    },
+    sessions: {
+      getHistory: (days) => ipcRenderer.invoke(CH.sessionsGetHistory, days),
     },
     limits: {
       getCodex: () => ipcRenderer.invoke(CH.limitsGetCodex),
