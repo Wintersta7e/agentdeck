@@ -3,6 +3,7 @@ import type {
   ActivityEvent,
   AgentEnvSnapshot,
   DailyCostEntry,
+  DailyUsageEntry,
   DetectedStack,
   GitStatus,
   LegacyTemplate,
@@ -10,6 +11,7 @@ import type {
   ProjectMeta,
   ReviewItem,
   Role,
+  SessionUsageRecord,
   SkillInfo,
   Template,
   TemplateDraft,
@@ -153,6 +155,10 @@ export interface AgentDeckBridge {
     ) => Promise<void>
     unbind: (sessionId: string) => Promise<void>
     onUpdate: (cb: (data: { sessionId: string; usage: TokenUsage }) => void) => BridgeUnsubscribe
+  }
+  usage: {
+    recordSession: (rec: SessionUsageRecord) => Promise<void>
+    getHistory: (days: number) => Promise<DailyUsageEntry[]>
   }
   home: {
     gitStatus: (projectId: string) => Promise<GitStatus | null>

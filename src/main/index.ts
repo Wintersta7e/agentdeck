@@ -12,11 +12,13 @@ import type { WorkflowEngine } from './workflow-engine'
 import type { WorktreeManager } from './worktree-manager'
 import { createCostTracker, type CostTracker } from './cost-tracker'
 import { createCostHistory } from './cost-history'
+import { createUsageHistory } from './usage-history'
 import { createAppWindow } from './app-window'
 import { registerAppIpcHandlers } from './app-ipc'
 import { createClaudeAdapter, createCodexAdapter } from './log-adapters'
 import {
   registerCostHandlers,
+  registerUsageHandlers,
   wireTemplateWindowEvents,
   registerEnvIpc,
   registerFilesIpc,
@@ -26,6 +28,7 @@ import { initializeWorktreeManager } from './worktree-runtime'
 import { publishWslAvailability, resolveWslHome } from './wsl-runtime'
 
 const costHistory = createCostHistory(join(app.getPath('userData'), 'cost-history.json'))
+const usageHistory = createUsageHistory(join(app.getPath('userData'), 'usage-history.json'))
 const log = createLogger('app')
 
 let mainWindow: BrowserWindow | null = null
@@ -109,6 +112,7 @@ app
     }
 
     registerCostHandlers(() => costTracker, costHistory)
+    registerUsageHandlers(usageHistory)
 
     // Warn renderer if encryption is unavailable (secrets stored as plaintext)
     if (!safeStorage.isEncryptionAvailable() && mainWindow) {
@@ -157,6 +161,7 @@ app
 app.on('before-quit', () => {
   log.info('App quitting')
   costHistory.flush()
+  usageHistory.flush()
   costTracker?.destroy()
   workflowEngine?.stopAll()
   ptyManager?.killAll()

@@ -4,7 +4,7 @@ import type { AgentDeckBridge } from '../../shared/bridge'
 import type { ReviewItem, TokenUsage } from '../../shared/types'
 import { onIpc } from './events'
 
-type WorkspaceBridge = Pick<AgentDeckBridge, 'worktree' | 'home' | 'cost'>
+type WorkspaceBridge = Pick<AgentDeckBridge, 'worktree' | 'home' | 'cost' | 'usage'>
 
 export function createWorkspaceBridge(): WorkspaceBridge {
   return {
@@ -30,6 +30,10 @@ export function createWorkspaceBridge(): WorkspaceBridge {
       bind: (sessionId, opts) => ipcRenderer.invoke(CH.costBind, sessionId, opts),
       unbind: (sessionId) => ipcRenderer.invoke(CH.costUnbind, sessionId),
       onUpdate: (cb) => onIpc<{ sessionId: string; usage: TokenUsage }>(CH.costUpdate, cb),
+    },
+    usage: {
+      recordSession: (rec) => ipcRenderer.invoke(CH.usageRecordSession, rec),
+      getHistory: (days) => ipcRenderer.invoke(CH.usageGetHistory, days),
     },
   }
 }
