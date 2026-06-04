@@ -385,7 +385,7 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
         : [...s.openSessionIds, freshId]
 
       // Carry over user-intent launch config from the old session
-      // (agent overrides, branch mode, cost cap, run mode, approval gates).
+      // (agent overrides, branch mode, run mode, approval gates).
       // Spawn-time captures (model, resolvedContextWindow,
       // resolvedContextSource) and one-shot inputs (initialPrompt) reset —
       // a restart re-detects the active model and is no longer prompted.
@@ -420,7 +420,7 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
 
   getSessionForProject: (projectId) => {
     const { sessions } = get()
-    // Only return live sessions — exited sessions are preserved for cost/timeline only
+    // Only return live sessions — exited sessions are preserved for timeline/productivity only
     return Object.values(sessions).find((s) => s.projectId === projectId && s.status !== 'exited')
   },
 

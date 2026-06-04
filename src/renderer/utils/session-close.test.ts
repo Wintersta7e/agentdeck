@@ -25,11 +25,6 @@ const makeMock = () => {
         invocations.push('pty.kill')
       }),
     },
-    cost: {
-      unbind: vi.fn(async () => {
-        invocations.push('cost.unbind')
-      }),
-    },
     usage: {
       recordSession: vi.fn(async () => undefined),
     },
