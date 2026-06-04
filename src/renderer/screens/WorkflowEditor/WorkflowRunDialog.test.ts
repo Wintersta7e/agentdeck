@@ -3,7 +3,7 @@ import { buildDefaults } from './WorkflowRunDialog'
 import type { WorkflowVariable } from '../../../shared/types'
 
 describe('WorkflowRunDialog buildDefaults', () => {
-  const projectPath = '/home/rooty/my-project'
+  const projectPath = '/home/user/my-project'
 
   it('prefills a path variable that has no default with the selected project path', () => {
     const vars: WorkflowVariable[] = [{ name: 'TARGET_PATH', label: 'Focus path', type: 'path' }]

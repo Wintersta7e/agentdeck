@@ -474,12 +474,12 @@ describe('role persona injection', () => {
       ],
     })
 
-    engine.run(wf, '/home/rooty/proj')
+    engine.run(wf, '/home/user/proj')
     await tick()
 
     const bashCmd = (mockSpawn.mock.calls[0] as string[][])[1]?.[3] ?? ''
     expect(bashCmd).toContain('cd ')
-    expect(bashCmd).toContain('/home/rooty/proj')
+    expect(bashCmd).toContain('/home/user/proj')
     expect(bashCmd).toContain('--print')
     expect(bashCmd).not.toContain('--directory')
 
@@ -503,7 +503,7 @@ describe('role persona injection', () => {
         }),
       ],
     })
-    engine.run(wf, '/home/rooty/proj')
+    engine.run(wf, '/home/user/proj')
     await tick()
     const bashCmd = (mockSpawn.mock.calls[0] as string[][])[1]?.[3] ?? ''
     expect(bashCmd).not.toContain('--permission-mode')
@@ -527,7 +527,7 @@ describe('role persona injection', () => {
         }),
       ],
     })
-    engine.run(wf, '/home/rooty/proj')
+    engine.run(wf, '/home/user/proj')
     await tick()
     const bashCmd = (mockSpawn.mock.calls[0] as string[][])[1]?.[3] ?? ''
     expect(bashCmd).toContain('--sandbox workspace-write')
@@ -543,7 +543,7 @@ describe('role persona injection', () => {
       id: 'wf-codex-hooks',
       nodes: [makeWorkflowNode({ id: 'a', type: 'agent', agent: 'codex', prompt: 'p' })],
     })
-    engine.run(wf, '/home/rooty/proj')
+    engine.run(wf, '/home/user/proj')
     await tick()
     const bashCmd = (mockSpawn.mock.calls[0] as string[][])[1]?.[3] ?? ''
     expect(bashCmd).toContain('--disable hooks')
@@ -565,7 +565,7 @@ describe('role persona injection', () => {
       id: 'wf-prompt-injection',
       nodes: [makeWorkflowNode({ id: 'a', type: 'agent', agent: 'codex', prompt })],
     })
-    engine.run(wf, '/home/rooty/proj')
+    engine.run(wf, '/home/user/proj')
     await tick()
     const bashCmd = (mockSpawn.mock.calls[0] as string[][])[1]?.[3] ?? ''
     // Prompt content must not be on the command line where bash would parse it.
@@ -618,7 +618,7 @@ describe('role persona injection', () => {
       id: 'wf-perm-default',
       nodes: [makeWorkflowNode({ id: 'a', type: 'agent', agent: 'codex', prompt: 'p' })],
     })
-    engine.run(wf, '/home/rooty/proj')
+    engine.run(wf, '/home/user/proj')
     await tick()
     const bashCmd = (mockSpawn.mock.calls[0] as string[][])[1]?.[3] ?? ''
     expect(bashCmd).toContain('--sandbox read-only')
