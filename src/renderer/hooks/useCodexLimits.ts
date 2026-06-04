@@ -76,12 +76,14 @@ export function useCodexLimits(): CodexLimitsData {
   const claude = useMemo(() => {
     // eslint-disable-next-line react-hooks/purity -- render-time snapshot; matches useProductivity
     const now = Date.now()
-    const claudeSessions = Object.fromEntries(
-      Object.entries(sessions).filter(
-        ([, s]) => resolveSessionAgent(s, projects) === 'claude-code',
+    return computeActivityWindow({
+      sessions: Object.fromEntries(
+        Object.entries(sessions).filter(
+          ([, s]) => resolveSessionAgent(s, projects) === 'claude-code',
+        ),
       ),
-    )
-    return computeActivityWindow({ sessions: claudeSessions, now })
+      now,
+    })
   }, [sessions, projects])
   return { codex, claude }
 }
