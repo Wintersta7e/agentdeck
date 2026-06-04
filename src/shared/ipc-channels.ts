@@ -41,6 +41,10 @@ export const CH = {
   costUnbind: 'cost:unbind',
   costUpdate: 'cost:update',
 
+  // ── Usage / productivity tracking ──────────────────────────────────
+  usageGetHistory: 'usage:getHistory',
+  usageRecordSession: 'usage:recordSession',
+
   // ── Env / Skills ───────────────────────────────────────────────────
   envGetAgentPaths: 'env:getAgentPaths',
   envGetAgentSnapshot: 'env:getAgentSnapshot',

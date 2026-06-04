@@ -484,6 +484,30 @@ export interface DailyCostEntry {
   tokenCount: number
 }
 
+/** Per-project / per-agent productivity totals for a single day. */
+export interface UsageTotals {
+  sessions: number
+  activeMs: number
+  filesChanged: number
+}
+
+/** Aggregated productivity data for a single day. */
+export interface DailyUsageEntry extends UsageTotals {
+  date: string
+  perProject: Record<string, UsageTotals>
+  perAgent: Record<string, UsageTotals>
+}
+
+/** One finished session's contribution, sent from renderer → main on end. */
+export interface SessionUsageRecord {
+  sessionId: string
+  agent: string
+  projectId: string
+  startedAt: number
+  endedAt: number
+  filesChanged: number
+}
+
 /** A proactive suggestion shown on the home screen */
 export interface Suggestion {
   id: string
