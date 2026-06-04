@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { parseCodexLimits } from './codex-limits'
 
+// Synthetic fixture (values are made up — not from any real account).
 const line = JSON.stringify({
   timestamp: '2026-01-15T10:00:00.000Z',
   type: 'event_msg',
