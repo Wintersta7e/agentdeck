@@ -54,7 +54,17 @@
   font-size: var(--fs-xs);
   color: var(--text3);
 }
-.plan-limits__claude {
+.plan-limits__agent-name--row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+.plan-limits__agent-icon {
+  display: flex;
+  align-items: center;
+  color: var(--text2);
+}
+.plan-limits__activity {
   font-size: var(--fs-base);
   color: var(--text0);
 }

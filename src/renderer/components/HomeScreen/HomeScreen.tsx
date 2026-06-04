@@ -317,7 +317,7 @@ export function HomeScreen({
         <Panel title="ACTIVITY / WK" sub="7-DAY ROLLUP" className="home-metrics-panel">
           <ProductivityPanel data={prod} midnight={midnight} />
         </Panel>
-        <Panel title="PLAN LIMITS" sub="ROLLING WINDOWS" className="home-metrics-panel">
+        <Panel title="USAGE" sub="LAST 5H · CODEX LIMITS" className="home-metrics-panel">
           <PlanLimitsPanel />
         </Panel>
       </section>

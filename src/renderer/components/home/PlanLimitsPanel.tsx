@@ -1,4 +1,5 @@
-import { useCodexLimits, resolveWindow, type ResolvedWindow } from '../../hooks/useCodexLimits'
+import { usePlanLimits, resolveWindow, type ResolvedWindow } from '../../hooks/usePlanLimits'
+import { AGENT_BY_ID } from '../../utils/agent-ui'
 import { formatDuration } from '../../utils/format-duration'
 import './PlanLimitsPanel.css'
 
@@ -29,37 +30,65 @@ function Gauge({ label, w }: { label: string; w: ResolvedWindow }): React.JSX.El
 }
 
 export function PlanLimitsPanel(): React.JSX.Element {
-  const { codex, claude } = useCodexLimits()
-  // render-time snapshot (see useCodexLimits for the convention)
+  const { codex, activity } = usePlanLimits()
+  // render-time snapshot (see usePlanLimits for the convention)
   // eslint-disable-next-line react-hooks/purity
   const now = Date.now()
   const primary = resolveWindow(codex?.primary ?? null, now)
   const weekly = resolveWindow(codex?.weekly ?? null, now)
+  const codexGaugesShown = primary !== null || weekly !== null
+
+  // When Codex gauges are visible, skip Codex from the activity rows (no duplication).
+  const activityRows = codexGaugesShown ? activity.filter((a) => a.agent !== 'codex') : activity
+
+  const isEmpty = !codexGaugesShown && activityRows.length === 0
 
   return (
     <div className="plan-limits">
-      <div className="plan-limits__agent">
-        <span className="plan-limits__agent-name">
-          Codex{codex?.planType ? ` · ${codex.planType}` : ''}
-        </span>
-        {primary || weekly ? (
+      {/* Codex gauges block */}
+      {codexGaugesShown && (
+        <div className="plan-limits__agent">
+          <span className="plan-limits__agent-name">
+            Codex{codex?.planType ? ` · ${codex.planType}` : ''}
+          </span>
           <div className="plan-limits__gauges">
             {primary && <Gauge label="5-hour" w={primary} />}
             {weekly && <Gauge label="weekly" w={weekly} />}
           </div>
-        ) : (
-          <span className="plan-limits__empty">No recent Codex usage.</span>
-        )}
-      </div>
+        </div>
+      )}
 
-      <div className="plan-limits__agent">
-        <span className="plan-limits__agent-name">Claude</span>
-        <span className="plan-limits__claude">
-          {claude.sessions} session{claude.sessions === 1 ? '' : 's'} ·{' '}
-          {formatDuration(claude.activeMs)} · last 5h
+      {/* Per-agent activity tiles */}
+      {activityRows.map(({ agent, sessions, activeMs }) => {
+        const meta = AGENT_BY_ID.get(agent as Parameters<(typeof AGENT_BY_ID)['get']>[0])
+        const icon = meta?.icon
+        const name = meta?.name ?? agent
+        return (
+          <div key={agent} className="plan-limits__agent">
+            <span className="plan-limits__agent-name plan-limits__agent-name--row">
+              {icon && (
+                <span className="plan-limits__agent-icon" aria-hidden="true">
+                  {icon}
+                </span>
+              )}
+              {name}
+            </span>
+            <span className="plan-limits__activity">
+              {sessions} session{sessions === 1 ? '' : 's'} · {formatDuration(activeMs)} · last 5h
+            </span>
+          </div>
+        )
+      })}
+
+      {/* Caveat note */}
+      {!isEmpty && (
+        <span className="plan-limits__note">
+          Only Codex exposes plan limits; others show recent activity.
         </span>
-        <span className="plan-limits__note">Claude doesn&apos;t expose plan limits.</span>
-      </div>
+      )}
+
+      {/* Empty state */}
+      {isEmpty && <span className="plan-limits__empty">No recent agent activity.</span>}
     </div>
   )
 }

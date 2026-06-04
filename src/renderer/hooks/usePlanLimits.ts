@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAppStore } from '../store/appStore'
-import type { CodexLimits, PlanWindow, Session } from '../../shared/types'
+import type { CodexLimits, PlanWindow, Project, Session } from '../../shared/types'
 import { USAGE_REFRESH_INTERVAL_MS } from '../../shared/constants'
 import { resolveSessionAgent } from '../utils/resolve-session-agent'
 
@@ -14,6 +14,10 @@ export interface ResolvedWindow {
 export interface ActivityWindow {
   sessions: number
   activeMs: number
+}
+
+export interface AgentActivity extends ActivityWindow {
+  agent: string
 }
 
 const FIVE_HOURS_MS = 5 * 3_600_000
@@ -49,12 +53,37 @@ export function computeActivityWindow({
   return { sessions: count, activeMs }
 }
 
-export interface CodexLimitsData {
-  codex: CodexLimits | null
-  claude: ActivityWindow
+/**
+ * Per-agent rolling-5h activity, for every agent with >=1 session started in the window.
+ * Sorted by activeMs desc, then sessions desc, then agent id.
+ */
+export function computeAgentActivity(
+  sessions: Record<string, Session>,
+  projects: Project[],
+  now: number,
+): AgentActivity[] {
+  const byAgent: Record<string, Record<string, Session>> = {}
+  for (const [id, s] of Object.entries(sessions)) {
+    const agent = resolveSessionAgent(s, projects)
+    ;(byAgent[agent] ??= {})[id] = s
+  }
+  const out: AgentActivity[] = []
+  for (const [agent, group] of Object.entries(byAgent)) {
+    const w = computeActivityWindow({ sessions: group, now })
+    if (w.sessions > 0) out.push({ agent, ...w })
+  }
+  out.sort(
+    (a, b) => b.activeMs - a.activeMs || b.sessions - a.sessions || a.agent.localeCompare(b.agent),
+  )
+  return out
 }
 
-export function useCodexLimits(): CodexLimitsData {
+export interface PlanLimitsData {
+  codex: CodexLimits | null
+  activity: AgentActivity[]
+}
+
+export function usePlanLimits(): PlanLimitsData {
   const [codex, setCodex] = useState<CodexLimits | null>(null)
   const sessions = useAppStore((s) => s.sessions)
   const projects = useAppStore((s) => s.projects)
@@ -82,9 +111,6 @@ export function useCodexLimits(): CodexLimitsData {
   // [sessions, projects] memo would freeze `now` between session changes.
   // eslint-disable-next-line react-hooks/purity -- render-time snapshot
   const now = Date.now()
-  const claudeSessions = Object.fromEntries(
-    Object.entries(sessions).filter(([, s]) => resolveSessionAgent(s, projects) === 'claude-code'),
-  )
-  const claude = computeActivityWindow({ sessions: claudeSessions, now })
-  return { codex, claude }
+  const activity = computeAgentActivity(sessions, projects, now)
+  return { codex, activity }
 }
