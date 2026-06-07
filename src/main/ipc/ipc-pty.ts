@@ -206,7 +206,7 @@ export function registerPtyHandlers(
                 agent: rec.agent,
                 projectId: rec.projectId,
                 startedAt: rec.startedAt,
-                endedAt: rec.endedAt ?? Date.now(),
+                lastActivityAt: rec.lastActivityAt,
                 filesChanged: rec.filesChanged,
               })
             }

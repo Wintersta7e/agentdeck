@@ -95,7 +95,7 @@ export function createUsageHistory(storePath?: string): UsageHistory {
     recordSession(rec) {
       const date = isoKeyFromTs(rec.startedAt)
       const entry = entries.get(date) ?? emptyEntry(date)
-      const activeMs = Math.max(0, rec.endedAt - rec.startedAt)
+      const activeMs = Math.max(0, rec.lastActivityAt - rec.startedAt)
       const files = Math.max(0, rec.filesChanged)
 
       addInto(entry, activeMs, files)

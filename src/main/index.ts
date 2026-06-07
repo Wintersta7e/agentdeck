@@ -31,9 +31,10 @@ const usageHistory = createUsageHistory(join(app.getPath('userData'), 'usage-his
 const sessionHistory = createSessionHistory(join(app.getPath('userData'), 'session-history.json'))
 const log = createLogger('app')
 
-// Count file-write activity events for the per-session history record.
+// Feed every activity event to the per-session history record: any activity
+// advances the active-time clock, and write events also bump the file count.
 ptyBus.on('activity', (payload: { sessionId: string; type: string }) => {
-  if (payload.type === 'write') sessionHistory.noteWrite(payload.sessionId)
+  sessionHistory.noteActivity(payload.sessionId, payload.type)
 })
 
 let mainWindow: BrowserWindow | null = null

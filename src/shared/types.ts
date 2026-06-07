@@ -483,7 +483,9 @@ export interface SessionUsageRecord {
   agent: string
   projectId: string
   startedAt: number
-  endedAt: number
+  /** Timestamp of the session's last activity — active time is measured to here,
+   *  not to endedAt, so a session left open idle doesn't inflate the total. */
+  lastActivityAt: number
   filesChanged: number
 }
 
@@ -493,6 +495,8 @@ export interface SessionRecord {
   projectId: string
   agent: string
   startedAt: number
+  /** Last activity timestamp; seeded to startedAt, advanced on each activity event. */
+  lastActivityAt: number
   endedAt: number | null // null while running
   status: 'exited' | 'error'
   filesChanged: number

@@ -20,7 +20,7 @@ export interface SessionHistory {
     agent: string
     startedAt: number
   }) => void
-  noteWrite: (sessionId: string) => void
+  noteActivity: (sessionId: string, type: string) => void
   endSession: (
     sessionId: string,
     end: { endedAt: number; status: 'exited' | 'error' },
@@ -52,12 +52,14 @@ function loadFromDisk(storePath: string): Map<string, SessionRecord> {
 export function createSessionHistory(storePath?: string): SessionHistory {
   const records = storePath ? loadFromDisk(storePath) : new Map<string, SessionRecord>()
 
-  // Recover dangling records from an unclean shutdown — a null endedAt means the
-  // app exited before the session's exit was recorded. Finalize so the record
-  // never renders as a perpetual "running" row in the session history UI.
   for (const rec of records.values()) {
+    // Back-compat: records written before lastActivityAt existed default to startedAt.
+    if (rec.lastActivityAt === undefined) rec.lastActivityAt = rec.startedAt
+    // Recover dangling records from an unclean shutdown — a null endedAt means the
+    // app exited before the session's exit was recorded. Finalize at the last known
+    // activity so the record never renders as a perpetual "running" row.
     if (rec.endedAt === null) {
-      rec.endedAt = rec.startedAt
+      rec.endedAt = rec.lastActivityAt
       rec.status = 'error'
     }
   }
@@ -110,15 +112,20 @@ export function createSessionHistory(storePath?: string): SessionHistory {
         projectId: rec.projectId,
         agent: rec.agent,
         startedAt: rec.startedAt,
+        lastActivityAt: rec.startedAt,
         endedAt: null,
         status: 'exited',
         filesChanged: 0,
       })
       scheduleFlush()
     },
-    noteWrite(sessionId) {
+    noteActivity(sessionId, type) {
       const r = records.get(sessionId)
-      if (r) r.filesChanged += 1 // persisted on endSession / next scheduled flush
+      if (!r) return
+      // Any activity advances the active-time clock; only writes bump filesChanged.
+      // Persisted on endSession / next scheduled flush.
+      r.lastActivityAt = Date.now()
+      if (type === 'write') r.filesChanged += 1
     },
     endSession(sessionId, end) {
       const r = records.get(sessionId)

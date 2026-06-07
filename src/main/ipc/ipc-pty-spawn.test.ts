@@ -23,7 +23,7 @@ const call = makeIpcCall(handlers)
 
 const stubSessionHistory = (): Parameters<typeof registerPtyHandlers>[1]['sessionHistory'] => ({
   startSession: vi.fn(),
-  noteWrite: vi.fn(),
+  noteActivity: vi.fn(),
   endSession: vi.fn(() => null),
   getHistory: vi.fn(() => []),
   flush: vi.fn(),
