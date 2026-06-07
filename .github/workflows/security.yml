@@ -58,7 +58,7 @@ jobs:
           curl -sSL https://github.com/aquasecurity/trivy/releases/download/v0.71.0/trivy_0.71.0_Linux-64bit.tar.gz \
             | tar -xz -C /usr/local/bin trivy
       - name: Cache trivy vulnerability DB
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/trivy
           key: trivy-db-${{ github.run_id }}
