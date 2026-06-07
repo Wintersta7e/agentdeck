@@ -5,6 +5,51 @@ All notable changes to AgentDeck will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.10.0] - 2026-06-07
+
+Covers everything since 6.8.0 (6.9.0 was never published). Headline: the
+unreliable cost tracking is replaced by honest **productivity + plan-limit**
+metrics, and **session history now survives restarts**.
+
+### Added
+
+- **Productivity tracking** — disk-backed daily rollups (sessions · active
+  time · files changed) that survive an app restart, recorded from the real
+  session lifecycle in the main process. Home KPIs, a 7-day sparkline, and a
+  per-project breakdown replace the old cost / token readouts.
+- **Plan-limits panel** — real Codex 5h + weekly rate-limit gauges read
+  account-wide from the rollout log (reset-aware), plus a rolling-5h activity
+  tile for every agent, built from productivity data.
+- **Persisted session history** — the home timeline and HISTORY screen read
+  from a disk-backed session log, so they survive close / restart.
+
+### Changed
+
+- Session productivity is recorded main-side on PTY spawn / exit instead of in
+  the renderer, so a session that ends after its window is gone still counts.
+- HISTORY screen ranks projects by files changed instead of cost.
+- Test coverage scoped to testable logic (render + bootstrap excluded), and
+  reported to Codecov.
+- Dependency refresh: zustand 5.0.14, lucide-react 1.17.0, lint-staged 17.0.7.
+
+### Removed
+
+- **Cost / token tracking, in full** — the cost tracker, per-agent log
+  adapters, model-pricing table, cost history, the Cost Dashboard, and every
+  cost / token readout across the session and home UI. Estimating
+  API-equivalent dollars from a static price table is meaningless on
+  subscription plans.
+- Per-session cost cap and the $/step estimate on the New Session screen.
+
+### Fixed
+
+- **"session not found" recording race** — user-killed sessions (null
+  signal / exit code) are now counted, and records left dangling by an unclean
+  shutdown are finalized on the next launch.
+- Productivity double-count, day-keying, and Claude-activity scoping bugs
+  caught in review; failed-launch sessions are excluded from active time.
+- Hardened usage IPC validation and coalesced plan-limit reads.
+
 ## [6.8.0] - 2026-05-31
 
 A large release covering everything since 6.6.0 (6.7.x was never published).
