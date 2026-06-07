@@ -1,0 +1,96 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Mondays 06:00 UTC — re-scan against advisories published since the last push.
+    - cron: '0 6 * * 1'
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# Tools are installed from pinned first-party release binaries rather than
+# marketplace actions: the trivy-action tags were hijacked in a March 2026
+# supply-chain attack, so a security workflow should not trust mutable action
+# refs. Versions match the locally-run toolchain.
+jobs:
+  secrets:
+    name: Secrets (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # full history so gitleaks can scan every commit
+      - name: Install gitleaks
+        run: |
+          curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz \
+            | tar -xz -C /usr/local/bin gitleaks
+      - name: Scan history for secrets (blocking)
+        run: gitleaks git . --no-banner --redact --exit-code 1
+
+  dependencies:
+    name: Dependencies (osv-scanner)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install osv-scanner
+        run: |
+          curl -sSL https://github.com/google/osv-scanner/releases/download/v2.3.8/osv-scanner_linux_amd64 \
+            -o /usr/local/bin/osv-scanner
+          chmod +x /usr/local/bin/osv-scanner
+      - name: Scan dependencies for known CVEs (blocking)
+        run: osv-scanner scan source -r .
+
+  vulnerabilities:
+    name: Vulns + secrets (trivy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install trivy
+        run: |
+          curl -sSL https://github.com/aquasecurity/trivy/releases/download/v0.71.0/trivy_0.71.0_Linux-64bit.tar.gz \
+            | tar -xz -C /usr/local/bin trivy
+      - name: Cache trivy vulnerability DB
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/trivy
+          key: trivy-db-${{ github.run_id }}
+          restore-keys: trivy-db-
+      - name: Scan filesystem — HIGH/CRITICAL block (blocking)
+        run: |
+          trivy fs --scanners vuln,secret \
+            --severity HIGH,CRITICAL \
+            --exit-code 1 \
+            --skip-dirs node_modules,dist,dist-release,out \
+            --no-progress .
+      - name: Misconfiguration scan (advisory)
+        continue-on-error: true
+        run: |
+          trivy fs --scanners misconfig \
+            --skip-dirs node_modules,dist,dist-release,out \
+            --no-progress .
+
+  sast:
+    name: Static analysis (semgrep, advisory)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      # Advisory: semgrep findings surface in the log but never fail the build.
+      # The two excluded rules are inherently noisy for this codebase — it
+      # legitimately joins validated IDs into paths (guarded by allowlist /
+      # safeId) and compiles user-authored workflow-condition regexes — so they
+      # fire only false positives here. See .semgrepignore for the rationale.
+      - name: Run semgrep
+        continue-on-error: true
+        run: |
+          pipx install semgrep
+          semgrep scan --config auto src/ \
+            --exclude-rule javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal \
+            --exclude-rule javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp

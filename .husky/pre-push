@@ -1,0 +1,10 @@
+# Block a push that would leak a secret. gitleaks is offline and fast (~7s on
+# this repo's history). If it isn't installed locally we skip rather than block
+# — the Security workflow re-runs it server-side on every push.
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "⚠ gitleaks not installed — skipping local secret scan (CI still enforces it)."
+  echo "  Install: https://github.com/gitleaks/gitleaks#installing"
+  exit 0
+fi
+
+gitleaks git . --no-banner --redact

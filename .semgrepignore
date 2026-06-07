@@ -1,0 +1,16 @@
+# Paths semgrep should not scan. (In a git repo semgrep already skips
+# gitignored files, so these are belt-and-braces for local runs.)
+node_modules/
+dist/
+dist-release/
+out/
+coverage/
+
+# Two rules are excluded at the invocation site (--exclude-rule in the Security
+# workflow and the `security` npm script) rather than here, because semgrepignore
+# only filters paths, not rules:
+#   - path-join-resolve-traversal — every hit joins a value already guarded by an
+#     allowlist, safeId(), or a literal segment (src/main path stores + IPC).
+#   - detect-non-literal-regexp — the only dynamic regexes are user-authored
+#     workflow condition patterns, compiled inside try/catch (ReDoS-guarded).
+# Both fire only false positives in this codebase. Drop the flag if that changes.

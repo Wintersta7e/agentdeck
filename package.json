@@ -45,6 +45,7 @@
     "test:main": "node node_modules/vitest/vitest.mjs run --project main",
     "test:renderer": "node node_modules/vitest/vitest.mjs run --project renderer",
     "typecheck": "node node_modules/typescript/bin/tsc -p tsconfig.node.json --noEmit && node node_modules/typescript/bin/tsc -p tsconfig.web.json --noEmit",
+    "security": "gitleaks git . --no-banner --redact && osv-scanner scan source -r . && trivy fs --scanners vuln,secret,misconfig --skip-dirs node_modules,dist,dist-release,out --no-progress . && semgrep scan --config auto src/ --exclude-rule javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal --exclude-rule javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp",
     "debug:context-resolution": "npx vite-node scripts/debug-context-resolution.ts",
     "prepare": "node node_modules/husky/bin.js"
   },
