@@ -1,8 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { ScreenShell, FilterChip } from '../../components/shared/ScreenShell'
-import { AGENTS } from '../../../shared/agents'
-import { getSessionAgentId } from '../../utils/agent-ui'
+import { getSessionAgentId, AGENT_BY_ID } from '../../utils/agent-ui'
 import type { Session, SessionStatus } from '../../../shared/types'
 import './SessionsScreen.css'
 
@@ -40,8 +39,6 @@ function statusTone(s: SessionStatus): string {
 function statusLabel(s: SessionStatus): string {
   return s.toUpperCase()
 }
-
-const AGENT_META_MAP = new Map(AGENTS.map((a) => [a.id, a]))
 
 function isActive(status: SessionStatus): boolean {
   return status === 'running' || status === 'starting'
@@ -200,7 +197,7 @@ export function SessionsScreen(): React.JSX.Element {
           filtered.map((session) => {
             const project = projectById.get(session.projectId)
             const agentId = getSessionAgentId(session, project)
-            const agent = AGENT_META_MAP.get(agentId)
+            const agent = AGENT_BY_ID.get(agentId)
             const feed = activityFeeds[session.id]
             const lastEvent = feed && feed.length > 0 ? feed[feed.length - 1] : undefined
             const activity = lastEvent

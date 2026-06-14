@@ -15,14 +15,10 @@ import { ProjectCardB1 } from '../home/ProjectCardB1'
 import { ProductivityPanel } from '../home/ProductivityPanel'
 import { PlanLimitsPanel } from '../home/PlanLimitsPanel'
 import { Mascot } from '../Mascot/Mascot'
-import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
+import { AGENT_BY_ID } from '../../../shared/agents'
 import { getProjectAgents } from '../../../shared/agent-helpers'
 import type { AgentConfig, Project } from '../../../shared/types'
 import './HomeScreen.css'
-
-const AGENT_META_MAP = new Map<string, (typeof SHARED_AGENTS)[number]>(
-  SHARED_AGENTS.map((a) => [a.id, a]),
-)
 
 function getGreeting(hour: number): string {
   if (hour < 12) return 'Good morning'
@@ -340,7 +336,7 @@ export function HomeScreen({
             >
               <div className="home-context-header">Launch with…</div>
               {projectAgents.map((ac) => {
-                const agentMeta = AGENT_META_MAP.get(ac.agent)
+                const agentMeta = AGENT_BY_ID.get(ac.agent)
                 return (
                   <button
                     key={ac.agent}

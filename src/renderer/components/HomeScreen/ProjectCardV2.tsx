@@ -2,12 +2,10 @@ import { useMemo } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { GitStatusRow } from './GitStatusRow'
 import { Skeleton } from '../shared/Skeleton'
-import { AGENTS } from '../../../shared/agents'
+import { AGENT_BY_ID } from '../../../shared/agents'
 import { getDefaultAgent, getProjectAgents } from '../../../shared/agent-helpers'
 import type { Project, StackBadge } from '../../../shared/types'
 import './ProjectCardV2.css'
-
-const AGENT_META = new Map(AGENTS.map((a) => [a.id, a]))
 
 const BADGE_ABBR: Record<StackBadge, string> = {
   Java: 'JV',
@@ -120,7 +118,7 @@ export function ProjectCardV2({
       {agents.length > 0 && (
         <div className="pcv2-agents">
           {agents.map((ac) => {
-            const meta = AGENT_META.get(ac.agent)
+            const meta = AGENT_BY_ID.get(ac.agent)
             const running = runningAgents.has(ac.agent)
             return (
               <span key={ac.agent} className={`pcv2-pill${running ? ' live' : ''}`}>

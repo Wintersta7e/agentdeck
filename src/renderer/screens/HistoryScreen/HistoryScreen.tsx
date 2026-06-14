@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { useMidnight } from '../../hooks/useMidnight'
 import { useSessionHistory } from '../../hooks/useSessionHistory'
-import { AGENTS } from '../../../shared/agents'
+import { AGENT_BY_ID } from '../../../shared/agents'
 import type { AgentType } from '../../../shared/types'
 import { ScreenShell, FilterChip } from '../../components/shared/ScreenShell'
 import { DAYS as HISTORY_DAYS } from './constants'
@@ -12,7 +12,6 @@ type Metric = 'count' | 'filesChanged'
 
 const HOURS = 24
 const DAY_MS = 24 * 60 * 60 * 1000
-const AGENT_META_MAP = new Map(AGENTS.map((a) => [a.id, a]))
 
 function weekdayLabel(ts: number): string {
   return new Date(ts).toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase().slice(0, 3)
@@ -160,7 +159,7 @@ export function HistoryScreen(): React.JSX.Element {
           <ul className="history-log__list">
             {sortedRows.map((row) => {
               const project = projectById.get(row.projectId)
-              const agent = AGENT_META_MAP.get(row.agent as AgentType)
+              const agent = AGENT_BY_ID.get(row.agent as AgentType)
               const files = row.filesChanged
               return (
                 <li key={row.sessionId} className="history-log__row">

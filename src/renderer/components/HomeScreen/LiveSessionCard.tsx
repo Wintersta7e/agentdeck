@@ -1,12 +1,9 @@
 import { useMemo } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { useElapsedTime } from '../../hooks/useElapsedTime'
-import { AGENTS } from '../../../shared/agents'
-import { getSessionAgentId } from '../../utils/agent-ui'
+import { getSessionAgentId, AGENT_BY_ID } from '../../utils/agent-ui'
 import type { ActivityEvent } from '../../../shared/types'
 import './LiveSessionCard.css'
-
-const AGENT_META = new Map(AGENTS.map((a) => [a.id, a]))
 
 function getPulseClass(event: ActivityEvent | undefined): string {
   if (!event || event.status !== 'active') return 'idle'
@@ -50,7 +47,7 @@ export function LiveSessionCard({ sessionId }: LiveSessionCardProps): React.JSX.
   )
 
   const agentId = getSessionAgentId(session, project)
-  const meta = AGENT_META.get(agentId)
+  const meta = AGENT_BY_ID.get(agentId)
   const pulseClass = getPulseClass(latestActivity ?? undefined)
 
   if (!session) return <div className="live-card live-card-empty" />

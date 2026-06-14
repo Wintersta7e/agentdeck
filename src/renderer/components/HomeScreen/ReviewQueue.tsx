@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useCallback } from 'react'
 import { useAppStore } from '../../store/appStore'
-import { AGENTS } from '../../../shared/agents'
+import { AGENT_BY_ID, type AgentId } from '../../../shared/agents'
 import './ReviewQueue.css'
-
-const AGENT_META = new Map<string, (typeof AGENTS)[number]>(AGENTS.map((a) => [a.id, a]))
 
 export function ReviewQueue(): React.JSX.Element {
   const projectIds = useAppStore((s) => s.projects.map((p) => p.id).join(','))
@@ -63,7 +61,7 @@ export function ReviewQueue(): React.JSX.Element {
         <div className="panel-empty">No pending reviews</div>
       ) : (
         pending.map((r) => {
-          const meta = AGENT_META.get(r.agentId)
+          const meta = AGENT_BY_ID.get(r.agentId as AgentId)
           return (
             <div key={r.id} className="review-item">
               <span className="review-agent">{meta?.name ?? r.agentId}</span>

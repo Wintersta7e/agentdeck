@@ -5,14 +5,12 @@ import { useProjects } from '../../hooks/useProjects'
 import { useGitStatusBatch } from '../../hooks/useGitStatus'
 import { ProjectCardV2 } from '../../components/HomeScreen/ProjectCardV2'
 import { ScreenShell, FilterChip } from '../../components/shared/ScreenShell'
-import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
+import { AGENT_BY_ID } from '../../../shared/agents'
 import { getProjectAgents } from '../../../shared/agent-helpers'
 import type { AgentConfig, Project } from '../../../shared/types'
 import './ProjectsScreen.css'
 
 type FilterId = 'all' | 'pinned' | 'dirty'
-
-const AGENT_META_MAP = new Map(SHARED_AGENTS.map((a) => [a.id, a]))
 
 interface ProjectsScreenProps {
   onOpenProject: (project: Project) => void
@@ -198,7 +196,7 @@ export function ProjectsScreen({
             >
               <div className="projects-screen__menu-head">Launch with…</div>
               {projectAgents.map((ac) => {
-                const agentMeta = AGENT_META_MAP.get(ac.agent)
+                const agentMeta = AGENT_BY_ID.get(ac.agent)
                 return (
                   <button
                     key={ac.agent}
