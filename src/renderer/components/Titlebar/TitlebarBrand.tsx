@@ -1,19 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Search } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
+import { formatClock, formatWeekday } from '../../utils/format-date'
 import './TitlebarBrand.css'
-
-function formatClock(d: Date): string {
-  return d.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  })
-}
-
-function formatDayOfWeek(d: Date): string {
-  return d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase().slice(0, 3)
-}
 
 /**
  * B1-style brand strip sitting inside the Titlebar.
@@ -37,14 +26,14 @@ export function TitlebarBrand(): React.JSX.Element {
   const username = useAppStore((s) => s.wslUsername)
 
   const [clock, setClock] = useState(() => formatClock(new Date()))
-  const [day, setDay] = useState(() => formatDayOfWeek(new Date()))
+  const [day, setDay] = useState(() => formatWeekday(new Date()))
   const [appVersion, setAppVersion] = useState<string | null>(null)
 
   useEffect(() => {
     const id = window.setInterval(() => {
       const d = new Date()
       setClock(formatClock(d))
-      setDay(formatDayOfWeek(d))
+      setDay(formatWeekday(d))
     }, 30_000)
     return () => window.clearInterval(id)
   }, [])

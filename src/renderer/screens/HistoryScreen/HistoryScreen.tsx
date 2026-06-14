@@ -6,16 +6,13 @@ import { AGENT_BY_ID } from '../../../shared/agents'
 import type { AgentType } from '../../../shared/types'
 import { ScreenShell, FilterChip } from '../../components/shared/ScreenShell'
 import { DAYS as HISTORY_DAYS } from './constants'
+import { formatWeekday } from '../../utils/format-date'
 import './HistoryScreen.css'
 
 type Metric = 'count' | 'filesChanged'
 
 const HOURS = 24
 const DAY_MS = 24 * 60 * 60 * 1000
-
-function weekdayLabel(ts: number): string {
-  return new Date(ts).toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase().slice(0, 3)
-}
 
 function dayOfMonthLabel(ts: number): string {
   return String(new Date(ts).getDate())
@@ -124,7 +121,7 @@ export function HistoryScreen(): React.JSX.Element {
           return (
             <div className="history-heatmap__row" key={dayIdx}>
               <span className="history-heatmap__day">
-                <span className="history-heatmap__day-name">{weekdayLabel(ts)}</span>
+                <span className="history-heatmap__day-name">{formatWeekday(new Date(ts))}</span>
                 <span className="history-heatmap__day-num">{dayOfMonthLabel(ts)}</span>
               </span>
               {row.map((value, hour) => {
@@ -137,7 +134,7 @@ export function HistoryScreen(): React.JSX.Element {
                     style={{ opacity: opacity || undefined }}
                     title={
                       value > 0
-                        ? `${weekdayLabel(ts)} ${String(hour).padStart(2, '0')}:00 · ${
+                        ? `${formatWeekday(new Date(ts))} ${String(hour).padStart(2, '0')}:00 · ${
                             metric === 'count' ? `${value} sessions` : `${value} files`
                           }`
                         : undefined

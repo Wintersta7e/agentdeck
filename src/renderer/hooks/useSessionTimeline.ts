@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useAppStore } from '../store/appStore'
 import type { ActivityEvent, Session } from '../../shared/types'
 import { useMidnight } from './useMidnight'
+import { formatDurationHm } from '../utils/format-duration'
 import { TIMELINE_EVENT_DURATION_MS, TIMELINE_MIN_SPAN_MS } from '../../shared/constants'
 
 export interface TimelineSegment {
@@ -14,12 +15,6 @@ export interface TimelineRow {
   label: string
   segments: TimelineSegment[]
   duration: string
-}
-
-function formatDuration(ms: number): string {
-  const h = Math.floor(ms / 3_600_000)
-  const m = Math.floor((ms % 3_600_000) / 60_000)
-  return `${h}h ${String(m).padStart(2, '0')}m`
 }
 
 export function computeTimeline(
@@ -77,7 +72,7 @@ export function computeTimeline(
       // For running sessions, use current time as end; for closed sessions, use last event
       const isRunning = session?.status === 'running' || session?.status === 'starting'
       const endTs = isRunning ? now : lastTs + TIMELINE_EVENT_DURATION_MS
-      const duration = formatDuration(endTs - firstTs)
+      const duration = formatDurationHm(endTs - firstTs)
       // Label derived fresh from session + projects. Evicted sessions are
       // pruned from activityFeeds in removeSession so we never reach here
       // without a live session.

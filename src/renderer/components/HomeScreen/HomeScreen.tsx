@@ -18,6 +18,7 @@ import { Mascot } from '../Mascot/Mascot'
 import { AGENT_BY_ID } from '../../../shared/agents'
 import { getProjectAgents } from '../../../shared/agent-helpers'
 import type { AgentConfig, Project } from '../../../shared/types'
+import { formatClock } from '../../utils/format-date'
 import './HomeScreen.css'
 
 function getGreeting(hour: number): string {
@@ -34,14 +35,6 @@ function formatDateCaption(d: Date): string {
       month: 'short',
     })
     .toUpperCase()
-}
-
-function formatClock(d: Date): string {
-  return d.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  })
 }
 
 interface HomeScreenProps {
