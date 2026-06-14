@@ -315,3 +315,61 @@ describe('pty:spawn review-detection wiring', () => {
     expect(onceSpy).not.toHaveBeenCalled()
   })
 })
+
+describe('pty:spawn session-reuse (no double session-init)', () => {
+  // pty-manager.spawn returns { reused: true } when an existing PTY is reused
+  // (e.g. a session moved between panes). The handler must NOT re-run
+  // startSession (which would reset the record) or register a second exit
+  // listener (which would double-count usage on exit).
+  it('skips startSession and exit-listener registration when the PTY was reused', async () => {
+    handlers.clear()
+    const { ptyBus } = await import('../pty-bus')
+    const onceSpy = vi.mocked(ptyBus.once)
+    onceSpy.mockClear()
+
+    const sessionHistoryStub = stubSessionHistory()
+    const mgr = { spawn: vi.fn(() => ({ ok: true, reused: true })) }
+    registerPtyHandlers(() => mgr as unknown as PtyManager, {
+      getMainWindow: () => null,
+      getProjectId: () => 'proj-1',
+      reviewTracker: {
+        addReview: vi.fn(),
+        getReviews: vi.fn(() => []),
+        dismissReview: vi.fn(),
+      } as unknown as Parameters<typeof registerPtyHandlers>[1]['reviewTracker'],
+      sessionHistory: sessionHistoryStub,
+      usageHistory: stubUsageHistory(),
+    })
+
+    call('pty:spawn', 'sess-reuse', 80, 24, '/proj', undefined, undefined, 'claude-code')
+
+    expect(sessionHistoryStub.startSession).not.toHaveBeenCalled()
+    expect(onceSpy).not.toHaveBeenCalled()
+  })
+
+  it('runs startSession and registers exactly one exit listener on a fresh spawn', async () => {
+    handlers.clear()
+    const { ptyBus } = await import('../pty-bus')
+    const onceSpy = vi.mocked(ptyBus.once)
+    onceSpy.mockClear()
+
+    const sessionHistoryStub = stubSessionHistory()
+    const mgr = { spawn: vi.fn(() => ({ ok: true, reused: false })) }
+    registerPtyHandlers(() => mgr as unknown as PtyManager, {
+      getMainWindow: () => null,
+      getProjectId: () => 'proj-1',
+      reviewTracker: {
+        addReview: vi.fn(),
+        getReviews: vi.fn(() => []),
+        dismissReview: vi.fn(),
+      } as unknown as Parameters<typeof registerPtyHandlers>[1]['reviewTracker'],
+      sessionHistory: sessionHistoryStub,
+      usageHistory: stubUsageHistory(),
+    })
+
+    call('pty:spawn', 'sess-fresh', 80, 24, '/proj', undefined, undefined, 'claude-code')
+
+    expect(sessionHistoryStub.startSession).toHaveBeenCalledTimes(1)
+    expect(onceSpy).toHaveBeenCalledWith('exit:sess-fresh', expect.any(Function))
+  })
+})

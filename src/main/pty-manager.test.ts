@@ -69,6 +69,19 @@ describe('createPtyManager', () => {
       )
     })
 
+    it('reuses an existing PTY without respawning and reports reused', () => {
+      const win = makeMockWindow()
+      const mgr = createPtyManager(win)
+
+      const first = mgr.spawn('s1', 120, 40)
+      const second = mgr.spawn('s1', 120, 40)
+
+      expect(first).toEqual({ ok: true, reused: false })
+      expect(second).toEqual({ ok: true, reused: true })
+      // node-pty must be spawned only once across the two calls.
+      expect(pty.spawn).toHaveBeenCalledTimes(1)
+    })
+
     it('is a no-op for existing session', () => {
       const win = makeMockWindow()
       const mgr = createPtyManager(win)
@@ -157,12 +170,12 @@ describe('createPtyManager', () => {
       )
     })
 
-    it('returns {ok:true} on a successful spawn', () => {
+    it('returns {ok:true, reused:false} on a fresh successful spawn', () => {
       const win = makeMockWindow()
       const mgr = createPtyManager(win)
 
       const result = mgr.spawn('s1', 80, 24)
-      expect(result).toEqual({ ok: true })
+      expect(result).toEqual({ ok: true, reused: false })
     })
 
     it('returns {ok:false,error} when pty.spawn throws and still sends exit -1', () => {

@@ -170,7 +170,7 @@ export function registerPtyHandlers(
       // Skip listener registration when spawn failed — pty-manager never emits
       // ptyBus.exit on a failed spawn (only the renderer-side exit channel),
       // so a `once` listener registered here would leak.
-      if (projectPath && spawnResult.ok) {
+      if (projectPath && spawnResult.ok && !spawnResult.reused) {
         const projectId = deps.getProjectId(projectPath)
         if (projectId) {
           const meta: SessionMeta = {

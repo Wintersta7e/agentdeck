@@ -130,6 +130,9 @@ export function createSessionHistory(storePath?: string): SessionHistory {
     endSession(sessionId, end) {
       const r = records.get(sessionId)
       if (!r) return null
+      // Idempotent: an already-ended session must not re-apply — guards against
+      // duplicate exit listeners double-counting usage downstream.
+      if (r.endedAt !== null) return null
       r.endedAt = end.endedAt
       r.status = end.status
       scheduleFlush()

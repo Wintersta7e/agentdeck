@@ -32,7 +32,7 @@ export interface PtyManager {
     env?: Record<string, string>,
     agent?: string,
     agentFlags?: string,
-  ) => { ok: true } | { ok: false; error: string }
+  ) => { ok: true; reused: boolean } | { ok: false; error: string }
   write: (sessionId: string, data: string) => void
   hasSession: (sessionId: string) => boolean
   resize: (sessionId: string, cols: number, rows: number) => void
@@ -121,11 +121,12 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
     env?: Record<string, string>,
     agent?: string,
     agentFlags?: string,
-  ): { ok: true } | { ok: false; error: string } {
+  ): { ok: true; reused: boolean } | { ok: false; error: string } {
     // If a PTY already exists for this session (e.g. session moved from visible
-    // pane to hidden section), don't kill and respawn — just reuse it.
+    // pane to hidden section), don't kill and respawn — just reuse it. The IPC
+    // layer keys session-lifecycle init on `reused`, so it isn't re-run.
     if (sessions.has(sessionId)) {
-      return { ok: true }
+      return { ok: true, reused: true }
     }
 
     if (sessions.size >= MAX_CONCURRENT_SESSIONS) {
@@ -303,7 +304,7 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
       ptyBus.emit(`exit:${sessionId}`, exitCode)
     })
 
-    return { ok: true }
+    return { ok: true, reused: false }
   }
 
   function write(sessionId: string, data: string): void {

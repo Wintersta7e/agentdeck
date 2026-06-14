@@ -117,6 +117,19 @@ describe('session-history', () => {
     expect(h.getHistory(1)).toHaveLength(0)
   })
 
+  it('endSession is idempotent — a second call returns null and preserves the first end', () => {
+    const h = createSessionHistory()
+    h.startSession(makeRec())
+    const first = h.endSession('s1', { endedAt: NOW, status: 'exited' })
+    expect(first).not.toBeNull()
+    // A duplicate end (e.g. two exit listeners firing) must not re-apply.
+    const second = h.endSession('s1', { endedAt: NOW + 5000, status: 'error' })
+    expect(second).toBeNull()
+    const row = h.getHistory(1)[0]!
+    expect(row.endedAt).toBe(NOW)
+    expect(row.status).toBe('exited')
+  })
+
   it('persists and reloads across instances (survives restart)', () => {
     const store = tmpStore()
     const h1 = createSessionHistory(store)
