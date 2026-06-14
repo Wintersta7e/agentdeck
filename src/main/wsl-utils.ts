@@ -75,6 +75,18 @@ export function wslPathToWindows(wslPath: string, distro = FALLBACK_DISTRO): str
 }
 
 /**
+ * Resolve a project path (WSL or Windows) to a Windows-accessible path. Windows
+ * drive-letter paths (e.g. `C:\…`) are already usable and returned as-is; WSL
+ * paths are converted via `wslPathToWindows`. Pass `distro` when it's already
+ * resolved to skip the async detection.
+ */
+export async function resolveToWindowsPath(projectPath: string, distro?: string): Promise<string> {
+  if (/^[A-Za-z]:/.test(projectPath)) return projectPath
+  const d = distro ?? (await getDefaultDistroAsync())
+  return wslPathToWindows(projectPath, d)
+}
+
+/**
  * Try a filesystem operation with UNC path fallback.
  * `\\wsl.localhost\` (Win11 22H2+) is tried first; on failure, retries
  * with `\\wsl$\` (Win10/older). Consolidates the fallback pattern that

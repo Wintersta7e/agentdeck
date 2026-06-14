@@ -16,7 +16,7 @@ const MAX_COMMAND = 10000
 const MAX_PROMPT = 10000
 const MAX_NODES = 100
 const MAX_EDGES = 500
-const VARIABLE_NAME_RE = /^[A-Z_][A-Z0-9_]*$/
+export const VARIABLE_NAME_RE = /^[A-Z_][A-Z0-9_]*$/
 
 /**
  * Runtime validation of a workflow loaded from disk (C2).

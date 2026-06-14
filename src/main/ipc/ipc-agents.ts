@@ -13,6 +13,10 @@ import type { AgentType } from '../../shared/types'
 
 const log = createLogger('ipc-agents')
 
+/** Per-agent default context windows, keyed by agent id. Hoisted so the three
+ *  effective-context handlers share one computation. */
+const AGENT_CONTEXT_DEFAULTS = Object.fromEntries(AGENTS.map((a) => [a.id, a.contextWindow]))
+
 /** Agent IPC handlers: detection, visibility, version checks, updates, WSL username, context resolution. */
 export function registerAgentHandlers(
   getWindow: () => BrowserWindow | null,
@@ -57,7 +61,6 @@ export function registerAgentHandlers(
     }
     const detector = await resolveActiveModel(agentId as AgentType)
     const prefs = store.get('appPrefs')
-    const defaults = Object.fromEntries(AGENTS.map((a) => [a.id, a.contextWindow]))
     return getEffectiveContextWindow({
       agentId,
       activeModel: detector.modelId,
@@ -68,7 +71,7 @@ export function registerAgentHandlers(
         agent: prefs.agentContextOverrides ?? {},
         model: prefs.modelContextOverrides ?? {},
       },
-      agentDefaults: defaults,
+      agentDefaults: AGENT_CONTEXT_DEFAULTS,
     })
   })
 
@@ -83,7 +86,6 @@ export function registerAgentHandlers(
     const modelOverrides = prefs.modelContextOverrides ?? {}
     const typed = agentId as AgentType
     const detector = await resolveActiveModel(typed, { forceRefresh: true })
-    const defaults = Object.fromEntries(AGENTS.map((a) => [a.id, a.contextWindow]))
     return getEffectiveContextWindow({
       agentId,
       activeModel: detector.modelId,
@@ -91,7 +93,7 @@ export function registerAgentHandlers(
         ? { cliContextOverride: detector.cliContextOverride }
         : {}),
       overrides: { agent: agentOverrides, model: modelOverrides },
-      agentDefaults: defaults,
+      agentDefaults: AGENT_CONTEXT_DEFAULTS,
     })
   })
 
@@ -106,7 +108,6 @@ export function registerAgentHandlers(
         return { error: 'invalid modelId' }
       }
       const prefs = store.get('appPrefs')
-      const defaults = Object.fromEntries(AGENTS.map((a) => [a.id, a.contextWindow]))
       return getEffectiveContextWindow({
         agentId,
         activeModel: modelId,
@@ -114,7 +115,7 @@ export function registerAgentHandlers(
           agent: prefs.agentContextOverrides ?? {},
           model: prefs.modelContextOverrides ?? {},
         },
-        agentDefaults: defaults,
+        agentDefaults: AGENT_CONTEXT_DEFAULTS,
       })
     },
   )

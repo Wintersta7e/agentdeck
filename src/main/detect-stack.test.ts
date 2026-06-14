@@ -6,8 +6,9 @@ vi.mock('fs/promises', () => ({
 
 // Mock wsl-utils to avoid execFileSync in module-level init
 vi.mock('./wsl-utils', () => ({
-  wslPathToWindows: vi.fn((p: string, _distro?: string) => {
-    // Simulate the real conversion for test control
+  resolveToWindowsPath: vi.fn(async (p: string, _distro?: string) => {
+    // Windows drive-letter paths pass through; WSL paths convert (mirrors the real helper)
+    if (/^[A-Za-z]:/.test(p)) return p
     const match = p.match(/^\/mnt\/([a-zA-Z])\/(.*)$/)
     if (match?.[1] && match[2] !== undefined) {
       return `${match[1].toUpperCase()}:\\${match[2].replace(/\//g, '\\')}`

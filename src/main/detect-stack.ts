@@ -1,5 +1,5 @@
 import { readdir } from 'fs/promises'
-import { wslPathToWindows, withUncFallback } from './wsl-utils'
+import { resolveToWindowsPath, withUncFallback } from './wsl-utils'
 import type { AgentType, DetectedStack, StackBadge } from '../shared/types'
 import { createLogger } from './logger'
 
@@ -42,12 +42,7 @@ export async function detectStack(
   distro: string,
 ): Promise<DetectedStack | null> {
   // Detect if it's already a Windows path or a WSL path
-  let windowsPath: string
-  if (/^[A-Za-z]:/.test(projectPath)) {
-    windowsPath = projectPath
-  } else {
-    windowsPath = wslPathToWindows(projectPath, distro)
-  }
+  const windowsPath = await resolveToWindowsPath(projectPath, distro)
 
   let entries: string[]
   try {
