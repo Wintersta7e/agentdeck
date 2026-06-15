@@ -330,6 +330,81 @@ describe('createPtyManager', () => {
     })
   })
 
+  describe('natural exit (onExit)', () => {
+    it('cleans up the session and notifies renderer + bus when the PTY exits on its own', async () => {
+      const { ptyBus } = await import('./pty-bus')
+      const win = makeMockWindow()
+      const mgr = createPtyManager(win)
+
+      mgr.spawn('s1', 80, 24)
+      expect(mgr.hasSession('s1')).toBe(true)
+
+      // The natural-exit path is wired via proc.onExit — the mock records the
+      // callback in ptyInstances[0].onExit. Nothing else ever invokes it, so
+      // invoke it here to exercise pty-manager's onExit handler.
+      const onExitCb = ptyInstances[0]?.onExit[0]
+      expect(onExitCb).toBeDefined()
+      onExitCb!({ exitCode: 0 })
+
+      // Session is removed from the live map.
+      expect(mgr.hasSession('s1')).toBe(false)
+
+      // Renderer is notified on the per-session exit channel with the exit code.
+      expect(win.webContents.send).toHaveBeenCalledWith('pty:exit:s1', 0)
+
+      // pty-bus is notified so the IPC `once('exit:s1')` listener fires.
+      expect(ptyBus.emit).toHaveBeenCalledWith('exit:s1', 0)
+    })
+
+    it('forwards a non-zero exit code unchanged to the renderer and bus', async () => {
+      const { ptyBus } = await import('./pty-bus')
+      const win = makeMockWindow()
+      const mgr = createPtyManager(win)
+
+      mgr.spawn('s1', 80, 24)
+      const onExitCb = ptyInstances[0]?.onExit[0]
+      onExitCb!({ exitCode: 137 })
+
+      expect(win.webContents.send).toHaveBeenCalledWith('pty:exit:s1', 137)
+      expect(ptyBus.emit).toHaveBeenCalledWith('exit:s1', 137)
+    })
+
+    it('frees the slot so the same sessionId can be re-spawned fresh after exit', async () => {
+      const win = makeMockWindow()
+      const mgr = createPtyManager(win)
+
+      mgr.spawn('s1', 80, 24)
+      const onExitCb = ptyInstances[0]?.onExit[0]
+      onExitCb!({ exitCode: 0 })
+
+      // After natural exit the old PTY is gone, so a re-spawn must create a
+      // brand-new node-pty (reused:false) rather than reuse the dead one.
+      const result = mgr.spawn('s1', 80, 24)
+      expect(result).toEqual({ ok: true, reused: false })
+      expect(pty.spawn).toHaveBeenCalledTimes(2)
+    })
+
+    it('stops batched data flush after a natural exit (no send on the exited session)', async () => {
+      const win = makeMockWindow()
+      const mgr = createPtyManager(win)
+
+      mgr.spawn('s1', 80, 24)
+      const dataCb = ptyInstances[0]?.onData[0]
+      const onExitCb = ptyInstances[0]?.onExit[0]
+
+      // Queue a data chunk (schedules a setImmediate flush), then exit before flush.
+      dataCb?.('partial output')
+      onExitCb!({ exitCode: 0 })
+      vi.runAllTimers()
+
+      // The session is gone, so the queued flush must not emit a data message.
+      const dataSends = vi
+        .mocked(win.webContents.send)
+        .mock.calls.filter((c) => c[0] === 'pty:data:s1')
+      expect(dataSends).toHaveLength(0)
+    })
+  })
+
   describe('killAll', () => {
     it('kills all active sessions', () => {
       const win = makeMockWindow()

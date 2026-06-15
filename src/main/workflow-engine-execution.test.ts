@@ -1390,3 +1390,417 @@ describe('shared escape target (in-degree > 1)', () => {
     expect(firstWarn, 'escape must not fire before the loop exhausts').toBeLessThan(firstEscape)
   })
 })
+
+// ═══════════════════════════════════════════════════════════════════════
+// Condition node with outputMatch branching (regex against upstream output)
+//
+// An outputMatch condition runs `new RegExp(conditionPattern).test(output)`
+// against the upstream node's captured output (conditionOutputs → nodeOutputs).
+// Agent stdout is what feeds those maps (see node-runners handleData), so the
+// upstream here is an agent whose stdout carries the match (or doesn't).
+// ═══════════════════════════════════════════════════════════════════════
+
+describe('condition node with outputMatch branching', () => {
+  it('takes the true branch when upstream output matches the pattern', async () => {
+    // u(agent, emits "BUILD SUCCEEDED") → cond(outputMatch /SUCCEEDED/)
+    //   → true:on-success (runs)  + false:on-fail (skipped)
+    const children: MockChild[] = []
+    mockSpawn.mockImplementation(() => {
+      const child = createMockChild(20000 + children.length)
+      children.push(child)
+      return child
+    })
+
+    const wf = makeWorkflow({
+      id: 'wf-om-true',
+      nodes: [
+        makeWorkflowNode({ id: 'u', type: 'agent', prompt: 'build the project' }),
+        makeWorkflowNode({
+          id: 'cond',
+          type: 'condition',
+          conditionMode: 'outputMatch',
+          conditionPattern: 'SUCCEEDED',
+        }),
+        makeWorkflowNode({ id: 'on-success', type: 'agent', prompt: 'ship it' }),
+        makeWorkflowNode({ id: 'on-fail', type: 'agent', prompt: 'diagnose failure' }),
+      ],
+      edges: [
+        makeWorkflowEdge('u', 'cond'),
+        makeWorkflowEdge('cond', 'on-success', { branch: 'true' }),
+        makeWorkflowEdge('cond', 'on-fail', { branch: 'false' }),
+      ],
+    })
+
+    engine.run(wf)
+    await tick()
+
+    // Upstream agent produces output containing the pattern, then exits 0.
+    children[0]?.stdout.emit('data', Buffer.from('compiling...\nBUILD SUCCEEDED\n'))
+    children[0]?.emit('close', 0)
+    await tick(100) // condition evaluates + true branch spawns
+
+    // Condition resolves true.
+    const condDone = getEvents(sendSpy, 'wf-om-true', 'node:done')
+    expect(condDone).toContainEqual(expect.objectContaining({ nodeId: 'cond', branch: 'true' }))
+
+    // True branch spawned (2nd spawn after the upstream agent).
+    expect(mockSpawn).toHaveBeenCalledTimes(2)
+
+    // Complete the true branch.
+    children[1]?.emit('close', 0)
+    await tick(100)
+
+    // False branch is skipped, true branch never skipped.
+    const skipped = getEvents(sendSpy, 'wf-om-true', 'node:skipped')
+    expect(skipped).toContainEqual(expect.objectContaining({ nodeId: 'on-fail' }))
+    expect(skipped).not.toContainEqual(expect.objectContaining({ nodeId: 'on-success' }))
+
+    expect(hasEvent(sendSpy, 'wf-om-true', 'workflow:done')).toBe(true)
+  })
+
+  it('takes the false branch when upstream output does NOT match the pattern', async () => {
+    // Same shape, but the upstream output never contains SUCCEEDED → false branch.
+    const children: MockChild[] = []
+    mockSpawn.mockImplementation(() => {
+      const child = createMockChild(21000 + children.length)
+      children.push(child)
+      return child
+    })
+
+    const wf = makeWorkflow({
+      id: 'wf-om-false',
+      nodes: [
+        makeWorkflowNode({ id: 'u', type: 'agent', prompt: 'build the project' }),
+        makeWorkflowNode({
+          id: 'cond',
+          type: 'condition',
+          conditionMode: 'outputMatch',
+          conditionPattern: 'SUCCEEDED',
+        }),
+        makeWorkflowNode({ id: 'on-success', type: 'agent', prompt: 'ship it' }),
+        makeWorkflowNode({ id: 'on-fail', type: 'agent', prompt: 'diagnose failure' }),
+      ],
+      edges: [
+        makeWorkflowEdge('u', 'cond'),
+        makeWorkflowEdge('cond', 'on-success', { branch: 'true' }),
+        makeWorkflowEdge('cond', 'on-fail', { branch: 'false' }),
+      ],
+    })
+
+    engine.run(wf)
+    await tick()
+
+    children[0]?.stdout.emit('data', Buffer.from('compiling...\nBUILD FAILED: 3 errors\n'))
+    children[0]?.emit('close', 0)
+    await tick(100)
+
+    // Condition resolves false.
+    const condDone = getEvents(sendSpy, 'wf-om-false', 'node:done')
+    expect(condDone).toContainEqual(expect.objectContaining({ nodeId: 'cond', branch: 'false' }))
+
+    // False branch spawned.
+    expect(mockSpawn).toHaveBeenCalledTimes(2)
+    children[1]?.emit('close', 0)
+    await tick(100)
+
+    // True branch is skipped (the opposite routing).
+    const skipped = getEvents(sendSpy, 'wf-om-false', 'node:skipped')
+    expect(skipped).toContainEqual(expect.objectContaining({ nodeId: 'on-success' }))
+    expect(skipped).not.toContainEqual(expect.objectContaining({ nodeId: 'on-fail' }))
+
+    expect(hasEvent(sendSpy, 'wf-om-false', 'workflow:done')).toBe(true)
+  })
+})
+
+// ═══════════════════════════════════════════════════════════════════════
+// Condition evaluation fallbacks (evaluateCondition defensive branches)
+//
+// Three runtime-defensive paths each evaluate to 'false' and let the workflow
+// COMPLETE rather than hang: (a) upstream produced no output, (b) the pattern
+// is an invalid regex at runtime, (c) an unknown conditionMode. These are
+// distinct from save-time validation — they re-evaluate live inside the engine.
+// ═══════════════════════════════════════════════════════════════════════
+
+describe('condition evaluation fallbacks (all route false, workflow completes)', () => {
+  it('(a) routes false and warns when the upstream produced no output', async () => {
+    // Upstream agent exits 0 but emits NO stdout → nothing in the output maps →
+    // evaluateCondition hits the "no output" guard.
+    const children: MockChild[] = []
+    mockSpawn.mockImplementation(() => {
+      const child = createMockChild(22000 + children.length)
+      children.push(child)
+      return child
+    })
+
+    const wf = makeWorkflow({
+      id: 'wf-fb-nooutput',
+      nodes: [
+        makeWorkflowNode({ id: 'u', type: 'agent', prompt: 'do work' }),
+        makeWorkflowNode({
+          id: 'cond',
+          type: 'condition',
+          conditionMode: 'outputMatch',
+          conditionPattern: 'anything',
+        }),
+        makeWorkflowNode({ id: 'on-success', type: 'agent', prompt: 't' }),
+        makeWorkflowNode({ id: 'on-fail', type: 'agent', prompt: 'f' }),
+      ],
+      edges: [
+        makeWorkflowEdge('u', 'cond'),
+        makeWorkflowEdge('cond', 'on-success', { branch: 'true' }),
+        makeWorkflowEdge('cond', 'on-fail', { branch: 'false' }),
+      ],
+    })
+
+    engine.run(wf)
+    await tick()
+
+    // Exit 0 with no stdout at all.
+    children[0]?.emit('close', 0)
+    await tick(100)
+    children[1]?.emit('close', 0) // false branch
+    await tick(100)
+
+    const condDone = getEvents(sendSpy, 'wf-fb-nooutput', 'node:done')
+    expect(condDone).toContainEqual(expect.objectContaining({ nodeId: 'cond', branch: 'false' }))
+
+    const outputs = getEvents(sendSpy, 'wf-fb-nooutput', 'node:output')
+    expect(outputs).toContainEqual(
+      expect.objectContaining({
+        nodeId: 'cond',
+        message: expect.stringContaining('Upstream produced no output'),
+      }),
+    )
+
+    // False branch routing + completion (not a hang).
+    expect(getEvents(sendSpy, 'wf-fb-nooutput', 'node:skipped')).toContainEqual(
+      expect.objectContaining({ nodeId: 'on-success' }),
+    )
+    expect(hasEvent(sendSpy, 'wf-fb-nooutput', 'workflow:done')).toBe(true)
+  })
+
+  it('(b) routes false and emits an "Invalid regex" warning for a runtime-invalid pattern', async () => {
+    // Pattern "[" compiles fine as a string but throws when `new RegExp("[")`
+    // runs, exercising the try/catch inside evaluateCondition.
+    const children: MockChild[] = []
+    mockSpawn.mockImplementation(() => {
+      const child = createMockChild(23000 + children.length)
+      children.push(child)
+      return child
+    })
+
+    const wf = makeWorkflow({
+      id: 'wf-fb-badregex',
+      nodes: [
+        makeWorkflowNode({ id: 'u', type: 'agent', prompt: 'build' }),
+        makeWorkflowNode({
+          id: 'cond',
+          type: 'condition',
+          conditionMode: 'outputMatch',
+          conditionPattern: '[', // unterminated character class
+        }),
+        makeWorkflowNode({ id: 'on-success', type: 'agent', prompt: 't' }),
+        makeWorkflowNode({ id: 'on-fail', type: 'agent', prompt: 'f' }),
+      ],
+      edges: [
+        makeWorkflowEdge('u', 'cond'),
+        makeWorkflowEdge('cond', 'on-success', { branch: 'true' }),
+        makeWorkflowEdge('cond', 'on-fail', { branch: 'false' }),
+      ],
+    })
+
+    engine.run(wf)
+    await tick()
+
+    // Upstream DOES produce output, so we reach the regex .test() (not the "no
+    // output" guard) and trip the syntax error.
+    children[0]?.stdout.emit('data', Buffer.from('some build output\n'))
+    children[0]?.emit('close', 0)
+    await tick(100)
+    children[1]?.emit('close', 0) // false branch
+    await tick(100)
+
+    const condDone = getEvents(sendSpy, 'wf-fb-badregex', 'node:done')
+    expect(condDone).toContainEqual(expect.objectContaining({ nodeId: 'cond', branch: 'false' }))
+
+    const outputs = getEvents(sendSpy, 'wf-fb-badregex', 'node:output')
+    expect(outputs).toContainEqual(
+      expect.objectContaining({
+        nodeId: 'cond',
+        // Engine surfaces the pattern and "evaluating as false".
+        message: expect.stringContaining('Invalid regex "["'),
+      }),
+    )
+    expect(outputs).toContainEqual(
+      expect.objectContaining({
+        nodeId: 'cond',
+        message: expect.stringContaining('evaluating as false'),
+      }),
+    )
+
+    expect(hasEvent(sendSpy, 'wf-fb-badregex', 'workflow:done')).toBe(true)
+  })
+
+  it('(c) routes false and warns for an unknown conditionMode', async () => {
+    // conditionMode outside the {exitCode, outputMatch} union — cast past the
+    // type to reach the engine's "unknown mode" branch.
+    const children: MockChild[] = []
+    mockSpawn.mockImplementation(() => {
+      const child = createMockChild(24000 + children.length)
+      children.push(child)
+      return child
+    })
+
+    const wf = makeWorkflow({
+      id: 'wf-fb-unknownmode',
+      nodes: [
+        makeWorkflowNode({ id: 'u', type: 'agent', prompt: 'build' }),
+        makeWorkflowNode({
+          id: 'cond',
+          type: 'condition',
+          conditionMode: 'bogusMode' as never,
+        }),
+        makeWorkflowNode({ id: 'on-success', type: 'agent', prompt: 't' }),
+        makeWorkflowNode({ id: 'on-fail', type: 'agent', prompt: 'f' }),
+      ],
+      edges: [
+        makeWorkflowEdge('u', 'cond'),
+        makeWorkflowEdge('cond', 'on-success', { branch: 'true' }),
+        makeWorkflowEdge('cond', 'on-fail', { branch: 'false' }),
+      ],
+    })
+
+    engine.run(wf)
+    await tick()
+
+    children[0]?.stdout.emit('data', Buffer.from('output\n'))
+    children[0]?.emit('close', 0)
+    await tick(100)
+    children[1]?.emit('close', 0) // false branch
+    await tick(100)
+
+    const condDone = getEvents(sendSpy, 'wf-fb-unknownmode', 'node:done')
+    expect(condDone).toContainEqual(expect.objectContaining({ nodeId: 'cond', branch: 'false' }))
+
+    const outputs = getEvents(sendSpy, 'wf-fb-unknownmode', 'node:output')
+    expect(outputs).toContainEqual(
+      expect.objectContaining({
+        nodeId: 'cond',
+        message: expect.stringContaining('Unknown conditionMode "bogusMode"'),
+      }),
+    )
+
+    expect(hasEvent(sendSpy, 'wf-fb-unknownmode', 'workflow:done')).toBe(true)
+  })
+})
+
+// ═══════════════════════════════════════════════════════════════════════
+// GAP 3 — stalled / unreachable-node detection
+//
+// The engine has a deadlock guard (workflow-engine.ts): when the ready queue
+// empties while the scheduler is NOT done AND the run was not stopped, it sets
+// a deadlock flag and emits `workflow:error` "stalled — some nodes unreachable"
+// instead of a false `workflow:done`.
+//
+// IMPORTANT — reachability finding (verified empirically, see report):
+// That LITERAL "stalled" branch is currently UNREACHABLE through the public
+// engine API with the present production code, because the only thing that
+// leaves a node permanently pending is `scheduler.failNode()` (it does not
+// activate outgoing edges) — and the engine ALWAYS pairs failNode() with
+// `stopped = true`. The main loop therefore breaks on `if (stopped)` BEFORE the
+// deadlock check, emitting `workflow:stopped`, not the stall error.
+// `continueOnError` failures call `completeNode()` (edges activate → no strand),
+// and conditions always resolve a branch (the loop machinery robustly restores
+// exit targets), so neither strands a node either.
+//
+// The ONE topology that does strand a node in the scheduler — a forward edge
+// whose `fromNodeId` is not a real node — is intercepted even earlier: the
+// engine runs `topoSort` first, which sees the orphan-fed node as permanently
+// in-degree>0 and throws "Circular dependency detected", surfaced as a
+// `workflow:error` (NOT the stall message) before the scheduler ever runs.
+//
+// Rather than fake the stall branch (e.g. by monkey-patching the scheduler or
+// editing production code), these tests pin the REAL reachable behavior: the
+// engine never reports a false `workflow:done` when a node cannot run, and it
+// always terminates rather than hanging.
+// ═══════════════════════════════════════════════════════════════════════
+
+describe('unreachable / stranded node detection', () => {
+  it('reports workflow:error (not a false workflow:done) when an edge sources a non-existent node', async () => {
+    // 'orphan' is fed only by an edge from 'GHOST', which is not in nodes[].
+    // topoSort can never give 'orphan' in-degree 0 → it throws, and the engine
+    // emits workflow:error. The run terminates; it does not hang or claim done.
+    mockExecFile.mockImplementation(
+      (cmd: string, _args: string[], _opts: unknown, cb?: (...a: unknown[]) => void) => {
+        if (cmd === 'wsl.exe' && typeof cb === 'function') {
+          process.nextTick(() => cb(null, 'ok', ''))
+        } else if (typeof cb === 'function') {
+          cb(null, '', '')
+        }
+        return { pid: 999, kill: vi.fn() }
+      },
+    )
+    buildEngine()
+
+    const wf = makeWorkflow({
+      id: 'wf-orphan',
+      nodes: [
+        makeWorkflowNode({ id: 'root', type: 'shell', command: 'echo ok' }),
+        makeWorkflowNode({ id: 'orphan', type: 'shell', command: 'echo orphan' }),
+      ],
+      edges: [makeWorkflowEdge('GHOST', 'orphan')],
+    })
+
+    engine.run(wf)
+    await tick(200)
+
+    // A workflow:error is emitted and workflow:done is NOT (no false success).
+    expect(hasEvent(sendSpy, 'wf-orphan', 'workflow:error')).toBe(true)
+    expect(hasEvent(sendSpy, 'wf-orphan', 'workflow:done')).toBe(false)
+
+    // The run finished (engine no longer tracks it) — i.e. it did not hang.
+    expect(engine.isRunning('wf-orphan')).toBe(false)
+  })
+
+  it('a hard node failure stops the run (does NOT silently complete) when a downstream is left unreachable', async () => {
+    // shell fails (no continueOnError) → its downstream can never run. The engine
+    // sets stopped and emits workflow:stopped — the failNode/stopped coupling that
+    // makes the literal "stalled" branch unreachable. Pin that it terminates and
+    // never reports a false workflow:done with an unrun downstream.
+    mockExecFile.mockImplementation(
+      (cmd: string, _args: string[], _opts: unknown, cb?: (...a: unknown[]) => void) => {
+        if (cmd === 'wsl.exe' && typeof cb === 'function') {
+          const err = new Error('exit 1') as NodeJS.ErrnoException
+          err.code = '1'
+          process.nextTick(() => cb(err, '', 'boom'))
+        } else if (typeof cb === 'function') {
+          cb(null, '', '')
+        }
+        return { pid: 999, kill: vi.fn() }
+      },
+    )
+    buildEngine()
+
+    const wf = makeWorkflow({
+      id: 'wf-strand-fail',
+      nodes: [
+        makeWorkflowNode({ id: 'upstream', type: 'shell', command: 'exit 1' }),
+        makeWorkflowNode({ id: 'downstream', type: 'shell', command: 'echo never' }),
+      ],
+      edges: [makeWorkflowEdge('upstream', 'downstream')],
+    })
+
+    engine.run(wf)
+    await tick(200)
+
+    // Upstream errored; downstream never ran (no node:started for it).
+    expect(hasEvent(sendSpy, 'wf-strand-fail', 'node:error')).toBe(true)
+    const started = getEvents(sendSpy, 'wf-strand-fail', 'node:started')
+    expect(started).not.toContainEqual(expect.objectContaining({ nodeId: 'downstream' }))
+
+    // Terminates as stopped, never a false workflow:done.
+    expect(hasEvent(sendSpy, 'wf-strand-fail', 'workflow:stopped')).toBe(true)
+    expect(hasEvent(sendSpy, 'wf-strand-fail', 'workflow:done')).toBe(false)
+    expect(engine.isRunning('wf-strand-fail')).toBe(false)
+  })
+})

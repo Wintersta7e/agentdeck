@@ -177,4 +177,58 @@ describe('substituteVariables', () => {
     expect(n1.command).toBe('echo test')
     expect(n2.message).toBe('test done')
   })
+
+  // Regex-replacement metacharacters in *values*. The replacer uses the
+  // function form of String.replace, so the replacement string is inserted
+  // verbatim — `$`, `$&`, `$1`, `\` carry no special meaning. A naive
+  // `s.replace(re, value)` would interpret these and corrupt the output.
+  // These tests pin that the function-replacer form is preserved.
+  it('inserts a value containing $ literally', () => {
+    const wf = makeWorkflow({
+      nodes: [makeWorkflowNode({ type: 'agent', prompt: 'cost {{AMT}}' })],
+    })
+    const result = substituteVariables(wf, { AMT: '$100' })
+    expect(firstNode(result, 'agent').prompt).toBe('cost $100')
+  })
+
+  it('inserts $& literally (no whole-match expansion)', () => {
+    const wf = makeWorkflow({
+      nodes: [makeWorkflowNode({ type: 'agent', prompt: 'val {{V}}' })],
+    })
+    // Under a naive String.replace, $& would expand to the matched text
+    // ('{{V}}'), yielding 'val {{V}}'. The function-replacer form keeps it literal.
+    const result = substituteVariables(wf, { V: '$&' })
+    expect(firstNode(result, 'agent').prompt).toBe('val $&')
+  })
+
+  it('inserts $1 literally (no capture-group expansion)', () => {
+    const wf = makeWorkflow({
+      nodes: [makeWorkflowNode({ type: 'agent', prompt: 'val {{V}}' })],
+    })
+    // Under a naive String.replace, $1 would expand to capture group 1
+    // (the variable name 'V'), yielding 'val V'. Here it stays literal.
+    const result = substituteVariables(wf, { V: '$1' })
+    expect(firstNode(result, 'agent').prompt).toBe('val $1')
+  })
+
+  it('inserts a backslash value literally', () => {
+    const wf = makeWorkflow({
+      nodes: [makeWorkflowNode({ type: 'agent', prompt: 'path {{V}}' })],
+    })
+    // The JS literal 'a\\b' is the three-char source `a\b`.
+    const result = substituteVariables(wf, { V: 'a\\b' })
+    expect(firstNode(result, 'agent').prompt).toBe('path a\\b')
+  })
+
+  it('is single-pass: a value that is itself a placeholder is not re-expanded', () => {
+    // This pins the single-pass / no-recursion design. `{{A}}` -> '{{B}}' in
+    // one pass; the inserted '{{B}}' is NOT scanned again, so it stays literal
+    // even though B is provided. (String.replace makes a single left-to-right
+    // pass over the ORIGINAL string and never revisits inserted text.)
+    const wf = makeWorkflow({
+      nodes: [makeWorkflowNode({ type: 'agent', prompt: '{{A}}' })],
+    })
+    const result = substituteVariables(wf, { A: '{{B}}', B: 'x' })
+    expect(firstNode(result, 'agent').prompt).toBe('{{B}}')
+  })
 })

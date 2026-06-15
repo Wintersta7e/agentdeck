@@ -40,10 +40,19 @@ describe('applySessionStatus — reason taxonomy', () => {
     expect(useAppStore.getState().sessions['s1']?.approvalState).toBe('review')
   })
 
-  it('idempotent on unknown id', () => {
-    expect(() =>
-      useAppStore.getState().applySessionStatus('nope', 'exited', 'pty-exit'),
-    ).not.toThrow()
+  it('no-ops on unknown id: inserts no phantom session, leaves others intact', () => {
+    const before = useAppStore.getState().sessions['s1']
+    expect(before).toBeDefined()
+
+    useAppStore.getState().applySessionStatus('nope', 'exited', 'pty-exit')
+
+    // No phantom session was created for the unknown id.
+    expect(useAppStore.getState().sessions['nope']).toBeUndefined()
+    // The pre-existing session is untouched (same reference, same fields).
+    const after = useAppStore.getState().sessions['s1']
+    expect(after).toBe(before)
+    expect(after?.status).toBe('running')
+    expect(after?.approvalState).toBe('idle')
   })
 
   it("pty:exit -1 marker routed via 'spawn-failure' yields error+idle (not exited+review)", () => {
