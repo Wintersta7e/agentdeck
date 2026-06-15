@@ -1,17 +1,8 @@
-import { renameSync, readFileSync, existsSync } from 'node:fs'
 import type { DailyUsageEntry, SessionUsageRecord, UsageTotals } from '../shared/types'
 import { isoKeyFromTs } from '../shared/date-keys'
-import { atomicWrite, atomicWriteSync } from './fs-atomic'
-import { createLogger } from './logger'
-
-const log = createLogger('usage-history')
+import { createJsonStore } from './json-store'
 
 const PERSISTED_VERSION = 1
-
-interface PersistedData {
-  version?: number
-  entries: DailyUsageEntry[]
-}
 
 export interface UsageHistory {
   recordSession: (rec: SessionUsageRecord) => void
@@ -33,63 +24,15 @@ function addInto(target: UsageTotals, activeMs: number, files: number): void {
   target.filesChanged += files
 }
 
-function loadFromDisk(storePath: string): Map<string, DailyUsageEntry> {
-  try {
-    if (!existsSync(storePath)) return new Map()
-    const data = JSON.parse(readFileSync(storePath, 'utf-8')) as PersistedData
-    if (data.version !== undefined && data.version !== PERSISTED_VERSION) return new Map()
-    return new Map((data.entries ?? []).map((e) => [e.date, e]))
-  } catch (err) {
-    try {
-      renameSync(storePath, `${storePath}.bad`)
-      log.error('usage-history unreadable; preserved as .bad', { err: String(err) })
-    } catch (renameErr) {
-      log.error('usage-history unreadable AND rename failed', {
-        err: String(err),
-        renameErr: String(renameErr),
-      })
-    }
-    return new Map()
-  }
-}
-
 export function createUsageHistory(storePath?: string): UsageHistory {
-  const entries = storePath ? loadFromDisk(storePath) : new Map<string, DailyUsageEntry>()
-  let flushTimer: ReturnType<typeof setTimeout> | null = null
-
-  function scheduleFlush(): void {
-    if (!storePath || flushTimer !== null) return
-    flushTimer = setTimeout(() => {
-      flushTimer = null
-      void writeAsync()
-    }, 5_000)
-  }
-
-  function serialize(): string {
-    return JSON.stringify(
-      { version: PERSISTED_VERSION, entries: Array.from(entries.values()) },
-      null,
-      2,
-    )
-  }
-
-  async function writeAsync(): Promise<void> {
-    if (!storePath) return
-    try {
-      await atomicWrite(storePath, serialize())
-    } catch (err) {
-      log.warn('async flush failed', { err: String(err) })
-    }
-  }
-
-  function writeSync(): void {
-    if (!storePath) return
-    try {
-      atomicWriteSync(storePath, serialize())
-    } catch (err) {
-      log.warn('sync flush failed', { err: String(err) })
-    }
-  }
+  const store = createJsonStore<DailyUsageEntry>({
+    storePath,
+    version: PERSISTED_VERSION,
+    field: 'entries',
+    key: (e) => e.date,
+    logName: 'usage-history',
+  })
+  const entries = store.map
 
   return {
     recordSession(rec) {
@@ -107,7 +50,7 @@ export function createUsageHistory(storePath?: string): UsageHistory {
       entry.perAgent[rec.agent] = ag
 
       entries.set(date, entry)
-      scheduleFlush()
+      store.scheduleFlush()
     },
 
     getHistory(days) {
@@ -120,11 +63,7 @@ export function createUsageHistory(storePath?: string): UsageHistory {
     },
 
     flush() {
-      if (flushTimer !== null) {
-        clearTimeout(flushTimer)
-        flushTimer = null
-      }
-      writeSync()
+      store.flush()
     },
   }
 }

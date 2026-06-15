@@ -1,17 +1,9 @@
-import { renameSync, readFileSync, existsSync } from 'node:fs'
 import type { SessionRecord } from '../shared/types'
-import { atomicWrite, atomicWriteSync } from './fs-atomic'
-import { createLogger } from './logger'
+import { createJsonStore } from './json-store'
 
-const log = createLogger('session-history')
 const PERSISTED_VERSION = 1
 const MAX_RECORDS = 10_000
 const RETENTION_MS = 365 * 24 * 60 * 60 * 1000
-
-interface PersistedData {
-  version?: number
-  records: SessionRecord[]
-}
 
 export interface SessionHistory {
   startSession: (rec: {
@@ -29,81 +21,36 @@ export interface SessionHistory {
   flush: () => void
 }
 
-function loadFromDisk(storePath: string): Map<string, SessionRecord> {
-  try {
-    if (!existsSync(storePath)) return new Map()
-    const data = JSON.parse(readFileSync(storePath, 'utf-8')) as PersistedData
-    if (data.version !== undefined && data.version !== PERSISTED_VERSION) return new Map()
-    return new Map((data.records ?? []).map((r) => [r.sessionId, r]))
-  } catch (err) {
-    try {
-      renameSync(storePath, `${storePath}.bad`)
-      log.error('session-history unreadable; preserved as .bad', { err: String(err) })
-    } catch (renameErr) {
-      log.error('session-history unreadable AND rename failed', {
-        err: String(err),
-        renameErr: String(renameErr),
-      })
-    }
-    return new Map()
-  }
-}
-
 export function createSessionHistory(storePath?: string): SessionHistory {
-  const records = storePath ? loadFromDisk(storePath) : new Map<string, SessionRecord>()
-
-  for (const rec of records.values()) {
-    // Back-compat: records written before lastActivityAt existed default to startedAt.
-    if (rec.lastActivityAt === undefined) rec.lastActivityAt = rec.startedAt
-    // Recover dangling records from an unclean shutdown — a null endedAt means the
-    // app exited before the session's exit was recorded. Finalize at the last known
-    // activity so the record never renders as a perpetual "running" row.
-    if (rec.endedAt === null) {
-      rec.endedAt = rec.lastActivityAt
-      rec.status = 'error'
-    }
-  }
-
-  let flushTimer: ReturnType<typeof setTimeout> | null = null
-
-  function scheduleFlush(): void {
-    if (!storePath || flushTimer !== null) return
-    flushTimer = setTimeout(() => {
-      flushTimer = null
-      void writeAsync()
-    }, 5_000)
-  }
-
-  function prunedRecords(): SessionRecord[] {
-    const cutoff = Date.now() - RETENTION_MS
-    let arr = Array.from(records.values())
-      .filter((r) => r.startedAt >= cutoff)
-      .sort((a, b) => a.startedAt - b.startedAt)
-    if (arr.length > MAX_RECORDS) arr = arr.slice(arr.length - MAX_RECORDS)
-    return arr
-  }
-
-  function serialize(): string {
-    return JSON.stringify({ version: PERSISTED_VERSION, records: prunedRecords() }, null, 2)
-  }
-
-  async function writeAsync(): Promise<void> {
-    if (!storePath) return
-    try {
-      await atomicWrite(storePath, serialize())
-    } catch (err) {
-      log.warn('async flush failed', { err: String(err) })
-    }
-  }
-
-  function writeSync(): void {
-    if (!storePath) return
-    try {
-      atomicWriteSync(storePath, serialize())
-    } catch (err) {
-      log.warn('sync flush failed', { err: String(err) })
-    }
-  }
+  const store = createJsonStore<SessionRecord>({
+    storePath,
+    version: PERSISTED_VERSION,
+    field: 'records',
+    key: (r) => r.sessionId,
+    logName: 'session-history',
+    onLoad: (records) => {
+      for (const rec of records) {
+        // Back-compat: records written before lastActivityAt existed default to startedAt.
+        if (rec.lastActivityAt === undefined) rec.lastActivityAt = rec.startedAt
+        // Recover dangling records from an unclean shutdown — a null endedAt means the
+        // app exited before the session's exit was recorded. Finalize at the last known
+        // activity so the record never renders as a perpetual "running" row.
+        if (rec.endedAt === null) {
+          rec.endedAt = rec.lastActivityAt
+          rec.status = 'error'
+        }
+      }
+    },
+    selectForWrite: (records) => {
+      const cutoff = Date.now() - RETENTION_MS
+      let arr = records
+        .filter((r) => r.startedAt >= cutoff)
+        .sort((a, b) => a.startedAt - b.startedAt)
+      if (arr.length > MAX_RECORDS) arr = arr.slice(arr.length - MAX_RECORDS)
+      return arr
+    },
+  })
+  const records = store.map
 
   return {
     startSession(rec) {
@@ -117,7 +64,7 @@ export function createSessionHistory(storePath?: string): SessionHistory {
         status: 'exited',
         filesChanged: 0,
       })
-      scheduleFlush()
+      store.scheduleFlush()
     },
     noteActivity(sessionId, type) {
       const r = records.get(sessionId)
@@ -135,7 +82,7 @@ export function createSessionHistory(storePath?: string): SessionHistory {
       if (r.endedAt !== null) return null
       r.endedAt = end.endedAt
       r.status = end.status
-      scheduleFlush()
+      store.scheduleFlush()
       return r
     },
     getHistory(days) {
@@ -145,11 +92,7 @@ export function createSessionHistory(storePath?: string): SessionHistory {
         .sort((a, b) => a.startedAt - b.startedAt)
     },
     flush() {
-      if (flushTimer !== null) {
-        clearTimeout(flushTimer)
-        flushTimer = null
-      }
-      writeSync()
+      store.flush()
     },
   }
 }
