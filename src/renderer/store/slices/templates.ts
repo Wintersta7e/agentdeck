@@ -1,16 +1,12 @@
 import type { StateCreator } from 'zustand'
 import type { AppState } from '../appStore'
-import type { Role, Template, TemplateDraft, TemplateScope } from '../../../shared/types'
-
-/**
- * Shape of a single `templates:change` event emitted by the main-process
- * TemplateStore. Kept as a local type because the event channel currently
- * carries an unknown payload over the preload bridge.
- */
-type TemplateChangeEvent =
-  | { kind: 'add'; scope: TemplateScope; projectId: string | null; template: Template }
-  | { kind: 'update'; scope: TemplateScope; projectId: string | null; template: Template }
-  | { kind: 'delete'; scope: TemplateScope; projectId: string | null; id: string }
+import type {
+  Role,
+  Template,
+  TemplateChangeEvent,
+  TemplateDraft,
+  TemplateScope,
+} from '../../../shared/types'
 
 interface TemplateRef {
   id: string
@@ -113,13 +109,7 @@ export const createTemplatesSlice: StateCreator<AppState, [], [], TemplatesSlice
         })
       }
 
-      templatesUnsub = window.agentDeck.templates.onChange((raw: unknown) => {
-        // Defensive: the preload types this as `unknown`. Narrow before use.
-        if (!raw || typeof raw !== 'object') return
-        const event = raw as TemplateChangeEvent
-        if (event.kind !== 'add' && event.kind !== 'update' && event.kind !== 'delete') {
-          return
-        }
+      templatesUnsub = window.agentDeck.templates.onChange((event) => {
         applyChangeEvent(event)
       })
 

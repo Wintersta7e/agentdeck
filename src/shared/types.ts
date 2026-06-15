@@ -97,6 +97,12 @@ export interface LegacyTemplate {
 // ── Template types (v6.1.0 file-based) ─────────────────────────────
 export type TemplateScope = 'user' | 'project'
 
+/** A single `templates:change` event emitted by the main-process TemplateStore. */
+export type TemplateChangeEvent =
+  | { kind: 'add'; scope: TemplateScope; projectId: string | null; template: Template }
+  | { kind: 'update'; scope: TemplateScope; projectId: string | null; template: Template }
+  | { kind: 'delete'; scope: TemplateScope; projectId: string | null; id: string }
+
 /** Persisted JSON on disk. Derived fields are NOT in the file. */
 export interface TemplateFile {
   id: string

@@ -14,6 +14,7 @@ import type {
   SessionRecord,
   SkillInfo,
   Template,
+  TemplateChangeEvent,
   TemplateDraft,
   TemplateScope,
   Workflow,
@@ -212,7 +213,7 @@ export interface AgentDeckBridge {
       ref: { id: string; scope: TemplateScope; projectId: string | null },
       pinned: boolean,
     ) => Promise<void>
-    onChange: (cb: (event: unknown) => void) => BridgeUnsubscribe
+    onChange: (cb: (event: TemplateChangeEvent) => void) => BridgeUnsubscribe
     onParseError: (cb: (event: { path: string; error: string }) => void) => BridgeUnsubscribe
   }
   env: {

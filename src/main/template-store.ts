@@ -1,6 +1,12 @@
 import { promises as fs, watch, existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
-import type { Template, TemplateFile, TemplateDraft, TemplateScope } from '../shared/types'
+import type {
+  Template,
+  TemplateFile,
+  TemplateDraft,
+  TemplateScope,
+  TemplateChangeEvent,
+} from '../shared/types'
 import { createLogger } from './logger'
 import { atomicWrite } from './fs-atomic'
 import { generateTemplateId } from './template-id'
@@ -33,10 +39,7 @@ export interface TemplateStore {
   dispose: () => void
 }
 
-export type TemplateChangeEvent =
-  | { kind: 'add'; scope: TemplateScope; projectId: string | null; template: Template }
-  | { kind: 'update'; scope: TemplateScope; projectId: string | null; template: Template }
-  | { kind: 'delete'; scope: TemplateScope; projectId: string | null; id: string }
+export type { TemplateChangeEvent }
 
 interface TemplateStoreOptions {
   userRoot: string
