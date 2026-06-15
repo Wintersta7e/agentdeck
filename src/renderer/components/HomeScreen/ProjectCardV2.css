@@ -127,7 +127,7 @@
 }
 
 .pcv2-sub {
-  font-size: 9px; /* mockup-specific */
+  font-size: var(--fs-xxs); /* mockup-specific */
   color: var(--text3);
   margin-top: 1px;
 }
@@ -147,7 +147,7 @@
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  font-size: 9px; /* mockup-specific */
+  font-size: var(--fs-xxs); /* mockup-specific */
   font-family: var(--font-mono);
   padding: 5px var(--sp-2); /* mockup-specific 5px vertical */
   background: var(--surface-tint);
@@ -196,7 +196,7 @@
 }
 
 .pcv2-pill {
-  font-size: 9px; /* mockup-specific */
+  font-size: var(--fs-xxs); /* mockup-specific */
   padding: var(--sp-0_75) var(--sp-2); /* mockup-specific var(--sp-0_75) vertical */
   border-radius: 12px;
   background: var(--surface-tint-2);
@@ -215,6 +215,6 @@
   margin-top: var(--sp-1_5); /* mockup-specific */
   padding-top: var(--sp-1_5); /* mockup-specific */
   border-top: 1px solid var(--surface-tint-2);
-  font-size: 9px; /* mockup-specific */
+  font-size: var(--fs-xxs); /* mockup-specific */
   color: var(--text3);
 }

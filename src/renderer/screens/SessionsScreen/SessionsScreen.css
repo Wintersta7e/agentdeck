@@ -67,7 +67,7 @@
   padding: var(--sp-2) var(--sp-4);
   border-bottom: 1px solid var(--border);
   font-family: var(--font-display);
-  font-size: 9px;
+  font-size: var(--fs-xxs);
   font-weight: 700;
   letter-spacing: 0.22em;
   text-transform: uppercase;

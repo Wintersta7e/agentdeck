@@ -121,6 +121,7 @@
   --sp-9: 48px;
 
   /* ── Type scale ── */
+  --fs-xxs: 9px;
   --fs-xs: 10px;
   --fs-sm: 12px;
   --fs-base: 14px;

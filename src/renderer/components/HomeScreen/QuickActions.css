@@ -69,7 +69,7 @@
 }
 
 .quick-action-kbd {
-  font-size: 8px; /* mockup-specific */
+  font-size: var(--fs-xxs); /* mockup-specific */
   padding: var(--sp-half) 5px; /* mockup-specific */
   background: var(--surface-kbd);
   border: 1px solid var(--surface-border);

@@ -166,7 +166,7 @@
   left: 50%;
   transform: translateX(-50%);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-xxs);
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--accent);

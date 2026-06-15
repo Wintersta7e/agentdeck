@@ -78,7 +78,7 @@
   background: var(--red);
   color: var(--bg0);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-xxs);
   font-weight: 700;
   letter-spacing: 0;
   border-radius: 999px;

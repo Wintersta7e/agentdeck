@@ -54,7 +54,7 @@
 
 .agent-tile__status {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-xxs);
   letter-spacing: 0.2em;
   text-transform: uppercase;
   padding: var(--sp-half) var(--sp-2);
@@ -109,7 +109,7 @@
 
 .agent-tile__meta dt {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-xxs);
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--text3);

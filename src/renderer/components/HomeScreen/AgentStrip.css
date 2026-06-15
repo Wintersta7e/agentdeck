@@ -54,20 +54,20 @@
 }
 
 .agent-chip-name {
-  font-size: 9px; /* mockup-specific */
+  font-size: var(--fs-xxs); /* mockup-specific */
   font-weight: 600;
   color: var(--text0);
   margin-top: var(--sp-half);
 }
 
 .agent-chip-ver {
-  font-size: 8px; /* mockup-specific */
+  font-size: var(--fs-xxs); /* mockup-specific */
   font-family: var(--font-mono);
   color: var(--text3);
 }
 
 .agent-chip-badge {
-  font-size: 7px; /* mockup-specific */
+  font-size: var(--fs-xxs); /* mockup-specific */
   padding: 1px var(--sp-1);
   border-radius: 2px;
   font-weight: 600;

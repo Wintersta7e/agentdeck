@@ -65,7 +65,7 @@
 .agent-chip-b1__ctx {
   margin-top: var(--sp-half);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-xxs);
   letter-spacing: 0.05em;
   color: var(--text3);
 }
@@ -78,7 +78,7 @@
   align-items: center;
   gap: var(--sp-1);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-xxs);
   letter-spacing: 0.15em;
   color: var(--chip-color, var(--accent));
 }

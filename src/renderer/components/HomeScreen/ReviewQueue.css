@@ -20,7 +20,7 @@
   display: flex;
   gap: var(--sp-1);
   font-family: var(--font-mono);
-  font-size: 9px; /* mockup-specific */
+  font-size: var(--fs-xxs); /* mockup-specific */
 }
 
 .review-plus {
@@ -32,7 +32,7 @@
 }
 
 .review-btn {
-  font-size: 9px; /* mockup-specific */
+  font-size: var(--fs-xxs); /* mockup-specific */
   padding: var(--sp-0_75) var(--sp-2);
   border-radius: var(--r);
   background: rgba(var(--accent-rgb), 0.06);

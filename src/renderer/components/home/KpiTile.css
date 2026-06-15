@@ -8,7 +8,7 @@
 
 .kpi-tile__label {
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: var(--fs-xxs);
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--text3);
@@ -26,7 +26,7 @@
 
 .kpi-tile__sub {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-xxs);
   letter-spacing: 0.05em;
   color: var(--text3);
   margin-top: var(--sp-half);

@@ -23,7 +23,7 @@
 }
 
 .panel-header {
-  font-size: 9px; /* mockup-specific */
+  font-size: var(--fs-xxs); /* mockup-specific */
   text-transform: uppercase;
   letter-spacing: 1.5px;
   font-weight: 600;
@@ -32,7 +32,7 @@
 }
 
 .panel-empty {
-  font-size: 9px; /* mockup-specific */
+  font-size: var(--fs-xxs); /* mockup-specific */
   color: var(--text3);
   font-style: italic;
   padding: var(--sp-1) 0;
@@ -68,7 +68,7 @@
 }
 
 .suggestion-action {
-  font-size: 9px; /* mockup-specific */
+  font-size: var(--fs-xxs); /* mockup-specific */
   color: var(--accent);
   margin-top: var(--sp-half);
   cursor: pointer;

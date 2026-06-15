@@ -18,7 +18,7 @@
 }
 
 .tl-empty {
-  font-size: 9px; /* mockup-specific */
+  font-size: var(--fs-xxs); /* mockup-specific */
   color: var(--text3);
   font-style: italic;
   padding: var(--sp-2) 0;
@@ -32,7 +32,7 @@
 }
 
 .tl-label {
-  font-size: 9px; /* mockup-specific */
+  font-size: var(--fs-xxs); /* mockup-specific */
   font-family: var(--font-mono);
   color: var(--text3);
   width: 90px;
@@ -73,7 +73,7 @@
 }
 
 .tl-duration {
-  font-size: 9px; /* mockup-specific */
+  font-size: var(--fs-xxs); /* mockup-specific */
   font-family: var(--font-mono);
   color: var(--text3);
   width: 48px;
@@ -91,7 +91,7 @@
   display: flex;
   align-items: center;
   gap: var(--sp-1);
-  font-size: 9px; /* mockup-specific */
+  font-size: var(--fs-xxs); /* mockup-specific */
   color: var(--text3);
 }
 

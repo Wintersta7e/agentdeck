@@ -21,7 +21,7 @@
 }
 
 .wf-run-badge {
-  font-size: 9px; /* mockup-specific */
+  font-size: var(--fs-xxs); /* mockup-specific */
   padding: 1px var(--sp-2);
   border-radius: 10px;
 }
@@ -42,6 +42,6 @@
 }
 
 .wf-run-time {
-  font-size: 9px; /* mockup-specific */
+  font-size: var(--fs-xxs); /* mockup-specific */
   color: var(--text3);
 }

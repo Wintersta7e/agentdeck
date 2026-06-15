@@ -98,7 +98,7 @@
 
 .app-settings-theme-card__check {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-xxs);
   letter-spacing: 0.2em;
   color: var(--accent);
 }
