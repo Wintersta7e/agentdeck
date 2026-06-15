@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { useProjects } from './useProjects'
 import { useAppStore } from '../store/appStore'
+import { getDefaultAgent } from '../../shared/agent-helpers'
 import type { AgentConfig, Project } from '../../shared/types'
 
 function newProjectSessionId(projectId: string): string {
@@ -35,9 +36,9 @@ export function useProjectSessionLauncher(): {
     (project: Project) => {
       const sessionId = newProjectSessionId(project.id)
       addSession(sessionId, project.id)
-      if (project.agent) {
-        void captureSessionSnapshot(sessionId, project.agent)
-      }
+      // Resolve through getDefaultAgent so agents[]-migrated projects (whose legacy
+      // `project.agent` is undefined) still record a context-window snapshot.
+      void captureSessionSnapshot(sessionId, getDefaultAgent(project).agent)
       markProjectOpened(project)
     },
     [addSession, captureSessionSnapshot, markProjectOpened],
