@@ -8,6 +8,7 @@ import type { EnvVar, Project, Role, LegacyTemplate } from '../shared/types'
 import { migrateProjectAgents } from '../shared/agent-helpers'
 import { createLogger } from './logger'
 import { validateId } from './validation'
+import { createKeyMutex } from './key-mutex'
 import { toWslPath } from './wsl-utils'
 
 const log = createLogger('project-store')
@@ -15,14 +16,10 @@ const log = createLogger('project-store')
 // Promise-based write lock prevents concurrent read-modify-write races.
 // All mutating handlers (save/delete for projects, templates, roles) are serialized
 // through this lock so a second IPC call waits for the first to finish writing.
-let writeLock = Promise.resolve()
+const writeLock = createKeyMutex()
+// One global key serializes every mutation of the single store file.
 function serialized<T>(fn: () => T): Promise<T> {
-  const p = writeLock.then(fn)
-  writeLock = p.then(
-    () => {},
-    () => {},
-  )
-  return p
+  return writeLock('store', fn)
 }
 
 function encryptEnvVars(envVars: EnvVar[] | undefined): EnvVar[] | undefined {

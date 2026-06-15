@@ -6,6 +6,7 @@ import { createLogger } from './logger'
 import { validateWorkflow } from '../shared/workflow-utils'
 import { validateId } from '../shared/validation'
 import type { Workflow, WorkflowMeta } from '../shared/types'
+import { createKeyMutex } from './key-mutex'
 
 const log = createLogger('workflow-store')
 
@@ -29,7 +30,7 @@ export function getWorkflowsDir(): string {
 }
 
 // Per-workflow write lock to prevent concurrent saves
-const writeLocks = new Map<string, Promise<Workflow>>()
+const writeLock = createKeyMutex()
 
 // Async versions of all workflow operations
 
@@ -101,15 +102,8 @@ export async function saveWorkflow(workflow: Workflow): Promise<Workflow> {
     return w
   }
 
-  // Chain onto any pending write for this ID to prevent concurrent writes
-  const existing = writeLocks.get(id) ?? Promise.resolve(null as Workflow | null)
-  const p = existing.catch(() => {}).then(() => doActualSave())
-  writeLocks.set(id, p)
-  try {
-    return await p
-  } finally {
-    if (writeLocks.get(id) === p) writeLocks.delete(id)
-  }
+  // Serialize writes for this ID to prevent concurrent read-modify-write races.
+  return writeLock(id, doActualSave)
 }
 
 export async function renameWorkflow(id: string, name: string): Promise<void> {

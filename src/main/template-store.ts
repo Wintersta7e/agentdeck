@@ -5,6 +5,7 @@ import { createLogger } from './logger'
 import { atomicWrite } from './fs-atomic'
 import { generateTemplateId } from './template-id'
 import { evictOldestFromMap } from './map-utils'
+import { createKeyMutex } from './key-mutex'
 
 const log = createLogger('template-store')
 
@@ -40,21 +41,6 @@ export type TemplateChangeEvent =
 interface TemplateStoreOptions {
   userRoot: string
   getProjectPath: (projectId: string) => string | null
-}
-
-function createMutex(): <T>(key: string, fn: () => Promise<T>) => Promise<T> {
-  const chains = new Map<string, Promise<unknown>>()
-  return function serialize<T>(key: string, fn: () => Promise<T>): Promise<T> {
-    const prev = chains.get(key) ?? Promise.resolve()
-    const next = prev.then(
-      () => fn(),
-      () => fn(),
-    )
-    chains.set(key, next as Promise<unknown>)
-    return next.finally(() => {
-      if (chains.get(key) === next) chains.delete(key)
-    }) as Promise<T>
-  }
 }
 
 async function readTemplateFile(
@@ -116,7 +102,7 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
   const changeListeners = new Set<(e: TemplateChangeEvent) => void>()
   const emitChange = (e: TemplateChangeEvent): void => changeListeners.forEach((l) => l(e))
 
-  const serialize = createMutex()
+  const serialize = createKeyMutex()
 
   function findById(
     id: string,
