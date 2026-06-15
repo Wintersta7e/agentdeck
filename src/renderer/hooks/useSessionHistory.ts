@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useAppStore } from '../store/appStore'
 import { resolveSessionAgent } from '../utils/resolve-session-agent'
 import { USAGE_REFRESH_INTERVAL_MS } from '../../shared/constants'
+import { usePollEffect } from './usePollEffect'
 import type { SessionRecord, Session, Project } from '../../shared/types'
 
 export interface SessionRow {
@@ -47,22 +48,20 @@ export function useSessionHistory(days: number): SessionRow[] {
   const liveSessions = useAppStore((s) => s.sessions)
   const writeCounts = useAppStore((s) => s.writeCountBySession)
   const projects = useAppStore((s) => s.projects)
-  useEffect(() => {
-    let cancelled = false
-    async function load(): Promise<void> {
+  const load = useCallback(
+    async (isActive: () => boolean) => {
       try {
         const next = await window.agentDeck.sessions.getHistory(days)
-        if (!cancelled) setRecords(next)
+        if (isActive()) setRecords(next)
       } catch {
         /* best-effort */
       }
-    }
-    void load()
-    const id = setInterval(() => void load(), USAGE_REFRESH_INTERVAL_MS)
-    return () => {
-      cancelled = true
-      clearInterval(id)
-    }
-  }, [days])
-  return mergeSessionRows(records, liveSessions, writeCounts, projects)
+    },
+    [days],
+  )
+  usePollEffect(load, USAGE_REFRESH_INTERVAL_MS)
+  return useMemo(
+    () => mergeSessionRows(records, liveSessions, writeCounts, projects),
+    [records, liveSessions, writeCounts, projects],
+  )
 }
