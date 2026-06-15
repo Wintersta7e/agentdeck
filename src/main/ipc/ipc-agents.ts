@@ -9,6 +9,7 @@ import { getEffectiveContextWindow } from '../../shared/context-window'
 import { resolveActiveModel, invalidateAll as invalidateModelCache } from '../active-model-cache'
 import { isValidContextOverride } from '../validation'
 import { createLogger } from '../logger'
+import { resolveWslUsername } from '../wsl-utils'
 import type { AgentType } from '../../shared/types'
 
 const log = createLogger('ipc-agents')
@@ -165,29 +166,5 @@ export function registerAgentHandlers(
   })
 
   /* ── WSL username ─────────────────────────────────────────────── */
-  ipcMain.handle(CH.appWslUsername, async () => {
-    const { execFile } = await import('child_process')
-    const tryCmd = (args: string[]): Promise<string> =>
-      new Promise((resolve) => {
-        execFile('wsl.exe', args, { timeout: 10000 }, (err, stdout) => {
-          const out = stdout?.trim() ?? ''
-          if (err || !out) {
-            resolve('')
-            return
-          }
-          resolve(out)
-        })
-      })
-
-    // Race all approaches in parallel — first non-empty result wins.
-    // On cold WSL boot, sequential attempts can stall for 45s total.
-    const results = await Promise.all([
-      tryCmd(['--', 'bash', '-lc', 'whoami']),
-      tryCmd(['--', 'whoami']),
-      tryCmd(['--', 'bash', '-lc', 'echo $USER']),
-    ])
-    const result = results.find((r) => r !== '') ?? ''
-    if (!result) log.warn('Failed to detect WSL username')
-    return result
-  })
+  ipcMain.handle(CH.appWslUsername, () => resolveWslUsername())
 }
