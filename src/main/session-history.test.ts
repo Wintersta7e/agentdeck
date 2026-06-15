@@ -130,6 +130,28 @@ describe('session-history', () => {
     expect(row.status).toBe('exited')
   })
 
+  it('noteActivity after endSession is a no-op (finalized record is not re-mutated)', () => {
+    vi.useFakeTimers()
+    try {
+      const start = Date.parse('2026-06-15T10:00:00Z')
+      vi.setSystemTime(start)
+      const h = createSessionHistory()
+      h.startSession(makeRec({ startedAt: start }))
+      vi.setSystemTime(start + 60_000)
+      h.noteActivity('s1', 'write')
+      h.endSession('s1', { endedAt: start + 120_000, status: 'exited' })
+      // A late activity event (e.g. a buffered PTY flush after exit) must not
+      // advance lastActivityAt or bump filesChanged on the finalized record.
+      vi.setSystemTime(start + 999_999)
+      h.noteActivity('s1', 'write')
+      const row = h.getHistory(1)[0]!
+      expect(row.filesChanged).toBe(1)
+      expect(row.lastActivityAt).toBe(start + 60_000)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('persists and reloads across instances (survives restart)', () => {
     const store = tmpStore()
     const h1 = createSessionHistory(store)

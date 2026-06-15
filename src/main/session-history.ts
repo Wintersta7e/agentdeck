@@ -69,6 +69,10 @@ export function createSessionHistory(storePath?: string): SessionHistory {
     noteActivity(sessionId, type) {
       const r = records.get(sessionId)
       if (!r) return
+      // A finalized record must not be re-mutated by a late activity event (e.g. a
+      // buffered PTY flush arriving after exit) — its active-time and file count are
+      // already settled. Mirrors endSession's idempotency guard.
+      if (r.endedAt !== null) return
       // Any activity advances the active-time clock; only writes bump filesChanged.
       // Persisted on endSession / next scheduled flush.
       r.lastActivityAt = Date.now()
