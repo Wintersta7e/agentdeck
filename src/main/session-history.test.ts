@@ -171,6 +171,36 @@ describe('session-history', () => {
     rmSync(store, { force: true })
   })
 
+  it('persists lastActivityAt across flush+reload (idle-trim survives restart)', () => {
+    // usage-history computes activeMs = lastActivityAt - startedAt, so a
+    // serialization regression that dropped lastActivityAt (resetting it to
+    // startedAt via the onLoad back-compat default) would silently zero out
+    // every reloaded session's active time. Pin time so the advance is exact.
+    vi.useFakeTimers()
+    try {
+      const start = Date.parse('2026-06-15T10:00:00Z')
+      const store = tmpStore()
+
+      const h1 = createSessionHistory(store)
+      h1.startSession(makeRec({ startedAt: start }))
+      vi.setSystemTime(start + 5 * 60_000) // activity 5 min after start
+      h1.noteActivity('s1', 'write')
+      h1.flush()
+
+      const h2 = createSessionHistory(store)
+      const row = h2.getHistory(1)[0]!
+      expect(row.startedAt).toBe(start)
+      // The reloaded row must carry the advanced lastActivityAt, NOT startedAt.
+      expect(row.lastActivityAt).toBe(start + 5 * 60_000)
+      expect(row.lastActivityAt).toBeGreaterThan(row.startedAt)
+      expect(row.filesChanged).toBe(1)
+
+      rmSync(store, { force: true })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('discards records written at an incompatible version', () => {
     const store = tmpStore()
     const h1 = createSessionHistory(store)

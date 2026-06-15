@@ -1,5 +1,21 @@
-import { describe, it, expect } from 'vitest'
-import { parseCodexLimits } from './codex-limits'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+// ── Mocks ────────────────────────────────────────────────────────────
+// readCodexLimits delegates the actual disk read to wslTry; mocking it lets
+// us drive the module-level inFlight coalescing/reset without touching WSL.
+const { mockWslTry } = vi.hoisted(() => ({
+  mockWslTry: vi.fn(),
+}))
+
+vi.mock('./wsl-exec', () => ({
+  wslTry: (...args: unknown[]) => mockWslTry(...args),
+}))
+
+const { parseCodexLimits, readCodexLimits } = await import('./codex-limits')
+
+beforeEach(() => {
+  mockWslTry.mockReset()
+})
 
 // Synthetic fixture (values are made up — not from any real account).
 const line = JSON.stringify({
@@ -48,5 +64,55 @@ describe('parseCodexLimits', () => {
     expect(r!.primary?.usedPercent).toBe(5)
     expect(r!.weekly).toBeNull()
     expect(r!.planType).toBe('pro')
+  })
+})
+
+describe('readCodexLimits', () => {
+  it('coalesces concurrent callers into a single underlying WSL read', async () => {
+    // Hold the read open so both callers observe the same in-flight promise.
+    let resolveRead: (v: string | null) => void = () => {}
+    mockWslTry.mockReturnValue(
+      new Promise<string | null>((resolve) => {
+        resolveRead = resolve
+      }),
+    )
+
+    const a = readCodexLimits()
+    const b = readCodexLimits()
+
+    // Both calls are in flight, but only one subprocess was spawned.
+    expect(mockWslTry).toHaveBeenCalledTimes(1)
+
+    resolveRead(line)
+    const [ra, rb] = await Promise.all([a, b])
+    expect(ra).toEqual(rb)
+    expect(ra!.planType).toBe('plus')
+    // Still just the one read across both resolved callers.
+    expect(mockWslTry).toHaveBeenCalledTimes(1)
+  })
+
+  it('resets inFlight after a call settles so a later call starts fresh', async () => {
+    mockWslTry.mockResolvedValueOnce(line)
+    const first = await readCodexLimits()
+    expect(first!.planType).toBe('plus')
+
+    // A subsequent, non-overlapping call must spawn its own read (inFlight cleared).
+    mockWslTry.mockResolvedValueOnce(null)
+    const second = await readCodexLimits()
+    expect(second).toBeNull()
+    expect(mockWslTry).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not permanently lock inFlight when the underlying read rejects', async () => {
+    // .finally() must clear inFlight even on failure, otherwise one error
+    // would wedge every future call.
+    mockWslTry.mockRejectedValueOnce(new Error('wsl blew up'))
+    await expect(readCodexLimits()).rejects.toThrow('wsl blew up')
+
+    // Recovery: the next call runs normally rather than re-throwing the stale promise.
+    mockWslTry.mockResolvedValueOnce(line)
+    const recovered = await readCodexLimits()
+    expect(recovered!.planType).toBe('plus')
+    expect(mockWslTry).toHaveBeenCalledTimes(2)
   })
 })

@@ -174,12 +174,19 @@ describe('pty:spawn exit-code → session recording', () => {
     onceSpy.mockClear()
 
     const sessionHistoryStub = stubSessionHistory()
+    // lastActivityAt is deliberately DISTINCT from endedAt: usage-history must
+    // be fed the last-activity instant (idle-trim source), not the wall-clock
+    // end. A regression passing rec.endedAt would inflate active time and still
+    // satisfy a bare "recordSession was called" assertion — so we pin a
+    // recognizable lastActivityAt and assert it propagates verbatim.
+    const lastActivityAt = 1_700_000_000_000
     const rec = {
       sessionId: 'sess-exit',
       projectId: 'proj-1',
       agent: 'claude-code',
       startedAt: Date.now() - 5000,
-      endedAt: null as number | null,
+      lastActivityAt,
+      endedAt: (lastActivityAt + 60_000) as number | null,
       status: 'exited' as 'exited' | 'error',
       filesChanged: 2,
     }
@@ -210,35 +217,46 @@ describe('pty:spawn exit-code → session recording', () => {
     // Invoke the exit callback with the given exitCode
     exitCb(exitCode)
 
-    return { sessionHistoryStub, usageHistoryStub }
+    return { sessionHistoryStub, usageHistoryStub, lastActivityAt }
   }
 
   it('records session when exitCode is 0 (clean exit)', async () => {
-    const { sessionHistoryStub, usageHistoryStub } = await makeSetup(0)
+    const { sessionHistoryStub, usageHistoryStub, lastActivityAt } = await makeSetup(0)
     expect(sessionHistoryStub.endSession).toHaveBeenCalledWith('sess-exit', {
       endedAt: expect.any(Number),
       status: 'exited',
     })
     expect(usageHistoryStub.recordSession).toHaveBeenCalledTimes(1)
+    // Active time is derived from lastActivityAt, not endedAt — recordSession
+    // must receive the record's lastActivityAt verbatim (idle-trim source).
+    expect(usageHistoryStub.recordSession).toHaveBeenCalledWith(
+      expect.objectContaining({ lastActivityAt }),
+    )
   })
 
   it('records session when exitCode is null (SIGTERM / user kill)', async () => {
-    const { sessionHistoryStub, usageHistoryStub } = await makeSetup(null)
+    const { sessionHistoryStub, usageHistoryStub, lastActivityAt } = await makeSetup(null)
     expect(sessionHistoryStub.endSession).toHaveBeenCalledWith('sess-exit', {
       endedAt: expect.any(Number),
       status: 'exited',
     })
     expect(usageHistoryStub.recordSession).toHaveBeenCalledTimes(1)
+    expect(usageHistoryStub.recordSession).toHaveBeenCalledWith(
+      expect.objectContaining({ lastActivityAt }),
+    )
   })
 
   it('records session even when exitCode is non-zero (maps to error status)', async () => {
-    const { sessionHistoryStub, usageHistoryStub } = await makeSetup(1)
+    const { sessionHistoryStub, usageHistoryStub, lastActivityAt } = await makeSetup(1)
     expect(sessionHistoryStub.endSession).toHaveBeenCalledWith('sess-exit', {
       endedAt: expect.any(Number),
       status: 'error',
     })
     // All sessions are recorded regardless of status
     expect(usageHistoryStub.recordSession).toHaveBeenCalledTimes(1)
+    expect(usageHistoryStub.recordSession).toHaveBeenCalledWith(
+      expect.objectContaining({ lastActivityAt }),
+    )
   })
 })
 

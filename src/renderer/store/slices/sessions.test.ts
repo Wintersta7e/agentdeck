@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useAppStore } from '../appStore'
+import { MAX_EXITED_SESSIONS } from '../../../shared/constants'
+import type { Session, SessionStatus } from '../../../shared/types'
 
 describe('sessions slice — addSession lifecycle', () => {
   beforeEach(() => {
@@ -125,5 +127,78 @@ describe('sessions slice — openSession + pruneSessionFromTabs', () => {
     expect(s.openSessionIds).toEqual([fresh, b])
     expect(s.sessions[a]).toBeUndefined()
     expect(s.sessions[fresh!]).toBeDefined()
+  })
+})
+
+describe('sessions slice — removeSession eviction of oldest exited sessions', () => {
+  const makeSession = (id: string, startedAt: number, status: SessionStatus): Session => ({
+    id,
+    projectId: 'p1',
+    status,
+    startedAt,
+    approvalState: 'idle',
+    seedTemplateId: null,
+  })
+
+  beforeEach(() => {
+    useAppStore.setState(useAppStore.getInitialState())
+  })
+
+  it('evicts the oldest exited session and drops it from openSessionIds + per-session maps', () => {
+    // Fill the store to exactly the retention cap with exited sessions, each with
+    // a distinct ascending startedAt so `exited-0` is unambiguously the oldest.
+    const sessions: Record<string, Session> = {}
+    const activityFeeds: Record<string, unknown[]> = {}
+    const writeCountBySession: Record<string, number> = {}
+    const worktreePaths: Record<string, { path: string; isolated: boolean }> = {}
+    const openSessionIds: string[] = []
+    for (let i = 0; i < MAX_EXITED_SESSIONS; i += 1) {
+      const id = `exited-${i}`
+      sessions[id] = makeSession(id, 1000 + i, 'exited')
+      activityFeeds[id] = []
+      writeCountBySession[id] = i
+      worktreePaths[id] = { path: `/tmp/${id}`, isolated: true }
+      openSessionIds.push(id)
+    }
+    // One extra running session whose closure pushes the exited count to
+    // MAX_EXITED_SESSIONS + 1, forcing eviction of the single oldest.
+    const live = makeSession('live', 9999, 'running')
+    sessions[live.id] = live
+    activityFeeds[live.id] = []
+    writeCountBySession[live.id] = 7
+    worktreePaths[live.id] = { path: '/tmp/live', isolated: true }
+    openSessionIds.push(live.id)
+
+    useAppStore.setState({
+      sessions,
+      activityFeeds,
+      writeCountBySession,
+      worktreePaths,
+      openSessionIds,
+      paneSessions: ['live', '', ''],
+      paneLayout: 1,
+      focusedPane: 0,
+      activeSessionId: 'live',
+    } as never)
+
+    useAppStore.getState().removeSession('live')
+
+    const state = useAppStore.getState()
+    const oldest = 'exited-0'
+    const retained = 'exited-1'
+
+    // Oldest exited session is fully evicted from every per-session map...
+    expect(state.sessions[oldest]).toBeUndefined()
+    expect(state.activityFeeds[oldest]).toBeUndefined()
+    expect(state.writeCountBySession[oldest]).toBeUndefined()
+    expect(state.worktreePaths[oldest]).toBeUndefined()
+    // ...and from the tab list so it can't become a dangling tab ref.
+    expect(state.openSessionIds).not.toContain(oldest)
+
+    // A more-recent exited session survives the eviction.
+    expect(state.sessions[retained]).toBeDefined()
+    expect(state.openSessionIds).toContain(retained)
+    // The just-closed session is retained (it's the newest exited one).
+    expect(state.sessions['live']?.status).toBe('exited')
   })
 })
