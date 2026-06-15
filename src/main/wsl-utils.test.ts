@@ -5,7 +5,7 @@ vi.mock('child_process', () => ({
   execFile: vi.fn(),
 }))
 
-import { wslPathToWindows } from './wsl-utils'
+import { wslPathToWindows, toWslPath } from './wsl-utils'
 import { execFile } from 'child_process'
 
 const mockedExecFile = vi.mocked(execFile)
@@ -79,5 +79,38 @@ describe('getDefaultDistroAsync', () => {
     const { getDefaultDistroAsync: freshGet } = await import('./wsl-utils')
     const result = await freshGet()
     expect(result).toBe('Ubuntu')
+  })
+})
+
+describe('toWslPath', () => {
+  it('converts Windows drive paths to /mnt (drive letter lowercased)', () => {
+    expect(toWslPath('C:\\Users\\test')).toBe('/mnt/c/Users/test')
+    expect(toWslPath('c:\\Users\\test')).toBe('/mnt/c/Users/test')
+  })
+
+  it('preserves spaces in paths', () => {
+    expect(toWslPath('C:\\Users\\my project')).toBe('/mnt/c/Users/my project')
+  })
+
+  it('handles a bare drive root', () => {
+    expect(toWslPath('C:\\')).toBe('/mnt/c')
+  })
+
+  it('converts legacy and modern UNC WSL paths', () => {
+    expect(toWslPath('\\\\wsl$\\Ubuntu\\home\\user')).toBe('/home/user')
+    expect(toWslPath('\\\\wsl.localhost\\Ubuntu\\home\\user')).toBe('/home/user')
+  })
+
+  it('passes through paths that are already WSL', () => {
+    expect(toWslPath('/home/user/project')).toBe('/home/user/project')
+  })
+
+  it('passes tilde home paths through verbatim (pty-manager cd relies on this)', () => {
+    expect(toWslPath('~')).toBe('~')
+    expect(toWslPath('~/code/app')).toBe('~/code/app')
+  })
+
+  it('returns an empty string unchanged', () => {
+    expect(toWslPath('')).toBe('')
   })
 })
