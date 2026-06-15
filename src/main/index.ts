@@ -20,6 +20,7 @@ import { createSessionHistory } from './session-history'
 import { ptyBus } from './pty-bus'
 import { createAppWindow } from './app-window'
 import { registerAppIpcHandlers } from './app-ipc'
+import { createReviewTracker } from './review-tracker'
 import {
   registerUsageHandlers,
   registerLimitsHandlers,
@@ -34,6 +35,7 @@ import { publishWslAvailability, resolveWslHome } from './wsl-runtime'
 
 const usageHistory = createUsageHistory(join(app.getPath('userData'), 'usage-history.json'))
 const sessionHistory = createSessionHistory(join(app.getPath('userData'), 'session-history.json'))
+const reviewTracker = createReviewTracker()
 const log = createLogger('app')
 
 // Feed every activity event to the per-session history record: any activity
@@ -101,6 +103,7 @@ app
       getWorktreeManager: () => worktreeManager,
       sessionHistory,
       usageHistory,
+      reviewTracker,
     })
 
     const windowRuntime = createAppWindow(appStore, () => {

@@ -5,6 +5,7 @@ import type { WorkflowEngine } from './workflow-engine'
 import type { WorktreeManager } from './worktree-manager'
 import type { SessionHistory } from './session-history'
 import type { UsageHistory } from './usage-history'
+import type { ReviewTracker } from './review-tracker'
 import {
   registerPtyHandlers,
   registerWindowHandlers,
@@ -15,7 +16,6 @@ import {
   registerSkillHandlers,
   registerWorktreeHandlers,
   registerHomeHandlers,
-  reviewTracker,
 } from './ipc'
 
 interface RegisterAppIpcHandlersOptions {
@@ -27,6 +27,7 @@ interface RegisterAppIpcHandlersOptions {
   getWorktreeManager: () => WorktreeManager | null
   sessionHistory: SessionHistory
   usageHistory: UsageHistory
+  reviewTracker: ReviewTracker
 }
 
 export function registerAppIpcHandlers({
@@ -38,6 +39,7 @@ export function registerAppIpcHandlers({
   getWorktreeManager,
   sessionHistory,
   usageHistory,
+  reviewTracker,
 }: RegisterAppIpcHandlersOptions): void {
   registerPtyHandlers(getPtyManager, {
     getMainWindow,
@@ -66,5 +68,5 @@ export function registerAppIpcHandlers({
   )
   registerUtilHandlers()
   registerWorktreeHandlers(getWorktreeManager)
-  registerHomeHandlers((projectId) => projectPathById(store, projectId))
+  registerHomeHandlers((projectId) => projectPathById(store, projectId), reviewTracker)
 }
