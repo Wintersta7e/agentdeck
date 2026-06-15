@@ -10,7 +10,7 @@ import {
 } from './project-store'
 import { seedTemplates, seedRoles } from './store-seeds'
 import type { TemplateStore } from './template-store'
-import { initGitStatusCache } from './git-status'
+import { initGitStatusCache, flushGitStatusCache } from './git-status'
 import { initLogger, createLogger, closeLogger } from './logger'
 import { seedWorkflows } from './workflow-seeds'
 import type { WorkflowEngine } from './workflow-engine'
@@ -174,6 +174,7 @@ app.on('before-quit', () => {
   ptyManager?.killAll()
   sessionHistory.flush()
   usageHistory.flush()
+  flushGitStatusCache()
   templateEventsOff?.()
   templateStore?.dispose()
   closeLogger()
