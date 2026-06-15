@@ -4,13 +4,12 @@ import type { BrowserWindow } from 'electron'
 import type { AppStore } from '../project-store'
 import { detectAgents } from '../agent-detector'
 import { checkAllUpdates, updateAgent } from '../agent-updater'
-import { AGENTS, KNOWN_AGENT_IDS } from '../../shared/agents'
+import { AGENTS, KNOWN_AGENT_IDS, isAgentId } from '../../shared/agents'
 import { getEffectiveContextWindow } from '../../shared/context-window'
 import { resolveActiveModel, invalidateAll as invalidateModelCache } from '../active-model-cache'
 import { isValidContextOverride } from '../validation'
 import { createLogger } from '../logger'
 import { resolveWslUsername } from '../wsl-utils'
-import type { AgentType } from '../../shared/types'
 
 const log = createLogger('ipc-agents')
 
@@ -44,8 +43,13 @@ export function registerAgentHandlers(
   ipcMain.handle(CH.agentsCheckUpdates, (_, installedAgents: unknown) => {
     if (!installedAgents || typeof installedAgents !== 'object' || Array.isArray(installedAgents))
       return
+    // Keep only boolean values — the cast alone wouldn't reject a non-boolean.
+    const checked: Record<string, boolean> = {}
+    for (const [id, v] of Object.entries(installedAgents)) {
+      if (typeof v === 'boolean') checked[id] = v
+    }
     const win = getWindow()
-    if (win) checkAllUpdates(win, installedAgents as Record<string, boolean>)
+    if (win) checkAllUpdates(win, checked)
   })
 
   ipcMain.handle(CH.agentsUpdate, async (_, agentId: string) => {
@@ -57,10 +61,10 @@ export function registerAgentHandlers(
 
   /* ── Effective context (auto-detect) ───────────────────────────── */
   ipcMain.handle(CH.agentsGetEffectiveContext, async (_, agentId: unknown) => {
-    if (typeof agentId !== 'string' || !KNOWN_AGENT_IDS.has(agentId)) {
+    if (typeof agentId !== 'string' || !isAgentId(agentId)) {
       return { error: 'invalid agentId' }
     }
-    const detector = await resolveActiveModel(agentId as AgentType)
+    const detector = await resolveActiveModel(agentId)
     const prefs = store.get('appPrefs')
     return getEffectiveContextWindow({
       agentId,
@@ -78,15 +82,14 @@ export function registerAgentHandlers(
 
   /* ── Effective context for launch snapshot (force-refresh + frozen prefs) ── */
   ipcMain.handle(CH.agentsGetEffectiveContextForLaunch, async (_, agentId: unknown) => {
-    if (typeof agentId !== 'string' || !KNOWN_AGENT_IDS.has(agentId)) {
+    if (typeof agentId !== 'string' || !isAgentId(agentId)) {
       return { error: 'invalid agentId' }
     }
     // Freeze appPrefs BEFORE the detector I/O so a save during the read can't leak in.
     const prefs = store.get('appPrefs')
     const agentOverrides = prefs.agentContextOverrides ?? {}
     const modelOverrides = prefs.modelContextOverrides ?? {}
-    const typed = agentId as AgentType
-    const detector = await resolveActiveModel(typed, { forceRefresh: true })
+    const detector = await resolveActiveModel(agentId, { forceRefresh: true })
     return getEffectiveContextWindow({
       agentId,
       activeModel: detector.modelId,

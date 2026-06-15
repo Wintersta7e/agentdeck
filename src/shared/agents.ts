@@ -166,6 +166,11 @@ export type AgentId = (typeof AGENTS)[number]['id']
 /** All known agent IDs as a Set for runtime validation */
 export const KNOWN_AGENT_IDS = new Set<string>(AGENTS.map((a) => a.id))
 
+/** Type guard: narrows a string to a known AgentId. */
+export function isAgentId(id: string): id is AgentId {
+  return KNOWN_AGENT_IDS.has(id)
+}
+
 /** Agent ID → binary name for PTY spawning and workflow execution */
 export const AGENT_BINARY_MAP: Readonly<Record<string, string>> = Object.freeze(
   Object.fromEntries(AGENTS.map((a) => [a.id, a.binary])),
