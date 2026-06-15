@@ -3,7 +3,7 @@ import { app } from 'electron'
 import { createLogger } from './logger'
 import { createWslGitPort } from './git-port'
 import { createWorktreeManager, type WorktreeManager } from './worktree-manager'
-import type { AppStore } from './project-store'
+import { projectPathById, type AppStore } from './project-store'
 
 const log = createLogger('worktree-runtime')
 
@@ -18,10 +18,7 @@ export async function initializeWorktreeManager(
 
   return createWorktreeManager(
     createWslGitPort(),
-    (id) => {
-      const projects = store.get('projects') ?? []
-      return projects.find((project) => project.id === id)?.path
-    },
+    (id) => projectPathById(store, id) ?? undefined,
     join(app.getPath('userData'), 'worktree-registry'),
     `${wslHome}/.agentdeck/worktrees`,
   )

@@ -2,7 +2,12 @@ import { CH } from '../shared/ipc-channels'
 import { app, safeStorage, type BrowserWindow } from 'electron'
 import { join } from 'path'
 import type { PtyManager } from './pty-manager'
-import { createProjectStore, registerStoreHandlers, type AppStore } from './project-store'
+import {
+  createProjectStore,
+  registerStoreHandlers,
+  projectPathById,
+  type AppStore,
+} from './project-store'
 import { seedTemplates, seedRoles } from './store-seeds'
 import type { TemplateStore } from './template-store'
 import { initGitStatusCache } from './git-status'
@@ -82,7 +87,7 @@ app
       codexHome: process.env['CODEX_HOME'] ?? null,
       agentdeckRoot,
       templateUserRoot: templateRuntime.templateUserRoot,
-      getProjectPath: (id) => appStore?.get('projects').find((p) => p.id === id)?.path ?? null,
+      getProjectPath: (id) => (appStore ? projectPathById(appStore, id) : null),
     })
 
     registerFilesIpc()

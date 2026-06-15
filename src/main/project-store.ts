@@ -370,6 +370,14 @@ export function registerStoreHandlers(store: AppStore): void {
 }
 
 /** Read roles directly from the store (for use in main process only). */
+export function projectPathById(store: AppStore, projectId: string): string | null {
+  return store.get('projects')?.find((p) => p.id === projectId)?.path ?? null
+}
+
+export function projectIdByPath(store: AppStore, projectPath: string): string | null {
+  return store.get('projects')?.find((p) => p.path === projectPath)?.id ?? null
+}
+
 export function getRolesFromStore(store: AppStore): Role[] {
   return store.get('roles')
 }
