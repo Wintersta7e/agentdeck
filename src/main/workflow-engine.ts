@@ -503,7 +503,7 @@ export function createWorkflowEngine(
 
       // Track which nodes we've emitted skip events for
       const emittedSkipped = new Set<string>()
-      // Track deadlock (nodes stuck pending after upstream failure)
+      // Set when the loop can make no further progress (see the no-ready guard below).
       let deadlocked = false
 
       try {
@@ -511,6 +511,11 @@ export function createWorkflowEngine(
           if (stopped) break
 
           const ready = scheduler.getReady()
+          // Safety backstop against an infinite loop: if nothing is ready while the
+          // run isn't done, no progress is possible. Normal node failures set
+          // `stopped` (and break above), so this only trips on an unexpected
+          // scheduler state — e.g. a future skip/branch-propagation gap that leaves
+          // a node stuck pending. Reported as an error below.
           if (ready.length === 0 && !scheduler.isDone()) {
             deadlocked = true
             break
