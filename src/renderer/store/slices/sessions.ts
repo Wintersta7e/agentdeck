@@ -13,6 +13,15 @@ import { ACTIVITY_FEED_CAP, MAX_EXITED_SESSIONS, MAX_PANE_COUNT } from '../../..
 import { nextApprovalState } from '../../../shared/approval-transitions'
 import { disposeCachedTerminal } from '../../components/Terminal/terminal-cache'
 
+/** Return a shallow copy of `map` with every key in `exclude` removed. */
+function filterMap<V>(map: Record<string, V>, exclude: Set<string>): Record<string, V> {
+  const out: Record<string, V> = {}
+  for (const [id, value] of Object.entries(map)) {
+    if (!exclude.has(id)) out[id] = value
+  }
+  return out
+}
+
 export interface SessionsSlice {
   sessions: Record<string, Session>
   activeSessionId: string | null
@@ -282,26 +291,10 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
         // Free any xterm + WebGL that was cached during a prior tab-switch
         // unmount for these now-evicted sessions.
         for (const id of evictIds) disposeCachedTerminal(id)
-        const nextSessions: typeof sessions = {}
-        for (const [id, s] of Object.entries(sessions)) {
-          if (!evictIds.has(id)) nextSessions[id] = s
-        }
-        sessions = nextSessions
-        const nextFeeds: typeof activityFeeds = {}
-        for (const [id, feed] of Object.entries(activityFeeds)) {
-          if (!evictIds.has(id)) nextFeeds[id] = feed
-        }
-        activityFeeds = nextFeeds
-        const nextWrites: typeof writeCountBySession = {}
-        for (const [id, count] of Object.entries(writeCountBySession)) {
-          if (!evictIds.has(id)) nextWrites[id] = count
-        }
-        writeCountBySession = nextWrites
-        const nextWorktrees: typeof worktreePaths = {}
-        for (const [id, wt] of Object.entries(worktreePaths)) {
-          if (!evictIds.has(id)) nextWorktrees[id] = wt
-        }
-        worktreePaths = nextWorktrees
+        sessions = filterMap(sessions, evictIds)
+        activityFeeds = filterMap(activityFeeds, evictIds)
+        writeCountBySession = filterMap(writeCountBySession, evictIds)
+        worktreePaths = filterMap(worktreePaths, evictIds)
         // Evicted ids would be dangling tab refs otherwise.
         openSessionIds = openSessionIds.filter((id) => !evictIds.has(id))
       }
