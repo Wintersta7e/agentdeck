@@ -59,7 +59,8 @@
     ]
   },
   "overrides": {
-    "node-abi": "^4.30.0"
+    "node-abi": "^4.30.0",
+    "esbuild": "^0.28.1"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
