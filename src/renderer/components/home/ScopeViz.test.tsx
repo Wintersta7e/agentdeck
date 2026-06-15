@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { render, cleanup } from '@testing-library/react'
+import { render, cleanup, act } from '@testing-library/react'
 import { ScopeViz } from './ScopeViz'
 import { useAppStore } from '../../store/appStore'
 
@@ -79,13 +79,19 @@ describe('ScopeViz', () => {
     const { rerender, container } = render(<ScopeViz />)
     expect(blipCount(container)).toBe(0)
 
-    useAppStore.getState().addSession('live-1', 'p-x', { agentOverride: 'goose' })
-    useAppStore.getState().setSessionStatus('live-1', 'running')
+    // Mutations after mount drive useSyncExternalStore re-renders — wrap them in
+    // act() so React flushes the update inside the test (no act() warning).
+    act(() => {
+      useAppStore.getState().addSession('live-1', 'p-x', { agentOverride: 'goose' })
+      useAppStore.getState().setSessionStatus('live-1', 'running')
+    })
     rerender(<ScopeViz />)
     expect(container.textContent).toMatch(/1 ACTIVE/)
     expect(blipCount(container)).toBe(1)
 
-    useAppStore.getState().setSessionStatus('live-1', 'exited')
+    act(() => {
+      useAppStore.getState().setSessionStatus('live-1', 'exited')
+    })
     rerender(<ScopeViz />)
     expect(container.textContent).toMatch(/0 ACTIVE/)
     expect(blipCount(container)).toBe(0)
