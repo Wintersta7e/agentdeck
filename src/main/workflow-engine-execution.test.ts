@@ -18,7 +18,7 @@ import {
   makeRole,
   resetCounter,
 } from '../__test__/helpers'
-import { _resetAgentPathCache } from './node-runners'
+import { invalidateAgentPathCache } from './node-runners'
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
@@ -130,7 +130,7 @@ function buildEngine(roles?: Role[]): void {
 beforeEach(() => {
   vi.useFakeTimers()
   resetCounter()
-  _resetAgentPathCache()
+  invalidateAgentPathCache()
   mockSpawn.mockReset()
   mockExecFile.mockReset()
   // Default: taskkill calls succeed immediately

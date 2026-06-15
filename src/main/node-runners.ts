@@ -93,8 +93,8 @@ export interface NodeRunnerDeps {
 /** Session cache of resolved PATH dir prefixes, keyed by agent binary name. */
 const agentPathCache = new Map<string, string>()
 
-/** Test-only: clear the per-session agent PATH-resolution cache. */
-export function _resetAgentPathCache(): void {
+/** Drop the per-session agent PATH-resolution cache (after an agent update, or between tests). */
+export function invalidateAgentPathCache(): void {
   agentPathCache.clear()
 }
 
