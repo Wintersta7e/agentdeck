@@ -7,7 +7,7 @@
  */
 import { spawn, execFile, type ChildProcess, type ExecException } from 'child_process'
 import { createLogger } from './logger'
-import type { AgentNode, ShellNode, WorkflowEvent, Role } from '../shared/types'
+import type { AgentNode, ShellNode, WorkflowEventInput, Role } from '../shared/types'
 import {
   AGENT_BINARY_MAP,
   AGENT_PRINT_FLAGS_MAP,
@@ -80,7 +80,7 @@ export function extractSkillPrefix(skillId: string | undefined, agentName: strin
 export interface NodeRunnerDeps {
   workflowId: string
   projectPath: string | undefined
-  push: (event: Omit<WorkflowEvent, 'id' | 'timestamp'>) => void
+  push: (event: WorkflowEventInput) => void
   nodeOutputs: Map<string, string>
   conditionOutputs: Map<string, string>
   nodeExitCodes: Map<string, number>

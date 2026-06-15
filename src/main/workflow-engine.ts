@@ -8,7 +8,7 @@ import type {
   WorkflowNode,
   ConditionNode,
   WorkflowEdge,
-  WorkflowEvent,
+  WorkflowEventInput,
   WorkflowNodeRun,
   Role,
 } from '../shared/types'
@@ -48,7 +48,7 @@ export function createWorkflowEngine(
 ): WorkflowEngine {
   const activeRuns = new Map<string, { stop: () => void; resume: (nodeId: string) => void }>()
 
-  function push(workflowId: string, event: Omit<WorkflowEvent, 'id' | 'timestamp'>): void {
+  function push(workflowId: string, event: WorkflowEventInput): void {
     if (mainWindow.isDestroyed()) return
     mainWindow.webContents.send(workflowEventChannel(workflowId), {
       ...event,
