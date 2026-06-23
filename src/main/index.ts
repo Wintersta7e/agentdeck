@@ -114,9 +114,13 @@ app
       agentRegistry,
     })
 
-    const windowRuntime = createAppWindow(appStore, () => {
-      mainWindow = null
-    })
+    const windowRuntime = createAppWindow(
+      appStore,
+      () => {
+        mainWindow = null
+      },
+      agentRegistry,
+    )
     mainWindow = windowRuntime.mainWindow
     ptyManager = windowRuntime.ptyManager
     workflowEngine = windowRuntime.workflowEngine
