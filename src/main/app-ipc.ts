@@ -50,6 +50,7 @@ export function registerAppIpcHandlers({
     reviewTracker,
     sessionHistory,
     usageHistory,
+    agentRegistry,
   })
   registerWindowHandlers(getMainWindow, store)
   registerAgentHandlers(getMainWindow, store, agentRegistry)

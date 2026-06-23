@@ -5,7 +5,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import type { PtyManager } from '../pty-manager'
 import { SAFE_ID_RE, MAX_SAFE_ID_LEN, validateId } from '../validation'
-import { KNOWN_AGENT_IDS, SAFE_FLAGS_RE } from '../../shared/agents'
+import { SAFE_FLAGS_RE } from '../../shared/agents'
 import { ptyBus } from '../pty-bus'
 import { invalidateGitCache } from '../git-status'
 import { toWslPath } from '../wsl-utils'
@@ -13,6 +13,7 @@ import type { ReviewFile } from '../../shared/types'
 import type { ReviewTracker } from '../review-tracker'
 import type { SessionHistory } from '../session-history'
 import type { UsageHistory } from '../usage-history'
+import type { AgentRegistry } from '../agent-registry'
 import { createLogger } from '../logger'
 
 const execFileAsync = promisify(execFile)
@@ -53,6 +54,7 @@ interface PtyHandlerDeps {
   reviewTracker: ReviewTracker
   sessionHistory: SessionHistory
   usageHistory: UsageHistory
+  agentRegistry: AgentRegistry
 }
 
 /**
@@ -126,7 +128,7 @@ export function registerPtyHandlers(
       ) {
         throw new Error('Invalid projectPath')
       }
-      if (agent !== undefined && (typeof agent !== 'string' || !KNOWN_AGENT_IDS.has(agent))) {
+      if (agent !== undefined && (typeof agent !== 'string' || !deps.agentRegistry.has(agent))) {
         throw new Error('Invalid agent')
       }
       // Validate startupCommands — reject crafted payloads

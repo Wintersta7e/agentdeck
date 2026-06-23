@@ -113,6 +113,13 @@ describe('ipc-agents', () => {
     expect(store._prefs.visibleAgents).toEqual(['claude-code', 'codex'])
   })
 
+  it('agents:setVisible persists a registered custom agent id', async () => {
+    await call('agents:saveCustom', VALID_SPEC)
+    call('agents:setVisible', ['claude-code', 'my-agent', 'still-not-an-agent'])
+    // The custom id survives the filter; the bogus one is dropped.
+    expect(store._prefs.visibleAgents).toEqual(['claude-code', 'my-agent'])
+  })
+
   it('agents:setVisible returns the current preference when given a non-array', () => {
     store._prefs.visibleAgents = ['claude-code']
     expect(call('agents:setVisible', 'not-an-array')).toEqual(['claude-code'])
@@ -146,6 +153,22 @@ describe('agents:getEffectiveContext', () => {
     const r = await call('agents:getEffectiveContext', 'claude-code')
     // resolveActiveModel is mocked to return { modelId: null }, so we get default source
     expect(r).toMatchObject({ value: expect.any(Number), source: expect.any(String) })
+  })
+
+  it('reports a custom agent’s own contextWindow (not 0) without erroring', async () => {
+    // A custom agent is absent from AGENT_CONTEXT_DEFAULTS; the handler must fold
+    // in registry.contextWindowFor(id) so it resolves to the spec value, not 0.
+    await call('agents:saveCustom', {
+      id: 'my-agent',
+      binary: 'my-agent-bin',
+      ui: { name: 'My Agent', contextWindow: 222_222 },
+    })
+    const r = (await call('agents:getEffectiveContext', 'my-agent')) as {
+      value?: number
+      error?: string
+    }
+    expect(r.error).toBeUndefined()
+    expect(r.value).toBe(222_222)
   })
 })
 

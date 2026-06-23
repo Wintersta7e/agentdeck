@@ -5,7 +5,7 @@ import type { AppStore } from '../project-store'
 import type { AgentRegistry } from '../agent-registry'
 import { detectAgents } from '../agent-detector'
 import { checkAllUpdates, updateAgent } from '../agent-updater'
-import { AGENTS, KNOWN_AGENT_IDS, isBuiltinAgent } from '../../shared/agents'
+import { AGENTS, KNOWN_AGENT_IDS } from '../../shared/agents'
 import { getEffectiveContextWindow } from '../../shared/context-window'
 import { resolveActiveModel, invalidateAll as invalidateModelCache } from '../active-model-cache'
 import { isValidContextOverride } from '../validation'
@@ -52,7 +52,7 @@ export function registerAgentHandlers(
   })
   ipcMain.handle(CH.agentsSetVisible, (_, agents: string[]) => {
     if (!Array.isArray(agents)) return store.get('appPrefs').visibleAgents ?? null
-    const safe = agents.filter((a) => typeof a === 'string' && KNOWN_AGENT_IDS.has(a))
+    const safe = agents.filter((a) => typeof a === 'string' && registry.has(a))
     store.set('appPrefs', { ...store.get('appPrefs'), visibleAgents: safe })
     return safe
   })
@@ -79,7 +79,7 @@ export function registerAgentHandlers(
 
   /* ── Effective context (auto-detect) ───────────────────────────── */
   ipcMain.handle(CH.agentsGetEffectiveContext, async (_, agentId: unknown) => {
-    if (typeof agentId !== 'string' || !isBuiltinAgent(agentId)) {
+    if (typeof agentId !== 'string' || !registry.has(agentId)) {
       return { error: 'invalid agentId' }
     }
     const detector = await resolveActiveModel(agentId)
@@ -94,13 +94,13 @@ export function registerAgentHandlers(
         agent: prefs.agentContextOverrides ?? {},
         model: prefs.modelContextOverrides ?? {},
       },
-      agentDefaults: AGENT_CONTEXT_DEFAULTS,
+      agentDefaults: { ...AGENT_CONTEXT_DEFAULTS, [agentId]: registry.contextWindowFor(agentId) },
     })
   })
 
   /* ── Effective context for launch snapshot (force-refresh + frozen prefs) ── */
   ipcMain.handle(CH.agentsGetEffectiveContextForLaunch, async (_, agentId: unknown) => {
-    if (typeof agentId !== 'string' || !isBuiltinAgent(agentId)) {
+    if (typeof agentId !== 'string' || !registry.has(agentId)) {
       return { error: 'invalid agentId' }
     }
     // Freeze appPrefs BEFORE the detector I/O so a save during the read can't leak in.
@@ -115,7 +115,7 @@ export function registerAgentHandlers(
         ? { cliContextOverride: detector.cliContextOverride }
         : {}),
       overrides: { agent: agentOverrides, model: modelOverrides },
-      agentDefaults: AGENT_CONTEXT_DEFAULTS,
+      agentDefaults: { ...AGENT_CONTEXT_DEFAULTS, [agentId]: registry.contextWindowFor(agentId) },
     })
   })
 
@@ -123,7 +123,7 @@ export function registerAgentHandlers(
   ipcMain.handle(
     CH.agentsGetEffectiveContextForModel,
     async (_, agentId: unknown, modelId: unknown) => {
-      if (typeof agentId !== 'string' || !KNOWN_AGENT_IDS.has(agentId)) {
+      if (typeof agentId !== 'string' || !registry.has(agentId)) {
         return { error: 'invalid agentId' }
       }
       if (typeof modelId !== 'string' || modelId.length === 0) {
@@ -137,7 +137,7 @@ export function registerAgentHandlers(
           agent: prefs.agentContextOverrides ?? {},
           model: prefs.modelContextOverrides ?? {},
         },
-        agentDefaults: AGENT_CONTEXT_DEFAULTS,
+        agentDefaults: { ...AGENT_CONTEXT_DEFAULTS, [agentId]: registry.contextWindowFor(agentId) },
       })
     },
   )
@@ -153,7 +153,7 @@ export function registerAgentHandlers(
     const prefs = store.get('appPrefs')
     if (kind === 'agent') {
       const { agentId } = args as { agentId?: unknown }
-      if (typeof agentId !== 'string' || !KNOWN_AGENT_IDS.has(agentId)) {
+      if (typeof agentId !== 'string' || !registry.has(agentId)) {
         return { ok: false, error: 'invalid agentId' }
       }
       const prev = prefs.agentContextOverrides ?? {}
