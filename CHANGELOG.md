@@ -5,6 +5,20 @@ All notable changes to AgentDeck will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.11.0] - 2026-06-24
+
+### Added
+
+- **Custom agents (bring-your-own-agent)** — register your own CLI agents
+  (Ollama, a local model runner, a personal wrapper) alongside the seven
+  built-ins. Manage them in the Agents screen (add / edit / clone / delete) or
+  by hand-editing `agents.toml`; each defines a binary, default args, non-secret
+  env, and display metadata (name, icon, colour, context window). Custom agents
+  are first-class — they appear in the new-session picker, command palette,
+  per-project default, and workflow nodes, and launch in both terminal sessions
+  and workflow runs (workflow nodes run them best-effort, raw output). Secrets
+  for local-model endpoints are deferred to a later release.
+
 ## [6.10.0] - 2026-06-07
 
 Covers everything since 6.8.0 (6.9.0 was never published). Headline: the
