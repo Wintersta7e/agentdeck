@@ -6,9 +6,9 @@ import type {
   AgentPermission,
   SkillInfo,
 } from '../../../shared/types'
-import { AGENTS } from '../../../shared/agents'
 import { MS_PER_MINUTE } from '../../../shared/constants'
 import { useAppStore } from '../../store/appStore'
+import { useAgentRegistry } from '../../hooks/useAgentRegistry'
 import { useRolesMap } from '../../hooks/useRolesMap'
 import { useProjects } from '../../hooks/useProjects'
 import RoleInlineForm from './RoleInlineForm'
@@ -22,7 +22,6 @@ interface Props {
   projectPath?: string | undefined
 }
 
-const KNOWN_AGENTS: AgentType[] = AGENTS.map((a) => a.id)
 const NEW_ROLE_SENTINEL = '__new__'
 
 export default function WorkflowNodeEditorPanel({
@@ -34,11 +33,16 @@ export default function WorkflowNodeEditorPanel({
 }: Props): React.JSX.Element {
   const roles = useAppStore((s) => s.roles)
   const rolesMap = useRolesMap()
+  const registry = useAgentRegistry()
   const { addRole, updateRole, deleteRole } = useProjects()
   // Agent-specific fields are only valid when node.type === 'agent'; pre-narrow
   // once so dep arrays and child reads stay typecheckable.
   const agentNode = node.type === 'agent' ? node : null
   const nodeAgent = agentNode?.agent
+  // A custom (console) agent has no headless --print mode, so the workflow
+  // engine drives it best-effort by capturing raw terminal output.
+  const selectedAgentIsCustom =
+    registry.find((a) => a.id === (nodeAgent ?? 'claude-code'))?.source === 'user'
   const nodeRoleId = agentNode?.roleId
   const role = nodeRoleId ? rolesMap.get(nodeRoleId) : undefined
 
@@ -207,12 +211,17 @@ export default function WorkflowNodeEditorPanel({
                 update(patch)
               }}
             >
-              {KNOWN_AGENTS.map((a) => (
-                <option key={a} value={a}>
-                  {a}
+              {registry.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
                 </option>
               ))}
             </select>
+            {selectedAgentIsCustom && (
+              <p className="wf-ne-hint">
+                Custom agent: runs best-effort (raw terminal output, no structured --print mode).
+              </p>
+            )}
           </div>
         )}
 
