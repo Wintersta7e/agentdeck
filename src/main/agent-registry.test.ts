@@ -92,3 +92,72 @@ describe('AgentRegistry.load', () => {
     expect(r.all().some((a) => a.source === 'user')).toBe(false)
   })
 })
+
+describe('AgentRegistry CRUD', () => {
+  it('saves a custom agent that survives a fresh instance', async () => {
+    const a = new AgentRegistry(file)
+    a.load()
+    const res = await a.saveCustom({
+      id: 'my-agent',
+      binary: 'my-agent-bin',
+      args: ['--x'],
+      ui: { name: 'My Agent' },
+    })
+    expect(res.ok).toBe(true)
+    const b = new AgentRegistry(file)
+    b.load()
+    expect(b.has('my-agent')).toBe(true)
+    expect(b.binaryFor('my-agent')).toBe('my-agent-bin')
+    expect(b.argsFor('my-agent')).toEqual(['--x'])
+  })
+
+  it('round-trips env and ui fields through TOML', async () => {
+    const a = new AgentRegistry(file)
+    a.load()
+    await a.saveCustom({
+      id: 'ol',
+      binary: 'ollama',
+      args: ['run', 'llama3'],
+      env: { OLLAMA_HOST: '127.0.0.1' },
+      ui: { name: 'Ollama', colorVar: '--green', contextWindow: 8192 },
+    })
+    const b = new AgentRegistry(file)
+    b.load()
+    expect(b.envFor('ol')).toEqual({ OLLAMA_HOST: '127.0.0.1' })
+    expect(b.byId('ol')?.colorVar).toBe('--green')
+    expect(b.contextWindowFor('ol')).toBe(8192)
+  })
+
+  it('rejects an invalid spec without writing', async () => {
+    const a = new AgentRegistry(file)
+    a.load()
+    const res = await a.saveCustom({ id: 'x', binary: 'bad bin', ui: { name: 'X' } })
+    expect(res.ok).toBe(false)
+    expect(a.has('x')).toBe(false)
+  })
+
+  it('rejects shadowing a builtin id', async () => {
+    const a = new AgentRegistry(file)
+    a.load()
+    const res = await a.saveCustom({ id: 'codex', binary: 'mycodex', ui: { name: 'My Codex' } })
+    expect(res.ok).toBe(false)
+  })
+
+  it('deletes a custom agent and persists the removal', async () => {
+    const a = new AgentRegistry(file)
+    a.load()
+    await a.saveCustom({ id: 'temp', binary: 'temp-bin', ui: { name: 'Temp' } })
+    expect(a.has('temp')).toBe(true)
+    expect(await a.deleteCustom('temp')).toBe(true)
+    expect(a.has('temp')).toBe(false)
+    const b = new AgentRegistry(file)
+    b.load()
+    expect(b.has('temp')).toBe(false)
+  })
+
+  it('returns false when deleting an unknown id', async () => {
+    const a = new AgentRegistry(file)
+    a.load()
+    expect(await a.deleteCustom('nope')).toBe(false)
+  })
+})

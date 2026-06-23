@@ -6,9 +6,10 @@
  * dependency) so it is unit-testable.
  */
 import { readFileSync } from 'node:fs'
-import { parse as parseToml } from 'smol-toml'
+import { parse as parseToml, stringify as stringifyToml } from 'smol-toml'
 import { AGENTS, AGENT_BINARY_MAP } from '../shared/agents'
 import { validateCustomAgent, type CustomAgentSpec } from '../shared/custom-agents'
+import { atomicWrite } from './fs-atomic'
 
 /** Redacted, renderer-safe view of an agent. NEVER carries args/env (main-only). */
 export interface AgentDescriptorWire {
@@ -51,6 +52,23 @@ function customDescriptor(spec: CustomAgentSpec): AgentDescriptorWire {
     contextWindow: spec.ui.contextWindow ?? 0,
     source: 'user' as const,
   }
+}
+
+/** Plain object for TOML serialization — only defined fields, no `source`. */
+function toTomlEntry(spec: CustomAgentSpec): Record<string, unknown> {
+  const ui: Record<string, unknown> = { name: spec.ui.name }
+  if (spec.ui.icon !== undefined) ui['icon'] = spec.ui.icon
+  if (spec.ui.short !== undefined) ui['short'] = spec.ui.short
+  if (spec.ui.colorVar !== undefined) ui['colorVar'] = spec.ui.colorVar
+  if (spec.ui.description !== undefined) ui['description'] = spec.ui.description
+  if (spec.ui.contextWindow !== undefined) ui['contextWindow'] = spec.ui.contextWindow
+  if (spec.ui.versionArgs !== undefined) ui['versionArgs'] = spec.ui.versionArgs
+
+  const entry: Record<string, unknown> = { id: spec.id, binary: spec.binary }
+  if (spec.args !== undefined) entry['args'] = spec.args
+  if (spec.env !== undefined) entry['env'] = spec.env
+  entry['ui'] = ui
+  return entry
 }
 
 export class AgentRegistry {
@@ -106,6 +124,32 @@ export class AgentRegistry {
 
     this.rebuild()
     return { warnings }
+  }
+
+  /** Validate + upsert a custom agent, persist atomically, then reload. */
+  async saveCustom(
+    spec: unknown,
+  ): Promise<{ ok: true; warnings: string[] } | { ok: false; error: string }> {
+    const res = validateCustomAgent(spec, BUILTIN_IDS)
+    if (!res.ok) return { ok: false, error: res.error }
+    const next = new Map(this.custom)
+    next.set(res.value.id, res.value)
+    await this.writeFile([...next.values()])
+    return { ok: true, warnings: this.load().warnings }
+  }
+
+  /** Remove a custom agent, persist atomically, then reload. Returns false if absent. */
+  async deleteCustom(id: string): Promise<boolean> {
+    if (!this.custom.has(id)) return false
+    const next = new Map(this.custom)
+    next.delete(id)
+    await this.writeFile([...next.values()])
+    this.load()
+    return true
+  }
+
+  private async writeFile(specs: CustomAgentSpec[]): Promise<void> {
+    await atomicWrite(this.filePath, stringifyToml({ agent: specs.map(toTomlEntry) }))
   }
 
   private rebuild(): void {
