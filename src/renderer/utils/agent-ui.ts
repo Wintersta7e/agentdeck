@@ -1,9 +1,4 @@
-import {
-  AGENTS,
-  AGENT_BY_ID as SHARED_AGENT_BY_ID,
-  AGENT_COLOR_VAR_MAP,
-  AGENT_SHORT_MAP,
-} from '../../shared/agents'
+import { AGENTS, AGENT_BY_ID as SHARED_AGENT_BY_ID, AGENT_COLOR_VAR_MAP } from '../../shared/agents'
 import { getDefaultAgent } from '../../shared/agent-helpers'
 import type { AgentDescriptorWire } from '../../shared/custom-agents'
 import type { AgentType, Project } from '../../shared/types'
@@ -19,12 +14,6 @@ export function agentColor(id: string | undefined | null): string {
 export function agentColorVar(id: string | undefined | null): string {
   if (!id) return '--accent'
   return AGENT_COLOR_VAR_MAP[id] ?? '--accent'
-}
-
-/** Returns a 2-letter mnemonic for an agent. */
-export function agentShort(id: string | undefined | null): string {
-  if (!id) return '·'
-  return AGENT_SHORT_MAP[id] ?? id.slice(0, 2).toUpperCase()
 }
 
 /** Display metadata resolved from the live agent registry for a given id. */

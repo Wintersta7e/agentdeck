@@ -43,6 +43,30 @@ export interface CustomAgentSpec {
   source: 'user'
 }
 
+/** Fields a built-in agent definition contributes to its wire descriptor. */
+type BuiltinAgentLike = Pick<
+  AgentDescriptorWire,
+  'id' | 'binary' | 'name' | 'icon' | 'short' | 'colorVar' | 'description' | 'contextWindow'
+>
+
+/**
+ * Map a built-in agent definition to its renderer-safe wire descriptor. Shared
+ * by the main registry and the renderer's bootstrap seed so the two stay in lockstep.
+ */
+export function toBuiltinDescriptor(a: BuiltinAgentLike): AgentDescriptorWire {
+  return {
+    id: a.id,
+    binary: a.binary,
+    name: a.name,
+    icon: a.icon,
+    short: a.short,
+    colorVar: a.colorVar,
+    description: a.description,
+    contextWindow: a.contextWindow,
+    source: 'builtin',
+  }
+}
+
 /**
  * A custom agent's binary is interpolated into a WSL shell. This charset forbids
  * spaces, a leading dash, and every shell metacharacter, so a charset-valid

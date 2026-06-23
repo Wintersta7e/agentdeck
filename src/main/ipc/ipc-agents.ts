@@ -95,6 +95,13 @@ export function registerAgentHandlers(
     return updateAgent(agentId)
   })
 
+  /** Builtin defaults with the (possibly custom) agent's own context window
+   *  layered on top, so a custom agent resolves to its declared window. */
+  const agentDefaultsFor = (agentId: string): Record<string, number> => ({
+    ...AGENT_CONTEXT_DEFAULTS,
+    [agentId]: registry.contextWindowFor(agentId),
+  })
+
   /* ── Effective context (auto-detect) ───────────────────────────── */
   ipcMain.handle(CH.agentsGetEffectiveContext, async (_, agentId: unknown) => {
     if (typeof agentId !== 'string' || !registry.has(agentId)) {
@@ -112,7 +119,7 @@ export function registerAgentHandlers(
         agent: prefs.agentContextOverrides ?? {},
         model: prefs.modelContextOverrides ?? {},
       },
-      agentDefaults: { ...AGENT_CONTEXT_DEFAULTS, [agentId]: registry.contextWindowFor(agentId) },
+      agentDefaults: agentDefaultsFor(agentId),
     })
   })
 
@@ -133,7 +140,7 @@ export function registerAgentHandlers(
         ? { cliContextOverride: detector.cliContextOverride }
         : {}),
       overrides: { agent: agentOverrides, model: modelOverrides },
-      agentDefaults: { ...AGENT_CONTEXT_DEFAULTS, [agentId]: registry.contextWindowFor(agentId) },
+      agentDefaults: agentDefaultsFor(agentId),
     })
   })
 
@@ -155,7 +162,7 @@ export function registerAgentHandlers(
           agent: prefs.agentContextOverrides ?? {},
           model: prefs.modelContextOverrides ?? {},
         },
-        agentDefaults: { ...AGENT_CONTEXT_DEFAULTS, [agentId]: registry.contextWindowFor(agentId) },
+        agentDefaults: agentDefaultsFor(agentId),
       })
     },
   )

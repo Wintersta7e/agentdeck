@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
-import { getSessionAgentId, selectAgentMeta } from '../../utils/agent-ui'
-import { useAgentRegistry } from '../../hooks/useAgentRegistry'
+import { getSessionAgentId } from '../../utils/agent-ui'
+import { useAgentMeta } from '../../hooks/useAgentRegistry'
 import './SessionMetricsStrip.css'
 
 interface SessionMetricsStripProps {
@@ -28,7 +28,6 @@ export function SessionMetricsStrip({ sessionId }: SessionMetricsStripProps): Re
     session ? (s.projects.find((p) => p.id === session.projectId) ?? null) : null,
   )
   const writeCount = useAppStore((s) => (sessionId ? (s.writeCountBySession[sessionId] ?? 0) : 0))
-  const registry = useAgentRegistry()
 
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
@@ -36,8 +35,7 @@ export function SessionMetricsStrip({ sessionId }: SessionMetricsStripProps): Re
     return () => window.clearInterval(id)
   }, [])
 
-  const agentId = getSessionAgentId(session, project)
-  const meta = selectAgentMeta(registry, agentId)
+  const meta = useAgentMeta(getSessionAgentId(session, project))
 
   return (
     <footer

@@ -7,7 +7,6 @@ import {
   AGENT_IDS,
   agentColor,
   agentColorVar,
-  agentShort,
   getSessionAgentId,
   selectAgentMeta,
 } from './agent-ui'
@@ -31,26 +30,6 @@ describe('agentColor / agentColorVar', () => {
     expect(agentColorVar('aider')).toBe('--agent-aider')
     expect(agentColorVar(null)).toBe('--accent')
     expect(agentColorVar('made-up')).toBe('--accent')
-  })
-})
-
-describe('agentShort', () => {
-  it('returns canonical two-letter mnemonics for known agents', () => {
-    expect(agentShort('claude-code')).toBe('CC')
-    expect(agentShort('codex')).toBe('CX')
-    expect(agentShort('gemini-cli')).toBe('GM')
-    expect(agentShort('amazon-q')).toBe('AQ')
-  })
-
-  it('falls back to a single glyph for nullish ids', () => {
-    expect(agentShort(null)).toBe('·')
-    expect(agentShort(undefined)).toBe('·')
-    expect(agentShort('')).toBe('·')
-  })
-
-  it('falls back to uppercase-2-char slice for unknown ids', () => {
-    expect(agentShort('llama')).toBe('LL')
-    expect(agentShort('xyz-tool')).toBe('XY')
   })
 })
 

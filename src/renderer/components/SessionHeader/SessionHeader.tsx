@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { useAppStore } from '../../store/appStore'
-import { getSessionAgentId, selectAgentMeta } from '../../utils/agent-ui'
-import { useAgentRegistry } from '../../hooks/useAgentRegistry'
+import { getSessionAgentId } from '../../utils/agent-ui'
+import { useAgentMeta } from '../../hooks/useAgentRegistry'
 import { getActionButtons } from '../../selectors/session-actions'
 import { rerunSession } from '../../utils/rerun-session'
 import type { Session } from '../../../shared/types'
@@ -26,12 +26,13 @@ export const SessionHeader = memo(function SessionHeader(): React.JSX.Element | 
   )
   const gitStatus = useAppStore((s) => (session ? s.gitStatuses[session.projectId] : undefined))
   const setApprovalState = useAppStore((s) => s.setApprovalState)
-  const registry = useAgentRegistry()
+  // `getSessionAgentId` is null-safe; resolving before the guard keeps the
+  // `useAgentMeta` hook call unconditional. When session/project are null we
+  // return null below anyway, so the resolved id is unused.
+  const meta = useAgentMeta(getSessionAgentId(session, project))
 
   if (!session || !project) return null
 
-  const agentId = getSessionAgentId(session, project)
-  const meta = selectAgentMeta(registry, agentId)
   const buttons = getActionButtons(session)
   const dirtyCount = gitStatus
     ? gitStatus.staged + gitStatus.unstaged + gitStatus.untracked

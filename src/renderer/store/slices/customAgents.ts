@@ -1,7 +1,7 @@
 import type { StateCreator } from 'zustand'
 import type { AppState } from '../appStore'
 import { AGENTS } from '../../../shared/agents'
-import type { AgentDescriptorWire } from '../../../shared/custom-agents'
+import { toBuiltinDescriptor, type AgentDescriptorWire } from '../../../shared/custom-agents'
 
 export interface CustomAgentsSlice {
   agentRegistry: AgentDescriptorWire[]
@@ -15,17 +15,7 @@ export interface CustomAgentsSlice {
  * (and in tests that don't seed the registry). The main process replaces this
  * with `builtinDescriptors() + custom` on `bootstrapAgentRegistry`.
  */
-const BUILTIN_DESCRIPTORS: AgentDescriptorWire[] = AGENTS.map((a) => ({
-  id: a.id,
-  binary: a.binary,
-  name: a.name,
-  icon: a.icon,
-  short: a.short,
-  colorVar: a.colorVar,
-  description: a.description,
-  contextWindow: a.contextWindow,
-  source: 'builtin',
-}))
+const BUILTIN_DESCRIPTORS: AgentDescriptorWire[] = AGENTS.map(toBuiltinDescriptor)
 
 // ── Module-level subscription handles ──────────────────────────────
 // Kept outside the store so they don't pollute the serializable state

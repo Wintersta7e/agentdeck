@@ -2,8 +2,8 @@ import { useEffect, useState, useCallback, useRef, memo } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { useAppStore } from '../../../store/appStore'
 import type { AgentEnvSnapshot } from '../../../../shared/types'
-import { getSessionAgentId, selectAgentMeta } from '../../../utils/agent-ui'
-import { useAgentRegistry } from '../../../hooks/useAgentRegistry'
+import { getSessionAgentId } from '../../../utils/agent-ui'
+import { useAgentMeta } from '../../../hooks/useAgentRegistry'
 import { HooksSection } from './HooksSection'
 import { SkillsSection } from './SkillsSection'
 import { McpSection } from './McpSection'
@@ -27,10 +27,9 @@ export const EnvTab = memo(function EnvTab(): React.JSX.Element {
     session ? (s.projects.find((p) => p.id === session.projectId) ?? null) : null,
   )
   const agentVersions = useAppStore((s) => s.agentVersions)
-  const registry = useAgentRegistry()
 
   const agentId = getSessionAgentId(session, project)
-  const meta = selectAgentMeta(registry, agentId)
+  const meta = useAgentMeta(agentId)
   // Gate on registry membership (builtin OR custom), not the builtin-only map —
   // a custom-agent session must still query the snapshot IPC (it returns a
   // neutral snapshot for custom ids).

@@ -4,6 +4,7 @@ import { useAppStore } from '../../store/appStore'
 import { useAgentRegistry } from '../../hooks/useAgentRegistry'
 import { getProjectAgents } from '../../../shared/agent-helpers'
 import type { AgentDescriptorWire } from '../../../shared/custom-agents'
+import type { Project } from '../../../shared/types'
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog'
 import { CustomAgentModal } from './CustomAgentModal'
 import './CustomAgentsSection.css'
@@ -22,10 +23,7 @@ type ModalState =
  * metadata (no node list), so checking nodes would require loading every
  * workflow file. The confirm copy notes this limitation.
  */
-function countProjectRefs(
-  projects: ReturnType<typeof useAppStore.getState>['projects'],
-  agentId: string,
-): number {
+function countProjectRefs(projects: Project[], agentId: string): number {
   return projects.filter((p) => getProjectAgents(p).some((a) => a.agent === agentId)).length
 }
 

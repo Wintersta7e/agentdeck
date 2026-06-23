@@ -10,6 +10,7 @@ import { parse as parseToml, stringify as stringifyToml } from 'smol-toml'
 import { AGENTS, AGENT_BINARY_MAP } from '../shared/agents'
 import {
   validateCustomAgent,
+  toBuiltinDescriptor,
   type AgentDescriptorWire,
   type CustomAgentSpec,
 } from '../shared/custom-agents'
@@ -20,17 +21,7 @@ export type { AgentDescriptorWire }
 const BUILTIN_IDS: ReadonlySet<string> = new Set(AGENTS.map((a) => a.id))
 
 function builtinDescriptors(): AgentDescriptorWire[] {
-  return AGENTS.map((a) => ({
-    id: a.id,
-    binary: a.binary,
-    name: a.name,
-    icon: a.icon,
-    short: a.short,
-    colorVar: a.colorVar,
-    description: a.description,
-    contextWindow: a.contextWindow,
-    source: 'builtin' as const,
-  }))
+  return AGENTS.map(toBuiltinDescriptor)
 }
 
 function customDescriptor(spec: CustomAgentSpec): AgentDescriptorWire {

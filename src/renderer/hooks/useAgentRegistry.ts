@@ -1,4 +1,5 @@
 import type { AgentDescriptorWire } from '../../shared/custom-agents'
+import { selectAgentMeta, type AgentMeta } from '../utils/agent-ui'
 import { useAppStore } from '../store/appStore'
 
 /**
@@ -9,4 +10,15 @@ import { useAppStore } from '../store/appStore'
  */
 export function useAgentRegistry(): AgentDescriptorWire[] {
   return useAppStore((s) => s.agentRegistry)
+}
+
+/**
+ * Resolve display metadata for a single agent id against the live registry.
+ *
+ * Convenience wrapper over `useAgentRegistry` + `selectAgentMeta` for the common
+ * top-level case. Inside `.map()`/loops a hook is illegal — call
+ * `selectAgentMeta(registry, id)` directly there.
+ */
+export function useAgentMeta(id: string): AgentMeta {
+  return selectAgentMeta(useAgentRegistry(), id)
 }

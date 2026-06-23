@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { ScreenShell } from '../../components/shared/ScreenShell'
-import { getSessionAgentId, selectAgentMeta } from '../../utils/agent-ui'
-import { useAgentRegistry } from '../../hooks/useAgentRegistry'
+import { getSessionAgentId } from '../../utils/agent-ui'
+import { useAgentMeta } from '../../hooks/useAgentRegistry'
 import './DiffReviewScreen.css'
 
 interface WorktreeSummary {
@@ -24,15 +24,13 @@ export function DiffReviewScreen(): React.JSX.Element {
   const addNotification = useAppStore((s) => s.addNotification)
   const clearWorktreePath = useAppStore((s) => s.clearWorktreePath)
   const removeSession = useAppStore((s) => s.removeSession)
-  const registry = useAgentRegistry()
 
   const [summary, setSummary] = useState<WorktreeSummary | null>(null)
   const [loading, setLoading] = useState(false)
   const [comment, setComment] = useState('')
   const [inflight, setInflight] = useState<'keep' | 'discard' | 'comment' | null>(null)
 
-  const agentId = getSessionAgentId(session, project)
-  const meta = selectAgentMeta(registry, agentId)
+  const meta = useAgentMeta(getSessionAgentId(session, project))
 
   useEffect(() => {
     if (!activeSessionId) return
