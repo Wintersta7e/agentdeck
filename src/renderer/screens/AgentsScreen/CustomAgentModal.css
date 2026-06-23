@@ -1,0 +1,486 @@
+/* ── Custom Agent modal ── */
+
+.cam-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay-scrim);
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-4);
+  animation: camFadeIn var(--duration-base) var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cam-backdrop {
+    animation: none;
+  }
+}
+
+@keyframes camFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.cam-dialog {
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--dialog-shadow);
+  width: 520px;
+  max-width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Header ── */
+.cam-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-4) var(--sp-5);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.cam-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: var(--text0);
+  margin: 0;
+}
+
+.cam-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r);
+  color: var(--text2);
+  cursor: pointer;
+  transition:
+    color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+.cam-close:hover {
+  color: var(--text0);
+  border-color: var(--border-bright);
+}
+
+.cam-close:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── Body ── */
+.cam-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--sp-4) var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  scrollbar-width: thin;
+  scrollbar-color: var(--bg4) transparent;
+}
+
+.cam-body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.cam-body::-webkit-scrollbar-thumb {
+  background: var(--bg4);
+}
+
+/* ── Live preview chip ── */
+.cam-preview {
+  display: flex;
+  justify-content: center;
+}
+
+.cam-preview__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: 20px;
+  border: 1px solid var(--cam-chip-color);
+  background: color-mix(in oklch, var(--cam-chip-color) 14%, transparent);
+  color: var(--cam-chip-color);
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.cam-preview__icon {
+  font-size: var(--fs-base);
+  line-height: 1;
+}
+
+.cam-preview__short {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xxs);
+  letter-spacing: 0.1em;
+  opacity: 0.8;
+}
+
+/* ── Section / fieldset ── */
+.cam-section {
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.cam-section__legend {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xxs);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text3);
+  padding: 0;
+  margin-bottom: var(--sp-1);
+}
+
+/* ── Fields ── */
+.cam-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.cam-field__label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text2);
+}
+
+.cam-row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-3);
+}
+
+.cam-input {
+  width: 100%;
+  min-height: 32px;
+  background: var(--bg0);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  color: var(--text1);
+  font-family: var(--font-ui);
+  font-size: var(--fs-sm);
+  padding: var(--sp-1) var(--sp-2);
+  outline: none;
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+
+.cam-input--mono {
+  font-family: var(--font-mono);
+}
+
+.cam-input:hover {
+  border-color: var(--border-bright);
+}
+
+.cam-input:focus {
+  border-color: var(--accent-border);
+}
+
+.cam-input::placeholder {
+  color: var(--text3);
+}
+
+.cam-input[readonly] {
+  background: var(--bg2);
+  color: var(--text2);
+  cursor: not-allowed;
+}
+
+.cam-hint {
+  font-size: var(--fs-xs);
+  color: var(--text3);
+}
+
+/* ── Launch preview line ── */
+.cam-launch {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--bg0);
+  border: 1px dotted var(--border-bright);
+  border-radius: var(--r);
+}
+
+.cam-launch__label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xxs);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+
+.cam-launch__cmd {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text1);
+  word-break: break-all;
+}
+
+/* ── Colour swatches ── */
+.cam-swatches {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.cam-swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--cam-sw);
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.cam-swatch:hover {
+  transform: scale(1.08);
+}
+
+.cam-swatch--active {
+  border-color: var(--text0);
+  box-shadow: 0 0 0 2px var(--bg1);
+}
+
+.cam-swatch:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cam-swatch {
+    transition: none;
+  }
+  .cam-swatch:hover {
+    transform: none;
+  }
+}
+
+/* ── Advanced disclosure ── */
+.cam-disclosure {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  background: transparent;
+  border: none;
+  color: var(--text1);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xxs);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: var(--sp-1) 0;
+  min-height: 32px;
+}
+
+.cam-disclosure:hover {
+  color: var(--text0);
+}
+
+.cam-disclosure:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.cam-advanced {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding-top: var(--sp-2);
+}
+
+.cam-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--accent-glow);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--r);
+  color: var(--text2);
+  font-size: var(--fs-xs);
+  line-height: 1.4;
+}
+
+.cam-note svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--accent);
+}
+
+/* ── Env rows ── */
+.cam-env-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 32px;
+  gap: var(--sp-2);
+  align-items: center;
+}
+
+.cam-env-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  color: var(--text2);
+  cursor: pointer;
+  transition:
+    color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+.cam-env-remove:hover {
+  color: var(--red);
+  border-color: var(--red-border);
+}
+
+.cam-env-remove:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.cam-env-warn {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: var(--fs-xs);
+  color: var(--red);
+}
+
+.cam-env-add {
+  align-self: flex-start;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  color: var(--text2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  padding: var(--sp-1) var(--sp-3);
+  min-height: 32px;
+  cursor: pointer;
+  transition:
+    color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+.cam-env-add:hover {
+  color: var(--text0);
+  border-color: var(--accent-border);
+}
+
+.cam-env-add:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── Errors ── */
+.cam-error {
+  margin: 0;
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--red-dim);
+  border: 1px solid var(--red-border);
+  border-radius: var(--r);
+  color: var(--red);
+  font-size: var(--fs-xs);
+  line-height: 1.4;
+}
+
+/* ── Footer ── */
+.cam-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-5);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.cam-footer__spacer {
+  flex: 1;
+}
+
+.cam-btn {
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  padding: var(--sp-2) var(--sp-4);
+  min-height: 32px;
+  background: transparent;
+  color: var(--text2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  cursor: pointer;
+  transition:
+    color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+.cam-btn:hover {
+  color: var(--text1);
+  border-color: var(--border-bright);
+}
+
+.cam-btn:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.cam-btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg0);
+  font-weight: 600;
+}
+
+.cam-btn--primary:hover:not(:disabled) {
+  filter: brightness(1.1);
+  color: var(--bg0);
+}
+
+.cam-btn--primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.cam-btn--danger {
+  border-color: transparent;
+  color: var(--text2);
+}
+
+.cam-btn--danger:hover {
+  color: var(--red);
+  border-color: var(--red-border);
+  background: var(--red-dim);
+}
