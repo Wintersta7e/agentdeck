@@ -26,6 +26,7 @@ import {
 } from '../shared/constants'
 import { NODE_INIT } from './wsl-utils'
 import { SAFE_SKILL_RE } from './skill-scanner'
+import { BLOCKED_ENV_KEYS } from '../shared/custom-agents'
 
 const log = createLogger('node-runners')
 
@@ -269,8 +270,21 @@ export async function runAgentNode(
     // E_UNEXPECTED. We write the prompt to stdin (NODE_INIT does not consume it),
     // then close the pipe so the agent sees EOF.
     const startTime = Date.now()
+    // A custom agent's non-secret env (e.g. OLLAMA_HOST) must reach the workflow
+    // child the same way it reaches a PTY session — via the child's env option,
+    // never serialized into the bash command string. Builtins contribute {} here.
+    // Filter BLOCKED_ENV_KEYS as defense-in-depth against an edited agents.toml
+    // (mirrors pty-manager). Spreading process.env keeps the runner's nvm/PATH.
+    const mergedEnv: NodeJS.ProcessEnv = { ...process.env }
+    if (isCustom) {
+      for (const [k, v] of Object.entries(deps.agentRegistry.envFor(agentName))) {
+        if (BLOCKED_ENV_KEYS.has(k)) continue
+        mergedEnv[k] = v
+      }
+    }
     const child = spawn('wsl.exe', ['--', 'bash', '-lc', NODE_INIT + fullCmd], {
       stdio: ['pipe', 'pipe', 'pipe'],
+      env: mergedEnv,
     })
     child.stdin?.write(prompt)
     child.stdin?.end()

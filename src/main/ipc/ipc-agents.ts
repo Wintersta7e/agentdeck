@@ -33,9 +33,27 @@ export function registerAgentHandlers(
   /* ── Custom-agent registry (live singleton) ─────────────────────── */
   ipcMain.handle(CH.agentsGetRegistry, () => registry.all())
 
+  // Full custom spec (args/env/versionArgs) for non-lossy edit/clone in the
+  // modal; null for builtins / unknown ids. Returns env because it is the
+  // user's own non-secret config (secrets blocked at validation).
+  ipcMain.handle(
+    CH.agentsGetCustomSpec,
+    (_, id: unknown) => registry.getSpec(typeof id === 'string' ? id : '') ?? null,
+  )
+
+  /** Surface non-fatal agents.toml warnings (raised on a CRUD reload) to the
+   *  renderer as a banner, mirroring the templates parse-error path. */
+  const emitParseWarnings = (warnings: string[]): void => {
+    if (warnings.length === 0) return
+    getWindow()?.webContents.send(CH.agentsParseError, { warnings })
+  }
+
   ipcMain.handle(CH.agentsSaveCustom, async (_, spec: unknown) => {
     const res = await registry.saveCustom(spec)
-    if (res.ok) getWindow()?.webContents.send(CH.agentsRegistryChange)
+    if (res.ok) {
+      getWindow()?.webContents.send(CH.agentsRegistryChange)
+      emitParseWarnings(res.warnings)
+    }
     return res
   })
 

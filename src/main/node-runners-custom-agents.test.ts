@@ -48,13 +48,19 @@ function createMockChild(): MockChild {
   return child
 }
 
-/** A registry stub that reports `id` as a custom agent with `binary`/`args`. */
-function customRegistry(id: string, binary: string, args: string[] = []): AgentRegistry {
+/** A registry stub that reports `id` as a custom agent with `binary`/`args`/`env`. */
+function customRegistry(
+  id: string,
+  binary: string,
+  args: string[] = [],
+  env: Record<string, string> = {},
+): AgentRegistry {
   return {
     has: (q: string) => q === id,
     isCustom: (q: string) => q === id,
     binaryFor: (q: string) => (q === id ? binary : undefined),
     argsFor: (q: string) => (q === id ? args : []),
+    envFor: (q: string) => (q === id ? env : {}),
   } as unknown as AgentRegistry
 }
 
@@ -65,6 +71,7 @@ function emptyRegistry(): AgentRegistry {
     isCustom: () => false,
     binaryFor: () => undefined,
     argsFor: () => [],
+    envFor: () => ({}),
   } as unknown as AgentRegistry
 }
 
@@ -137,6 +144,45 @@ describe('runAgentNode — custom agents', () => {
     expect(bashCmd).not.toContain('--print')
     // No native --cd flag for a custom agent → falls through to shell cd.
     expect(bashCmd).toContain("cd '/home/u/proj'")
+  })
+
+  it("passes a custom agent's env to the child's env option, not the command string", async () => {
+    const child = createMockChild()
+    mockSpawn.mockReturnValue(child)
+    const deps = makeDeps(
+      customRegistry('my-agent', 'my-agent-bin', [], { OLLAMA_HOST: '127.0.0.1:11434' }),
+      '/home/u/proj',
+    )
+
+    const promise = runAgentNode(makeAgentNode({ agent: 'my-agent' }), '', emptyRoles, deps)
+    await spawnThenClose(child)
+    await promise
+
+    const spawnCall = mockSpawn.mock.calls[0] as [string, string[], { env?: NodeJS.ProcessEnv }]
+    // env reaches the child via the spawn options...
+    expect(spawnCall[2]?.env?.['OLLAMA_HOST']).toBe('127.0.0.1:11434')
+    // ...and the base process env is still inherited (nvm/PATH preserved).
+    expect(spawnCall[2]?.env).toMatchObject(process.env)
+    // ...but is NEVER serialized into the bash command string.
+    const bashCmd = spawnCall[1]?.[3] ?? ''
+    expect(bashCmd).not.toContain('OLLAMA_HOST')
+    expect(bashCmd).not.toContain('127.0.0.1:11434')
+  })
+
+  it('drops BLOCKED_ENV_KEYS from a custom agent env before spawning', async () => {
+    const child = createMockChild()
+    mockSpawn.mockReturnValue(child)
+    const deps = makeDeps(
+      customRegistry('my-agent', 'my-agent-bin', [], { LD_PRELOAD: '/evil.so', SAFE: 'ok' }),
+    )
+
+    const promise = runAgentNode(makeAgentNode({ agent: 'my-agent' }), '', emptyRoles, deps)
+    await spawnThenClose(child)
+    await promise
+
+    const env = (mockSpawn.mock.calls[0] as [string, string[], { env?: NodeJS.ProcessEnv }])[2]?.env
+    expect(env?.['LD_PRELOAD']).toBeUndefined()
+    expect(env?.['SAFE']).toBe('ok')
   })
 
   it('shell-quotes the binary in the command -v PATH-resolution probe (injection regression)', async () => {

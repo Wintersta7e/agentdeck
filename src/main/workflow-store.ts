@@ -111,7 +111,11 @@ export async function saveWorkflow(
   return writeLock(id, doActualSave)
 }
 
-export async function renameWorkflow(id: string, name: string): Promise<void> {
+export async function renameWorkflow(
+  id: string,
+  name: string,
+  knownAgentIds?: ReadonlySet<string>,
+): Promise<void> {
   const wf = await loadWorkflow(id)
   if (!wf) {
     log.warn('Cannot rename — workflow not found', { id })
@@ -119,7 +123,10 @@ export async function renameWorkflow(id: string, name: string): Promise<void> {
   }
   wf.name = name
   wf.updatedAt = Date.now()
-  await saveWorkflow(wf)
+  // Forward the merged registry id set (from the IPC handler) so re-validation
+  // on save accepts custom-agent nodes; omitting it would fall back to the
+  // builtin-only default and reject a workflow that already saved/runs fine.
+  await saveWorkflow(wf, knownAgentIds)
   log.info('Workflow renamed', { id, name })
 }
 

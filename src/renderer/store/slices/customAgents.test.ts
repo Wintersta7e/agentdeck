@@ -20,20 +20,29 @@ function makeDescriptor(over: Partial<AgentDescriptorWire> = {}): AgentDescripto
 
 let getRegistry: ReturnType<typeof vi.fn>
 let onRegistryChange: ReturnType<typeof vi.fn>
+let onParseError: ReturnType<typeof vi.fn>
 let unsubscribe: ReturnType<typeof vi.fn>
+let parseErrorUnsubscribe: ReturnType<typeof vi.fn>
 let registryChangeCb: (() => void) | null
+let parseErrorCb: ((e: { warnings: string[] }) => void) | null
 
 beforeEach(() => {
   useAppStore.setState(useAppStore.getInitialState())
   registryChangeCb = null
+  parseErrorCb = null
   unsubscribe = vi.fn()
+  parseErrorUnsubscribe = vi.fn()
   getRegistry = vi.fn(async () => [makeDescriptor()])
   onRegistryChange = vi.fn((cb: () => void) => {
     registryChangeCb = cb
     return unsubscribe
   })
+  onParseError = vi.fn((cb: (e: { warnings: string[] }) => void) => {
+    parseErrorCb = cb
+    return parseErrorUnsubscribe
+  })
   ;(globalThis as unknown as { window: Window }).window.agentDeck = {
-    agents: { getRegistry, onRegistryChange },
+    agents: { getRegistry, onRegistryChange, onParseError },
     log: { send: vi.fn() },
   } as never
 })
@@ -75,11 +84,32 @@ describe('customAgents slice', () => {
     expect(useAppStore.getState().agentRegistry).toEqual(updated)
   })
 
-  it('is idempotent: re-bootstrapping tears down the previous subscription', async () => {
+  it('is idempotent: re-bootstrapping tears down the previous subscriptions', async () => {
     await useAppStore.getState().bootstrapAgentRegistry()
     await useAppStore.getState().bootstrapAgentRegistry()
     expect(unsubscribe).toHaveBeenCalledTimes(1)
+    expect(parseErrorUnsubscribe).toHaveBeenCalledTimes(1)
     expect(onRegistryChange).toHaveBeenCalledTimes(2)
+    expect(onParseError).toHaveBeenCalledTimes(2)
+  })
+
+  it('routes agents.toml parse warnings to addNotification (one per warning)', async () => {
+    await useAppStore.getState().bootstrapAgentRegistry()
+    expect(onParseError).toHaveBeenCalledTimes(1)
+    expect(parseErrorCb).toBeTypeOf('function')
+
+    parseErrorCb?.({
+      warnings: [
+        'skipped invalid agent — bad binary',
+        'duplicate agent id "x" — keeping the first',
+      ],
+    })
+
+    const notes = useAppStore.getState().notifications.filter((n) => n.kind === 'basic')
+    expect(notes).toHaveLength(2)
+    expect(notes.every((n) => n.kind === 'basic' && n.type === 'warning')).toBe(true)
+    expect(notes[0]?.kind === 'basic' && notes[0].message).toContain('Custom agent skipped')
+    expect(notes[0]?.kind === 'basic' && notes[0].message).toContain('bad binary')
   })
 
   it('logs and keeps the built-in default when getRegistry rejects', async () => {

@@ -167,6 +167,17 @@ export class AgentRegistry {
     return this.custom.has(id)
   }
 
+  /**
+   * Full custom spec (args/env/versionArgs) for non-lossy edit/clone in the
+   * renderer; undefined for builtins and unknown ids. Unlike the redacted
+   * `AgentDescriptorWire`, this returns env — acceptable because it is the
+   * user's own non-secret config from their own agents.toml (secrets are
+   * blocked at validation; real secrets arrive in Phase 2 secure storage).
+   */
+  getSpec(id: string): CustomAgentSpec | undefined {
+    return this.custom.get(id)
+  }
+
   knownIds(): ReadonlySet<string> {
     return this.ids
   }

@@ -1,5 +1,5 @@
 import type { ContextResult, SetContextOverrideArgs } from './context-types'
-import type { AgentDescriptorWire } from './custom-agents'
+import type { AgentDescriptorWire, CustomAgentSpec } from './custom-agents'
 import type {
   ActivityEvent,
   AgentEnvSnapshot,
@@ -122,11 +122,14 @@ export interface AgentDeckBridge {
       model: Record<string, number>
     }>
     getRegistry: () => Promise<AgentDescriptorWire[]>
+    /** Full custom spec (args/env/versionArgs) for non-lossy edit/clone; null for builtins/unknown. */
+    getCustomSpec: (id: string) => Promise<CustomAgentSpec | null>
     saveCustom: (
       spec: unknown,
     ) => Promise<{ ok: true; warnings: string[] } | { ok: false; error: string }>
     deleteCustom: (id: string) => Promise<boolean>
     onRegistryChange: (cb: () => void) => BridgeUnsubscribe
+    onParseError: (cb: (event: { warnings: string[] }) => void) => BridgeUnsubscribe
   }
   projects: {
     detectStack: (path: string, distro?: string) => Promise<DetectedStack | null>

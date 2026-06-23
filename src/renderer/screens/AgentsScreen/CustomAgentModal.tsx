@@ -33,6 +33,12 @@ export interface CustomAgentModalProps {
   initial: AgentDescriptorWire | null
   /** 'add' | 'edit' | 'clone' — controls id mutability and footer. */
   mode: 'add' | 'edit' | 'clone'
+  /**
+   * Source agent id to load the full (non-redacted) spec from for edit/clone —
+   * args/env/versionArgs aren't on the redacted wire descriptor. For clone the
+   * displayed id is blanked, so this carries the original id to fetch from.
+   */
+  sourceId?: string | undefined
   onClose: () => void
   /** Edit-mode only: open the remove confirmation for this agent. */
   onRequestRemove?: (() => void) | undefined
@@ -41,6 +47,7 @@ export interface CustomAgentModalProps {
 export function CustomAgentModal({
   initial,
   mode,
+  sourceId,
   onClose,
   onRequestRemove,
 }: CustomAgentModalProps): React.JSX.Element {
@@ -60,8 +67,9 @@ export function CustomAgentModal({
   const idTouched = idOverride !== null
   const id = isEdit ? (initial?.id ?? '') : (idOverride ?? slugifyId(name))
   const [binary, setBinary] = useState(initial?.binary ?? '')
-  // args/env are main-only (not on the redacted wire descriptor), so they start
-  // blank in edit/clone mode; a hint tells the user to re-enter them.
+  // args/env/versionArgs are main-only (not on the redacted wire descriptor).
+  // In edit/clone mode they're hydrated from the full spec via getCustomSpec
+  // (effect below) so a save doesn't wipe them; add mode starts blank.
   const [argsText, setArgsText] = useState('')
   const [icon, setIcon] = useState(initial?.icon ?? '●')
   const [short, setShort] = useState(initial?.short ?? '')
@@ -138,6 +146,38 @@ export function CustomAgentModal({
     const rest = parsedArgs.length > 0 ? ` ${parsedArgs.join(' ')}` : ''
     return `cd <project> && ${bin}${rest}`
   }, [binary, parsedArgs])
+
+  // Hydrate args/env/versionArgs from the full custom spec in edit/clone mode.
+  // The redacted wire descriptor omits them, so a save would otherwise wipe
+  // them. `sourceId` is the original agent id (clone blanks the displayed id).
+  useEffect(() => {
+    if (isAdd) return
+    const id = sourceId
+    if (!id) return
+    let cancelled = false
+    void window.agentDeck.agents
+      .getCustomSpec(id)
+      .then((spec) => {
+        if (cancelled || !spec) return
+        if (spec.args && spec.args.length > 0) setArgsText(spec.args.join(' '))
+        if (spec.env) {
+          const rows = Object.entries(spec.env).map(([key, value]) => ({ key, value }))
+          if (rows.length > 0) setEnvRows(rows)
+        }
+        if (spec.ui.versionArgs && spec.ui.versionArgs.length > 0) {
+          setVersionArgsText(spec.ui.versionArgs.join(' '))
+        }
+      })
+      .catch((err: unknown) => {
+        void window.agentDeck.log.send('warn', 'agents', 'getCustomSpec failed', {
+          id,
+          err: String(err),
+        })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [isAdd, sourceId])
 
   // Close on Escape (capture phase, like ConfirmDialog).
   useEffect(() => {
@@ -277,10 +317,7 @@ export function CustomAgentModal({
                 onChange={(e) => setArgsText(e.target.value)}
                 placeholder="run llama3"
               />
-              <span className="cam-hint">
-                Space-separated launch args.
-                {!isAdd && ' Args and env are not shown when editing — re-enter to keep them.'}
-              </span>
+              <span className="cam-hint">Space-separated launch args.</span>
             </label>
 
             <div className="cam-launch">

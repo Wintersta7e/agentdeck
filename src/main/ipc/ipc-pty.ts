@@ -14,6 +14,7 @@ import type { ReviewTracker } from '../review-tracker'
 import type { SessionHistory } from '../session-history'
 import type { UsageHistory } from '../usage-history'
 import type { AgentRegistry } from '../agent-registry'
+import { BLOCKED_ENV_KEYS } from '../../shared/custom-agents'
 import { createLogger } from '../logger'
 
 const execFileAsync = promisify(execFile)
@@ -24,15 +25,6 @@ const log = createLogger('ipc-pty')
  *
  * Uses a getter for ptyManager because the instance is created after module load.
  */
-
-/** Keys blocked from renderer-supplied env to prevent process hijacking. */
-const BLOCKED_ENV = new Set([
-  'LD_PRELOAD',
-  'LD_LIBRARY_PATH',
-  'NODE_OPTIONS',
-  'ELECTRON_RUN_AS_NODE',
-  'ELECTRON_NO_ASAR',
-])
 
 /** Maximum bytes per pty:write chunk (1 MiB). */
 const MAX_CHUNK = 1_048_576
@@ -116,7 +108,7 @@ export function registerPtyHandlers(
       if (env && typeof env === 'object') {
         safeEnv = {}
         for (const [k, v] of Object.entries(env)) {
-          if (typeof k === 'string' && typeof v === 'string' && !BLOCKED_ENV.has(k)) {
+          if (typeof k === 'string' && typeof v === 'string' && !BLOCKED_ENV_KEYS.has(k)) {
             safeEnv[k] = v
           }
         }

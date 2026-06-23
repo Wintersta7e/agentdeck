@@ -161,3 +161,56 @@ describe('AgentRegistry CRUD', () => {
     expect(await a.deleteCustom('nope')).toBe(false)
   })
 })
+
+describe('AgentRegistry.getSpec (non-lossy edit/clone source)', () => {
+  it('returns the full spec (args/env/versionArgs) for a custom agent', async () => {
+    const a = new AgentRegistry(file)
+    a.load()
+    await a.saveCustom({
+      id: 'ol',
+      binary: 'ollama',
+      args: ['run', 'llama3'],
+      env: { OLLAMA_HOST: '127.0.0.1' },
+      ui: { name: 'Ollama', versionArgs: ['--version'] },
+    })
+    const spec = a.getSpec('ol')
+    expect(spec?.args).toEqual(['run', 'llama3'])
+    expect(spec?.env).toEqual({ OLLAMA_HOST: '127.0.0.1' })
+    expect(spec?.ui.versionArgs).toEqual(['--version'])
+  })
+
+  it('returns undefined for builtins and unknown ids', () => {
+    const a = new AgentRegistry(file)
+    a.load()
+    expect(a.getSpec('codex')).toBeUndefined()
+    expect(a.getSpec('nope')).toBeUndefined()
+  })
+
+  it('edit round-trip: changing only the description preserves args/env/versionArgs', async () => {
+    // Simulate the modal edit flow: load the full spec, change one UI field,
+    // re-save. args/env/versionArgs must survive (the bug full-replaced them
+    // with the redacted wire descriptor's blanks).
+    const a = new AgentRegistry(file)
+    a.load()
+    await a.saveCustom({
+      id: 'ol',
+      binary: 'ollama',
+      args: ['run', 'llama3'],
+      env: { OLLAMA_HOST: '127.0.0.1' },
+      ui: { name: 'Ollama', description: 'old', versionArgs: ['--version'] },
+    })
+    const prev = a.getSpec('ol')
+    expect(prev).toBeDefined()
+    // Re-save with the same args/env/versionArgs (as the modal now does after
+    // hydrating from getCustomSpec) but a new description.
+    await a.saveCustom({
+      ...prev,
+      ui: { ...prev!.ui, description: 'new' },
+    })
+    const next = a.getSpec('ol')
+    expect(next?.ui.description).toBe('new')
+    expect(next?.args).toEqual(['run', 'llama3'])
+    expect(next?.env).toEqual({ OLLAMA_HOST: '127.0.0.1' })
+    expect(next?.ui.versionArgs).toEqual(['--version'])
+  })
+})

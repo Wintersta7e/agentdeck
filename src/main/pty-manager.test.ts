@@ -142,6 +142,24 @@ describe('createPtyManager', () => {
       expect(mockProc.write).toHaveBeenCalledWith(expect.stringContaining('claude'))
     })
 
+    it('writes a visible notice to the terminal when the agent id is no longer registered', () => {
+      // A session whose agent was deleted/renamed reaches spawn with an id the
+      // registry no longer knows. Instead of silently dropping to a bare shell,
+      // pty-manager must surface a visible notice on the data channel (spec §8).
+      const win = makeMockWindow()
+      const mgr = createPtyManager(win, makeRegistry())
+
+      mgr.spawn('s1', 80, 24, undefined, undefined, undefined, 'ghost-agent')
+
+      const dataSends = vi
+        .mocked(win.webContents.send)
+        .mock.calls.filter((c) => c[0] === 'pty:data:s1')
+      expect(dataSends).toHaveLength(1)
+      expect(dataSends[0]?.[1]).toContain('[agentdeck]')
+      expect(dataSends[0]?.[1]).toContain('ghost-agent')
+      expect(dataSends[0]?.[1]).toContain('no longer registered')
+    })
+
     it('rejects unsafe agent flags', () => {
       const win = makeMockWindow()
       const mgr = createPtyManager(win, makeRegistry())

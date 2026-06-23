@@ -24,13 +24,15 @@ const builtin = descriptor({ id: 'claude-code', name: 'Claude Code', source: 'bu
 
 let saveCustom: ReturnType<typeof vi.fn>
 let deleteCustom: ReturnType<typeof vi.fn>
+let getCustomSpec: ReturnType<typeof vi.fn>
 
 beforeEach(() => {
   useAppStore.setState(useAppStore.getInitialState())
   saveCustom = vi.fn(async () => ({ ok: true as const, warnings: [] }))
   deleteCustom = vi.fn(async () => true)
+  getCustomSpec = vi.fn(async () => null)
   ;(window as unknown as { agentDeck: unknown }).agentDeck = {
-    agents: { saveCustom, deleteCustom },
+    agents: { saveCustom, deleteCustom, getCustomSpec },
     log: { send: vi.fn() },
   }
 })

@@ -212,6 +212,15 @@ export function createPtyManager(mainWindow: BrowserWindow, registry: AgentRegis
       const bin = registry.binaryFor(agent)
       if (!bin) {
         log.warn(`Unknown agent "${agent}" for session ${sessionId}, skipping agent command`)
+        // Spec §8: a session whose agent was deleted/renamed must not silently
+        // drop to a bare shell with no explanation. Surface a visible notice in
+        // the terminal so the user understands why no agent launched.
+        if (!mainWindow.isDestroyed()) {
+          mainWindow.webContents.send(
+            ptyDataChannel(sessionId),
+            `\r\n[agentdeck] Agent "${agent}" is no longer registered.\r\n`,
+          )
+        }
       } else if (registry.isCustom(agent)) {
         // Custom agent: quote the binary and every default arg so a charset-valid
         // (but space/metachar-free) command can't reshape the shell command. The

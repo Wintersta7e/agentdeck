@@ -27,24 +27,30 @@ const BUILTIN_DESCRIPTORS: AgentDescriptorWire[] = AGENTS.map((a) => ({
   source: 'builtin',
 }))
 
-// ── Module-level subscription handle ───────────────────────────────
-// Kept outside the store so it doesn't pollute the serializable state
+// ── Module-level subscription handles ──────────────────────────────
+// Kept outside the store so they don't pollute the serializable state
 // shape. `bootstrapAgentRegistry` is idempotent: calling it twice tears
-// down the previous subscription first.
+// down the previous subscriptions first.
 let registryUnsub: (() => void) | null = null
+let parseErrorUnsub: (() => void) | null = null
 
 export const createCustomAgentsSlice: StateCreator<AppState, [], [], CustomAgentsSlice> = (
   set,
+  get,
 ) => ({
   agentRegistry: BUILTIN_DESCRIPTORS,
 
   setAgentRegistry: (list) => set({ agentRegistry: list }),
 
   bootstrapAgentRegistry: async () => {
-    // Idempotent: tear down any previous subscription first.
+    // Idempotent: tear down any previous subscriptions first.
     if (registryUnsub) {
       registryUnsub()
       registryUnsub = null
+    }
+    if (parseErrorUnsub) {
+      parseErrorUnsub()
+      parseErrorUnsub = null
     }
 
     try {
@@ -65,6 +71,15 @@ export const createCustomAgentsSlice: StateCreator<AppState, [], [], CustomAgent
             err: String(err),
           })
         })
+    })
+
+    // Surface non-fatal agents.toml parse warnings (skipped/duplicate entries)
+    // so a malformed agent doesn't silently vanish — mirrors the templates slice.
+    parseErrorUnsub = window.agentDeck.agents.onParseError((e) => {
+      for (const warning of e.warnings) {
+        window.agentDeck.log.send('warn', 'agents', 'parse error', { warning })
+        get().addNotification('warning', `Custom agent skipped: ${warning}`)
+      }
     })
   },
 })

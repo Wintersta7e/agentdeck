@@ -145,6 +145,26 @@ describe('pty:spawn IPC validation', () => {
     expect(passedEnv?.['NORMAL']).toBe('ok')
   })
 
+  it('strips the wider shared BLOCKED_ENV_KEYS (e.g. BASH_ENV) the old local set missed', () => {
+    // BASH_ENV / LD_AUDIT are in the shared denylist but were NOT in the old
+    // local 5-key BLOCKED_ENV; they must now be stripped on the renderer path.
+    call(
+      'pty:spawn',
+      'sess-1',
+      80,
+      24,
+      '/p',
+      undefined,
+      { BASH_ENV: '/evil.sh', LD_AUDIT: '/evil.so', NORMAL: 'ok' },
+      'claude-code',
+    )
+    const passedEnv = mgr.spawn.mock.calls[0]?.[5] as Record<string, string> | undefined
+    expect(passedEnv).toBeDefined()
+    expect(passedEnv?.['BASH_ENV']).toBeUndefined()
+    expect(passedEnv?.['LD_AUDIT']).toBeUndefined()
+    expect(passedEnv?.['NORMAL']).toBe('ok')
+  })
+
   it('rejects projectPath over 1024 characters', () => {
     const longPath = '/home/' + 'x'.repeat(1100)
     expect(() => call('pty:spawn', 'sess-1', 80, 24, longPath)).toThrow(/projectPath/)

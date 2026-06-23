@@ -128,6 +128,7 @@ export function CustomAgentsSection(): React.JSX.Element {
         <CustomAgentModal
           mode={modal.kind}
           initial={modal.kind === 'add' ? null : cloneInitial(modal.kind, modal.agent)}
+          sourceId={modal.kind === 'add' ? undefined : modal.agent.id}
           onClose={() => setModal({ kind: 'closed' })}
           onRequestRemove={modal.kind === 'edit' ? () => setPendingDelete(modal.agent) : undefined}
         />

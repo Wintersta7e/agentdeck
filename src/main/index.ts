@@ -134,6 +134,16 @@ app
     registerLimitsHandlers()
     registerSessionHistoryHandlers(sessionHistory)
 
+    // Surface non-fatal agents.toml parse warnings (captured at load above,
+    // before the window existed) to the renderer as a banner once it loads —
+    // mirrors the safeStorage notice and the templates parse-error path.
+    if (registryLoad.warnings.length > 0 && mainWindow) {
+      const warnings = registryLoad.warnings
+      mainWindow.webContents.once('did-finish-load', () => {
+        mainWindow?.webContents.send(CH.agentsParseError, { warnings })
+      })
+    }
+
     // Warn renderer if encryption is unavailable (secrets stored as plaintext)
     if (!safeStorage.isEncryptionAvailable() && mainWindow) {
       log.warn('safeStorage encryption unavailable — secrets stored as plaintext')

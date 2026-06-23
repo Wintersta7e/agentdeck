@@ -100,6 +100,7 @@ describe('ipc-agents', () => {
       CH.agentsSetContextOverride,
       CH.agentsGetOverrides,
       CH.agentsGetRegistry,
+      CH.agentsGetCustomSpec,
       CH.agentsSaveCustom,
       CH.agentsDeleteCustom,
     ]
@@ -429,5 +430,56 @@ describe('agents registry IPC', () => {
   it('agents:deleteCustom returns false for an unknown / non-string id', async () => {
     expect(await call('agents:deleteCustom', 'nope')).toBe(false)
     expect(await call('agents:deleteCustom', 42)).toBe(false)
+  })
+
+  it('agents:getCustomSpec round-trips args/env/versionArgs for a custom agent', async () => {
+    await call('agents:saveCustom', {
+      id: 'ol',
+      binary: 'ollama',
+      args: ['run', 'llama3'],
+      env: { OLLAMA_HOST: '127.0.0.1:11434' },
+      ui: { name: 'Ollama', versionArgs: ['--version'] },
+    })
+    const spec = (await call('agents:getCustomSpec', 'ol')) as {
+      args?: string[]
+      env?: Record<string, string>
+      ui: { versionArgs?: string[] }
+    } | null
+    expect(spec).not.toBeNull()
+    expect(spec?.args).toEqual(['run', 'llama3'])
+    expect(spec?.env).toEqual({ OLLAMA_HOST: '127.0.0.1:11434' })
+    expect(spec?.ui.versionArgs).toEqual(['--version'])
+  })
+
+  it('agents:getCustomSpec returns null for builtins, unknown, and non-string ids', async () => {
+    expect(await call('agents:getCustomSpec', 'codex')).toBeNull()
+    expect(await call('agents:getCustomSpec', 'nope')).toBeNull()
+    expect(await call('agents:getCustomSpec', 42)).toBeNull()
+  })
+})
+
+describe('agents parse-error emission on save', () => {
+  function setup(): { sent: Array<{ channel: string; payload: unknown }> } {
+    handlers.clear()
+    const sent: Array<{ channel: string; payload: unknown }> = []
+    const fakeWindow = {
+      webContents: { send: (channel: string, payload: unknown) => sent.push({ channel, payload }) },
+    }
+    registerAgentHandlers(
+      () => fakeWindow as unknown as ReturnType<Parameters<typeof registerAgentHandlers>[0]>,
+      makeStore() as unknown as Parameters<typeof registerAgentHandlers>[1],
+      registry,
+    )
+    return { sent }
+  }
+
+  it('signals registryChange but NOT a parseError on a clean save (no warnings)', async () => {
+    const { sent } = setup()
+    const res = (await call('agents:saveCustom', VALID_SPEC)) as { ok: boolean; warnings: string[] }
+    expect(res.ok).toBe(true)
+    expect(res.warnings).toEqual([])
+    expect(sent.some((m) => m.channel === CH.agentsRegistryChange)).toBe(true)
+    // No banner when the reload is clean — guards against a spurious empty toast.
+    expect(sent.some((m) => m.channel === CH.agentsParseError)).toBe(false)
   })
 })

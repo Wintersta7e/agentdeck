@@ -47,7 +47,7 @@ export function registerWorkflowHandlers(
     validateId(id, 'workflow id')
     if (typeof name !== 'string' || !name.trim() || name.length > 200)
       throw new Error('Invalid workflow name')
-    return renameWorkflow(id, name)
+    return renameWorkflow(id, name, agentRegistry.knownIds())
   })
   ipcMain.handle(CH.workflowsDelete, async (_, id: string) => {
     validateId(id, 'workflow id')
