@@ -4,7 +4,7 @@ import type { BrowserWindow } from 'electron'
 import type { AppStore } from '../project-store'
 import { detectAgents } from '../agent-detector'
 import { checkAllUpdates, updateAgent } from '../agent-updater'
-import { AGENTS, KNOWN_AGENT_IDS, isAgentId } from '../../shared/agents'
+import { AGENTS, KNOWN_AGENT_IDS, isBuiltinAgent } from '../../shared/agents'
 import { getEffectiveContextWindow } from '../../shared/context-window'
 import { resolveActiveModel, invalidateAll as invalidateModelCache } from '../active-model-cache'
 import { isValidContextOverride } from '../validation'
@@ -61,7 +61,7 @@ export function registerAgentHandlers(
 
   /* ── Effective context (auto-detect) ───────────────────────────── */
   ipcMain.handle(CH.agentsGetEffectiveContext, async (_, agentId: unknown) => {
-    if (typeof agentId !== 'string' || !isAgentId(agentId)) {
+    if (typeof agentId !== 'string' || !isBuiltinAgent(agentId)) {
       return { error: 'invalid agentId' }
     }
     const detector = await resolveActiveModel(agentId)
@@ -82,7 +82,7 @@ export function registerAgentHandlers(
 
   /* ── Effective context for launch snapshot (force-refresh + frozen prefs) ── */
   ipcMain.handle(CH.agentsGetEffectiveContextForLaunch, async (_, agentId: unknown) => {
-    if (typeof agentId !== 'string' || !isAgentId(agentId)) {
+    if (typeof agentId !== 'string' || !isBuiltinAgent(agentId)) {
       return { error: 'invalid agentId' }
     }
     // Freeze appPrefs BEFORE the detector I/O so a save during the read can't leak in.

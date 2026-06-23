@@ -5,6 +5,7 @@ import {
   KNOWN_AGENT_IDS,
   SAFE_FLAGS_RE,
   getPermissionFlags,
+  isBuiltinAgent,
 } from './agents'
 
 describe('AGENTS', () => {
@@ -47,6 +48,15 @@ describe('KNOWN_AGENT_IDS', () => {
 
   it('does not contain unknown IDs', () => {
     expect(KNOWN_AGENT_IDS.has('nonexistent')).toBe(false)
+  })
+})
+
+describe('isBuiltinAgent', () => {
+  it('narrows builtin ids and rejects custom ids', () => {
+    expect(isBuiltinAgent('codex')).toBe(true)
+    expect(isBuiltinAgent('claude-code')).toBe(true)
+    expect(isBuiltinAgent('my-agent')).toBe(false)
+    expect(isBuiltinAgent('')).toBe(false)
   })
 })
 

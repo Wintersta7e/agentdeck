@@ -160,14 +160,21 @@ export const AGENTS = [
   },
 ] as const
 
-/** Union of valid agent IDs */
-export type AgentId = (typeof AGENTS)[number]['id']
+/** Strict union of the built-in agent IDs (the 7 canonical agents). */
+export type BuiltinAgentId = (typeof AGENTS)[number]['id']
 
-/** All known agent IDs as a Set for runtime validation */
+/**
+ * Runtime agent ID: a built-in id OR any registered custom id.
+ * The `(string & {})` member keeps built-in autocomplete while still accepting
+ * arbitrary custom ids; built-in-only code paths must narrow with `isBuiltinAgent`.
+ */
+export type AgentId = BuiltinAgentId | (string & {})
+
+/** All known built-in agent IDs as a Set for runtime validation */
 export const KNOWN_AGENT_IDS = new Set<string>(AGENTS.map((a) => a.id))
 
-/** Type guard: narrows a string to a known AgentId. */
-export function isAgentId(id: string): id is AgentId {
+/** Type guard: narrows a string to a known built-in AgentId. */
+export function isBuiltinAgent(id: string): id is BuiltinAgentId {
   return KNOWN_AGENT_IDS.has(id)
 }
 
