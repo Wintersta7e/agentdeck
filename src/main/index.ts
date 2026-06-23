@@ -21,6 +21,7 @@ import { ptyBus } from './pty-bus'
 import { createAppWindow } from './app-window'
 import { registerAppIpcHandlers } from './app-ipc'
 import { createReviewTracker } from './review-tracker'
+import { AgentRegistry } from './agent-registry'
 import {
   registerUsageHandlers,
   registerLimitsHandlers,
@@ -36,6 +37,7 @@ import { publishWslAvailability, resolveWslHome } from './wsl-runtime'
 const usageHistory = createUsageHistory(join(app.getPath('userData'), 'usage-history.json'))
 const sessionHistory = createSessionHistory(join(app.getPath('userData'), 'session-history.json'))
 const reviewTracker = createReviewTracker()
+const agentRegistry = new AgentRegistry(join(app.getPath('userData'), 'agents.toml'))
 const log = createLogger('app')
 
 // Feed every activity event to the per-session history record: any activity
@@ -71,6 +73,11 @@ app
     initGitStatusCache(app.getPath('userData'))
     log.info('App ready', { version: app.getVersion() })
 
+    const registryLoad = agentRegistry.load()
+    for (const warning of registryLoad.warnings) {
+      log.warn('Agent registry', { warning })
+    }
+
     appStore = createProjectStore()
     registerStoreHandlers(appStore)
     seedTemplates(appStore)
@@ -104,6 +111,7 @@ app
       sessionHistory,
       usageHistory,
       reviewTracker,
+      agentRegistry,
     })
 
     const windowRuntime = createAppWindow(appStore, () => {

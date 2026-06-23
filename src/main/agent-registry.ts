@@ -8,21 +8,14 @@
 import { readFileSync } from 'node:fs'
 import { parse as parseToml, stringify as stringifyToml } from 'smol-toml'
 import { AGENTS, AGENT_BINARY_MAP } from '../shared/agents'
-import { validateCustomAgent, type CustomAgentSpec } from '../shared/custom-agents'
+import {
+  validateCustomAgent,
+  type AgentDescriptorWire,
+  type CustomAgentSpec,
+} from '../shared/custom-agents'
 import { atomicWrite } from './fs-atomic'
 
-/** Redacted, renderer-safe view of an agent. NEVER carries args/env (main-only). */
-export interface AgentDescriptorWire {
-  id: string
-  binary: string
-  name: string
-  icon: string
-  short: string
-  colorVar: string
-  description: string
-  contextWindow: number
-  source: 'builtin' | 'user'
-}
+export type { AgentDescriptorWire }
 
 const BUILTIN_IDS: ReadonlySet<string> = new Set(AGENTS.map((a) => a.id))
 

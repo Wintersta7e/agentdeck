@@ -2,6 +2,7 @@ import { CH } from '../../shared/ipc-channels'
 import { ipcMain } from 'electron'
 import type { BrowserWindow } from 'electron'
 import type { AppStore } from '../project-store'
+import type { AgentRegistry } from '../agent-registry'
 import { detectAgents } from '../agent-detector'
 import { checkAllUpdates, updateAgent } from '../agent-updater'
 import { AGENTS, KNOWN_AGENT_IDS, isBuiltinAgent } from '../../shared/agents'
@@ -17,15 +18,32 @@ const log = createLogger('ipc-agents')
  *  effective-context handlers share one computation. */
 const AGENT_CONTEXT_DEFAULTS = Object.fromEntries(AGENTS.map((a) => [a.id, a.contextWindow]))
 
-/** Agent IPC handlers: detection, visibility, version checks, updates, WSL username, context resolution. */
+/** Agent IPC handlers: detection, visibility, version checks, updates, WSL username, context resolution, custom-agent registry. */
 export function registerAgentHandlers(
   getWindow: () => BrowserWindow | null,
   store: AppStore,
+  registry: AgentRegistry,
 ): void {
   /* ── Agent detection (async, non-blocking) ──────────────────────── */
   ipcMain.handle(CH.agentsCheck, () => {
     invalidateModelCache()
     return detectAgents(log)
+  })
+
+  /* ── Custom-agent registry (live singleton) ─────────────────────── */
+  ipcMain.handle(CH.agentsGetRegistry, () => registry.all())
+
+  ipcMain.handle(CH.agentsSaveCustom, async (_, spec: unknown) => {
+    const res = await registry.saveCustom(spec)
+    if (res.ok) getWindow()?.webContents.send(CH.agentsRegistryChange)
+    return res
+  })
+
+  ipcMain.handle(CH.agentsDeleteCustom, async (_, id: unknown) => {
+    const safeId = typeof id === 'string' ? id : ''
+    const ok = await registry.deleteCustom(safeId)
+    if (ok) getWindow()?.webContents.send(CH.agentsRegistryChange)
+    return ok
   })
 
   /* ── Agent visibility ─────────────────────────────────────────── */

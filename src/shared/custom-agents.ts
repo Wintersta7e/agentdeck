@@ -17,6 +17,23 @@ export interface CustomAgentUi {
   versionArgs?: string[]
 }
 
+/**
+ * Redacted, renderer-safe view of an agent. NEVER carries args/env (main-only).
+ * Lives in shared/ (not the main-only agent-registry) so the IPC bridge can
+ * import it without dragging a main module into shared/renderer code.
+ */
+export interface AgentDescriptorWire {
+  id: string
+  binary: string
+  name: string
+  icon: string
+  short: string
+  colorVar: string
+  description: string
+  contextWindow: number
+  source: 'builtin' | 'user'
+}
+
 export interface CustomAgentSpec {
   id: string
   binary: string
