@@ -145,8 +145,15 @@ describe('constants', () => {
     expect(CURATED_COLOR_VARS).toContain('--accent')
     expect(CURATED_COLOR_VARS).toContain('--green')
   })
-  it('BLOCKED_ENV_KEYS contains the hijack vars', () => {
-    expect(BLOCKED_ENV_KEYS.has('LD_PRELOAD')).toBe(true)
-    expect(BLOCKED_ENV_KEYS.has('NODE_OPTIONS')).toBe(true)
+  it('BLOCKED_ENV_KEYS contains the linker + startup-hook hijack vars', () => {
+    for (const k of [
+      'LD_PRELOAD',
+      'LD_AUDIT',
+      'BASH_ENV',
+      'ENV',
+      'NODE_OPTIONS',
+      'ELECTRON_RUN_AS_NODE',
+    ])
+      expect(BLOCKED_ENV_KEYS.has(k)).toBe(true)
   })
 })

@@ -38,10 +38,24 @@ export const AGENT_BINARY_RE = /^[A-Za-z0-9_][A-Za-z0-9_./-]*$/
 export const CURATED_COLOR_VARS = ['--accent', '--green', '--red', '--blue', '--purple'] as const
 const DEFAULT_COLOR_VAR = '--accent'
 
-/** Env vars that can hijack the child process — never accepted from a custom agent. */
+/**
+ * Env vars that can hijack the child process via the dynamic linker or a shell /
+ * runtime startup hook. Rejected from a custom agent's env as best-effort
+ * defense-in-depth: a denylist is inherently non-exhaustive, but the real
+ * boundary here is trust — the env comes from the user's own agents.toml on their
+ * own machine (they could run the command directly), so this guards against
+ * footguns and a hostile imported file, not a privileged attacker. Superset of
+ * the original ipc-pty BLOCKED_ENV, which consumes this set (see ipc-pty).
+ */
 export const BLOCKED_ENV_KEYS: ReadonlySet<string> = new Set([
+  // dynamic-linker hijacks
   'LD_PRELOAD',
   'LD_LIBRARY_PATH',
+  'LD_AUDIT',
+  'LD_PROFILE',
+  // shell / Node / Electron startup hooks
+  'BASH_ENV',
+  'ENV',
   'NODE_OPTIONS',
   'ELECTRON_RUN_AS_NODE',
   'ELECTRON_NO_ASAR',
