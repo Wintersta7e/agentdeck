@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useAppStore } from '../appStore'
+import { AGENTS } from '../../../shared/agents'
 import type { AgentDescriptorWire } from '../../../shared/custom-agents'
 
 function makeDescriptor(over: Partial<AgentDescriptorWire> = {}): AgentDescriptorWire {
@@ -44,8 +45,15 @@ describe('customAgents slice', () => {
     expect(useAppStore.getState().agentRegistry).toBe(next)
   })
 
+  it('seeds the registry with built-in descriptors before bootstrap', () => {
+    const seeded = useAppStore.getState().agentRegistry
+    // Defaults to all built-ins so selectAgentMeta resolves them pre-hydration.
+    expect(seeded).toHaveLength(AGENTS.length)
+    expect(seeded.every((d) => d.source === 'builtin')).toBe(true)
+    expect(seeded.map((d) => d.id)).toEqual(AGENTS.map((a) => a.id))
+  })
+
   it('bootstrapAgentRegistry populates agentRegistry from getRegistry', async () => {
-    expect(useAppStore.getState().agentRegistry).toEqual([])
     await useAppStore.getState().bootstrapAgentRegistry()
     expect(getRegistry).toHaveBeenCalledTimes(1)
     expect(useAppStore.getState().agentRegistry).toEqual([makeDescriptor()])
@@ -74,10 +82,13 @@ describe('customAgents slice', () => {
     expect(onRegistryChange).toHaveBeenCalledTimes(2)
   })
 
-  it('logs and leaves the registry empty when getRegistry rejects', async () => {
+  it('logs and keeps the built-in default when getRegistry rejects', async () => {
     getRegistry.mockRejectedValueOnce(new Error('boom'))
     await useAppStore.getState().bootstrapAgentRegistry()
-    expect(useAppStore.getState().agentRegistry).toEqual([])
+    // Failed initial pull leaves the built-in seed intact (not wiped to []).
+    const after = useAppStore.getState().agentRegistry
+    expect(after).toHaveLength(AGENTS.length)
+    expect(after.every((d) => d.source === 'builtin')).toBe(true)
     // Subscription is still established after a failed initial pull.
     expect(onRegistryChange).toHaveBeenCalledTimes(1)
   })

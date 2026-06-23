@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { getProjectAgents } from '../../../shared/agent-helpers'
-import { AGENT_BY_ID, agentColorVar } from '../../utils/agent-ui'
+import { selectAgentMeta } from '../../utils/agent-ui'
+import { useAgentRegistry } from '../../hooks/useAgentRegistry'
 import type { Project } from '../../../shared/types'
 import './ProjectCardB1.css'
 
@@ -46,6 +47,7 @@ export function ProjectCardB1({
 }: ProjectCardB1Props): React.JSX.Element {
   const sessions = useAppStore((s) => s.sessions)
   const gitStatuses = useAppStore((s) => s.gitStatuses)
+  const registry = useAgentRegistry()
 
   const runningCount = useMemo(
     () =>
@@ -63,13 +65,13 @@ export function ProjectCardB1({
 
   const branchLabel = gitStatuses[project.id]?.branch || 'main'
 
-  const agents = useMemo(() => {
-    const configs = getProjectAgents(project)
-    return configs
-      .map((c) => ({ agent: AGENT_BY_ID.get(c.agent), id: c.agent }))
-      .filter((a) => a.agent)
-      .slice(0, 4)
-  }, [project])
+  const agents = useMemo(
+    () =>
+      getProjectAgents(project)
+        .slice(0, 4)
+        .map((c) => ({ meta: selectAgentMeta(registry, c.agent), id: c.agent })),
+    [project, registry],
+  )
 
   const badge = project.badge ?? undefined
 
@@ -98,14 +100,14 @@ export function ProjectCardB1({
 
       <div className="pc-b1__row pc-b1__row--agents">
         <div className="pc-b1__agent-row">
-          {agents.map(({ agent, id }) => (
+          {agents.map(({ meta, id }) => (
             <span
               key={id}
               className="pc-b1__agent-glyph"
-              style={{ ['--glyph-color' as 'color']: `var(${agentColorVar(id)})` }}
+              style={{ ['--glyph-color' as 'color']: `var(${meta.colorVar})` }}
               aria-hidden="true"
             >
-              {agent?.icon ?? '◈'}
+              {meta.icon}
             </span>
           ))}
         </div>

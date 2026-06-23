@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { useElapsedTime } from '../../hooks/useElapsedTime'
-import { getSessionAgentId, AGENT_BY_ID } from '../../utils/agent-ui'
+import { getSessionAgentId, selectAgentMeta } from '../../utils/agent-ui'
+import { useAgentRegistry } from '../../hooks/useAgentRegistry'
 import type { ActivityEvent } from '../../../shared/types'
 import './LiveSessionCard.css'
 
@@ -38,6 +39,7 @@ export function LiveSessionCard({ sessionId }: LiveSessionCardProps): React.JSX.
   // 500-event feed cap and doesn't iterate events on every mutation.
   const filesChanged = useAppStore((s) => s.writeCountBySession[sessionId] ?? 0)
   const projects = useAppStore((s) => s.projects)
+  const registry = useAgentRegistry()
 
   const elapsed = useElapsedTime(session?.startedAt)
 
@@ -47,7 +49,7 @@ export function LiveSessionCard({ sessionId }: LiveSessionCardProps): React.JSX.
   )
 
   const agentId = getSessionAgentId(session, project)
-  const meta = AGENT_BY_ID.get(agentId)
+  const meta = selectAgentMeta(registry, agentId)
   const pulseClass = getPulseClass(latestActivity ?? undefined)
 
   if (!session) return <div className="live-card live-card-empty" />
@@ -55,8 +57,8 @@ export function LiveSessionCard({ sessionId }: LiveSessionCardProps): React.JSX.
   return (
     <div className="live-card">
       <div className="live-card-head">
-        <span className="live-card-agent-icon">{meta?.icon ?? '\u25C8'}</span>
-        <span className="live-card-agent-name">{meta?.name ?? agentId}</span>
+        <span className="live-card-agent-icon">{meta.icon}</span>
+        <span className="live-card-agent-name">{meta.name}</span>
         <span className="live-card-project">{project?.name ?? 'Unknown'}</span>
         <span className="live-card-elapsed">{elapsed}</span>
       </div>

@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { AGENTS } from '../../../shared/agents'
-import { AGENT_BY_ID, agentColorVar, agentShort, getSessionAgentId } from '../../utils/agent-ui'
+import { getSessionAgentId, selectAgentMeta } from '../../utils/agent-ui'
+import { useAgentRegistry } from '../../hooks/useAgentRegistry'
 import { useEffectiveContext, badgeLabelFor } from '../../hooks/useEffectiveContext'
 import type { AgentType } from '../../../shared/types'
 import './AgentChipB1.css'
@@ -23,7 +24,9 @@ interface AgentChipProps {
 export function AgentChipB1({ agentId }: AgentChipProps): React.JSX.Element {
   const sessions = useAppStore((s) => s.sessions)
   const projects = useAppStore((s) => s.projects)
-  const agent = AGENT_BY_ID.get(agentId)
+  const registry = useAgentRegistry()
+  const meta = selectAgentMeta(registry, agentId)
+  const descriptor = registry.find((d) => d.id === agentId)
 
   const ctx = useEffectiveContext(agentId)
 
@@ -36,25 +39,23 @@ export function AgentChipB1({ agentId }: AgentChipProps): React.JSX.Element {
     ).length
   }, [sessions, projects, agentId])
 
-  if (!agent) return <></>
-
-  const displayValue = ctx.value ?? agent.contextWindow
+  const displayValue = ctx.value ?? descriptor?.contextWindow ?? 0
   const badge = badgeLabelFor(ctx.source, ctx.modelId)
-  const colorVar = agentColorVar(agentId)
 
   return (
     <article
       className="agent-chip-b1"
-      style={{ ['--chip-color' as 'color']: `var(${colorVar})` }}
-      aria-label={agent.name}
+      style={{ ['--chip-color' as 'color']: `var(${meta.colorVar})` }}
+      aria-label={meta.name}
+      {...(meta.isRegistered ? {} : { title: 'Agent no longer registered' })}
     >
       <div className="agent-chip-b1__head">
         <span className="agent-chip-b1__glyph" aria-hidden="true">
-          {agent.icon}
+          {meta.icon}
         </span>
-        <span className="agent-chip-b1__short">{agentShort(agentId)}</span>
+        <span className="agent-chip-b1__short">{meta.short}</span>
       </div>
-      <div className="agent-chip-b1__name">{agent.name}</div>
+      <div className="agent-chip-b1__name">{meta.name}</div>
       <div className="agent-chip-b1__ctx">
         ctx {formatContextWindow(displayValue)}
         {badge !== null && <span className="agent-chip-b1__ctx-badge">{badge}</span>}

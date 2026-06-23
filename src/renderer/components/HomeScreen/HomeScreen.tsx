@@ -15,7 +15,8 @@ import { ProjectCardB1 } from '../home/ProjectCardB1'
 import { ProductivityPanel } from '../home/ProductivityPanel'
 import { PlanLimitsPanel } from '../home/PlanLimitsPanel'
 import { Mascot } from '../Mascot/Mascot'
-import { AGENT_BY_ID } from '../../../shared/agents'
+import { selectAgentMeta } from '../../utils/agent-ui'
+import { useAgentRegistry } from '../../hooks/useAgentRegistry'
 import { getProjectAgents } from '../../../shared/agent-helpers'
 import type { AgentConfig, Project } from '../../../shared/types'
 import { formatClock } from '../../utils/format-date'
@@ -47,6 +48,7 @@ export function HomeScreen({
   onOpenProjectWithAgent,
 }: HomeScreenProps): React.JSX.Element {
   const projects = useAppStore((s) => s.projects)
+  const registry = useAgentRegistry()
   const templates = useTemplates()
   const openWizard = useAppStore((s) => s.openWizard)
   const openCommandPalette = useAppStore((s) => s.openCommandPalette)
@@ -329,7 +331,7 @@ export function HomeScreen({
             >
               <div className="home-context-header">Launch with…</div>
               {projectAgents.map((ac) => {
-                const agentMeta = AGENT_BY_ID.get(ac.agent)
+                const agentMeta = selectAgentMeta(registry, ac.agent)
                 return (
                   <button
                     key={ac.agent}
@@ -340,8 +342,8 @@ export function HomeScreen({
                       setCardMenu(null)
                     }}
                   >
-                    <span className="home-ctx-agent-icon">{agentMeta?.icon ?? '◈'}</span>
-                    <span className="home-ctx-agent-name">{agentMeta?.name ?? ac.agent}</span>
+                    <span className="home-ctx-agent-icon">{agentMeta.icon}</span>
+                    <span className="home-ctx-agent-name">{agentMeta.name}</span>
                     {ac.isDefault && <span className="home-ctx-agent-badge">DEFAULT</span>}
                   </button>
                 )

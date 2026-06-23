@@ -1,5 +1,6 @@
 import type { StateCreator } from 'zustand'
 import type { AppState } from '../appStore'
+import { AGENTS } from '../../../shared/agents'
 import type { AgentDescriptorWire } from '../../../shared/custom-agents'
 
 export interface CustomAgentsSlice {
@@ -7,6 +8,24 @@ export interface CustomAgentsSlice {
   setAgentRegistry: (list: AgentDescriptorWire[]) => void
   bootstrapAgentRegistry: () => Promise<void>
 }
+
+/**
+ * Built-in agents as renderer-safe descriptors, used to seed the registry so
+ * `selectAgentMeta` resolves builtins correctly before the async IPC pull lands
+ * (and in tests that don't seed the registry). The main process replaces this
+ * with `builtinDescriptors() + custom` on `bootstrapAgentRegistry`.
+ */
+const BUILTIN_DESCRIPTORS: AgentDescriptorWire[] = AGENTS.map((a) => ({
+  id: a.id,
+  binary: a.binary,
+  name: a.name,
+  icon: a.icon,
+  short: a.short,
+  colorVar: a.colorVar,
+  description: a.description,
+  contextWindow: a.contextWindow,
+  source: 'builtin',
+}))
 
 // ── Module-level subscription handle ───────────────────────────────
 // Kept outside the store so it doesn't pollute the serializable state
@@ -17,7 +36,7 @@ let registryUnsub: (() => void) | null = null
 export const createCustomAgentsSlice: StateCreator<AppState, [], [], CustomAgentsSlice> = (
   set,
 ) => ({
-  agentRegistry: [],
+  agentRegistry: BUILTIN_DESCRIPTORS,
 
   setAgentRegistry: (list) => set({ agentRegistry: list }),
 
