@@ -21,8 +21,16 @@ export const VARIABLE_NAME_RE = /^[A-Z_][A-Z0-9_]*$/
 /**
  * Runtime validation of a workflow loaded from disk (C2).
  * Returns structured errors and warnings instead of throwing.
+ *
+ * `knownAgentIds` defaults to the built-in set so existing callers (and tests)
+ * keep working; the main process passes the registry's merged id set so custom
+ * agents validate. shared/ stays free of any main-process import — the caller
+ * supplies the set.
  */
-export function validateWorkflow(w: unknown): ValidationResult {
+export function validateWorkflow(
+  w: unknown,
+  knownAgentIds: ReadonlySet<string> = KNOWN_AGENT_IDS,
+): ValidationResult {
   const errors: string[] = []
   const warnings: string[] = []
 
@@ -83,7 +91,7 @@ export function validateWorkflow(w: unknown): ValidationResult {
       errors.push(`Node command exceeds ${MAX_COMMAND} chars`)
     if (n.prompt !== undefined && typeof n.prompt === 'string' && n.prompt.length > MAX_PROMPT)
       errors.push(`Node prompt exceeds ${MAX_PROMPT} chars`)
-    if (n.agent !== undefined && typeof n.agent === 'string' && !KNOWN_AGENT_IDS.has(n.agent))
+    if (n.agent !== undefined && typeof n.agent === 'string' && !knownAgentIds.has(n.agent))
       errors.push(`Unknown agent: ${n.agent}`)
     if (n.agentFlags !== undefined) {
       if (typeof n.agentFlags !== 'string') errors.push('Node agentFlags must be a string')

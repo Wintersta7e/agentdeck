@@ -17,6 +17,7 @@ export { validateWorkflow, topoSort } from '../shared/workflow-utils'
 import { createScheduler } from './edge-scheduler'
 import { substituteVariables } from './variable-substitution'
 import { runAgentNode, runShellNode, forceKillTree, type NodeRunnerDeps } from './node-runners'
+import type { AgentRegistry } from './agent-registry'
 import { MAX_CONCURRENT_WORKFLOWS, MAX_TIER_CONCURRENCY } from '../shared/constants'
 import { createRunRecorder, getErrorTail } from './workflow-history'
 
@@ -44,6 +45,7 @@ export { ptyBus } from './pty-bus'
 export function createWorkflowEngine(
   _ptyManager: PtyManager,
   mainWindow: BrowserWindow,
+  agentRegistry: AgentRegistry,
   getRoles?: (() => Role[]) | undefined,
 ): WorkflowEngine {
   const activeRuns = new Map<string, { stop: () => void; resume: (nodeId: string) => void }>()
@@ -128,6 +130,7 @@ export function createWorkflowEngine(
       nodeExitCodes,
       activeChildProcesses,
       isStopped: () => stopped,
+      agentRegistry,
     }
 
     function onCheckpoint(nodeId: string): Promise<void> {

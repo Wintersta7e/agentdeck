@@ -19,6 +19,7 @@ import {
   resetCounter,
 } from '../__test__/helpers'
 import { invalidateAgentPathCache } from './node-runners'
+import { AgentRegistry } from './agent-registry'
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
@@ -120,11 +121,17 @@ function createMockWindow(): {
   }
 }
 
+// Builtins-only registry (missing file → just the 7 canonical agents). The
+// engine threads this into NodeRunnerDeps for the runner's id/binary/args
+// lookups; these execution tests only exercise builtin agents.
+const agentRegistry = new AgentRegistry('/nonexistent/agents.toml')
+agentRegistry.load()
+
 function buildEngine(roles?: Role[]): void {
   const win = createMockWindow()
   sendSpy = win.webContents.send
   const getRoles = roles ? () => roles : undefined
-  engine = createWorkflowEngine(mockPtyManager, win as never, getRoles)
+  engine = createWorkflowEngine(mockPtyManager, win as never, agentRegistry, getRoles)
 }
 
 beforeEach(() => {

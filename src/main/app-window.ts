@@ -117,6 +117,7 @@ export function createAppWindow(
   const workflowEngine = createWorkflowEngine(
     ptyManager,
     mainWindow,
+    agentRegistry,
     () => store.get('roles') ?? [],
   )
 

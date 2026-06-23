@@ -74,7 +74,10 @@ export async function loadWorkflow(id: string): Promise<Workflow | null> {
   }
 }
 
-export async function saveWorkflow(workflow: Workflow): Promise<Workflow> {
+export async function saveWorkflow(
+  workflow: Workflow,
+  knownAgentIds?: ReadonlySet<string>,
+): Promise<Workflow> {
   const id = workflow.id || crypto.randomUUID()
 
   const doActualSave = async (): Promise<Workflow> => {
@@ -86,8 +89,10 @@ export async function saveWorkflow(workflow: Workflow): Promise<Workflow> {
       id,
     }
 
-    // Validate before persisting to disk
-    const validation = validateWorkflow(w)
+    // Validate before persisting to disk. The caller (IPC) passes the merged
+    // registry id set so custom-agent nodes validate; tests / other callers
+    // omit it and fall back to validateWorkflow's builtin-only default.
+    const validation = validateWorkflow(w, knownAgentIds)
     if (validation.errors.length > 0) {
       throw new Error(`Invalid workflow: ${validation.errors.join('; ')}`)
     }

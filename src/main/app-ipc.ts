@@ -58,6 +58,7 @@ export function registerAppIpcHandlers({
   registerSkillHandlers()
   registerWorkflowHandlers(
     getWorkflowEngine,
+    agentRegistry,
     () => store.get('roles') ?? [],
     (role) => {
       const roles = store.get('roles') ?? []

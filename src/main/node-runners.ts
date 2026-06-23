@@ -9,15 +9,14 @@ import { spawn, execFile, type ChildProcess, type ExecException } from 'child_pr
 import { createLogger } from './logger'
 import type { AgentNode, ShellNode, WorkflowEventInput, Role } from '../shared/types'
 import {
-  AGENT_BINARY_MAP,
-  AGENT_PRINT_FLAGS_MAP,
+  AGENT_BY_ID,
   AGENT_CD_FLAG_MAP,
   AGENT_ENGINE_FLAGS_MAP,
   AGENT_SUPPORTS_SKILLS_MAP,
-  KNOWN_AGENT_IDS,
   SAFE_FLAGS_RE,
   getPermissionFlags,
 } from '../shared/agents'
+import type { AgentRegistry } from './agent-registry'
 import {
   AGENT_IDLE_TIMEOUT,
   DEFAULT_AGENT_TIMEOUT,
@@ -86,6 +85,8 @@ export interface NodeRunnerDeps {
   nodeExitCodes: Map<string, number>
   activeChildProcesses: Set<ChildProcess>
   isStopped: () => boolean
+  /** Merged builtin + custom agent registry: id membership, binary, args, custom flag. */
+  agentRegistry: AgentRegistry
 }
 
 // ── Node runners ─────────────────────────────────────────────────────
@@ -106,8 +107,9 @@ export function invalidateAgentPathCache(): void {
  * and `node` (needed by codex's `#!/usr/bin/env node` shebang), are otherwise
  * absent from PATH. Returns a colon-joined list of absolute dirs to prepend to
  * PATH, or '' if unresolved. Parses only absolute paths (ignores shell-init
- * noise / stderr). Cached per binary for the session. `bin` is a validated
- * registry id (KNOWN_AGENT_IDS), so it is safe to interpolate.
+ * noise / stderr). Cached per binary for the session. `bin` can be a custom
+ * agent's binary (arbitrary user string), so it is shell-quoted before being
+ * spliced into the `bash -lic` command line.
  */
 function resolveAgentPathPrefix(bin: string): Promise<string> {
   const cached = agentPathCache.get(bin)
@@ -115,7 +117,12 @@ function resolveAgentPathPrefix(bin: string): Promise<string> {
   return new Promise<string>((resolve) => {
     execFile(
       'wsl.exe',
-      ['--', 'bash', '-lic', `command -v ${bin} 2>/dev/null; command -v node 2>/dev/null`],
+      [
+        '--',
+        'bash',
+        '-lic',
+        `command -v ${shellQuote(bin)} 2>/dev/null; command -v node 2>/dev/null`,
+      ],
       { timeout: 15_000 },
       (_err, stdout) => {
         const dirs: string[] = []
@@ -150,10 +157,10 @@ export async function runAgentNode(
   let prompt = promptParts.join('\n\n')
 
   const agentName = node.agent ?? 'claude-code'
-  if (!KNOWN_AGENT_IDS.has(agentName)) {
-    // Loud-fail on unknown agents instead of falling through to '--print'
-    // and AGENT_BINARY_MAP[id] ?? id — that pair would silently invoke
-    // whatever string the renderer sent as a binary name.
+  if (!deps.agentRegistry.has(agentName)) {
+    // Loud-fail on unknown agents instead of falling through to a `?? agentName`
+    // footgun that would silently invoke whatever string the renderer sent as a
+    // binary name. Membership covers both builtins and registered custom agents.
     throw new Error(`Unknown agent: ${agentName}`)
   }
 
@@ -173,8 +180,20 @@ export async function runAgentNode(
 
   if (!prompt) return
 
-  const bin = AGENT_BINARY_MAP[agentName] ?? agentName
-  const printFlags = AGENT_PRINT_FLAGS_MAP[agentName] ?? ['--print']
+  const bin = deps.agentRegistry.binaryFor(agentName)
+  if (bin === undefined) {
+    // Membership already guaranteed a binary; this satisfies the type and
+    // guards against a registry that knows the id but has no binary for it.
+    throw new Error(`No binary registered for agent: ${agentName}`)
+  }
+  // Custom agents are console/TUI agents with no headless --print mode, so they
+  // get no print flags; their default launch args (argsFor) are appended
+  // instead. Builtins keep their canonical print-mode flags exactly.
+  const isCustom = deps.agentRegistry.isCustom(agentName)
+  const printFlags: readonly string[] = isCustom
+    ? []
+    : (AGENT_BY_ID.get(agentName)?.printFlags ?? ['--print'])
+  const customArgs = isCustom ? deps.agentRegistry.argsFor(agentName) : []
 
   let sanitizedFlags = ''
   if (node.agentFlags) {
@@ -207,6 +226,8 @@ export async function runAgentNode(
   const pathExport = pathPrefix ? `export PATH="${pathPrefix}:$PATH"; ` : ''
   const cdFlag = AGENT_CD_FLAG_MAP[agentName]
   const flagStr = printFlags.length > 0 ? printFlags.join(' ') + ' ' : ''
+  // Custom-agent launch args (arbitrary user strings) shell-quoted individually.
+  const customArgsStr = customArgs.length > 0 ? customArgs.map(shellQuote).join(' ') + ' ' : ''
   const cdFlagStr = deps.projectPath && cdFlag ? `${cdFlag} ${shellQuote(deps.projectPath)} ` : ''
   const engineFlags = AGENT_ENGINE_FLAGS_MAP[agentName]
   const engineFlagStr = engineFlags ? engineFlags.join(' ') + ' ' : ''
@@ -216,7 +237,7 @@ export async function runAgentNode(
   const runParts: string[] = []
   if (deps.projectPath && !cdFlag) runParts.push(`cd ${shellQuote(deps.projectPath)}`)
   runParts.push(
-    `${shellQuote(bin)} ${flagStr}${cdFlagStr}${engineFlagStr}${permFlagStr}${sanitizedFlags}`.trimEnd(),
+    `${shellQuote(bin)} ${flagStr}${customArgsStr}${cdFlagStr}${engineFlagStr}${permFlagStr}${sanitizedFlags}`.trimEnd(),
   )
   const fullCmd = pathExport + runParts.join(' && ')
 
