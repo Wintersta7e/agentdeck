@@ -1,6 +1,7 @@
 import type { AgentType } from '../shared/types'
-import type { DetectorOutput } from './active-model-detectors'
+import type { ActiveModelReader, DetectorOutput } from './active-model-detectors'
 import { DETECTORS } from './active-model-detectors'
+import { isBuiltinAgent } from '../shared/agents'
 
 const TTL_MS = 30_000
 
@@ -25,12 +26,17 @@ interface ResolveOpts {
  * share one underlying read via inFlight. `forceRefresh: true` bypasses both
  * the TTL cache and inFlight, starting its own read, and wins any race via
  * freshness-ordered writes (`requestSeq` minted before I/O).
+ *
+ * Custom (non-built-in) agents have no detector — they short-circuit to a null
+ * model. The `reader` is typed `| undefined` because the detector map can be
+ * partially mocked in tests even though production DETECTORS is exhaustive.
  */
 export async function resolveActiveModel(
   agentId: AgentType,
   opts: ResolveOpts = {},
 ): Promise<DetectorOutput> {
-  const reader = DETECTORS[agentId]
+  if (!isBuiltinAgent(agentId)) return { modelId: null }
+  const reader: ActiveModelReader | undefined = DETECTORS[agentId]
   if (!reader) return { modelId: null }
 
   if (opts.forceRefresh) {

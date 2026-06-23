@@ -19,6 +19,10 @@ describe('active-model cache', () => {
   })
   afterEach(() => vi.useRealTimers())
 
+  it('returns {modelId:null} for a custom (non-builtin) agent id', async () => {
+    await expect(resolveActiveModel('my-agent')).resolves.toEqual({ modelId: null })
+  })
+
   it('caches within TTL', async () => {
     mockCodex.mockResolvedValue({ modelId: 'gpt-5.4' })
     await resolveActiveModel('codex')
