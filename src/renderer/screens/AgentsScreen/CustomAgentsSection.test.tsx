@@ -132,7 +132,12 @@ describe('CustomAgentsSection', () => {
 
   it('delete confirm shows the project reference count when in use', () => {
     const projects: Project[] = [
-      { id: 'p1', name: 'P1', path: '/home/u/p1', agents: [{ agent: 'my-agent', isDefault: true }] },
+      {
+        id: 'p1',
+        name: 'P1',
+        path: '/home/u/p1',
+        agents: [{ agent: 'my-agent', isDefault: true }],
+      },
     ] as Project[]
     useAppStore.setState({ agentRegistry: [descriptor()], projects })
     render(<CustomAgentsSection />)

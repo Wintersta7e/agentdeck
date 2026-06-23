@@ -217,7 +217,9 @@ describe('renameWorkflow', () => {
   it('rejects the same rename when no merged id set is passed (builtin-only default)', async () => {
     await seedCustomAgentWorkflow('wf-custom2')
 
-    await expect(renameWorkflow('wf-custom2', 'New name')).rejects.toThrow(/Unknown agent: my-agent/)
+    await expect(renameWorkflow('wf-custom2', 'New name')).rejects.toThrow(
+      /Unknown agent: my-agent/,
+    )
   })
 })
 

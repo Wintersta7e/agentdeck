@@ -44,7 +44,15 @@ describe('validateWorkflow — custom agent id set', () => {
       id: 'wf-2',
       name: 'Test',
       nodes: [
-        { id: 'n1', type: 'agent', name: 'N', x: 0, y: 0, agent: 'my-agent', skillId: 'global:foo' },
+        {
+          id: 'n1',
+          type: 'agent',
+          name: 'N',
+          x: 0,
+          y: 0,
+          agent: 'my-agent',
+          skillId: 'global:foo',
+        },
       ],
       edges: [],
       createdAt: 0,
