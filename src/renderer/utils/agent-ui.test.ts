@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { AGENTS } from '../../shared/agents'
 import type { Project } from '../../shared/types'
+import type { AgentDescriptorWire } from '../../shared/custom-agents'
 import {
   AGENT_BY_ID,
   AGENT_IDS,
@@ -8,6 +9,7 @@ import {
   agentColorVar,
   agentShort,
   getSessionAgentId,
+  selectAgentMeta,
 } from './agent-ui'
 
 describe('agentColor / agentColorVar', () => {
@@ -99,5 +101,51 @@ describe('getSessionAgentId', () => {
   it('falls back to claude-code when project is missing', () => {
     expect(getSessionAgentId({}, null)).toBe('claude-code')
     expect(getSessionAgentId(null, null)).toBe('claude-code')
+  })
+})
+
+describe('selectAgentMeta', () => {
+  const registry: AgentDescriptorWire[] = [
+    {
+      id: 'my-tool',
+      binary: 'mytool',
+      name: 'My Tool',
+      icon: '🛠',
+      short: 'MT',
+      colorVar: '--green',
+      description: 'a custom agent',
+      contextWindow: 128_000,
+      source: 'user',
+    },
+  ]
+
+  it('returns the descriptor fields for a registered id', () => {
+    expect(selectAgentMeta(registry, 'my-tool')).toEqual({
+      name: 'My Tool',
+      short: 'MT',
+      colorVar: '--green',
+      icon: '🛠',
+      isRegistered: true,
+    })
+  })
+
+  it('returns the neutral fallback for an unregistered id', () => {
+    expect(selectAgentMeta(registry, 'ghost-agent')).toEqual({
+      name: 'ghost-agent',
+      short: 'GH',
+      colorVar: '--accent',
+      icon: '●',
+      isRegistered: false,
+    })
+  })
+
+  it('falls back without crashing on an empty registry', () => {
+    expect(selectAgentMeta([], 'codex')).toEqual({
+      name: 'codex',
+      short: 'CO',
+      colorVar: '--accent',
+      icon: '●',
+      isRegistered: false,
+    })
   })
 })

@@ -5,6 +5,7 @@ import {
   AGENT_SHORT_MAP,
 } from '../../shared/agents'
 import { getDefaultAgent } from '../../shared/agent-helpers'
+import type { AgentDescriptorWire } from '../../shared/custom-agents'
 import type { AgentType, Project } from '../../shared/types'
 
 /** Returns a CSS var() expression (e.g. "var(--agent-claude)") for an agent. */
@@ -24,6 +25,43 @@ export function agentColorVar(id: string | undefined | null): string {
 export function agentShort(id: string | undefined | null): string {
   if (!id) return '·'
   return AGENT_SHORT_MAP[id] ?? id.slice(0, 2).toUpperCase()
+}
+
+/** Display metadata resolved from the live agent registry for a given id. */
+export interface AgentMeta {
+  name: string
+  short: string
+  colorVar: string
+  icon: string
+  /** False when the id has no descriptor (e.g. a deleted custom agent). */
+  isRegistered: boolean
+}
+
+/**
+ * Resolve display metadata for an agent id against the live registry.
+ *
+ * A dangling id (deleted custom agent, or one not yet loaded) returns a
+ * neutral fallback so the UI renders visibly-degraded rather than crashing.
+ * Pure — the hook `useAgentRegistry` supplies the `registry` argument.
+ */
+export function selectAgentMeta(registry: AgentDescriptorWire[], id: string): AgentMeta {
+  const found = registry.find((d) => d.id === id)
+  if (found) {
+    return {
+      name: found.name,
+      short: found.short,
+      colorVar: found.colorVar,
+      icon: found.icon,
+      isRegistered: true,
+    }
+  }
+  return {
+    name: id,
+    short: id.slice(0, 2).toUpperCase(),
+    colorVar: '--accent',
+    icon: '●',
+    isRegistered: false,
+  }
 }
 
 /** Re-export of the canonical AGENT_BY_ID map from shared/agents. */
