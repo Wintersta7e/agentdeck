@@ -348,6 +348,44 @@ describe('concurrent execution', () => {
     expect(hasEvent(sendSpy, 'wf-seq', 'workflow:done')).toBe(true)
   })
 
+  it('force-kills in-flight sibling children when a parallel node hard-fails', async () => {
+    const children: MockChild[] = []
+    mockSpawn.mockImplementation(() => {
+      const child = createMockChild(5500 + children.length)
+      children.push(child)
+      return child
+    })
+
+    const wf = makeWorkflow({
+      id: 'wf-parfail',
+      nodes: [
+        makeWorkflowNode({ id: 'a', type: 'agent', prompt: 'fails' }),
+        makeWorkflowNode({ id: 'b', type: 'agent', prompt: 'still running' }),
+      ],
+    })
+
+    engine.run(wf)
+    await tick()
+    expect(mockSpawn).toHaveBeenCalledTimes(2)
+
+    // Node a fails (non-zero, no continueOnError) while node b's child is live.
+    const childA = children[0]
+    const childB = children[1]
+    expect(childB).toBeDefined()
+    childA?.emit('close', 1)
+    await tick()
+
+    // The surviving sibling's process tree should be force-killed (taskkill /F /T).
+    const taskkillPids = mockExecFile.mock.calls
+      .filter((c) => c[0] === 'taskkill')
+      .map((c) => (c[1] as string[])?.[3])
+    expect(taskkillPids).toContain(String(childB?.pid))
+
+    // Let the run settle so no child/timer dangles.
+    childB?.emit('close', 1)
+    await tick()
+  })
+
   it('passes context summary from previous tier to next tier', async () => {
     const children: MockChild[] = []
     mockSpawn.mockImplementation(() => {

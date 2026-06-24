@@ -106,6 +106,15 @@ export function createWorkflowEngine(
     const conditionOutputs = new Map<string, string>()
     const activeChildProcesses = new Set<ChildProcess>()
     const runningNodeIds = new Set<string>()
+    /** Force-kill the entire process tree of every in-flight child, then clear
+     *  the set. Shared by user-stop and the hard-fail path — a failed node must
+     *  not leave its parallel-tier siblings running. */
+    const killActiveChildren = (): void => {
+      for (const child of activeChildProcesses) {
+        forceKillTree(child)
+      }
+      activeChildProcesses.clear()
+    }
     // Key checkpoints by workflowId:nodeId (scoped to this run)
     const runCheckpoints = new Map<string, () => void>()
 
@@ -467,6 +476,9 @@ export function createWorkflowEngine(
         } else {
           scheduler.failNode(node.id)
           stopped = true
+          // Kill in-flight siblings in the same parallel tier; they would
+          // otherwise keep running (and editing files) until their own timeout.
+          killActiveChildren()
         }
       }
     }
@@ -619,10 +631,7 @@ export function createWorkflowEngine(
         }
         runningNodeIds.clear()
         // Force-kill all in-flight child processes (entire process tree)
-        for (const child of activeChildProcesses) {
-          forceKillTree(child)
-        }
-        activeChildProcesses.clear()
+        killActiveChildren()
         // Only clear this run's checkpoints
         for (const [, resolve] of runCheckpoints) {
           resolve()

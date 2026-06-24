@@ -33,6 +33,10 @@ const log = createLogger('node-runners')
 // Re-export for callers that previously imported these from this module.
 export { AGENT_IDLE_TIMEOUT, MAX_TIER_CONCURRENCY }
 
+/** Max stdout+stderr a shell node may buffer before execFile aborts it.
+ *  Node's 1 MiB default is too small for verbose build/test logs. */
+const SHELL_MAX_BUFFER = 16 * 1024 * 1024
+
 // ── Utility functions ────────────────────────────────────────────────
 
 /**
@@ -420,14 +424,28 @@ export function runShellNode(node: ShellNode, deps: NodeRunnerDeps): Promise<voi
     // Use projectPath as cwd context for shell commands
     const fullCmd = deps.projectPath ? `cd ${shellQuote(deps.projectPath)} && ${cmd}` : cmd
 
+    const timeoutMs = node.timeout ?? 60000
+    let settled = false
+
     const child = execFile(
       'wsl.exe',
       ['--', 'bash', '-lc', NODE_INIT + fullCmd],
-      { timeout: node.timeout ?? 60000 },
+      // No execFile `timeout`: it only SIGTERMs wsl.exe and orphans the Linux
+      // process inside WSL — we enforce it ourselves via forceKillTree below.
+      // A generous maxBuffer keeps a chatty-but-successful command (verbose
+      // build/test logs) from being killed and misreported as a failure.
+      { maxBuffer: SHELL_MAX_BUFFER },
       (err, stdout, stderr) => {
+        if (settled) return
+        settled = true
+        clearTimeout(timer)
         deps.activeChildProcesses.delete(child)
-        // Extract real exit code from ExecException instead of hardcoding 1
-        const exitCode = err ? ((err as ExecException).code ?? 1) : 0
+        // execFile surfaces the OS exit code as a number; a non-numeric code
+        // (e.g. 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER' when maxBuffer overflows)
+        // means Node killed the child — treat it as a generic failure rather
+        // than letting a string leak into the numeric exit-code map.
+        const raw = (err as ExecException | null)?.code
+        const exitCode = typeof raw === 'number' ? raw : err ? 1 : 0
         deps.nodeExitCodes.set(node.id, exitCode)
         const out = stripAnsi(stdout + stderr)
         deps.nodeOutputs.set(node.id, out)
@@ -442,6 +460,19 @@ export function runShellNode(node: ShellNode, deps: NodeRunnerDeps): Promise<voi
         else resolve()
       },
     )
+
+    // Enforce the timeout by killing the whole WSL process tree (taskkill /F /T),
+    // mirroring the agent-node path. 124 is the conventional timeout exit code.
+    const timer = setTimeout(() => {
+      if (settled) return
+      settled = true
+      log.warn('Shell node timeout', { workflowId: deps.workflowId, nodeId: node.id, timeoutMs })
+      forceKillTree(child)
+      deps.activeChildProcesses.delete(child)
+      deps.nodeExitCodes.set(node.id, 124)
+      reject(new Error(`Shell command timed out after ${timeoutMs / 1000}s`))
+    }, timeoutMs)
+
     // Track child process so stop() can kill it
     deps.activeChildProcesses.add(child)
   })
