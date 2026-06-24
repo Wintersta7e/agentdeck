@@ -80,6 +80,49 @@ describe('getDefaultDistroAsync', () => {
     const result = await freshGet()
     expect(result).toBe('Ubuntu')
   })
+
+  it('falls back to "Ubuntu" when wsl.exe exits 0 with empty/BOM-only output', async () => {
+    // WSL installed but no distros registered: exit 0, stdout is just a BOM and
+    // whitespace. Must cache the fallback, not an empty distro segment.
+    vi.resetModules()
+    mockedExecFile.mockImplementation(
+      (_cmd: unknown, _args: unknown, _opts: unknown, cb: unknown) => {
+        ;(cb as (err: null, stdout: string) => void)(null, '﻿\n   \n')
+        return undefined as never
+      },
+    )
+    const { getDefaultDistroAsync: freshGet } = await import('./wsl-utils')
+    expect(await freshGet()).toBe('Ubuntu')
+  })
+})
+
+describe('resolveWslUsername', () => {
+  it('returns the first non-empty result across the racing commands', async () => {
+    vi.resetModules()
+    mockedExecFile.mockImplementation(
+      (_cmd: unknown, args: unknown, _opts: unknown, cb: unknown) => {
+        // Only the bare `wsl -- whoami` command yields a name; the bash variants
+        // return empty. The non-empty one must win regardless of race order.
+        const out = (args as string[]).join(' ') === '-- whoami' ? 'devuser\n' : ''
+        ;(cb as (err: null, stdout: string) => void)(null, out)
+        return undefined as never
+      },
+    )
+    const { resolveWslUsername } = await import('./wsl-utils')
+    expect(await resolveWslUsername()).toBe('devuser')
+  })
+
+  it('returns an empty string when every detection command fails or is empty', async () => {
+    vi.resetModules()
+    mockedExecFile.mockImplementation(
+      (_cmd: unknown, _args: unknown, _opts: unknown, cb: unknown) => {
+        ;(cb as (err: Error, stdout: string) => void)(new Error('no wsl'), '')
+        return undefined as never
+      },
+    )
+    const { resolveWslUsername } = await import('./wsl-utils')
+    expect(await resolveWslUsername()).toBe('')
+  })
 })
 
 describe('toWslPath', () => {

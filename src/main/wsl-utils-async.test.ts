@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { execFileSync } from 'node:child_process'
 import { NODE_INIT } from './wsl-utils'
 
 describe('NODE_INIT', () => {
@@ -36,5 +37,17 @@ describe('NODE_INIT', () => {
 
   it('ends with true to ensure zero exit code', () => {
     expect(NODE_INIT).toContain('true; ')
+  })
+
+  it('is syntactically valid bash', () => {
+    // The substring assertions above can't catch a stray quote or operator that
+    // would break every WSL launch. `bash -n` parses the prelude without running
+    // it — appending `true` completes the trailing `; ` into a valid command.
+    expect(() =>
+      execFileSync('bash', ['-n'], {
+        input: NODE_INIT + 'true',
+        stdio: ['pipe', 'ignore', 'pipe'],
+      }),
+    ).not.toThrow()
   })
 })
