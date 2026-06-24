@@ -27,4 +27,12 @@ asar: true
 asarUnpack:
   - "node_modules/node-pty/**"
 
+# Disable Electron's Node-runtime abuse vectors on the packaged binary. These
+# do not affect normal app startup (unlike the asar-integrity fuses, which alter
+# the app-loading path and need a packaged-binary launch test before enabling).
+electronFuses:
+  runAsNode: false
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+
 npmRebuild: true
