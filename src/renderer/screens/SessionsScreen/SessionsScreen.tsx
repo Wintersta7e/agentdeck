@@ -72,7 +72,6 @@ export function SessionsScreen(): React.JSX.Element {
   const registry = useAgentRegistry()
   const activityFeeds = useAppStore((s) => s.activityFeeds)
   const setActiveSession = useAppStore((s) => s.setActiveSession)
-  const setTab = useAppStore((s) => s.setTab)
   const setCurrentView = useAppStore((s) => s.setCurrentView)
   const openCommandPalette = useAppStore((s) => s.openCommandPalette)
 
@@ -120,9 +119,8 @@ export function SessionsScreen(): React.JSX.Element {
       setActiveSession(session.id)
       // Keep currentView synchronous so SplitView/RightPanel see session immediately
       setCurrentView('sessions')
-      setTab('sessions', { sessionId: session.id })
     },
-    [setActiveSession, setCurrentView, setTab],
+    [setActiveSession, setCurrentView],
   )
 
   return (

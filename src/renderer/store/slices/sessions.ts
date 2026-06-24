@@ -55,13 +55,11 @@ export interface SessionsSlice {
    */
   clearActiveSession: () => void
   removeSession: (sessionId: string) => void
-  restartSession: (oldSessionId: string) => string | null
   getSessionForProject: (projectId: string) => Session | undefined
 
   // Activity Feed (per-session)
   activityFeeds: Record<string, ActivityEvent[]>
   addActivityEvent: (sessionId: string, event: ActivityEvent) => void
-  clearActivityFeed: (sessionId: string) => void
 
   // Total writes observed per session, tracked outside the capped feed so
   // "Files Changed" counters stay accurate for long heavy sessions.
@@ -82,8 +80,8 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
   openSessionIds: [],
 
   // Cross-slice note: every session-mutating action below
-  // (addSession / openSession / setActiveSession / removeSession /
-  // restartSession) reads and writes paneSessions, focusedPane, and
+  // (addSession / openSession / setActiveSession / removeSession)
+  // reads and writes paneSessions, focusedPane, and
   // paneLayout — those fields are declared on UiSlice but updated here
   // atomically with the session mutation so subscribers never see a pane
   // grid that points at sessions that don't exist or vice versa.
@@ -343,74 +341,6 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
       }
     }),
 
-  restartSession: (oldSessionId) => {
-    let newSessionId: string | null = null
-
-    set((s) => {
-      const oldSession = s.sessions[oldSessionId]
-      if (!oldSession) return s
-
-      const projectId = oldSession.projectId
-      // Match openSession's ID format — Date.now() alone is collide-able if
-      // two restarts fire within the same millisecond for the same project.
-      const freshId = `session-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`
-      newSessionId = freshId
-
-      // Remove old session
-      const { [oldSessionId]: _, ...rest } = s.sessions
-      const { [oldSessionId]: _feed, ...remainingFeeds } = s.activityFeeds
-      const { [oldSessionId]: _writes, ...remainingWrites } = s.writeCountBySession
-
-      // Find which pane slot the old session occupies (read from live state)
-      const paneIndex = s.paneSessions.indexOf(oldSessionId)
-      const paneSessions = s.paneSessions.map((id) => (id === oldSessionId ? freshId : id))
-      if (paneIndex === -1) {
-        // Old session wasn't in a pane — put new one in focused pane
-        while (paneSessions.length <= s.focusedPane) paneSessions.push('')
-        paneSessions[s.focusedPane] = freshId
-      }
-
-      // Swap the old id for the fresh one at the same index so the tab keeps its
-      // position; append if the old id wasn't tracked for some reason.
-      const hadOldTab = s.openSessionIds.includes(oldSessionId)
-      const openSessionIds = hadOldTab
-        ? s.openSessionIds.map((x) => (x === oldSessionId ? freshId : x))
-        : [...s.openSessionIds, freshId]
-
-      // Carry over user-intent launch config from the old session
-      // (agent overrides, branch mode, run mode, approval gates).
-      // Spawn-time captures (model, resolvedContextWindow,
-      // resolvedContextSource) and one-shot inputs (initialPrompt) reset —
-      // a restart re-detects the active model and is no longer prompted.
-      return {
-        sessions: {
-          ...rest,
-          [freshId]: {
-            id: freshId,
-            projectId,
-            status: 'starting' as const,
-            startedAt: Date.now(),
-            approvalState: 'idle' as const,
-            seedTemplateId: null,
-            agentOverride: oldSession.agentOverride,
-            agentFlagsOverride: oldSession.agentFlagsOverride,
-            branchMode: oldSession.branchMode,
-            initialBranch: oldSession.initialBranch,
-            runMode: oldSession.runMode,
-            approve: oldSession.approve,
-          },
-        },
-        activityFeeds: remainingFeeds,
-        writeCountBySession: remainingWrites,
-        activeSessionId: freshId,
-        paneSessions,
-        openSessionIds,
-      }
-    })
-
-    return newSessionId
-  },
-
   getSessionForProject: (projectId) => {
     const { sessions } = get()
     // Only return live sessions — exited sessions are preserved for timeline/productivity only
@@ -442,14 +372,6 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
       }
       return { activityFeeds, writeCountBySession }
     }),
-
-  clearActivityFeed: (sessionId) =>
-    set((state) => ({
-      activityFeeds: {
-        ...state.activityFeeds,
-        [sessionId]: [],
-      },
-    })),
 
   // Worktree isolation paths
   worktreePaths: {},

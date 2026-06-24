@@ -34,20 +34,6 @@ describe('sessions slice — addSession lifecycle', () => {
     expect(state.sessions['s1']?.status).toBe('exited')
     expect(state.sessions['s2']).toBeDefined()
   })
-
-  it('restartSession preserves agent overrides', () => {
-    useAppStore.getState().addSession('s1', 'proj-1', {
-      agentOverride: 'codex',
-      agentFlagsOverride: '--fast',
-    })
-    const newId = useAppStore.getState().restartSession('s1')
-    expect(typeof newId).toBe('string')
-    expect(newId).not.toBe('')
-    const newSession = newId ? useAppStore.getState().sessions[newId] : undefined
-    expect(newSession?.agentOverride).toBe('codex')
-    expect(newSession?.agentFlagsOverride).toBe('--fast')
-    expect(newSession?.status).toBe('starting')
-  })
 })
 
 describe('sessions slice — openSession + pruneSessionFromTabs', () => {
@@ -114,19 +100,6 @@ describe('sessions slice — openSession + pruneSessionFromTabs', () => {
     useAppStore.setState({ paneSessions: ['prev', '', ''], focusedPane: 0 } as never)
     const id = useAppStore.getState().openSession({ projectId: 'p1', seedTemplateId: null })
     expect(useAppStore.getState().paneSessions[0]).toBe(id)
-  })
-
-  it('restartSession swaps the old id for the fresh id in openSessionIds at the same index', () => {
-    const a = useAppStore.getState().openSession({ projectId: 'p1', seedTemplateId: null })
-    const b = useAppStore.getState().openSession({ projectId: 'p2', seedTemplateId: null })
-    expect(useAppStore.getState().openSessionIds).toEqual([a, b])
-    const fresh = useAppStore.getState().restartSession(a)
-    expect(fresh).not.toBeNull()
-    const s = useAppStore.getState()
-    // 'a' replaced by fresh id at index 0, 'b' untouched at index 1
-    expect(s.openSessionIds).toEqual([fresh, b])
-    expect(s.sessions[a]).toBeUndefined()
-    expect(s.sessions[fresh!]).toBeDefined()
   })
 })
 
