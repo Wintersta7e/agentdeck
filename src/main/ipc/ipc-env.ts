@@ -5,7 +5,7 @@ import { getDefaultDistroAsync } from '../wsl-utils'
 import { getWslHome } from '../wsl-paths'
 import { createLogger } from '../logger'
 import { SAFE_ID_RE } from '../validation'
-import { KNOWN_AGENT_IDS } from '../../shared/agents'
+import { isBuiltinAgent } from '../../shared/agents'
 import type { AgentEnvSnapshot } from '../../shared/types'
 
 const log = createLogger('ipc-env')
@@ -52,8 +52,32 @@ export function registerEnvIpc(ctx: EnvCtx): void {
       projectId?: unknown
       force?: unknown
     }
-    if (typeof agentId !== 'string' || !KNOWN_AGENT_IDS.has(agentId)) {
+    if (typeof agentId !== 'string' || agentId.length === 0) {
       throw new Error(`env:getAgentSnapshot: invalid agentId`)
+    }
+    // Custom agents have no env-introspection backend (the resolver only knows
+    // the 7 builtins and throws otherwise). Short-circuit to a neutral, empty
+    // snapshot so the EnvTab renders blank instead of erroring.
+    if (!isBuiltinAgent(agentId)) {
+      return {
+        agentId,
+        agentName: agentId,
+        agentVersion: null,
+        supportLevel: 'minimal',
+        hooks: [],
+        skills: [],
+        mcpServers: [],
+        config: [],
+        paths: {
+          userConfigDir: null,
+          projectConfigDir: null,
+          agentdeckRoot: ctx.agentdeckRoot,
+          templateUserRoot: ctx.templateUserRoot,
+          wslDistro: null,
+          wslHome: null,
+          projectAgentdeckDir: null,
+        },
+      }
     }
     let projectPath: string | undefined
     if (projectId !== undefined && projectId !== null) {

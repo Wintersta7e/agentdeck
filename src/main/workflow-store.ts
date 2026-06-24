@@ -74,7 +74,10 @@ export async function loadWorkflow(id: string): Promise<Workflow | null> {
   }
 }
 
-export async function saveWorkflow(workflow: Workflow): Promise<Workflow> {
+export async function saveWorkflow(
+  workflow: Workflow,
+  knownAgentIds?: ReadonlySet<string>,
+): Promise<Workflow> {
   const id = workflow.id || crypto.randomUUID()
 
   const doActualSave = async (): Promise<Workflow> => {
@@ -86,8 +89,10 @@ export async function saveWorkflow(workflow: Workflow): Promise<Workflow> {
       id,
     }
 
-    // Validate before persisting to disk
-    const validation = validateWorkflow(w)
+    // Validate before persisting to disk. The caller (IPC) passes the merged
+    // registry id set so custom-agent nodes validate; tests / other callers
+    // omit it and fall back to validateWorkflow's builtin-only default.
+    const validation = validateWorkflow(w, knownAgentIds)
     if (validation.errors.length > 0) {
       throw new Error(`Invalid workflow: ${validation.errors.join('; ')}`)
     }
@@ -106,7 +111,11 @@ export async function saveWorkflow(workflow: Workflow): Promise<Workflow> {
   return writeLock(id, doActualSave)
 }
 
-export async function renameWorkflow(id: string, name: string): Promise<void> {
+export async function renameWorkflow(
+  id: string,
+  name: string,
+  knownAgentIds?: ReadonlySet<string>,
+): Promise<void> {
   const wf = await loadWorkflow(id)
   if (!wf) {
     log.warn('Cannot rename — workflow not found', { id })
@@ -114,7 +123,10 @@ export async function renameWorkflow(id: string, name: string): Promise<void> {
   }
   wf.name = name
   wf.updatedAt = Date.now()
-  await saveWorkflow(wf)
+  // Forward the merged registry id set (from the IPC handler) so re-validation
+  // on save accepts custom-agent nodes; omitting it would fall back to the
+  // builtin-only default and reject a workflow that already saved/runs fine.
+  await saveWorkflow(wf, knownAgentIds)
   log.info('Workflow renamed', { id, name })
 }
 

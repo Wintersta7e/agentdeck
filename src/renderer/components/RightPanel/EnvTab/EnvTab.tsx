@@ -2,7 +2,8 @@ import { useEffect, useState, useCallback, useRef, memo } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { useAppStore } from '../../../store/appStore'
 import type { AgentEnvSnapshot } from '../../../../shared/types'
-import { AGENT_BY_ID, getSessionAgentId } from '../../../utils/agent-ui'
+import { getSessionAgentId } from '../../../utils/agent-ui'
+import { useAgentMeta } from '../../../hooks/useAgentRegistry'
 import { HooksSection } from './HooksSection'
 import { SkillsSection } from './SkillsSection'
 import { McpSection } from './McpSection'
@@ -28,7 +29,11 @@ export const EnvTab = memo(function EnvTab(): React.JSX.Element {
   const agentVersions = useAppStore((s) => s.agentVersions)
 
   const agentId = getSessionAgentId(session, project)
-  const agent = AGENT_BY_ID.get(agentId) ?? null
+  const meta = useAgentMeta(agentId)
+  // Gate on registry membership (builtin OR custom), not the builtin-only map —
+  // a custom-agent session must still query the snapshot IPC (it returns a
+  // neutral snapshot for custom ids).
+  const agentKnown = meta.isRegistered
   const projectId = project?.id
 
   const [snapshot, setSnapshot] = useState<AgentEnvSnapshot | null>(null)
@@ -43,7 +48,7 @@ export const EnvTab = memo(function EnvTab(): React.JSX.Element {
 
   const load = useCallback(
     (force: boolean): void => {
-      if (!activeSessionId || !agent) return
+      if (!activeSessionId || !agentKnown) return
       const seq = ++reqSeqRef.current
       // Nested async so react-hooks/set-state-in-effect doesn't flag the sync sets.
       const run = async (): Promise<void> => {
@@ -66,7 +71,7 @@ export const EnvTab = memo(function EnvTab(): React.JSX.Element {
       }
       void run()
     },
-    [activeSessionId, agent, agentId, projectId],
+    [activeSessionId, agentKnown, agentId, projectId],
   )
 
   useEffect(() => {
@@ -82,7 +87,7 @@ export const EnvTab = memo(function EnvTab(): React.JSX.Element {
     }
   }, [load])
 
-  if (!activeSessionId || !session || !agent) {
+  if (!activeSessionId || !session || !agentKnown) {
     return <div className="ri-tab__empty">Open a session to see its agent&apos;s environment.</div>
   }
   if (error) {
@@ -98,7 +103,7 @@ export const EnvTab = memo(function EnvTab(): React.JSX.Element {
     <div className="env-tab">
       <header className="env-tab__header">
         <div className="env-tab__title-row">
-          <span className="env-tab__agent-name">{agent.name}</span>
+          <span className="env-tab__agent-name">{meta.name}</span>
           <span className="env-tab__version">{versionInfo}</span>
         </div>
         <div className="env-tab__subtitle-row">
@@ -117,7 +122,7 @@ export const EnvTab = memo(function EnvTab(): React.JSX.Element {
       </header>
 
       {snapshot.supportLevel === 'future' ? (
-        <FuturePlaceholder agentName={agent.name} />
+        <FuturePlaceholder agentName={meta.name} />
       ) : (
         <>
           <HooksSection hooks={snapshot.hooks} />

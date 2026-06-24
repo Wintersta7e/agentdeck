@@ -6,6 +6,7 @@ import type { WorktreeManager } from './worktree-manager'
 import type { SessionHistory } from './session-history'
 import type { UsageHistory } from './usage-history'
 import type { ReviewTracker } from './review-tracker'
+import type { AgentRegistry } from './agent-registry'
 import {
   registerPtyHandlers,
   registerWindowHandlers,
@@ -28,6 +29,7 @@ interface RegisterAppIpcHandlersOptions {
   sessionHistory: SessionHistory
   usageHistory: UsageHistory
   reviewTracker: ReviewTracker
+  agentRegistry: AgentRegistry
 }
 
 export function registerAppIpcHandlers({
@@ -40,6 +42,7 @@ export function registerAppIpcHandlers({
   sessionHistory,
   usageHistory,
   reviewTracker,
+  agentRegistry,
 }: RegisterAppIpcHandlersOptions): void {
   registerPtyHandlers(getPtyManager, {
     getMainWindow,
@@ -47,13 +50,15 @@ export function registerAppIpcHandlers({
     reviewTracker,
     sessionHistory,
     usageHistory,
+    agentRegistry,
   })
   registerWindowHandlers(getMainWindow, store)
-  registerAgentHandlers(getMainWindow, store)
+  registerAgentHandlers(getMainWindow, store, agentRegistry)
   registerProjectHandlers(getMainWindow, getAppStore)
   registerSkillHandlers()
   registerWorkflowHandlers(
     getWorkflowEngine,
+    agentRegistry,
     () => store.get('roles') ?? [],
     (role) => {
       const roles = store.get('roles') ?? []

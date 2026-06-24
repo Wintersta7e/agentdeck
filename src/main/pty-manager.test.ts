@@ -1,5 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { BrowserWindow } from 'electron'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 // Track onData/onExit callbacks for each spawned PTY
 type PtyCallbacks = {
@@ -32,7 +35,15 @@ vi.mock('./pty-bus', () => ({
 }))
 
 import { createPtyManager } from './pty-manager'
+import { AgentRegistry } from './agent-registry'
 import * as pty from 'node-pty'
+
+// A real builtins-only registry (no agents.toml on disk → `binaryFor` falls back
+// to AGENT_BINARY_MAP, `isCustom` is false for every id). Used by every existing
+// test so the spawn path resolves builtin binaries exactly as before.
+function makeRegistry(): AgentRegistry {
+  return new AgentRegistry(join(tmpdir(), 'pty-manager-test-nonexistent-agents.toml'))
+}
 
 function makeMockWindow(): BrowserWindow {
   return {
@@ -55,7 +66,7 @@ describe('createPtyManager', () => {
   describe('spawn', () => {
     it('calls pty.spawn with wsl.exe', () => {
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       mgr.spawn('s1', 120, 40)
       expect(pty.spawn).toHaveBeenCalledWith(
@@ -71,7 +82,7 @@ describe('createPtyManager', () => {
 
     it('reuses an existing PTY without respawning and reports reused', () => {
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       const first = mgr.spawn('s1', 120, 40)
       const second = mgr.spawn('s1', 120, 40)
@@ -84,7 +95,7 @@ describe('createPtyManager', () => {
 
     it('is a no-op for existing session', () => {
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       mgr.spawn('s1', 80, 24)
       mgr.spawn('s1', 80, 24)
@@ -94,7 +105,7 @@ describe('createPtyManager', () => {
 
     it('sends cd command for projectPath', () => {
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       mgr.spawn('s1', 80, 24, '/home/user/project')
 
@@ -109,7 +120,7 @@ describe('createPtyManager', () => {
 
     it('converts Windows paths to WSL paths', () => {
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       mgr.spawn('s1', 80, 24, 'C:\\Users\\dev\\project')
       vi.advanceTimersByTime(600)
@@ -122,7 +133,7 @@ describe('createPtyManager', () => {
 
     it('appends agent binary command', () => {
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       mgr.spawn('s1', 80, 24, undefined, undefined, undefined, 'claude-code')
       vi.advanceTimersByTime(600)
@@ -131,9 +142,27 @@ describe('createPtyManager', () => {
       expect(mockProc.write).toHaveBeenCalledWith(expect.stringContaining('claude'))
     })
 
+    it('writes a visible notice to the terminal when the agent id is no longer registered', () => {
+      // A session whose agent was deleted/renamed reaches spawn with an id the
+      // registry no longer knows. Instead of silently dropping to a bare shell,
+      // pty-manager must surface a visible notice on the data channel (spec §8).
+      const win = makeMockWindow()
+      const mgr = createPtyManager(win, makeRegistry())
+
+      mgr.spawn('s1', 80, 24, undefined, undefined, undefined, 'ghost-agent')
+
+      const dataSends = vi
+        .mocked(win.webContents.send)
+        .mock.calls.filter((c) => c[0] === 'pty:data:s1')
+      expect(dataSends).toHaveLength(1)
+      expect(dataSends[0]?.[1]).toContain('[agentdeck]')
+      expect(dataSends[0]?.[1]).toContain('ghost-agent')
+      expect(dataSends[0]?.[1]).toContain('no longer registered')
+    })
+
     it('rejects unsafe agent flags', () => {
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       mgr.spawn('s1', 80, 24, undefined, undefined, undefined, 'claude-code', '; rm -rf /')
       vi.advanceTimersByTime(600)
@@ -149,7 +178,7 @@ describe('createPtyManager', () => {
 
     it('includes safe agent flags', () => {
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       mgr.spawn('s1', 80, 24, undefined, undefined, undefined, 'claude-code', '--verbose')
       vi.advanceTimersByTime(600)
@@ -160,7 +189,7 @@ describe('createPtyManager', () => {
 
     it('clamps cols/rows to minimum', () => {
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       mgr.spawn('s1', -1, 0)
       expect(pty.spawn).toHaveBeenCalledWith(
@@ -172,7 +201,7 @@ describe('createPtyManager', () => {
 
     it('returns {ok:true, reused:false} on a fresh successful spawn', () => {
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       const result = mgr.spawn('s1', 80, 24)
       expect(result).toEqual({ ok: true, reused: false })
@@ -184,7 +213,7 @@ describe('createPtyManager', () => {
       })
       const win = makeMockWindow()
       const sendSpy = vi.mocked(win.webContents.send)
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       const result = mgr.spawn('s1', 80, 24)
       expect(result).toEqual({ ok: false, error: 'wsl.exe not on PATH' })
@@ -195,7 +224,7 @@ describe('createPtyManager', () => {
 
     it('sends data to renderer via webContents (batched per tick)', () => {
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       mgr.spawn('s1', 80, 24)
 
@@ -211,7 +240,7 @@ describe('createPtyManager', () => {
 
     it('coalesces multiple rapid chunks into a single IPC send', () => {
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       mgr.spawn('s1', 80, 24)
 
@@ -240,7 +269,7 @@ describe('createPtyManager', () => {
   describe('write', () => {
     it('writes to the correct session', () => {
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       mgr.spawn('s1', 80, 24)
       mgr.write('s1', 'input data')
@@ -251,7 +280,7 @@ describe('createPtyManager', () => {
 
     it('is a no-op for unknown session', () => {
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       // Should not throw
       mgr.write('nonexistent', 'data')
@@ -261,7 +290,7 @@ describe('createPtyManager', () => {
   describe('resize', () => {
     it('resizes the correct session', () => {
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       mgr.spawn('s1', 80, 24)
       mgr.resize('s1', 120, 40)
@@ -272,7 +301,7 @@ describe('createPtyManager', () => {
 
     it('clamps cols and rows to minimum 1', () => {
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       mgr.spawn('s1', 80, 24)
       const mockProc = vi.mocked(pty.spawn).mock.results[0]?.value
@@ -289,7 +318,7 @@ describe('createPtyManager', () => {
 
     it('is a no-op for unknown session', () => {
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       // Should not throw
       mgr.resize('nonexistent', 80, 24)
@@ -299,7 +328,7 @@ describe('createPtyManager', () => {
   describe('kill', () => {
     it('kills and cleans up session', () => {
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       mgr.spawn('s1', 80, 24)
       mgr.kill('s1')
@@ -314,7 +343,7 @@ describe('createPtyManager', () => {
 
     it('cancels pending spawn timer on kill', () => {
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       mgr.spawn('s1', 80, 24, '/home/user/project')
       // Kill before timer fires
@@ -334,7 +363,7 @@ describe('createPtyManager', () => {
     it('cleans up the session and notifies renderer + bus when the PTY exits on its own', async () => {
       const { ptyBus } = await import('./pty-bus')
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       mgr.spawn('s1', 80, 24)
       expect(mgr.hasSession('s1')).toBe(true)
@@ -359,7 +388,7 @@ describe('createPtyManager', () => {
     it('forwards a non-zero exit code unchanged to the renderer and bus', async () => {
       const { ptyBus } = await import('./pty-bus')
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       mgr.spawn('s1', 80, 24)
       const onExitCb = ptyInstances[0]?.onExit[0]
@@ -371,7 +400,7 @@ describe('createPtyManager', () => {
 
     it('frees the slot so the same sessionId can be re-spawned fresh after exit', async () => {
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       mgr.spawn('s1', 80, 24)
       const onExitCb = ptyInstances[0]?.onExit[0]
@@ -386,7 +415,7 @@ describe('createPtyManager', () => {
 
     it('stops batched data flush after a natural exit (no send on the exited session)', async () => {
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       mgr.spawn('s1', 80, 24)
       const dataCb = ptyInstances[0]?.onData[0]
@@ -408,7 +437,7 @@ describe('createPtyManager', () => {
   describe('killAll', () => {
     it('kills all active sessions', () => {
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       mgr.spawn('s1', 80, 24)
       mgr.spawn('s2', 80, 24)
@@ -427,7 +456,7 @@ describe('createPtyManager', () => {
     // \bRead\b, \bWrit(?:e|ing)\b, \b(?:Execute|Running|Bash)\b, \bTool\b, \b[Tt]hinking\b
     it('emits read activity for lines containing "Read"', () => {
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       mgr.spawn('s1', 80, 24)
       const cb = ptyInstances[0]?.onData[0]
@@ -442,7 +471,7 @@ describe('createPtyManager', () => {
 
     it('emits write activity for lines containing "Write"', () => {
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       mgr.spawn('s1', 80, 24)
       const cb = ptyInstances[0]?.onData[0]
@@ -457,7 +486,7 @@ describe('createPtyManager', () => {
 
     it('emits command activity for "Running" lines', () => {
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       mgr.spawn('s1', 80, 24)
       const cb = ptyInstances[0]?.onData[0]
@@ -472,7 +501,7 @@ describe('createPtyManager', () => {
 
     it('emits tool activity for "Tool" lines (without Bash/Running/Execute)', () => {
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       mgr.spawn('s1', 80, 24)
       const cb = ptyInstances[0]?.onData[0]
@@ -488,7 +517,7 @@ describe('createPtyManager', () => {
 
     it('emits think activity for "Thinking" lines', () => {
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       mgr.spawn('s1', 80, 24)
       const cb = ptyInstances[0]?.onData[0]
@@ -503,7 +532,7 @@ describe('createPtyManager', () => {
 
     it('handles multi-line data chunks correctly', () => {
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       mgr.spawn('s1', 80, 24)
       const cb = ptyInstances[0]?.onData[0]
@@ -522,7 +551,7 @@ describe('createPtyManager', () => {
   describe('line buffer cap', () => {
     it('caps buffer at 8KB', () => {
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
 
       mgr.spawn('s1', 80, 24)
       const cb = ptyInstances[0]?.onData[0]
@@ -551,7 +580,7 @@ describe('createPtyManager', () => {
   describe('concurrency limit', () => {
     it('throws when attempting to exceed MAX_CONCURRENT_SESSIONS', () => {
       const win = makeMockWindow()
-      const mgr = createPtyManager(win)
+      const mgr = createPtyManager(win, makeRegistry())
       // Internal cap is 20 — spawn 20 distinct sessions, then assert the 21st throws
       for (let i = 0; i < 20; i++) {
         mgr.spawn(`sess-${i}`, 80, 24)
@@ -559,6 +588,99 @@ describe('createPtyManager', () => {
       expect(() => mgr.spawn('sess-overflow', 80, 24)).toThrow(
         /Maximum concurrent sessions reached/,
       )
+    })
+  })
+
+  describe('custom agent spawn', () => {
+    let dir: string
+    let registry: AgentRegistry
+
+    beforeEach(() => {
+      dir = mkdtempSync(join(tmpdir(), 'agentdeck-pty-'))
+      const toml = `
+[[agent]]
+id = "ollama"
+binary = "ollama"
+args = ["run", "llama3"]
+[agent.env]
+OLLAMA_HOST = "127.0.0.1:11434"
+[agent.ui]
+name = "Ollama"
+`
+      writeFileSync(join(dir, 'agents.toml'), toml)
+      registry = new AgentRegistry(join(dir, 'agents.toml'))
+      registry.load()
+    })
+
+    afterEach(() => {
+      rmSync(dir, { recursive: true, force: true })
+    })
+
+    it('builds "ollama run llama3" (shell-quoted) from binary + default args', () => {
+      const win = makeMockWindow()
+      const mgr = createPtyManager(win, registry)
+
+      mgr.spawn('s1', 80, 24, undefined, undefined, undefined, 'ollama')
+      vi.advanceTimersByTime(600)
+
+      const mockProc = vi.mocked(pty.spawn).mock.results[0]?.value
+      // Binary + each default arg is shellQuote'd (single-quoted), which executes
+      // identically to `ollama run llama3` but is injection-safe.
+      expect(mockProc.write).toHaveBeenCalledWith(
+        expect.stringContaining("'ollama' 'run' 'llama3'"),
+      )
+    })
+
+    it('appends safe user flags (unquoted) after the default args', () => {
+      const win = makeMockWindow()
+      const mgr = createPtyManager(win, registry)
+
+      mgr.spawn('s1', 80, 24, undefined, undefined, undefined, 'ollama', '--verbose')
+      vi.advanceTimersByTime(600)
+
+      const mockProc = vi.mocked(pty.spawn).mock.results[0]?.value
+      expect(mockProc.write).toHaveBeenCalledWith(
+        expect.stringContaining("'ollama' 'run' 'llama3' --verbose"),
+      )
+    })
+
+    it('passes custom env to the spawned process, never the command string', () => {
+      const win = makeMockWindow()
+      const mgr = createPtyManager(win, registry)
+
+      mgr.spawn('s1', 80, 24, undefined, undefined, undefined, 'ollama')
+      vi.advanceTimersByTime(600)
+
+      // env reaches the child via pty.spawn options...
+      expect(pty.spawn).toHaveBeenCalledWith(
+        'wsl.exe',
+        [],
+        expect.objectContaining({
+          env: expect.objectContaining({ OLLAMA_HOST: '127.0.0.1:11434' }),
+        }),
+      )
+
+      // ...and is NOT serialized into the shell command string.
+      const mockProc = vi.mocked(pty.spawn).mock.results[0]?.value
+      const writtenCmd = mockProc.write.mock.calls[0]?.[0] as string | undefined
+      expect(writtenCmd).toBeDefined()
+      expect(writtenCmd).not.toContain('OLLAMA_HOST')
+      expect(writtenCmd).not.toContain('11434')
+    })
+
+    it('leaves a builtin agent launch string unchanged (no quoting)', () => {
+      const win = makeMockWindow()
+      const mgr = createPtyManager(win, registry)
+
+      mgr.spawn('s1', 80, 24, undefined, undefined, undefined, 'claude-code', '--verbose')
+      vi.advanceTimersByTime(600)
+
+      const mockProc = vi.mocked(pty.spawn).mock.results[0]?.value
+      const writtenCmd = mockProc.write.mock.calls[0]?.[0] as string | undefined
+      expect(writtenCmd).toBeDefined()
+      // Builtin is unquoted, exactly as before custom-agent support.
+      expect(writtenCmd).toContain('claude --verbose')
+      expect(writtenCmd).not.toContain("'claude'")
     })
   })
 })

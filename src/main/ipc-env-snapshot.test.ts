@@ -87,8 +87,31 @@ describe('env:getAgentSnapshot', () => {
     })
   })
 
-  it('rejects unknown agentId', async () => {
-    await expect(handler(null, { agentId: 'fake' })).rejects.toThrow(/invalid agent/i)
+  it('returns a neutral snapshot for a custom (non-builtin) agentId without throwing', async () => {
+    const { getAgentSnapshot } = await import('./agent-env-resolver')
+    const result = (await handler(null, { agentId: 'my-agent' })) as {
+      agentId: string
+      supportLevel: string
+      hooks: unknown[]
+      skills: unknown[]
+      mcpServers: unknown[]
+      config: unknown[]
+      paths: { agentdeckRoot: string | null; userConfigDir: string | null }
+    }
+    // The resolver (builtin-only) must never be invoked for a custom id.
+    expect(getAgentSnapshot).not.toHaveBeenCalled()
+    expect(result.agentId).toBe('my-agent')
+    expect(result.hooks).toEqual([])
+    expect(result.skills).toEqual([])
+    expect(result.mcpServers).toEqual([])
+    expect(result.config).toEqual([])
+    expect(result.paths.userConfigDir).toBeNull()
+    // Static footer fields from EnvCtx are still populated.
+    expect(result.paths.agentdeckRoot).toBe('/home/u/.agentdeck')
+  })
+
+  it('rejects empty agentId', async () => {
+    await expect(handler(null, { agentId: '' })).rejects.toThrow(/invalid agent/i)
   })
 
   it('rejects non-object opts', async () => {

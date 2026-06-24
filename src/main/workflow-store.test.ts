@@ -58,7 +58,14 @@ vi.mock('fs', () => {
   }
 })
 
-import { listWorkflows, loadWorkflow, saveWorkflow, deleteWorkflow } from './workflow-store'
+import {
+  listWorkflows,
+  loadWorkflow,
+  saveWorkflow,
+  renameWorkflow,
+  deleteWorkflow,
+} from './workflow-store'
+import { KNOWN_AGENT_IDS } from '../shared/agents'
 import * as fs from 'fs'
 
 const testStore = (fs as unknown as { __testStore: Map<string, string> }).__testStore
@@ -174,6 +181,45 @@ describe('saveWorkflow', () => {
       updatedAt: 0,
     })
     expect(result.createdAt).toBe(42)
+  })
+})
+
+describe('renameWorkflow', () => {
+  // A workflow containing a custom-agent node — the id isn't in the builtin set,
+  // so re-validation on save must use the merged registry id set the IPC handler
+  // forwards, not the builtin-only default.
+  const merged = new Set([...KNOWN_AGENT_IDS, 'my-agent'])
+
+  async function seedCustomAgentWorkflow(id: string): Promise<void> {
+    // Seed through saveWorkflow (with the merged id set so the seed itself
+    // validates) — this writes to the real getWorkflowsDir()/<id>.json path.
+    await saveWorkflow(
+      {
+        id,
+        name: 'Old name',
+        nodes: [{ id: 'n1', type: 'agent', name: 'Step', x: 0, y: 0, agent: 'my-agent' }],
+        edges: [],
+        createdAt: 1,
+        updatedAt: 1,
+      },
+      merged,
+    )
+  }
+
+  it('renames a workflow whose node references a custom agent (merged id set)', async () => {
+    await seedCustomAgentWorkflow('wf-custom')
+
+    await expect(renameWorkflow('wf-custom', 'New name', merged)).resolves.toBeUndefined()
+    const reloaded = await loadWorkflow('wf-custom')
+    expect(reloaded?.name).toBe('New name')
+  })
+
+  it('rejects the same rename when no merged id set is passed (builtin-only default)', async () => {
+    await seedCustomAgentWorkflow('wf-custom2')
+
+    await expect(renameWorkflow('wf-custom2', 'New name')).rejects.toThrow(
+      /Unknown agent: my-agent/,
+    )
   })
 })
 

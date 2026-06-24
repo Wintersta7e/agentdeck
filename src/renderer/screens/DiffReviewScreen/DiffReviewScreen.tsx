@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { ScreenShell } from '../../components/shared/ScreenShell'
-import { AGENT_BY_ID, agentColorVar, getSessionAgentId } from '../../utils/agent-ui'
+import { getSessionAgentId } from '../../utils/agent-ui'
+import { useAgentMeta } from '../../hooks/useAgentRegistry'
 import './DiffReviewScreen.css'
 
 interface WorktreeSummary {
@@ -29,9 +30,7 @@ export function DiffReviewScreen(): React.JSX.Element {
   const [comment, setComment] = useState('')
   const [inflight, setInflight] = useState<'keep' | 'discard' | 'comment' | null>(null)
 
-  const agentId = getSessionAgentId(session, project)
-  const agent = AGENT_BY_ID.get(agentId)
-  const colorVar = agentColorVar(agentId)
+  const meta = useAgentMeta(getSessionAgentId(session, project))
 
   useEffect(() => {
     if (!activeSessionId) return
@@ -148,13 +147,13 @@ export function DiffReviewScreen(): React.JSX.Element {
               <div className="dr-panel__body">
                 <div
                   className="dr-summary__agent"
-                  style={{ ['--sel-color' as 'color']: `var(${colorVar})` }}
+                  style={{ ['--sel-color' as 'color']: `var(${meta.colorVar})` }}
                 >
                   <span className="dr-summary__glyph" aria-hidden="true">
-                    {agent?.icon ?? '◈'}
+                    {meta.icon}
                   </span>
                   <div>
-                    <div className="dr-summary__agent-name">{agent?.name ?? agentId}</div>
+                    <div className="dr-summary__agent-name">{meta.name}</div>
                     <div className="dr-summary__agent-session">
                       session <code>{activeSessionId.slice(-8)}</code>
                     </div>

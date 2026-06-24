@@ -3,7 +3,8 @@ import { LayoutGrid, Plus, X } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import { closeSession } from '../../utils/session-close'
 import type { Session, Project } from '../../../shared/types'
-import { AGENT_BY_ID, agentColorVar, getSessionAgentId } from '../../utils/agent-ui'
+import { getSessionAgentId, selectAgentMeta } from '../../utils/agent-ui'
+import { useAgentRegistry } from '../../hooks/useAgentRegistry'
 import './SessionTabs.css'
 
 function shortBranch(branch?: string): string {
@@ -28,6 +29,7 @@ export const SessionTabs = memo(function SessionTabs(): React.JSX.Element {
   const setActiveSession = useAppStore((s) => s.setActiveSession)
   const clearActiveSession = useAppStore((s) => s.clearActiveSession)
   const openNewSessionComposer = useAppStore((s) => s.openNewSessionComposer)
+  const registry = useAgentRegistry()
 
   const projectById = useMemo(
     () => new Map<string, Project>(projects.map((p) => [p.id, p])),
@@ -50,7 +52,7 @@ export const SessionTabs = memo(function SessionTabs(): React.JSX.Element {
         if (!session) return null
         const project = projectById.get(session.projectId)
         const agentId = getSessionAgentId(session, project)
-        const agent = AGENT_BY_ID.get(agentId)
+        const meta = selectAgentMeta(registry, agentId)
         const tone = statusTone(session)
         const isActive = activeSessionId === id
         const label = project?.name ?? 'Unknown'
@@ -68,10 +70,11 @@ export const SessionTabs = memo(function SessionTabs(): React.JSX.Element {
                 setActiveSession(id)
               }
             }}
-            style={{ ['--agent-accent' as never]: `var(${agentColorVar(agentId)})` }}
+            style={{ ['--agent-accent' as never]: `var(${meta.colorVar})` }}
+            {...(meta.isRegistered ? {} : { title: 'Agent no longer registered' })}
           >
             <span className="session-tab__glyph" aria-hidden>
-              {agent?.icon ?? '●'}
+              {meta.icon}
             </span>
             <span className="session-tab__name">{label}</span>
             {session.initialBranch && (

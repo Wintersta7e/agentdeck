@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useAppStore } from '../../store/appStore'
-import { agentColorVar, agentShort, getSessionAgentId } from '../../utils/agent-ui'
+import { getSessionAgentId, selectAgentMeta } from '../../utils/agent-ui'
+import { useAgentRegistry } from '../../hooks/useAgentRegistry'
 import './ScopeViz.css'
 
 interface ScopeVizProps {
@@ -26,6 +27,7 @@ const BLIP_RINGS = [72, 100, 128]
 export function ScopeViz({ size = 300 }: ScopeVizProps): React.JSX.Element {
   const sessions = useAppStore((s) => s.sessions)
   const projects = useAppStore((s) => s.projects)
+  const registry = useAgentRegistry()
   const running = useMemo(
     () => Object.values(sessions).filter((sess) => sess.status === 'running'),
     [sessions],
@@ -42,16 +44,17 @@ export function ScopeViz({ size = 300 }: ScopeVizProps): React.JSX.Element {
       const x = center + Math.cos(angle) * ring
       const y = center + Math.sin(angle) * ring
       const agentId = getSessionAgentId(session, projectById.get(session.projectId))
+      const meta = selectAgentMeta(registry, agentId)
       return {
         id: session.id,
         x,
         y,
-        short: agentShort(agentId),
-        colorVar: agentColorVar(agentId),
+        short: meta.short,
+        colorVar: meta.colorVar,
         delay: (i * 0.4).toFixed(2),
       }
     })
-  }, [running, center, projects])
+  }, [running, center, projects, registry])
 
   return (
     <div className="scope-viz" style={{ width: size, height: size }}>

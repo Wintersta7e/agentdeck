@@ -5,7 +5,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import type { PtyManager } from '../pty-manager'
 import { SAFE_ID_RE, MAX_SAFE_ID_LEN, validateId } from '../validation'
-import { KNOWN_AGENT_IDS, SAFE_FLAGS_RE } from '../../shared/agents'
+import { SAFE_FLAGS_RE } from '../../shared/agents'
 import { ptyBus } from '../pty-bus'
 import { invalidateGitCache } from '../git-status'
 import { toWslPath } from '../wsl-utils'
@@ -13,6 +13,8 @@ import type { ReviewFile } from '../../shared/types'
 import type { ReviewTracker } from '../review-tracker'
 import type { SessionHistory } from '../session-history'
 import type { UsageHistory } from '../usage-history'
+import type { AgentRegistry } from '../agent-registry'
+import { BLOCKED_ENV_KEYS } from '../../shared/custom-agents'
 import { createLogger } from '../logger'
 
 const execFileAsync = promisify(execFile)
@@ -23,15 +25,6 @@ const log = createLogger('ipc-pty')
  *
  * Uses a getter for ptyManager because the instance is created after module load.
  */
-
-/** Keys blocked from renderer-supplied env to prevent process hijacking. */
-const BLOCKED_ENV = new Set([
-  'LD_PRELOAD',
-  'LD_LIBRARY_PATH',
-  'NODE_OPTIONS',
-  'ELECTRON_RUN_AS_NODE',
-  'ELECTRON_NO_ASAR',
-])
 
 /** Maximum bytes per pty:write chunk (1 MiB). */
 const MAX_CHUNK = 1_048_576
@@ -53,6 +46,7 @@ interface PtyHandlerDeps {
   reviewTracker: ReviewTracker
   sessionHistory: SessionHistory
   usageHistory: UsageHistory
+  agentRegistry: AgentRegistry
 }
 
 /**
@@ -114,7 +108,7 @@ export function registerPtyHandlers(
       if (env && typeof env === 'object') {
         safeEnv = {}
         for (const [k, v] of Object.entries(env)) {
-          if (typeof k === 'string' && typeof v === 'string' && !BLOCKED_ENV.has(k)) {
+          if (typeof k === 'string' && typeof v === 'string' && !BLOCKED_ENV_KEYS.has(k)) {
             safeEnv[k] = v
           }
         }
@@ -126,7 +120,7 @@ export function registerPtyHandlers(
       ) {
         throw new Error('Invalid projectPath')
       }
-      if (agent !== undefined && (typeof agent !== 'string' || !KNOWN_AGENT_IDS.has(agent))) {
+      if (agent !== undefined && (typeof agent !== 'string' || !deps.agentRegistry.has(agent))) {
         throw new Error('Invalid agent')
       }
       // Validate startupCommands — reject crafted payloads

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Search, ArrowUp, ArrowDown, CornerDownLeft } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import { useTemplates } from '../../hooks/useTemplates'
+import { useAgentRegistry } from '../../hooks/useAgentRegistry'
 import type { Project } from '../../../shared/types'
 import { createBlankWorkflow } from '../../utils/workflowUtils'
 import { ThemeSubmenu } from './ThemeSubmenu'
@@ -10,7 +11,6 @@ import {
   type ScopeTab,
   type PaletteItem,
   SCOPE_TABS,
-  ALL_AGENTS,
   buildPaletteItems,
   filterPaletteItems,
   groupBySections,
@@ -82,6 +82,13 @@ function PaletteInner({
   const activeSessionId = useAppStore((s) => s.activeSessionId)
   const setWorkflows = useAppStore((s) => s.setWorkflows)
   const openWorkflow = useAppStore((s) => s.openWorkflow)
+
+  const registry = useAgentRegistry()
+  // Live builtin+custom agent options for the "Pinned Agents" submenu.
+  const agentOptions = useMemo(
+    () => registry.map((a) => ({ id: a.id, label: a.name, desc: a.description })),
+    [registry],
+  )
 
   const paletteMode = useAppStore((s) => s.commandPaletteMode)
   const initialScope: ScopeTab =
@@ -190,12 +197,12 @@ function PaletteInner({
 
   const handleAgentToggle = useCallback(
     (agentId: string) => {
-      const current = visibleAgentsRef.current ?? ALL_AGENTS.map((a) => a.id)
+      const current = visibleAgentsRef.current ?? agentOptions.map((a) => a.id)
       const isVisible = current.includes(agentId)
       const updated = isVisible ? current.filter((id) => id !== agentId) : [...current, agentId]
       setVisibleAgents(updated)
     },
-    [setVisibleAgents],
+    [setVisibleAgents, agentOptions],
   )
 
   // Execute action for the selected item
@@ -396,7 +403,7 @@ function PaletteInner({
         {/* Results */}
         {subMenu === 'agents' ? (
           <AgentsSubmenu
-            agents={ALL_AGENTS}
+            agents={agentOptions}
             visibleAgents={visibleAgents}
             selectedIndex={selectedIndex}
             onSelectIndex={setSelectedIndex}

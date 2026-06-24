@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { join } from 'node:path'
+import { tmpdir } from 'node:os'
 import type { PtyManager } from '../pty-manager'
+import { AgentRegistry } from '../agent-registry'
 import { makeHandlersMap, makeIpcCall, makeIpcElectronMock } from '../../__test__/ipc-harness'
 
 const handlers = makeHandlersMap()
@@ -54,6 +57,14 @@ function makeMockMgr(overrides: Partial<MockMgr> = {}): MockMgr {
   }
 }
 
+// Builtins-only registry (no agents.toml on disk) — these IO/kill/resize tests
+// never exercise the spawn agent-gate, but the dep is required.
+const stubRegistry = (): AgentRegistry => {
+  const reg = new AgentRegistry(join(tmpdir(), 'agdeck-pty-io-nonexistent.toml'))
+  reg.load()
+  return reg
+}
+
 function register(mgr: MockMgr): void {
   registerPtyHandlers(() => mgr as unknown as PtyManager, {
     getMainWindow: () => null,
@@ -65,6 +76,7 @@ function register(mgr: MockMgr): void {
     } as unknown as Parameters<typeof registerPtyHandlers>[1]['reviewTracker'],
     sessionHistory: stubSessionHistory(),
     usageHistory: stubUsageHistory(),
+    agentRegistry: stubRegistry(),
   })
 }
 

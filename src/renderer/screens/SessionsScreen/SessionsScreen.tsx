@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { ScreenShell, FilterChip } from '../../components/shared/ScreenShell'
-import { getSessionAgentId, AGENT_BY_ID } from '../../utils/agent-ui'
+import { getSessionAgentId, selectAgentMeta } from '../../utils/agent-ui'
+import { useAgentRegistry } from '../../hooks/useAgentRegistry'
 import type { Session, SessionStatus } from '../../../shared/types'
 import './SessionsScreen.css'
 
@@ -68,6 +69,7 @@ function matchesFilter(status: SessionStatus, filter: FilterId): boolean {
 export function SessionsScreen(): React.JSX.Element {
   const sessions = useAppStore((s) => s.sessions)
   const projects = useAppStore((s) => s.projects)
+  const registry = useAgentRegistry()
   const activityFeeds = useAppStore((s) => s.activityFeeds)
   const setActiveSession = useAppStore((s) => s.setActiveSession)
   const setTab = useAppStore((s) => s.setTab)
@@ -197,7 +199,7 @@ export function SessionsScreen(): React.JSX.Element {
           filtered.map((session) => {
             const project = projectById.get(session.projectId)
             const agentId = getSessionAgentId(session, project)
-            const agent = AGENT_BY_ID.get(agentId)
+            const meta = selectAgentMeta(registry, agentId)
             const feed = activityFeeds[session.id]
             const lastEvent = feed && feed.length > 0 ? feed[feed.length - 1] : undefined
             const activity = lastEvent
@@ -221,9 +223,9 @@ export function SessionsScreen(): React.JSX.Element {
                 </span>
                 <span className="sessions-row__agent">
                   <span className="sessions-row__agent-glyph" aria-hidden="true">
-                    {agent?.icon ?? '◈'}
+                    {meta.icon}
                   </span>
-                  <span className="sessions-row__agent-name">{agent?.name ?? agentId}</span>
+                  <span className="sessions-row__agent-name">{meta.name}</span>
                 </span>
                 <span className="sessions-row__project">
                   <span className="sessions-row__project-name">

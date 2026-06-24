@@ -2,8 +2,8 @@ import { useMemo, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { useMidnight } from '../../hooks/useMidnight'
 import { useSessionHistory } from '../../hooks/useSessionHistory'
-import { AGENT_BY_ID } from '../../../shared/agents'
-import type { AgentType } from '../../../shared/types'
+import { selectAgentMeta } from '../../utils/agent-ui'
+import { useAgentRegistry } from '../../hooks/useAgentRegistry'
 import { ScreenShell, FilterChip } from '../../components/shared/ScreenShell'
 import { DAYS as HISTORY_DAYS } from './constants'
 import { formatWeekday } from '../../utils/format-date'
@@ -29,6 +29,7 @@ function formatTs(ts: number): string {
 
 export function HistoryScreen(): React.JSX.Element {
   const projects = useAppStore((s) => s.projects)
+  const registry = useAgentRegistry()
   const setActiveSession = useAppStore((s) => s.setActiveSession)
   const setCurrentView = useAppStore((s) => s.setCurrentView)
 
@@ -156,7 +157,7 @@ export function HistoryScreen(): React.JSX.Element {
           <ul className="history-log__list">
             {sortedRows.map((row) => {
               const project = projectById.get(row.projectId)
-              const agent = AGENT_BY_ID.get(row.agent as AgentType)
+              const meta = selectAgentMeta(registry, row.agent)
               const files = row.filesChanged
               return (
                 <li key={row.sessionId} className="history-log__row">
@@ -167,8 +168,8 @@ export function HistoryScreen(): React.JSX.Element {
                   >
                     <span className="history-log__time">{formatTs(row.startedAt)}</span>
                     <span className="history-log__agent">
-                      <span aria-hidden="true">{agent?.icon ?? '◈'}</span>
-                      {agent?.name ?? row.agent}
+                      <span aria-hidden="true">{meta.icon}</span>
+                      {meta.name}
                     </span>
                     <span className="history-log__project">
                       {project?.name ?? (row.projectId || 'ad-hoc')}

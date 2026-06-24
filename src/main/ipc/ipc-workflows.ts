@@ -12,6 +12,7 @@ import { listRuns, deleteRun } from '../workflow-run-store'
 import { validateWorkflow, validateRole, VARIABLE_NAME_RE } from '../../shared/workflow-utils'
 import { toWslPath } from '../wsl-utils'
 import type { WorkflowEngine } from '../workflow-engine'
+import type { AgentRegistry } from '../agent-registry'
 import type { Role, Workflow, WorkflowExport } from '../../shared/types'
 import { SAFE_ID_RE, validateId } from '../validation'
 
@@ -23,6 +24,7 @@ import { SAFE_ID_RE, validateId } from '../validation'
  */
 export function registerWorkflowHandlers(
   getWorkflowEngine: () => WorkflowEngine | null,
+  agentRegistry: AgentRegistry,
   getRoles?: (() => Role[]) | undefined,
   saveRole?: ((role: Role) => void) | undefined,
 ): void {
@@ -39,13 +41,13 @@ export function registerWorkflowHandlers(
     // When a non-empty id is present, enforce SAFE_ID_RE consistent with peer handlers.
     const id: unknown = (workflow as { id?: unknown }).id
     if (id !== undefined && id !== '') validateId(id, 'workflow id')
-    return saveWorkflow(workflow)
+    return saveWorkflow(workflow, agentRegistry.knownIds())
   })
   ipcMain.handle(CH.workflowsRename, (_, id: string, name: string) => {
     validateId(id, 'workflow id')
     if (typeof name !== 'string' || !name.trim() || name.length > 200)
       throw new Error('Invalid workflow name')
-    return renameWorkflow(id, name)
+    return renameWorkflow(id, name, agentRegistry.knownIds())
   })
   ipcMain.handle(CH.workflowsDelete, async (_, id: string) => {
     validateId(id, 'workflow id')
@@ -101,8 +103,9 @@ export function registerWorkflowHandlers(
           ? (roleStrategy as Record<string, 'skip' | 'copy'>)
           : {}
 
-      // Validate workflow structure
-      const validation = validateWorkflow(importedWorkflow)
+      // Validate workflow structure against the merged registry id set so
+      // imported workflows referencing registered custom agents validate.
+      const validation = validateWorkflow(importedWorkflow, agentRegistry.knownIds())
       if (validation.errors.length > 0) {
         throw new Error(`Invalid workflow: ${validation.errors.join('; ')}`)
       }
@@ -184,7 +187,7 @@ export function registerWorkflowHandlers(
         createdAt: Date.now(),
         updatedAt: Date.now(),
       }
-      const saved = await saveWorkflow(newWorkflow)
+      const saved = await saveWorkflow(newWorkflow, agentRegistry.knownIds())
       return { workflow: saved, warnings }
     },
   )
@@ -201,7 +204,7 @@ export function registerWorkflowHandlers(
       createdAt: Date.now(),
       updatedAt: Date.now(),
     }
-    return saveWorkflow(clone)
+    return saveWorkflow(clone, agentRegistry.knownIds())
   })
 
   /* ── Workflow Run History ──────────────────────────────────────── */
@@ -231,8 +234,9 @@ export function registerWorkflowHandlers(
       if (!workflow) throw new Error(`Workflow not found: ${workflowId}`)
       const engine = getWorkflowEngine()
       if (!engine) throw new Error('Workflow engine not initialized')
-      // Validate workflow structure before execution
-      const validation = validateWorkflow(workflow)
+      // Validate workflow structure before execution against the merged
+      // registry id set so custom-agent nodes are accepted.
+      const validation = validateWorkflow(workflow, agentRegistry.knownIds())
       if (validation.errors.length > 0) {
         throw new Error(`Invalid workflow: ${validation.errors.join('; ')}`)
       }

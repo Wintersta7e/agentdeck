@@ -2,6 +2,7 @@ import { useAppStore } from '../store/appStore'
 
 export async function bootstrapInitialRendererState(): Promise<void> {
   const templatesPromise = useAppStore.getState().bootstrapTemplates()
+  const agentRegistryPromise = useAppStore.getState().bootstrapAgentRegistry()
   const visibleAgentsPromise = window.agentDeck.agents.getVisible()
   const layoutPromise = window.agentDeck.layout.get()
 
@@ -20,5 +21,5 @@ export async function bootstrapInitialRendererState(): Promise<void> {
     ...(layout.wfLogPanelWidth !== undefined && { wfLogPanelWidth: layout.wfLogPanelWidth }),
   })
 
-  await templatesPromise
+  await Promise.all([templatesPromise, agentRegistryPromise])
 }

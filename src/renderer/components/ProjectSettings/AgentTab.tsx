@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { SquareCheck, Square, Star, ChevronUp, ChevronDown } from 'lucide-react'
-import { AGENTS as SHARED_AGENTS, SAFE_FLAGS_RE } from '../../../shared/agents'
+import { SAFE_FLAGS_RE } from '../../../shared/agents'
 import type { Project, AgentType } from '../../../shared/types'
 import { getProjectAgents } from '../../../shared/agent-helpers'
+import { useAgentRegistry } from '../../hooks/useAgentRegistry'
 
 interface TabProps {
   draft: Project
@@ -10,6 +11,7 @@ interface TabProps {
 }
 
 export function AgentTab({ draft, onChange }: TabProps): React.JSX.Element {
+  const registry = useAgentRegistry()
   const agents = getProjectAgents(draft)
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null)
 
@@ -71,15 +73,16 @@ export function AgentTab({ draft, onChange }: TabProps): React.JSX.Element {
           <div className="section-head-sub">Check agents to enable, star one as default</div>
         </div>
         <div className="section-body">
-          {SHARED_AGENTS.map((agentDef) => {
-            const enabled = isEnabled(agentDef.id)
-            const isDefaultAgent = getDefault() === agentDef.id
+          {registry.map((agentDef) => {
+            const agentId = agentDef.id as AgentType
+            const enabled = isEnabled(agentId)
+            const isDefaultAgent = getDefault() === agentId
             const isExpanded = expandedAgent === agentDef.id && enabled
             return (
               <div key={agentDef.id} className="agent-multi-row">
                 <div
                   className={`agent-row${enabled ? ' selected' : ''}`}
-                  onClick={() => toggleAgent(agentDef.id)}
+                  onClick={() => toggleAgent(agentId)}
                 >
                   <div className="agent-row-check">
                     {enabled ? <SquareCheck size={16} /> : <Square size={16} />}
@@ -100,7 +103,7 @@ export function AgentTab({ draft, onChange }: TabProps): React.JSX.Element {
                       }
                       onClick={(e) => {
                         e.stopPropagation()
-                        setDefault(agentDef.id)
+                        setDefault(agentId)
                       }}
                     >
                       <Star size={14} fill={isDefaultAgent ? 'currentColor' : 'none'} />
@@ -134,17 +137,16 @@ export function AgentTab({ draft, onChange }: TabProps): React.JSX.Element {
                       <div className="form-control-col">
                         <input
                           type="text"
-                          className={`settings-input${getAgentFlags(agentDef.id) && !SAFE_FLAGS_RE.test(getAgentFlags(agentDef.id)) ? ' settings-input-error' : ''}`}
-                          value={getAgentFlags(agentDef.id)}
-                          onChange={(e) => updateAgentFlags(agentDef.id, e.target.value)}
+                          className={`settings-input${getAgentFlags(agentId) && !SAFE_FLAGS_RE.test(getAgentFlags(agentId)) ? ' settings-input-error' : ''}`}
+                          value={getAgentFlags(agentId)}
+                          onChange={(e) => updateAgentFlags(agentId, e.target.value)}
                           maxLength={200}
                           placeholder="e.g. --model claude-opus-4-5"
                           aria-label={`Custom flags for ${agentDef.name}`}
                         />
-                        {getAgentFlags(agentDef.id) &&
-                          !SAFE_FLAGS_RE.test(getAgentFlags(agentDef.id)) && (
-                            <div className="form-field-error">Contains unsafe characters</div>
-                          )}
+                        {getAgentFlags(agentId) && !SAFE_FLAGS_RE.test(getAgentFlags(agentId)) && (
+                          <div className="form-field-error">Contains unsafe characters</div>
+                        )}
                       </div>
                     </div>
                   </div>

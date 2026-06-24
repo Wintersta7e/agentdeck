@@ -1,5 +1,5 @@
 import type { AgentEnvSnapshot } from '../shared/types'
-import { KNOWN_AGENT_IDS, type AgentId } from '../shared/agents'
+import { KNOWN_AGENT_IDS, type BuiltinAgentId } from '../shared/agents'
 import { SNAPSHOT_CACHE_TTL_MS } from '../shared/constants'
 import { readClaudeSnapshot } from './agent-env-claude'
 import { readCodexSnapshot } from './agent-env-codex'
@@ -24,7 +24,9 @@ export interface GetSnapshotOpts {
 
 type Reader = (opts: { projectPath?: string | undefined }) => Promise<AgentEnvSnapshot>
 
-const READERS: Partial<Record<AgentId, Reader>> = {
+// Annotation (not `satisfies`) so this intentionally-partial map can be indexed by a
+// BuiltinAgentId and yield `Reader | undefined`, while still rejecting typo'd keys.
+const READERS: Partial<Record<BuiltinAgentId, Reader>> = {
   'claude-code': (opts) => readClaudeSnapshot(opts),
   codex: (opts) => readCodexSnapshot(opts),
 }
@@ -48,7 +50,8 @@ export async function getAgentSnapshot(opts: GetSnapshotOpts): Promise<AgentEnvS
 
   const promise = (async (): Promise<AgentEnvSnapshot> => {
     log.info('resolving agent snapshot', { agentId, projectPath, force })
-    const reader = READERS[agentId as AgentId]
+    // Safe cast: the KNOWN_AGENT_IDS guard above guarantees agentId is a built-in.
+    const reader = READERS[agentId as BuiltinAgentId]
     const snapshot = reader
       ? await reader({ projectPath })
       : await readOtherAgentSnapshot({ agentId, projectPath })

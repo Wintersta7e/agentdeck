@@ -51,6 +51,16 @@ function fakeEngine(): FakeEngine {
   }
 }
 
+// Minimal AgentRegistry stand-in: the workflow handlers only read knownIds()
+// for validateWorkflow. Builtins are enough; tests that need a custom id can
+// pass their own set.
+function fakeRegistry(
+  extraIds: readonly string[] = [],
+): Parameters<typeof registerWorkflowHandlers>[1] {
+  const ids = new Set<string>(['claude-code', 'codex', ...extraIds])
+  return { knownIds: () => ids } as unknown as Parameters<typeof registerWorkflowHandlers>[1]
+}
+
 function validWorkflow(overrides: Partial<Workflow> = {}): Workflow {
   return {
     id: 'wf-1',
@@ -68,7 +78,7 @@ const call = makeIpcCall(handlers)
 describe('ipc-workflows', () => {
   beforeEach(() => {
     handlers.clear()
-    registerWorkflowHandlers(() => null)
+    registerWorkflowHandlers(() => null, fakeRegistry())
   })
 
   it('workflows:load rejects unsafe ids', () => {
@@ -79,7 +89,7 @@ describe('ipc-workflows', () => {
     const saveSpy = vi.fn()
     handlers.clear()
     // Re-register so we capture saveWorkflow mock state
-    registerWorkflowHandlers(() => null)
+    registerWorkflowHandlers(() => null, fakeRegistry())
     // The concrete call should not throw; the underlying saveWorkflow mock just resolves.
     expect(() => call('workflows:save', { name: 'Fresh', nodes: [], edges: [] })).not.toThrow()
     void saveSpy
@@ -155,6 +165,7 @@ describe('ipc-workflows :: workflows:import', () => {
     }
     registerWorkflowHandlers(
       () => null,
+      fakeRegistry(),
       () => getRolesMock(),
       (r) => saveRoleMock(r),
     )
@@ -429,6 +440,7 @@ describe('ipc-workflows :: workflow:run', () => {
         engine as unknown as Parameters<typeof registerWorkflowHandlers>[0] extends () => infer R
           ? R
           : never,
+      fakeRegistry(),
     )
   })
 
@@ -443,7 +455,7 @@ describe('ipc-workflows :: workflow:run', () => {
 
   it('rejects when the engine is uninitialized', async () => {
     handlers.clear()
-    registerWorkflowHandlers(() => null)
+    registerWorkflowHandlers(() => null, fakeRegistry())
     await expect(call('workflow:run', 'wf-1') as Promise<unknown>).rejects.toThrow(
       /engine not initialized/i,
     )
