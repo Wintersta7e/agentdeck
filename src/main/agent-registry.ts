@@ -60,6 +60,9 @@ export class AgentRegistry {
   private custom = new Map<string, CustomAgentSpec>()
   private descriptors: AgentDescriptorWire[] = builtinDescriptors()
   private ids: Set<string> = new Set(BUILTIN_IDS)
+  /** Serializes write mutations so overlapping save/delete calls each start
+   *  from committed in-memory state (no snapshot-before-await race). */
+  private writeChain: Promise<unknown> = Promise.resolve()
 
   constructor(filePath: string) {
     this.filePath = filePath
@@ -116,24 +119,37 @@ export class AgentRegistry {
   ): Promise<{ ok: true; warnings: string[] } | { ok: false; error: string }> {
     const res = validateCustomAgent(spec, BUILTIN_IDS)
     if (!res.ok) return { ok: false, error: res.error }
-    const next = new Map(this.custom)
-    next.set(res.value.id, res.value)
-    await this.writeFile([...next.values()])
-    return { ok: true, warnings: this.load().warnings }
+    return this.serialize(async () => {
+      const next = new Map(this.custom)
+      next.set(res.value.id, res.value)
+      await this.writeFile([...next.values()])
+      return { ok: true, warnings: this.load().warnings }
+    })
   }
 
   /** Remove a custom agent, persist atomically, then reload. Returns false if absent. */
   async deleteCustom(id: string): Promise<boolean> {
-    if (!this.custom.has(id)) return false
-    const next = new Map(this.custom)
-    next.delete(id)
-    await this.writeFile([...next.values()])
-    this.load()
-    return true
+    return this.serialize(async () => {
+      if (!this.custom.has(id)) return false
+      const next = new Map(this.custom)
+      next.delete(id)
+      await this.writeFile([...next.values()])
+      this.load()
+      return true
+    })
   }
 
   private async writeFile(specs: CustomAgentSpec[]): Promise<void> {
     await atomicWrite(this.filePath, stringifyToml({ agent: specs.map(toTomlEntry) }))
+  }
+
+  /** Run a read-modify-write-reload mutation only after any in-flight one has
+   *  settled, so each starts from committed state. The chain survives a rejected
+   *  link (next mutation still runs). */
+  private serialize<T>(fn: () => Promise<T>): Promise<T> {
+    const result = this.writeChain.then(fn, fn)
+    this.writeChain = result.catch(() => undefined)
+    return result
   }
 
   private rebuild(): void {

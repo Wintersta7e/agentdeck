@@ -160,6 +160,30 @@ describe('AgentRegistry CRUD', () => {
     a.load()
     expect(await a.deleteCustom('nope')).toBe(false)
   })
+
+  it('serializes overlapping saves so neither agent is dropped', async () => {
+    const a = new AgentRegistry(file)
+    a.load()
+    // Fire two saves without awaiting the first. Without serialization the
+    // second snapshots in-memory state before the first's reload and drops "one".
+    const p1 = a.saveCustom({ id: 'one', binary: 'one-bin', ui: { name: 'One' } })
+    const p2 = a.saveCustom({ id: 'two', binary: 'two-bin', ui: { name: 'Two' } })
+    await Promise.all([p1, p2])
+    const b = new AgentRegistry(file)
+    b.load()
+    expect(b.has('one')).toBe(true)
+    expect(b.has('two')).toBe(true)
+  })
+
+  it('rejects on write failure without leaving a phantom in-memory entry', async () => {
+    // A path inside a non-existent directory makes atomicWrite fail.
+    const bad = new AgentRegistry(join(dir, 'no-such-dir', 'agents.toml'))
+    bad.load()
+    await expect(
+      bad.saveCustom({ id: 'ghost', binary: 'ghost-bin', ui: { name: 'Ghost' } }),
+    ).rejects.toThrow()
+    expect(bad.has('ghost')).toBe(false)
+  })
 })
 
 describe('AgentRegistry.getSpec (non-lossy edit/clone source)', () => {

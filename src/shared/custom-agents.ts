@@ -108,6 +108,9 @@ const LIMIT = {
   binary: 256,
   name: 64,
   description: 200,
+  // Generous over the modal's maxLength=4 to allow multi-code-unit emoji glyphs.
+  icon: 8,
+  short: 8,
   argCount: 32,
   argLen: 256,
   envCount: 32,
@@ -199,11 +202,20 @@ export function validateCustomAgent(raw: unknown, builtinIds: ReadonlySet<string
   if (versionArgsRaw !== undefined) {
     if (!isStringArray(versionArgsRaw) || versionArgsRaw.length > LIMIT.argCount)
       return fail('ui.versionArgs must be a string array')
+    if (versionArgsRaw.some((a) => /\s/.test(a)))
+      return fail('each ui.versionArgs entry must be a single token (no whitespace)')
     versionArgs = versionArgsRaw
   }
 
-  const icon = typeof u['icon'] === 'string' && u['icon'] ? u['icon'] : '●'
-  const short = typeof u['short'] === 'string' && u['short'] ? u['short'] : deriveShort(name)
+  const iconRaw = u['icon']
+  if (iconRaw !== undefined && (typeof iconRaw !== 'string' || iconRaw.length > LIMIT.icon))
+    return fail(`ui.icon must be a string <= ${LIMIT.icon} chars`)
+  const icon = typeof iconRaw === 'string' && iconRaw ? iconRaw : '●'
+
+  const shortRaw = u['short']
+  if (shortRaw !== undefined && (typeof shortRaw !== 'string' || shortRaw.length > LIMIT.short))
+    return fail(`ui.short must be a string <= ${LIMIT.short} chars`)
+  const short = typeof shortRaw === 'string' && shortRaw ? shortRaw : deriveShort(name)
   const colorVarRaw = u['colorVar']
   const colorVar =
     typeof colorVarRaw === 'string' &&
@@ -218,6 +230,11 @@ export function validateCustomAgent(raw: unknown, builtinIds: ReadonlySet<string
     if (argsRaw.length > LIMIT.argCount) return fail(`args must have <= ${LIMIT.argCount} items`)
     if (argsRaw.some((a) => a.length > LIMIT.argLen))
       return fail(`each arg must be <= ${LIMIT.argLen} chars`)
+    // The Agents modal edits args as one whitespace-joined field and re-splits
+    // on save, so a whitespace-bearing arg cannot round-trip losslessly. Reject
+    // it here so the data model matches what the modal can faithfully represent.
+    if (argsRaw.some((a) => /\s/.test(a)))
+      return fail('each arg must be a single token (no whitespace)')
     args = argsRaw
   }
 

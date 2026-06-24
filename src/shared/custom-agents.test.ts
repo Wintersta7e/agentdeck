@@ -113,6 +113,28 @@ describe('validateCustomAgent', () => {
   it('derives a short label from name when omitted', () => {
     expect(ok({ id: 'x', binary: 'x', ui: { name: 'My Agent' } }).ui.short).toBeTruthy()
   })
+
+  it('rejects an over-long ui.icon or ui.short', () => {
+    // The modal caps both at maxLength=4; the shared validator must agree so a
+    // hand-edited agents.toml can't smuggle a layout-breaking 5000-char glyph.
+    expect(err({ id: 'x', binary: 'x', ui: { name: 'X', icon: 'a'.repeat(9) } })).toMatch(/icon/i)
+    expect(err({ id: 'x', binary: 'x', ui: { name: 'X', short: 'a'.repeat(9) } })).toMatch(/short/i)
+    // A multi-code-unit emoji icon and a short 4-char label still pass.
+    expect(ok({ id: 'x', binary: 'x', ui: { name: 'X', icon: '🦙', short: 'OL' } }).ui.icon).toBe(
+      '🦙',
+    )
+  })
+
+  it('rejects args/versionArgs entries containing whitespace (lossy-edit guard)', () => {
+    // The Agents modal stores args in one whitespace-joined field and re-splits
+    // on save, so an arg with embedded whitespace cannot round-trip losslessly.
+    expect(
+      err({ id: 'x', binary: 'x', ui: { name: 'X' }, args: ['--system-prompt=hello world'] }),
+    ).toMatch(/whitespace|space/i)
+    expect(err({ id: 'x', binary: 'x', ui: { name: 'X', versionArgs: ['--foo bar'] } })).toMatch(
+      /whitespace|space/i,
+    )
+  })
 })
 
 describe('looksLikeCredentialKey', () => {
