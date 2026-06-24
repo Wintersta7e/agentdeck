@@ -29,6 +29,15 @@ export function registerProjectHandlers(
     if (typeof p !== 'string' || !p || p.length > 1024) {
       throw new Error('projects:detectStack requires a valid path')
     }
+    // Reject path traversal, mirroring projects:readFile. (`..` as a substring
+    // — e.g. foo..bar — is fine; only real `..` path segments are rejected.)
+    const slashified = p.replace(/\\/g, '/')
+    if (
+      slashified !== path.posix.normalize(slashified) ||
+      /(?:^|\/)\.\.(?:\/|$)/.test(slashified)
+    ) {
+      throw new Error('projects:detectStack rejects path traversal')
+    }
     if (distro !== undefined && typeof distro !== 'string') {
       throw new Error('projects:detectStack requires a string distro')
     }

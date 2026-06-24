@@ -114,7 +114,11 @@ export const createProjectsSlice: StateCreator<AppState, [], [], ProjectsSlice> 
   // Visible Agents
   visibleAgents: null,
   setVisibleAgents: (agents) => {
-    window.agentDeck.agents.setVisible(agents)
+    window.agentDeck.agents.setVisible(agents).catch((err: unknown) => {
+      window.agentDeck.log.send('warn', 'agents', 'setVisible persist failed', {
+        err: String(err),
+      })
+    })
     set({ visibleAgents: agents })
   },
 

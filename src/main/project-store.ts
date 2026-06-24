@@ -13,6 +13,31 @@ import { toWslPath } from './wsl-utils'
 
 const log = createLogger('project-store')
 
+// Persistable Project fields copied verbatim from renderer input on save
+// (id/path/envVars are handled explicitly). Anything not listed here is dropped
+// so the store can't accumulate arbitrary keys. `satisfies` guards against typos;
+// keep in sync when adding a Project field that should persist.
+const PROJECT_PATCH_FIELDS = [
+  'name',
+  'pinned',
+  'lastOpened',
+  'badge',
+  'attachedTemplates',
+  'wslDistro',
+  'notes',
+  'startupCommands',
+  'agent',
+  'agentFlags',
+  'agents',
+  'contextFile',
+  'identity',
+  'autoOpen',
+  'scrollbackLines',
+  'fontSize',
+  'shell',
+  'meta',
+] as const satisfies readonly (keyof Project)[]
+
 // Promise-based write lock prevents concurrent read-modify-write races.
 // All mutating handlers (save/delete for projects, templates, roles) are serialized
 // through this lock so a second IPC call waits for the first to finish writing.
@@ -284,18 +309,24 @@ export function registerStoreHandlers(store: AppStore): void {
       // windowsToWsl (e.g. an older PathInput, a manual store edit) can't leak
       // Windows-style paths into the store and trip files:listDir validation.
       const normalizedPath = typeof p.path === 'string' ? toWslPath(p.path) : p.path
-      const withId = {
-        ...p,
-        id,
-        ...(normalizedPath !== undefined && { path: normalizedPath }),
-        envVars: encryptEnvVars(p.envVars),
-      } as Project
+      // Copy only known Project fields (id/path/envVars handled explicitly
+      // below) so a buggy or compromised renderer can't persist arbitrary
+      // extra keys. Only fields actually present in the input are carried, so
+      // partial updates still merge cleanly with the existing record.
+      const withId: Partial<Project> = { id }
+      for (const k of PROJECT_PATCH_FIELDS) {
+        const v = p[k]
+        if (v !== undefined) (withId as Record<string, unknown>)[k] = v
+      }
+      if (normalizedPath !== undefined) withId.path = normalizedPath
+      withId.envVars = encryptEnvVars(p.envVars)
       const idx = projects.findIndex((existing) => existing.id === id)
       const existing = idx >= 0 ? projects[idx] : undefined
       if (existing !== undefined) {
         projects[idx] = { ...existing, ...withId }
       } else {
-        projects.push(withId)
+        // A create always carries name+path from the renderer; the cast is safe.
+        projects.push(withId as Project)
       }
       store.set('projects', projects)
       const savedIdx = idx >= 0 ? idx : projects.length - 1

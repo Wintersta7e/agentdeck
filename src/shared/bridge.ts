@@ -104,7 +104,7 @@ export interface AgentDeckBridge {
   agents: {
     check: () => Promise<Record<string, boolean>>
     getVisible: () => Promise<string[] | null>
-    setVisible: (agents: string[]) => Promise<string[]>
+    setVisible: (agents: string[]) => Promise<string[] | null>
     checkUpdates: (installedAgents: Record<string, boolean>) => Promise<void>
     update: (agentId: string) => Promise<AgentUpdateResult>
     onVersionInfo: (cb: (info: AgentVersionInfo) => void) => BridgeUnsubscribe
