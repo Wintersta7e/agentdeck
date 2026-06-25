@@ -43,6 +43,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and workflow runs (workflow nodes run them best-effort, raw output). Secrets
   for local-model endpoints are deferred to a later release.
 
+### Changed
+
+- Refreshed Electron to 42.5.0 and tightened packaging (dropped a forced
+  node-pty rebuild).
+- Removed dead store actions and an unused tab-params code path.
+
+### Security
+
+- **Hardened the workflow shell node** — bounded output (16 MiB `maxBuffer`),
+  numeric exit-code coercion, tree-kill on timeout, and cancellation of parallel
+  siblings on a hard failure.
+- **Tightened untrusted renderer input handling** — a path-traversal guard on
+  stack detection, a project-field whitelist on save, and a stricter Content
+  Security Policy (`base-uri` / `form-action`).
+- **Hardened custom-agent validation and registry writes** — bounded icon /
+  short metadata and serialized registry writes.
+- **Disabled Node-runtime abuse vectors on the packaged binary** — the
+  `runAsNode`, `enableNodeOptionsEnvironmentVariable`, and
+  `enableNodeCliInspectArguments` fuses are now off.
+
+### Fixed
+
+- Fixed an atomic-write temp-file leak when a rename failed.
+
 ## [6.10.0] - 2026-06-07
 
 Covers everything since 6.8.0 (6.9.0 was never published). Headline: the

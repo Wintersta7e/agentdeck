@@ -1,6 +1,6 @@
 # AgentDeck User Guide
 
-> **Version**: 6.10.0
+> **Version**: 7.0.0
 
 AgentDeck is a desktop command center for managing AI coding agents through WSL2 terminals. This guide covers every feature from first launch to advanced workflow automation.
 
@@ -24,9 +24,10 @@ AgentDeck is a desktop command center for managing AI coding agents through WSL2
 14. [Productivity & Plan Limits](#productivity--plan-limits)
 15. [Git Worktree Isolation](#git-worktree-isolation)
 16. [Agent Updates](#agent-updates)
-17. [Themes](#themes)
-18. [Keyboard Shortcuts](#keyboard-shortcuts)
-19. [Troubleshooting](#troubleshooting)
+17. [Custom Agents](#custom-agents)
+18. [Themes](#themes)
+19. [Keyboard Shortcuts](#keyboard-shortcuts)
+20. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -66,7 +67,7 @@ The titlebar carries an 8-tab navigation strip. Each tab maps to a primary works
 | Home | **Alt+1** | Dashboard: digest, live sessions, projects, productivity, plan limits, agents |
 | Sessions | **Alt+2** | Active and exited session list + tabbed split view |
 | Projects | **Alt+3** | All projects, wizards, settings |
-| Agents | **Alt+4** | Per-agent detection, version, update, env / hooks / skills |
+| Agents | **Alt+4** | Per-agent detection, version, update, env / hooks / skills; custom agents (bring-your-own) |
 | Workflows | **Alt+5** | Workflow library + editor canvases |
 | History | **Alt+6** | Workflow run history across all workflows |
 | Alerts | **Alt+7** | Notifications and review queue |
@@ -96,7 +97,7 @@ The home screen is a command center that appears when no session or workflow tab
 - **Session Timeline** — Horizontal bars showing activity phases (read, write, think, command, error) for each session today
 - **Productivity Panel** — Sessions · active time · files changed, with a 7-day sparkline and a per-project breakdown
 - **Plan-Limits Panel** — Real Codex 5h / weekly rate-limit gauges, plus a rolling-5h activity tile for every agent
-- **Agent Strip** — All 7 agents with detection status, version, and context window
+- **Agent Strip** — All 7 built-in agents — plus any custom agents you've added — with detection status, version, and context window
 
 Home-screen data is disk-backed and survives close / restart — productivity rollups, the session timeline, and the digest all persist across app sessions, not just the current run.
 
@@ -115,6 +116,8 @@ AgentDeck checks for 7 agents by running `which <binary>` in your WSL environmen
 | OpenCode | `opencode` | Open-source agent |
 
 Agents that aren't installed appear greyed out. You can hide/show agents via the Command Palette > Agents sub-menu.
+
+Beyond these 7 built-ins, any **custom agents** you've registered appear alongside them in the agent strip and pickers — see [Custom Agents](#custom-agents).
 
 ---
 
@@ -660,9 +663,50 @@ Use the Command Palette or home screen to re-check agent status. This also trigg
 
 ---
 
+## Custom Agents
+
+Beyond the 7 built-ins, you can register your own CLI agents — a local model runner such as Ollama, a personal wrapper script, or even a Windows `.exe` reachable from WSL via interop — and use them everywhere a built-in agent works. Unlike the built-ins, custom agents are managed by hand: AgentDeck does not auto-detect or auto-update them.
+
+### Adding a Custom Agent
+
+Open the **Agents** tab (**Alt+4**) and find the **Custom Agents** section. Click **Add agent** to open the editor modal and fill in:
+
+- **Name** — Display name shown in pickers and on cards
+- **Binary** — A PATH-resolvable command to launch (e.g. `ollama`). No spaces or leading dash.
+- **Launch arguments** — Default CLI args, edited **one per row** (like the env rows below). Each argument is its own field, so a value that contains spaces — a system-prompt string, for example — is expressed as a single argument and round-trips losslessly.
+- **Environment variables** — Optional non-secret `KEY=value` rows passed to the agent process.
+- **Appearance** — Optional id, icon, colour swatch, short label, description, and context window used to render the agent throughout the UI.
+
+Save to add the agent. It appears immediately in the Custom Agents section.
+
+### Editing, Cloning, Deleting
+
+Each custom agent card has **Edit**, **Clone**, and **Delete** actions. Clone is handy for spinning up a near-identical variant (e.g. the same runner with a different model arg). Deleting a custom agent **cascades** — it is also removed as the pinned agent from any project that used it, so a later session can't fail to launch with an "Invalid agent" error.
+
+### Hand-editing agents.toml
+
+Custom agents are stored in `<userData>/agents.toml`. You can edit this file directly instead of using the modal; AgentDeck reloads it and surfaces a parse-error notification if the file is malformed.
+
+### First-class everywhere
+
+Custom agents are not second-class citizens. Once added, they appear in:
+
+- the **new-session** agent picker
+- the **Command Palette**
+- the **per-project default agent** setting
+- **workflow agent-nodes**
+
+and they launch in both terminal sessions and workflow runs, exactly like a built-in.
+
+### No secrets yet
+
+Environment variables on a custom agent are stored in **plaintext** in `agents.toml`, and a value that looks like an API key or credential is rejected. Secure storage for local-model endpoint secrets is planned for a later release — for now, keep secrets out of custom-agent config.
+
+---
+
 ## Themes
 
-AgentDeck v6.x ships three dark themes — the eight v5.x palettes were retired in v6.0 and are auto-migrated to their nearest successor on first boot.
+AgentDeck ships three dark themes — the eight v5.x palettes were retired in v6.0 and are auto-migrated to their nearest successor on first boot.
 
 | Theme | Accent | Vibe |
 |-------|--------|------|
