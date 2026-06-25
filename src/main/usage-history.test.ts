@@ -20,7 +20,7 @@ const rec = (
   agent: 'claude-code',
   projectId: 'p1',
   startedAt: BASE_START,
-  endedAt: BASE_END, // ~60s
+  lastActivityAt: BASE_END, // ~60s of activity
   filesChanged: 3,
   ...over,
 })
@@ -34,7 +34,7 @@ describe('usage-history', () => {
         sessionId: 's2',
         agent: 'codex',
         startedAt: BASE_START,
-        endedAt: BASE_START + 30000,
+        lastActivityAt: BASE_START + 30000,
         filesChanged: 1,
       }),
     ) // 30s
@@ -49,10 +49,18 @@ describe('usage-history', () => {
 
   it('clamps negative durations/files to zero', () => {
     const h = createUsageHistory()
-    h.recordSession(rec({ endedAt: 0, filesChanged: -5 }))
+    h.recordSession(rec({ lastActivityAt: 0, filesChanged: -5 }))
     const today = h.getHistory(1)[0]!
     expect(today.activeMs).toBe(0)
     expect(today.filesChanged).toBe(0)
+  })
+
+  it('counts active time up to the last activity, not the session lifespan', () => {
+    const h = createUsageHistory()
+    // Started ~60s ago but the last activity was only 2s in — the idle tail
+    // (a session left open) must not inflate active time.
+    h.recordSession(rec({ startedAt: BASE_START, lastActivityAt: BASE_START + 2_000 }))
+    expect(h.getHistory(1)[0]!.activeMs).toBe(2_000)
   })
 
   it('persists and reloads across instances (survives restart)', () => {
@@ -117,7 +125,7 @@ describe('usage-history', () => {
         projectId: 'p2',
         agent: 'codex',
         startedAt: BASE_START,
-        endedAt: BASE_START + 30000,
+        lastActivityAt: BASE_START + 30000,
         filesChanged: 5,
       }),
     )

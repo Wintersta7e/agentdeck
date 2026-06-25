@@ -8,7 +8,7 @@ import type {
   WorkflowNode,
   ConditionNode,
   WorkflowEdge,
-  WorkflowEvent,
+  WorkflowEventInput,
   WorkflowNodeRun,
   Role,
 } from '../shared/types'
@@ -17,6 +17,7 @@ export { validateWorkflow, topoSort } from '../shared/workflow-utils'
 import { createScheduler } from './edge-scheduler'
 import { substituteVariables } from './variable-substitution'
 import { runAgentNode, runShellNode, forceKillTree, type NodeRunnerDeps } from './node-runners'
+import type { AgentRegistry } from './agent-registry'
 import { MAX_CONCURRENT_WORKFLOWS, MAX_TIER_CONCURRENCY } from '../shared/constants'
 import { createRunRecorder, getErrorTail } from './workflow-history'
 
@@ -44,11 +45,12 @@ export { ptyBus } from './pty-bus'
 export function createWorkflowEngine(
   _ptyManager: PtyManager,
   mainWindow: BrowserWindow,
+  agentRegistry: AgentRegistry,
   getRoles?: (() => Role[]) | undefined,
 ): WorkflowEngine {
   const activeRuns = new Map<string, { stop: () => void; resume: (nodeId: string) => void }>()
 
-  function push(workflowId: string, event: Omit<WorkflowEvent, 'id' | 'timestamp'>): void {
+  function push(workflowId: string, event: WorkflowEventInput): void {
     if (mainWindow.isDestroyed()) return
     mainWindow.webContents.send(workflowEventChannel(workflowId), {
       ...event,
@@ -104,6 +106,15 @@ export function createWorkflowEngine(
     const conditionOutputs = new Map<string, string>()
     const activeChildProcesses = new Set<ChildProcess>()
     const runningNodeIds = new Set<string>()
+    /** Force-kill the entire process tree of every in-flight child, then clear
+     *  the set. Shared by user-stop and the hard-fail path — a failed node must
+     *  not leave its parallel-tier siblings running. */
+    const killActiveChildren = (): void => {
+      for (const child of activeChildProcesses) {
+        forceKillTree(child)
+      }
+      activeChildProcesses.clear()
+    }
     // Key checkpoints by workflowId:nodeId (scoped to this run)
     const runCheckpoints = new Map<string, () => void>()
 
@@ -128,6 +139,7 @@ export function createWorkflowEngine(
       nodeExitCodes,
       activeChildProcesses,
       isStopped: () => stopped,
+      agentRegistry,
     }
 
     function onCheckpoint(nodeId: string): Promise<void> {
@@ -464,6 +476,9 @@ export function createWorkflowEngine(
         } else {
           scheduler.failNode(node.id)
           stopped = true
+          // Kill in-flight siblings in the same parallel tier; they would
+          // otherwise keep running (and editing files) until their own timeout.
+          killActiveChildren()
         }
       }
     }
@@ -503,7 +518,7 @@ export function createWorkflowEngine(
 
       // Track which nodes we've emitted skip events for
       const emittedSkipped = new Set<string>()
-      // Track deadlock (nodes stuck pending after upstream failure)
+      // Set when the loop can make no further progress (see the no-ready guard below).
       let deadlocked = false
 
       try {
@@ -511,6 +526,11 @@ export function createWorkflowEngine(
           if (stopped) break
 
           const ready = scheduler.getReady()
+          // Safety backstop against an infinite loop: if nothing is ready while the
+          // run isn't done, no progress is possible. Normal node failures set
+          // `stopped` (and break above), so this only trips on an unexpected
+          // scheduler state — e.g. a future skip/branch-propagation gap that leaves
+          // a node stuck pending. Reported as an error below.
           if (ready.length === 0 && !scheduler.isDone()) {
             deadlocked = true
             break
@@ -611,10 +631,7 @@ export function createWorkflowEngine(
         }
         runningNodeIds.clear()
         // Force-kill all in-flight child processes (entire process tree)
-        for (const child of activeChildProcesses) {
-          forceKillTree(child)
-        }
-        activeChildProcesses.clear()
+        killActiveChildren()
         // Only clear this run's checkpoints
         for (const [, resolve] of runCheckpoints) {
           resolve()

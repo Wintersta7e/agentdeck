@@ -1,4 +1,5 @@
 import type { ContextResult, SetContextOverrideArgs } from './context-types'
+import type { AgentDescriptorWire, CustomAgentSpec } from './custom-agents'
 import type {
   ActivityEvent,
   AgentEnvSnapshot,
@@ -14,6 +15,7 @@ import type {
   SessionRecord,
   SkillInfo,
   Template,
+  TemplateChangeEvent,
   TemplateDraft,
   TemplateScope,
   Workflow,
@@ -102,7 +104,7 @@ export interface AgentDeckBridge {
   agents: {
     check: () => Promise<Record<string, boolean>>
     getVisible: () => Promise<string[] | null>
-    setVisible: (agents: string[]) => Promise<string[]>
+    setVisible: (agents: string[]) => Promise<string[] | null>
     checkUpdates: (installedAgents: Record<string, boolean>) => Promise<void>
     update: (agentId: string) => Promise<AgentUpdateResult>
     onVersionInfo: (cb: (info: AgentVersionInfo) => void) => BridgeUnsubscribe
@@ -119,6 +121,15 @@ export interface AgentDeckBridge {
       agent: Record<string, number>
       model: Record<string, number>
     }>
+    getRegistry: () => Promise<AgentDescriptorWire[]>
+    /** Full custom spec (args/env/versionArgs) for non-lossy edit/clone; null for builtins/unknown. */
+    getCustomSpec: (id: string) => Promise<CustomAgentSpec | null>
+    saveCustom: (
+      spec: unknown,
+    ) => Promise<{ ok: true; warnings: string[] } | { ok: false; error: string }>
+    deleteCustom: (id: string) => Promise<boolean>
+    onRegistryChange: (cb: () => void) => BridgeUnsubscribe
+    onParseError: (cb: (event: { warnings: string[] }) => void) => BridgeUnsubscribe
   }
   projects: {
     detectStack: (path: string, distro?: string) => Promise<DetectedStack | null>
@@ -212,7 +223,7 @@ export interface AgentDeckBridge {
       ref: { id: string; scope: TemplateScope; projectId: string | null },
       pinned: boolean,
     ) => Promise<void>
-    onChange: (cb: (event: unknown) => void) => BridgeUnsubscribe
+    onChange: (cb: (event: TemplateChangeEvent) => void) => BridgeUnsubscribe
     onParseError: (cb: (event: { path: string; error: string }) => void) => BridgeUnsubscribe
   }
   env: {

@@ -4,6 +4,7 @@ import { AGENTS } from '../../../shared/agents'
 import { useEffectiveContext, badgeLabelFor } from '../../hooks/useEffectiveContext'
 import { ScreenShell, FilterChip } from '../../components/shared/ScreenShell'
 import { ProgressBar } from '../../components/shared/ProgressBar'
+import { CustomAgentsSection } from './CustomAgentsSection'
 import './AgentsScreen.css'
 
 type AgentRecord = (typeof AGENTS)[number]
@@ -243,6 +244,7 @@ export function AgentsScreen(): React.JSX.Element {
           />
         ))}
       </div>
+      <CustomAgentsSection />
     </ScreenShell>
   )
 }

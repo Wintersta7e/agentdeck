@@ -7,14 +7,8 @@ export interface UiSlice {
   currentView: ViewType
   setCurrentView: (view: ViewType) => void
 
-  /**
-   * Parameters for the active tab view (e.g. { sessionId }, { projectId }, { workflowId }).
-   * Reset when a new top-level tab is selected via setTab().
-   */
-  tabParams: Record<string, unknown>
-  setTabParams: (params: Record<string, unknown>) => void
-  /** Switch to a top-level tab and reset tabParams atomically. */
-  setTab: (view: ViewType, params?: Record<string, unknown>) => void
+  /** Switch to a top-level tab. */
+  setTab: (view: ViewType) => void
 
   settingsProjectId: string | null
   viewStack: ViewType[]
@@ -79,16 +73,10 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set) => (
   currentView: 'home',
   setCurrentView: (view) => set({ currentView: view }),
 
-  tabParams: {},
-  setTabParams: (params) => set({ tabParams: params }),
-  // Top-level tab navigation resets tabParams but does NOT push to
-  // viewStack. The stack is reserved for sub-view modals (wizard,
-  // settings, template-editor) so switching tabs isn't unbounded memory.
-  setTab: (view, params) =>
-    set({
-      currentView: view,
-      tabParams: params ?? {},
-    }),
+  // Top-level tab navigation does NOT push to viewStack. The stack is
+  // reserved for sub-view modals (wizard, settings, template-editor) so
+  // switching tabs isn't unbounded memory.
+  setTab: (view) => set({ currentView: view }),
 
   settingsProjectId: null,
   viewStack: [] as ViewType[],

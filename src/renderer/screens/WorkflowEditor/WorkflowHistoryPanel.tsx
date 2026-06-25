@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { RefreshCw, Trash2, ChevronRight } from 'lucide-react'
 import { handleIpcError } from '../../utils/ipcErrorHandler'
 import { Skeleton } from '../../components/shared/Skeleton'
+import { formatDurationShort } from '../../utils/format-duration'
 import type { WorkflowRun, WorkflowNodeRun } from '../../../shared/types'
 import './WorkflowHistoryPanel.css'
 
@@ -10,15 +11,6 @@ interface WorkflowHistoryPanelProps {
 }
 
 // ── Formatting helpers ──────────────────────────────────────────────────────
-
-function formatDuration(ms: number | null): string {
-  if (ms === null) return '\u2014'
-  if (ms < 1000) return '< 1s'
-  const s = Math.floor(ms / 1000)
-  if (s < 60) return `${s}s`
-  const m = Math.floor(s / 60)
-  return `${m}m ${s % 60}s`
-}
 
 function formatTime(ts: number): string {
   return new Date(ts).toLocaleString()
@@ -66,7 +58,7 @@ function NodeRow({ node }: { node: WorkflowNodeRun }): React.JSX.Element {
         </span>
       )}
 
-      <span className="wf-history-node-duration">{formatDuration(node.durationMs)}</span>
+      <span className="wf-history-node-duration">{formatDurationShort(node.durationMs)}</span>
     </div>
   )
 }
@@ -99,7 +91,7 @@ function RunCard({
       <button type="button" className="wf-history-run-header" onClick={onToggle}>
         <div className={`wf-history-status-dot ${statusClass(run.status)}`} />
         <span className="wf-history-run-time">{formatTime(run.startedAt)}</span>
-        <span className="wf-history-run-duration">{formatDuration(run.durationMs)}</span>
+        <span className="wf-history-run-duration">{formatDurationShort(run.durationMs)}</span>
         {varCount > 0 && (
           <span className="wf-history-run-vars">
             {varCount} var{varCount !== 1 ? 's' : ''}

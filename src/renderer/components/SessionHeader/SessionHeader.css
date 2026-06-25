@@ -19,6 +19,10 @@
   font-weight: 600;
 }
 
+.session-header__unregistered {
+  color: var(--red);
+}
+
 .session-header__divider {
   width: 1px;
   height: 14px;

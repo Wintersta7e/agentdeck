@@ -2,21 +2,17 @@ import { useMemo, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { useMidnight } from '../../hooks/useMidnight'
 import { useSessionHistory } from '../../hooks/useSessionHistory'
-import { AGENTS } from '../../../shared/agents'
-import type { AgentType } from '../../../shared/types'
+import { selectAgentMeta } from '../../utils/agent-ui'
+import { useAgentRegistry } from '../../hooks/useAgentRegistry'
 import { ScreenShell, FilterChip } from '../../components/shared/ScreenShell'
 import { DAYS as HISTORY_DAYS } from './constants'
+import { formatWeekday } from '../../utils/format-date'
 import './HistoryScreen.css'
 
 type Metric = 'count' | 'filesChanged'
 
 const HOURS = 24
 const DAY_MS = 24 * 60 * 60 * 1000
-const AGENT_META_MAP = new Map(AGENTS.map((a) => [a.id, a]))
-
-function weekdayLabel(ts: number): string {
-  return new Date(ts).toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase().slice(0, 3)
-}
 
 function dayOfMonthLabel(ts: number): string {
   return String(new Date(ts).getDate())
@@ -33,6 +29,7 @@ function formatTs(ts: number): string {
 
 export function HistoryScreen(): React.JSX.Element {
   const projects = useAppStore((s) => s.projects)
+  const registry = useAgentRegistry()
   const setActiveSession = useAppStore((s) => s.setActiveSession)
   const setCurrentView = useAppStore((s) => s.setCurrentView)
 
@@ -125,7 +122,7 @@ export function HistoryScreen(): React.JSX.Element {
           return (
             <div className="history-heatmap__row" key={dayIdx}>
               <span className="history-heatmap__day">
-                <span className="history-heatmap__day-name">{weekdayLabel(ts)}</span>
+                <span className="history-heatmap__day-name">{formatWeekday(new Date(ts))}</span>
                 <span className="history-heatmap__day-num">{dayOfMonthLabel(ts)}</span>
               </span>
               {row.map((value, hour) => {
@@ -138,7 +135,7 @@ export function HistoryScreen(): React.JSX.Element {
                     style={{ opacity: opacity || undefined }}
                     title={
                       value > 0
-                        ? `${weekdayLabel(ts)} ${String(hour).padStart(2, '0')}:00 · ${
+                        ? `${formatWeekday(new Date(ts))} ${String(hour).padStart(2, '0')}:00 · ${
                             metric === 'count' ? `${value} sessions` : `${value} files`
                           }`
                         : undefined
@@ -160,7 +157,7 @@ export function HistoryScreen(): React.JSX.Element {
           <ul className="history-log__list">
             {sortedRows.map((row) => {
               const project = projectById.get(row.projectId)
-              const agent = AGENT_META_MAP.get(row.agent as AgentType)
+              const meta = selectAgentMeta(registry, row.agent)
               const files = row.filesChanged
               return (
                 <li key={row.sessionId} className="history-log__row">
@@ -171,8 +168,8 @@ export function HistoryScreen(): React.JSX.Element {
                   >
                     <span className="history-log__time">{formatTs(row.startedAt)}</span>
                     <span className="history-log__agent">
-                      <span aria-hidden="true">{agent?.icon ?? '◈'}</span>
-                      {agent?.name ?? row.agent}
+                      <span aria-hidden="true">{meta.icon}</span>
+                      {meta.name}
                     </span>
                     <span className="history-log__project">
                       {project?.name ?? (row.projectId || 'ad-hoc')}

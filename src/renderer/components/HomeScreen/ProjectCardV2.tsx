@@ -2,12 +2,11 @@ import { useMemo } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { GitStatusRow } from './GitStatusRow'
 import { Skeleton } from '../shared/Skeleton'
-import { AGENTS } from '../../../shared/agents'
+import { selectAgentMeta } from '../../utils/agent-ui'
+import { useAgentRegistry } from '../../hooks/useAgentRegistry'
 import { getDefaultAgent, getProjectAgents } from '../../../shared/agent-helpers'
 import type { Project, StackBadge } from '../../../shared/types'
 import './ProjectCardV2.css'
-
-const AGENT_META = new Map(AGENTS.map((a) => [a.id, a]))
 
 const BADGE_ABBR: Record<StackBadge, string> = {
   Java: 'JV',
@@ -50,6 +49,7 @@ export function ProjectCardV2({
   onContextMenu,
 }: ProjectCardV2Props): React.JSX.Element {
   const gitStatus = useAppStore((s) => s.gitStatuses[project.id])
+  const registry = useAgentRegistry()
 
   // Primitive selector: returns true/false, avoiding a full sessions object subscription.
   const isRunning = useAppStore((s) =>
@@ -120,11 +120,11 @@ export function ProjectCardV2({
       {agents.length > 0 && (
         <div className="pcv2-agents">
           {agents.map((ac) => {
-            const meta = AGENT_META.get(ac.agent)
+            const meta = selectAgentMeta(registry, ac.agent)
             const running = runningAgents.has(ac.agent)
             return (
               <span key={ac.agent} className={`pcv2-pill${running ? ' live' : ''}`}>
-                {meta?.icon ?? '\u25C8'} {meta?.name ?? ac.agent}
+                {meta.icon} {meta.name}
               </span>
             )
           })}

@@ -1,6 +1,6 @@
 # AgentDeck User Guide
 
-> **Version**: 6.6.0
+> **Version**: 6.10.0
 
 AgentDeck is a desktop command center for managing AI coding agents through WSL2 terminals. This guide covers every feature from first launch to advanced workflow automation.
 
@@ -21,7 +21,7 @@ AgentDeck is a desktop command center for managing AI coding agents through WSL2
 11. [Agentic Workflows](#agentic-workflows) (conditions, loops, variables, import/export, history)
 12. [Workflow Roles](#workflow-roles)
 13. [Command Palette](#command-palette)
-14. [Cost/Token Tracking](#costtoken-tracking)
+14. [Productivity & Plan Limits](#productivity--plan-limits)
 15. [Git Worktree Isolation](#git-worktree-isolation)
 16. [Agent Updates](#agent-updates)
 17. [Themes](#themes)
@@ -63,7 +63,7 @@ The titlebar carries an 8-tab navigation strip. Each tab maps to a primary works
 
 | Tab | Shortcut | What lives here |
 |-----|----------|------------------|
-| Home | **Alt+1** | Dashboard: digest, live sessions, projects, cost, agents |
+| Home | **Alt+1** | Dashboard: digest, live sessions, projects, productivity, plan limits, agents |
 | Sessions | **Alt+2** | Active and exited session list + tabbed split view |
 | Projects | **Alt+3** | All projects, wizards, settings |
 | Agents | **Alt+4** | Per-agent detection, version, update, env / hooks / skills |
@@ -82,11 +82,11 @@ The home screen is a command center that appears when no session or workflow tab
 
 ### Tier 1 — Critical (always visible)
 - **Greeting + Date** — Shows your WSL username and current date
-- **Daily Digest** — Today's session count, total cost, exit rate, and top agent
+- **Daily Digest** — Today's session count, active time, files changed, exit rate, and top agent
 - **Quick Actions** — New Session, Run Workflow, From Template, Resume Last
 
 ### Tier 2 — Operational
-- **Live Session Grid** — Real-time cards for running sessions showing agent name, elapsed time, activity pulse, token gauge, and cost
+- **Live Session Grid** — Real-time cards for running sessions showing agent name, elapsed time, activity pulse, and files-changed count
 - **Projects** — Pinned project cards with git status (branch, uncommitted changes), agent pills, and stack badge. Click to open a session.
 - **Suggestions Panel** — Proactive recommendations (stale projects, unused templates, available updates)
 - **Review Queue** — Agent-produced diffs awaiting human review
@@ -94,10 +94,11 @@ The home screen is a command center that appears when no session or workflow tab
 
 ### Tier 3 — Reference (collapsible)
 - **Session Timeline** — Horizontal bars showing activity phases (read, write, think, command, error) for each session today
-- **Cost Dashboard** — Daily cost with per-agent breakdown, 7-day sparkline history, budget bar
+- **Productivity Panel** — Sessions · active time · files changed, with a 7-day sparkline and a per-project breakdown
+- **Plan-Limits Panel** — Real Codex 5h / weekly rate-limit gauges, plus a rolling-5h activity tile for every agent
 - **Agent Strip** — All 7 agents with detection status, version, and context window
 
-Data on the home screen persists after closing session tabs — cost, timeline, and digest show cumulative stats for the entire app session.
+Home-screen data is disk-backed and survives close / restart — productivity rollups, the session timeline, and the digest all persist across app sessions, not just the current run.
 
 ### Agent Detection
 
@@ -269,7 +270,7 @@ Future-tier agents (gemini-cli, amazon-q, opencode) render a "not yet supported"
 
 ### Config
 
-Session-scoped settings: cost cap, auto-approve level, model override, retry policy.
+Session-scoped settings: auto-approve level, model override, retry policy.
 
 ### Resize
 
@@ -564,35 +565,50 @@ In the Themes sub-menu, arrow keys give a live preview of each theme. Press Ente
 
 ---
 
-## Cost/Token Tracking
+## Productivity & Plan Limits
 
-AgentDeck tracks token usage and estimated cost for **Claude Code** and **Codex CLI** sessions in real-time.
+AgentDeck measures what you actually did — sessions, active time, and files
+changed — and surfaces the rate limits of your agent subscriptions. There is
+no cost or token estimation: charging API-equivalent dollars from a static
+price table is meaningless on a subscription plan, so it was removed.
 
-### How It Works
+### Productivity Tracking
 
-When a session starts, AgentDeck discovers the agent's JSONL log file in WSL and tails it every 3 seconds. Token usage and cost are parsed from the log entries and pushed to the UI.
+Every agent session is recorded from its real lifecycle in the main process —
+on PTY spawn and exit — so a session still counts even if it ends after the
+window is gone. Three numbers are tracked per session and rolled up per day:
 
-- **Claude Code**: Reads `~/.claude/projects/` session logs (or `$CLAUDE_CONFIG_DIR/projects/` when overridden). Pricing uses the model ID (opus/sonnet/haiku, including the `[1m]` 1M-context variants) with cache-aware rates — cache writes cost 1.25x, cache reads cost 0.1x of the base input rate.
-- **Codex CLI**: Reads `~/.codex/sessions/` rollout files (or `$CODEX_HOME/sessions/`). Per-model pricing covers the gpt-5.4 family (incl. mini/nano/pro), gpt-5.3 / gpt-5.3-codex / gpt-5.2-codex, gpt-5, o3, gpt-4o, and gpt-4-turbo.
+- **Sessions** — how many agent sessions you started
+- **Active time** — wall-clock duration each session was open
+- **Files changed** — file-write events observed during the session
 
-### The Cost Badge
+These rollups are **disk-backed** (`usage-history.json` in the app's data
+dir), so they survive restarts — today's numbers no longer reset when you
+relaunch. The Productivity panel on the home screen shows a 7-day sparkline
+and a per-project breakdown, and the daily digest leads with the same figures.
+Productivity is fully **agent-agnostic** — all 7 agents are tracked the same
+way, with no per-agent log parsing.
 
-A **Zap icon** appears in the SessionHeader showing:
-- **USD cost** (e.g. `$0.18`) — computed from model pricing
-- **Total tokens** (e.g. `28.8k tokens`) — all tokens processed (input + cache + output)
+### Plan Limits
 
-**Hover** the badge for a tooltip breakdown: input, output, cache read, and cache write tokens.
+The Plan-Limits panel shows how much of your subscription window you've used:
 
-The cost and token count are always consistent — both reflect the same set of tokens, so the numbers make sense together.
+- **Codex** — real 5-hour and weekly rate-limit gauges, read account-wide from
+  the newest Codex rollout log (`~/.codex/.../rollout-*.jsonl`, or
+  `$CODEX_HOME`). The gauges are reset-aware — a window reads 0% once its
+  `resets_at` has passed. Codex is the only agent that writes a subscription
+  rate-limit window to disk.
+- **Every agent** — a rolling-5-hour **activity tile** built from productivity
+  data (sessions + active time in the last 5h). This is honest local
+  measurement, not a server quota; gemini-cli and amazon-q quotas live
+  server-side, and aider / goose / opencode are bring-your-own-API.
 
 ### Notes
 
-- Cost tracking is automatic — no configuration needed
-- Only Claude Code and Codex are supported (other agents show no badge)
-- On the first turn, Claude shows high token counts due to system prompt caching — this drops dramatically on subsequent turns
-- Cost data is per-session and resets when the session closes
-
-The Cost Dashboard on the home screen shows a 7-day cost history sparkline, today's total with per-agent breakdown, and an optional daily budget bar. Cost data refreshes every 30 seconds and persists after closing session tabs.
+- Tracking is automatic — no configuration needed, and nothing is sent off your
+  machine.
+- Claude Code session logs carry **no** rate-limit data, so Claude shows the
+  rolling-5h activity tile rather than a subscription gauge.
 
 ---
 

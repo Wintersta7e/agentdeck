@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { useSessionHistory } from '../../hooks/useSessionHistory'
-import { AGENT_BY_ID, agentColorVar } from '../../utils/agent-ui'
-import type { AgentType } from '../../../shared/types'
+import { selectAgentMeta } from '../../utils/agent-ui'
+import { useAgentRegistry } from '../../hooks/useAgentRegistry'
 import './SessionTimelineB1.css'
 
 const WINDOW_MS = 60 * 60 * 1000 // last 60 minutes
@@ -10,8 +10,8 @@ const WINDOW_MS = 60 * 60 * 1000 // last 60 minutes
 interface Row {
   id: string
   projectName: string
-  agentId: string
   glyph: string
+  colorVar: string
   startPct: number
   widthPct: number
   running: boolean
@@ -26,6 +26,7 @@ interface Row {
 export function SessionTimelineB1({ now }: { now: number }): React.JSX.Element {
   const projects = useAppStore((s) => s.projects)
   const sessionRows = useSessionHistory(1)
+  const registry = useAgentRegistry()
 
   const projectById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects])
 
@@ -44,19 +45,19 @@ export function SessionTimelineB1({ now }: { now: number }): React.JSX.Element {
         const endPct = Math.max(startPct + 2, ((endTs - windowStart) / WINDOW_MS) * 100)
         const widthPct = Math.min(100 - startPct, endPct - startPct)
         const projectName = projectById.get(r.projectId)?.name ?? (r.projectId || 'ad-hoc')
-        const agent = AGENT_BY_ID.get(r.agent as AgentType)
+        const meta = selectAgentMeta(registry, r.agent)
         return {
           id: r.sessionId,
           projectName,
-          agentId: r.agent,
-          glyph: agent?.icon ?? '◈',
+          glyph: meta.icon,
+          colorVar: meta.colorVar,
           startPct,
           widthPct,
           running,
           mins: Math.max(0, Math.floor((now - r.startedAt) / 60000)),
         }
       })
-  }, [sessionRows, projectById, now])
+  }, [sessionRows, projectById, registry, now])
 
   return (
     <div className="st-b1">
@@ -78,7 +79,7 @@ export function SessionTimelineB1({ now }: { now: number }): React.JSX.Element {
             <li
               key={row.id}
               className={`st-b1__row${i === rows.length - 1 ? ' st-b1__row--last' : ''}`}
-              style={{ ['--row-color' as 'color']: `var(${agentColorVar(row.agentId)})` }}
+              style={{ ['--row-color' as 'color']: `var(${row.colorVar})` }}
             >
               <span className="st-b1__glyph">{row.glyph}</span>
               <span className="st-b1__project" title={row.projectName}>

@@ -126,6 +126,35 @@ describe('createProjectStore', () => {
     expect(projects[0]?.name).toBe('Updated')
   })
 
+  it('drops unknown renderer fields and persists only known Project fields', async () => {
+    setupStore()
+    const saved = (await callHandler('store:saveProject', {
+      name: 'Whitelisted',
+      path: '/home/test',
+      agent: 'codex',
+      bogusField: 'should not persist',
+    })) as Project
+    expect(saved.agent).toBe('codex')
+    expect((saved as unknown as Record<string, unknown>).bogusField).toBeUndefined()
+  })
+
+  it('preserves known fields omitted from a partial update', async () => {
+    setupStore()
+    const saved = (await callHandler('store:saveProject', {
+      name: 'P',
+      path: '/home/test',
+      agent: 'codex',
+      wslDistro: 'Ubuntu',
+    })) as Project
+    const updated = (await callHandler('store:saveProject', {
+      id: saved.id,
+      name: 'P2',
+    })) as Project
+    expect(updated.name).toBe('P2')
+    expect(updated.agent).toBe('codex')
+    expect(updated.wslDistro).toBe('Ubuntu')
+  })
+
   it('deletes a project', async () => {
     setupStore()
     const saved = (await callHandler('store:saveProject', {

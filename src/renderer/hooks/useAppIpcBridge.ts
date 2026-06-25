@@ -150,7 +150,6 @@ export function useAppIpcBridge(): void {
         const unsub = window.agentDeck.workflows.onEvent(workflowId, (event: WorkflowEvent) => {
           const store = useAppStore.getState()
           store.addWorkflowLog(workflowId, event)
-          const nodeId = event.nodeId
           switch (event.type) {
             case 'workflow:started':
               store.setWorkflowStatus(workflowId, 'running')
@@ -164,21 +163,23 @@ export function useAppIpcBridge(): void {
             case 'workflow:stopped':
               store.setWorkflowStatus(workflowId, 'stopped')
               break
+            // Node-level events carry a required nodeId (WorkflowEvent DU), so
+            // these narrow without a per-case guard.
             case 'node:started':
             case 'node:resumed':
-              if (nodeId) store.setWorkflowNodeStatus(workflowId, nodeId, 'running')
+              store.setWorkflowNodeStatus(workflowId, event.nodeId, 'running')
               break
             case 'node:done':
-              if (nodeId) store.setWorkflowNodeStatus(workflowId, nodeId, 'done')
+              store.setWorkflowNodeStatus(workflowId, event.nodeId, 'done')
               break
             case 'node:error':
-              if (nodeId) store.setWorkflowNodeStatus(workflowId, nodeId, 'error')
+              store.setWorkflowNodeStatus(workflowId, event.nodeId, 'error')
               break
             case 'node:paused':
-              if (nodeId) store.setWorkflowNodeStatus(workflowId, nodeId, 'paused')
+              store.setWorkflowNodeStatus(workflowId, event.nodeId, 'paused')
               break
             case 'node:skipped':
-              if (nodeId) store.setWorkflowNodeStatus(workflowId, nodeId, 'skipped')
+              store.setWorkflowNodeStatus(workflowId, event.nodeId, 'skipped')
               break
           }
         })

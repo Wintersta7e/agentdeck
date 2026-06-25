@@ -1,10 +1,12 @@
 import type { BrowserWindow } from 'electron'
 import type { PtyManager } from './pty-manager'
-import type { AppStore } from './project-store'
+import { projectIdByPath, projectPathById, type AppStore } from './project-store'
 import type { WorkflowEngine } from './workflow-engine'
 import type { WorktreeManager } from './worktree-manager'
 import type { SessionHistory } from './session-history'
 import type { UsageHistory } from './usage-history'
+import type { ReviewTracker } from './review-tracker'
+import type { AgentRegistry } from './agent-registry'
 import {
   registerPtyHandlers,
   registerWindowHandlers,
@@ -15,7 +17,6 @@ import {
   registerSkillHandlers,
   registerWorktreeHandlers,
   registerHomeHandlers,
-  reviewTracker,
 } from './ipc'
 
 interface RegisterAppIpcHandlersOptions {
@@ -27,6 +28,8 @@ interface RegisterAppIpcHandlersOptions {
   getWorktreeManager: () => WorktreeManager | null
   sessionHistory: SessionHistory
   usageHistory: UsageHistory
+  reviewTracker: ReviewTracker
+  agentRegistry: AgentRegistry
 }
 
 export function registerAppIpcHandlers({
@@ -38,23 +41,24 @@ export function registerAppIpcHandlers({
   getWorktreeManager,
   sessionHistory,
   usageHistory,
+  reviewTracker,
+  agentRegistry,
 }: RegisterAppIpcHandlersOptions): void {
   registerPtyHandlers(getPtyManager, {
     getMainWindow,
-    getProjectId: (projectPath) => {
-      const projects = store.get('projects') ?? []
-      return projects.find((project) => project.path === projectPath)?.id ?? null
-    },
+    getProjectId: (projectPath) => projectIdByPath(store, projectPath),
     reviewTracker,
     sessionHistory,
     usageHistory,
+    agentRegistry,
   })
   registerWindowHandlers(getMainWindow, store)
-  registerAgentHandlers(getMainWindow, store)
+  registerAgentHandlers(getMainWindow, store, agentRegistry)
   registerProjectHandlers(getMainWindow, getAppStore)
   registerSkillHandlers()
   registerWorkflowHandlers(
     getWorkflowEngine,
+    agentRegistry,
     () => store.get('roles') ?? [],
     (role) => {
       const roles = store.get('roles') ?? []
@@ -69,9 +73,5 @@ export function registerAppIpcHandlers({
   )
   registerUtilHandlers()
   registerWorktreeHandlers(getWorktreeManager)
-  registerHomeHandlers((projectId) => {
-    const projects = store.get('projects') ?? []
-    const project = projects.find((candidate) => candidate.id === projectId)
-    return project?.path ?? null
-  })
+  registerHomeHandlers((projectId) => projectPathById(store, projectId), reviewTracker)
 }

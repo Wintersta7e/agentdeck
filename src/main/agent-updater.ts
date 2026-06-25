@@ -4,6 +4,7 @@ import { AGENTS, AGENT_BINARY_MAP } from '../shared/agents'
 import type { AgentUpdateResult, AgentVersionInfo } from '../shared/bridge'
 import { createLogger } from './logger'
 import { wslRun, shellQuote } from './wsl-exec'
+import { invalidateAgentPathCache } from './node-runners'
 
 const log = createLogger('agent-updater')
 
@@ -268,6 +269,11 @@ export async function updateAgent(agentId: string): Promise<UpdateResult> {
     log.warn(`Update failed for ${agentId}`, { message })
     return { agentId, success: false, newVersion: null, message }
   }
+
+  // The install may have moved or replaced the agent binary (e.g. a new nvm node
+  // version relocates the global bin dir). Drop any cached PATH prefix so the next
+  // workflow run re-resolves it instead of exec'ing a stale path.
+  invalidateAgentPathCache()
 
   // Critical safety check: verify the binary still exists after update.
   // npm install -g can remove the old binary before installing the new one.

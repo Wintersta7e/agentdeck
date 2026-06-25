@@ -131,7 +131,7 @@
   background: var(--bg0);
   color: var(--node-accent);
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: var(--fs-xxs);
   letter-spacing: 0.2em;
   line-height: 14px;
   text-transform: uppercase;
@@ -238,7 +238,7 @@
 
 .wf-node-field-label {
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: var(--fs-xxs);
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--text3);
@@ -267,7 +267,7 @@
   gap: var(--sp-1);
   padding: var(--sp-half) var(--sp-2);
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: var(--fs-xxs);
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--cyan);
@@ -362,7 +362,7 @@
 .wf-node-edit-btn {
   padding: var(--sp-0_75) var(--sp-3);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-xxs);
   letter-spacing: 0.2em;
   text-transform: uppercase;
   cursor: pointer;

@@ -5,7 +5,7 @@ vi.mock('child_process', () => ({
   execFile: vi.fn(),
 }))
 
-import { wslPathToWindows } from './wsl-utils'
+import { wslPathToWindows, toWslPath } from './wsl-utils'
 import { execFile } from 'child_process'
 
 const mockedExecFile = vi.mocked(execFile)
@@ -79,5 +79,81 @@ describe('getDefaultDistroAsync', () => {
     const { getDefaultDistroAsync: freshGet } = await import('./wsl-utils')
     const result = await freshGet()
     expect(result).toBe('Ubuntu')
+  })
+
+  it('falls back to "Ubuntu" when wsl.exe exits 0 with empty/BOM-only output', async () => {
+    // WSL installed but no distros registered: exit 0, stdout is just a BOM and
+    // whitespace. Must cache the fallback, not an empty distro segment.
+    vi.resetModules()
+    mockedExecFile.mockImplementation(
+      (_cmd: unknown, _args: unknown, _opts: unknown, cb: unknown) => {
+        ;(cb as (err: null, stdout: string) => void)(null, '﻿\n   \n')
+        return undefined as never
+      },
+    )
+    const { getDefaultDistroAsync: freshGet } = await import('./wsl-utils')
+    expect(await freshGet()).toBe('Ubuntu')
+  })
+})
+
+describe('resolveWslUsername', () => {
+  it('returns the first non-empty result across the racing commands', async () => {
+    vi.resetModules()
+    mockedExecFile.mockImplementation(
+      (_cmd: unknown, args: unknown, _opts: unknown, cb: unknown) => {
+        // Only the bare `wsl -- whoami` command yields a name; the bash variants
+        // return empty. The non-empty one must win regardless of race order.
+        const out = (args as string[]).join(' ') === '-- whoami' ? 'devuser\n' : ''
+        ;(cb as (err: null, stdout: string) => void)(null, out)
+        return undefined as never
+      },
+    )
+    const { resolveWslUsername } = await import('./wsl-utils')
+    expect(await resolveWslUsername()).toBe('devuser')
+  })
+
+  it('returns an empty string when every detection command fails or is empty', async () => {
+    vi.resetModules()
+    mockedExecFile.mockImplementation(
+      (_cmd: unknown, _args: unknown, _opts: unknown, cb: unknown) => {
+        ;(cb as (err: Error, stdout: string) => void)(new Error('no wsl'), '')
+        return undefined as never
+      },
+    )
+    const { resolveWslUsername } = await import('./wsl-utils')
+    expect(await resolveWslUsername()).toBe('')
+  })
+})
+
+describe('toWslPath', () => {
+  it('converts Windows drive paths to /mnt (drive letter lowercased)', () => {
+    expect(toWslPath('C:\\Users\\test')).toBe('/mnt/c/Users/test')
+    expect(toWslPath('c:\\Users\\test')).toBe('/mnt/c/Users/test')
+  })
+
+  it('preserves spaces in paths', () => {
+    expect(toWslPath('C:\\Users\\my project')).toBe('/mnt/c/Users/my project')
+  })
+
+  it('handles a bare drive root', () => {
+    expect(toWslPath('C:\\')).toBe('/mnt/c')
+  })
+
+  it('converts legacy and modern UNC WSL paths', () => {
+    expect(toWslPath('\\\\wsl$\\Ubuntu\\home\\user')).toBe('/home/user')
+    expect(toWslPath('\\\\wsl.localhost\\Ubuntu\\home\\user')).toBe('/home/user')
+  })
+
+  it('passes through paths that are already WSL', () => {
+    expect(toWslPath('/home/user/project')).toBe('/home/user/project')
+  })
+
+  it('passes tilde home paths through verbatim (pty-manager cd relies on this)', () => {
+    expect(toWslPath('~')).toBe('~')
+    expect(toWslPath('~/code/app')).toBe('~/code/app')
+  })
+
+  it('returns an empty string unchanged', () => {
+    expect(toWslPath('')).toBe('')
   })
 })

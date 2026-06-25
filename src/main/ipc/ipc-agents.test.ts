@@ -1,6 +1,10 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { mkdtempSync, rmSync } from 'node:fs'
+import { join } from 'node:path'
+import { tmpdir } from 'node:os'
 import { CH } from '../../shared/ipc-channels'
 import { makeHandlersMap, makeIpcCall, makeIpcElectronMock } from '../../__test__/ipc-harness'
+import { AgentRegistry } from '../agent-registry'
 
 const handlers = makeHandlersMap()
 vi.mock('electron', () => makeIpcElectronMock(handlers))
@@ -27,6 +31,25 @@ vi.mock('../active-model-cache', () => ({
 const { registerAgentHandlers } = await import('./ipc-agents')
 
 const call = makeIpcCall(handlers)
+
+// A real (temp-backed) registry so the new agents:getRegistry/saveCustom/
+// deleteCustom handlers exercise actual persistence, mirroring agent-registry.test.ts.
+let regDir: string
+let registry: AgentRegistry
+
+beforeEach(() => {
+  regDir = mkdtempSync(join(tmpdir(), 'agdeck-ipc-reg-'))
+  registry = new AgentRegistry(join(regDir, 'agents.toml'))
+  registry.load()
+})
+afterEach(() => rmSync(regDir, { recursive: true, force: true }))
+
+const VALID_SPEC = {
+  id: 'my-agent',
+  binary: 'my-agent-bin',
+  args: ['--x'],
+  ui: { name: 'My Agent' },
+}
 
 interface MiniPrefs {
   visibleAgents: string[] | null
@@ -60,6 +83,7 @@ describe('ipc-agents', () => {
     registerAgentHandlers(
       () => null,
       store as unknown as Parameters<typeof registerAgentHandlers>[1],
+      registry,
     )
   })
 
@@ -75,6 +99,10 @@ describe('ipc-agents', () => {
       CH.agentsGetEffectiveContextForModel,
       CH.agentsSetContextOverride,
       CH.agentsGetOverrides,
+      CH.agentsGetRegistry,
+      CH.agentsGetCustomSpec,
+      CH.agentsSaveCustom,
+      CH.agentsDeleteCustom,
     ]
     for (const ch of expected) {
       expect(handlers.has(ch)).toBe(true)
@@ -84,6 +112,13 @@ describe('ipc-agents', () => {
   it('agents:setVisible filters unknown agent ids before persisting', () => {
     call('agents:setVisible', ['claude-code', 'definitely-not-an-agent', 'codex'])
     expect(store._prefs.visibleAgents).toEqual(['claude-code', 'codex'])
+  })
+
+  it('agents:setVisible persists a registered custom agent id', async () => {
+    await call('agents:saveCustom', VALID_SPEC)
+    call('agents:setVisible', ['claude-code', 'my-agent', 'still-not-an-agent'])
+    // The custom id survives the filter; the bogus one is dropped.
+    expect(store._prefs.visibleAgents).toEqual(['claude-code', 'my-agent'])
   })
 
   it('agents:setVisible returns the current preference when given a non-array', () => {
@@ -101,6 +136,7 @@ describe('agents:getEffectiveContext', () => {
     registerAgentHandlers(
       () => null,
       store as unknown as Parameters<typeof registerAgentHandlers>[1],
+      registry,
     )
   })
 
@@ -119,6 +155,22 @@ describe('agents:getEffectiveContext', () => {
     // resolveActiveModel is mocked to return { modelId: null }, so we get default source
     expect(r).toMatchObject({ value: expect.any(Number), source: expect.any(String) })
   })
+
+  it('reports a custom agent’s own contextWindow (not 0) without erroring', async () => {
+    // A custom agent is absent from AGENT_CONTEXT_DEFAULTS; the handler must fold
+    // in registry.contextWindowFor(id) so it resolves to the spec value, not 0.
+    await call('agents:saveCustom', {
+      id: 'my-agent',
+      binary: 'my-agent-bin',
+      ui: { name: 'My Agent', contextWindow: 222_222 },
+    })
+    const r = (await call('agents:getEffectiveContext', 'my-agent')) as {
+      value?: number
+      error?: string
+    }
+    expect(r.error).toBeUndefined()
+    expect(r.value).toBe(222_222)
+  })
 })
 
 describe('agents:getEffectiveContextForLaunch', () => {
@@ -130,6 +182,7 @@ describe('agents:getEffectiveContextForLaunch', () => {
     registerAgentHandlers(
       () => null,
       store as unknown as Parameters<typeof registerAgentHandlers>[1],
+      registry,
     )
   })
 
@@ -149,6 +202,7 @@ describe('agents:getEffectiveContextForModel', () => {
     registerAgentHandlers(
       () => null,
       store as unknown as Parameters<typeof registerAgentHandlers>[1],
+      registry,
     )
   })
 
@@ -182,6 +236,7 @@ describe('agents:setContextOverride', () => {
     registerAgentHandlers(
       () => null,
       store as unknown as Parameters<typeof registerAgentHandlers>[1],
+      registry,
     )
   })
 
@@ -293,6 +348,7 @@ describe('agents:getOverrides', () => {
     registerAgentHandlers(
       () => null,
       store as unknown as Parameters<typeof registerAgentHandlers>[1],
+      registry,
     )
   })
 
@@ -317,5 +373,113 @@ describe('agents:getOverrides', () => {
       agent: { 'claude-code': 500_000 },
       model: { 'weirdnet-xyz': 100_000 },
     })
+  })
+})
+
+describe('agents registry IPC', () => {
+  let store: MiniStore
+
+  beforeEach(() => {
+    handlers.clear()
+    store = makeStore()
+    registerAgentHandlers(
+      () => null,
+      store as unknown as Parameters<typeof registerAgentHandlers>[1],
+      registry,
+    )
+  })
+
+  it('agents:getRegistry returns the builtins', async () => {
+    const r = (await call('agents:getRegistry')) as Array<{ id: string; source: string }>
+    expect(r.some((a) => a.id === 'codex' && a.source === 'builtin')).toBe(true)
+    expect(r.some((a) => a.source === 'user')).toBe(false)
+  })
+
+  it('agents:getRegistry includes a saved custom agent', async () => {
+    await call('agents:saveCustom', VALID_SPEC)
+    const r = (await call('agents:getRegistry')) as Array<{ id: string; source: string }>
+    expect(r.some((a) => a.id === 'my-agent' && a.source === 'user')).toBe(true)
+  })
+
+  it('agents:saveCustom with a valid spec returns ok and the registry then contains it', async () => {
+    const res = await call('agents:saveCustom', VALID_SPEC)
+    expect(res).toMatchObject({ ok: true })
+    expect(registry.has('my-agent')).toBe(true)
+    expect(registry.binaryFor('my-agent')).toBe('my-agent-bin')
+  })
+
+  it('agents:saveCustom with an invalid spec returns an error without throwing', async () => {
+    const res = (await call('agents:saveCustom', {
+      id: 'x',
+      binary: 'bad bin',
+      ui: { name: 'X' },
+    })) as { ok: boolean; error?: string }
+    expect(res.ok).toBe(false)
+    expect(typeof res.error).toBe('string')
+    expect(registry.has('x')).toBe(false)
+  })
+
+  it('agents:deleteCustom removes a previously-saved custom agent', async () => {
+    await call('agents:saveCustom', VALID_SPEC)
+    expect(registry.has('my-agent')).toBe(true)
+    const ok = await call('agents:deleteCustom', 'my-agent')
+    expect(ok).toBe(true)
+    expect(registry.has('my-agent')).toBe(false)
+  })
+
+  it('agents:deleteCustom returns false for an unknown / non-string id', async () => {
+    expect(await call('agents:deleteCustom', 'nope')).toBe(false)
+    expect(await call('agents:deleteCustom', 42)).toBe(false)
+  })
+
+  it('agents:getCustomSpec round-trips args/env/versionArgs for a custom agent', async () => {
+    await call('agents:saveCustom', {
+      id: 'ol',
+      binary: 'ollama',
+      args: ['run', 'llama3'],
+      env: { OLLAMA_HOST: '127.0.0.1:11434' },
+      ui: { name: 'Ollama', versionArgs: ['--version'] },
+    })
+    const spec = (await call('agents:getCustomSpec', 'ol')) as {
+      args?: string[]
+      env?: Record<string, string>
+      ui: { versionArgs?: string[] }
+    } | null
+    expect(spec).not.toBeNull()
+    expect(spec?.args).toEqual(['run', 'llama3'])
+    expect(spec?.env).toEqual({ OLLAMA_HOST: '127.0.0.1:11434' })
+    expect(spec?.ui.versionArgs).toEqual(['--version'])
+  })
+
+  it('agents:getCustomSpec returns null for builtins, unknown, and non-string ids', async () => {
+    expect(await call('agents:getCustomSpec', 'codex')).toBeNull()
+    expect(await call('agents:getCustomSpec', 'nope')).toBeNull()
+    expect(await call('agents:getCustomSpec', 42)).toBeNull()
+  })
+})
+
+describe('agents parse-error emission on save', () => {
+  function setup(): { sent: Array<{ channel: string; payload: unknown }> } {
+    handlers.clear()
+    const sent: Array<{ channel: string; payload: unknown }> = []
+    const fakeWindow = {
+      webContents: { send: (channel: string, payload: unknown) => sent.push({ channel, payload }) },
+    }
+    registerAgentHandlers(
+      () => fakeWindow as unknown as ReturnType<Parameters<typeof registerAgentHandlers>[0]>,
+      makeStore() as unknown as Parameters<typeof registerAgentHandlers>[1],
+      registry,
+    )
+    return { sent }
+  }
+
+  it('signals registryChange but NOT a parseError on a clean save (no warnings)', async () => {
+    const { sent } = setup()
+    const res = (await call('agents:saveCustom', VALID_SPEC)) as { ok: boolean; warnings: string[] }
+    expect(res.ok).toBe(true)
+    expect(res.warnings).toEqual([])
+    expect(sent.some((m) => m.channel === CH.agentsRegistryChange)).toBe(true)
+    // No banner when the reload is clean — guards against a spurious empty toast.
+    expect(sent.some((m) => m.channel === CH.agentsParseError)).toBe(false)
   })
 })

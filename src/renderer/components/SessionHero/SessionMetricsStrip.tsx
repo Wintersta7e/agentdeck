@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
-import { AGENT_BY_ID, agentColorVar, getSessionAgentId } from '../../utils/agent-ui'
+import { getSessionAgentId } from '../../utils/agent-ui'
+import { useAgentMeta } from '../../hooks/useAgentRegistry'
 import './SessionMetricsStrip.css'
 
 interface SessionMetricsStripProps {
@@ -34,21 +35,20 @@ export function SessionMetricsStrip({ sessionId }: SessionMetricsStripProps): Re
     return () => window.clearInterval(id)
   }, [])
 
-  const agentId = getSessionAgentId(session, project)
-  const agent = AGENT_BY_ID.get(agentId)
+  const meta = useAgentMeta(getSessionAgentId(session, project))
 
   return (
     <footer
       className="session-strip"
-      style={{ ['--strip-color' as 'color']: `var(${agentColorVar(agentId)})` }}
+      style={{ ['--strip-color' as 'color']: `var(${meta.colorVar})` }}
     >
       <div className="session-strip__item">
         <div className="session-strip__label">AGENT</div>
         <div className="session-strip__value session-strip__value--agent">
           <span className="session-strip__glyph" aria-hidden="true">
-            {agent?.icon ?? '◈'}
+            {meta.icon}
           </span>
-          {agent?.name ?? agentId}
+          {meta.name}
         </div>
       </div>
 

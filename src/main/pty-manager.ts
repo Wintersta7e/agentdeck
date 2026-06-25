@@ -6,7 +6,9 @@ import { createLogger } from './logger'
 import { ptyBus } from './pty-bus'
 import { toWslPath } from './wsl-utils'
 import { AGENT_BINARY_MAP, SAFE_FLAGS_RE } from '../shared/agents'
+import { BLOCKED_ENV_KEYS } from '../shared/custom-agents'
 import { shellQuote } from './node-runners'
+import type { AgentRegistry } from './agent-registry'
 
 const log = createLogger('pty-manager')
 
@@ -32,7 +34,7 @@ export interface PtyManager {
     env?: Record<string, string>,
     agent?: string,
     agentFlags?: string,
-  ) => { ok: true } | { ok: false; error: string }
+  ) => { ok: true; reused: boolean } | { ok: false; error: string }
   write: (sessionId: string, data: string) => void
   hasSession: (sessionId: string) => boolean
   resize: (sessionId: string, cols: number, rows: number) => void
@@ -103,7 +105,7 @@ function parseActivityLine(line: string): { type: string; title: string; detail:
   return null
 }
 
-export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
+export function createPtyManager(mainWindow: BrowserWindow, registry: AgentRegistry): PtyManager {
   const sessions = new Map<string, IPty>()
   const lineBuffers = new Map<string, string>()
   /* Fix 4 (PTY-3): Track spawn timers so we can cancel on kill */
@@ -121,11 +123,12 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
     env?: Record<string, string>,
     agent?: string,
     agentFlags?: string,
-  ): { ok: true } | { ok: false; error: string } {
+  ): { ok: true; reused: boolean } | { ok: false; error: string } {
     // If a PTY already exists for this session (e.g. session moved from visible
-    // pane to hidden section), don't kill and respawn — just reuse it.
+    // pane to hidden section), don't kill and respawn — just reuse it. The IPC
+    // layer keys session-lifecycle init on `reused`, so it isn't re-run.
     if (sessions.has(sessionId)) {
-      return { ok: true }
+      return { ok: true, reused: true }
     }
 
     if (sessions.size >= MAX_CONCURRENT_SESSIONS) {
@@ -137,6 +140,16 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
     // Set COLORFGBG so TUI apps (Codex/crossterm) detect dark background without
     // sending OSC 10/11 color queries that leak as visible text in xterm.js.
     const mergedEnv = { COLORFGBG: '15;0', ...process.env, ...env } as Record<string, string>
+
+    // A custom agent's non-secret env reaches the child via the process env, never
+    // a shell string. Validation already rejects BLOCKED_ENV_KEYS, but drop them
+    // here too as defense-in-depth against a hostile/edited agents.toml.
+    if (agent) {
+      for (const [k, v] of Object.entries(registry.envFor(agent))) {
+        if (BLOCKED_ENV_KEYS.has(k)) continue
+        mergedEnv[k] = v
+      }
+    }
 
     /* Fix 8 (ERR-6): Wrap pty.spawn in try-catch */
     let proc: IPty
@@ -196,10 +209,27 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
     }
 
     if (agent) {
-      const bin = AGENT_BINARY_MAP[agent]
+      const bin = registry.binaryFor(agent)
       if (!bin) {
         log.warn(`Unknown agent "${agent}" for session ${sessionId}, skipping agent command`)
+        // Spec §8: a session whose agent was deleted/renamed must not silently
+        // drop to a bare shell with no explanation. Surface a visible notice in
+        // the terminal so the user understands why no agent launched.
+        if (!mainWindow.isDestroyed()) {
+          mainWindow.webContents.send(
+            ptyDataChannel(sessionId),
+            `\r\n[agentdeck] Agent "${agent}" is no longer registered.\r\n`,
+          )
+        }
+      } else if (registry.isCustom(agent)) {
+        // Custom agent: quote the binary and every default arg so a charset-valid
+        // (but space/metachar-free) command can't reshape the shell command. The
+        // npm-symlink fix is builtin-only (NPM_AGENT_PACKAGES has no custom ids).
+        const parts = [shellQuote(bin), ...registry.argsFor(agent).map(shellQuote)]
+        if (sanitizedFlags) parts.push(sanitizedFlags)
+        commands.push(parts.join(' '))
       } else {
+        // Builtin agent: launch string unchanged (existing tests assert it).
         // Fix missing npm global bin symlinks for npm-installed agents.
         // WSL sometimes loses these, causing the stale Windows-side binary to
         // shadow the newer WSL-installed version (e.g. codex update loop).
@@ -303,7 +333,7 @@ export function createPtyManager(mainWindow: BrowserWindow): PtyManager {
       ptyBus.emit(`exit:${sessionId}`, exitCode)
     })
 
-    return { ok: true }
+    return { ok: true, reused: false }
   }
 
   function write(sessionId: string, data: string): void {

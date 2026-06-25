@@ -6,6 +6,7 @@ import { createLogger } from './logger'
 import { isEnoent } from './fs-errors'
 import type { WorkflowRun } from '../shared/types'
 import { validateId } from '../shared/validation'
+import { createKeyMutex } from './key-mutex'
 
 const log = createLogger('workflow-run-store')
 const MAX_RUNS_PER_WORKFLOW = 20
@@ -29,8 +30,8 @@ function getRunsDir(): string {
   return dir
 }
 
-/** WF-8: Per-workflow write locks to prevent saveRun + pruneRuns races. */
-const writeLocks = new Map<string, Promise<void>>()
+/** WF-8: Per-workflow write lock to prevent saveRun + pruneRuns races. */
+const writeLock = createKeyMutex()
 
 /**
  * Build a deterministic filename from workflow ID, startedAt timestamp, and run ID.
@@ -45,33 +46,24 @@ function runFilename(workflowId: string, startedAt: number, runId: string): stri
 const WORKFLOW_RUN_VERSION = 1
 
 export async function saveRun(run: WorkflowRun): Promise<void> {
-  // Chain onto any pending write for this workflow to prevent races
-  const prev = writeLocks.get(run.workflowId) ?? Promise.resolve()
-  const task = prev
-    .catch(() => {})
-    .then(async () => {
-      const dir = getRunsDir()
-      const filename = runFilename(run.workflowId, run.startedAt, run.id)
-      const file = path.join(dir, filename)
-      const tmpFile = `${file}.${randomBytes(6).toString('hex')}.tmp`
+  // Serialize writes for this workflow to prevent saveRun + pruneRuns races.
+  await writeLock(run.workflowId, async () => {
+    const dir = getRunsDir()
+    const filename = runFilename(run.workflowId, run.startedAt, run.id)
+    const file = path.join(dir, filename)
+    const tmpFile = `${file}.${randomBytes(6).toString('hex')}.tmp`
 
-      // Always stamp the current schema version so older payloads created without
-      // the field migrate forward on the next save.
-      const payload: WorkflowRun = { ...run, version: WORKFLOW_RUN_VERSION }
-      await fs.promises.writeFile(tmpFile, JSON.stringify(payload, null, 2), 'utf-8')
-      await fs.promises.rename(tmpFile, file)
+    // Always stamp the current schema version so older payloads created without
+    // the field migrate forward on the next save.
+    const payload: WorkflowRun = { ...run, version: WORKFLOW_RUN_VERSION }
+    await fs.promises.writeFile(tmpFile, JSON.stringify(payload, null, 2), 'utf-8')
+    await fs.promises.rename(tmpFile, file)
 
-      log.info('Workflow run saved', { id: run.id, workflowId: run.workflowId })
+    log.info('Workflow run saved', { id: run.id, workflowId: run.workflowId })
 
-      // Prune: keep only the most recent MAX_RUNS_PER_WORKFLOW files per workflow
-      await pruneRuns(run.workflowId)
-    })
-  writeLocks.set(run.workflowId, task)
-  try {
-    await task
-  } finally {
-    if (writeLocks.get(run.workflowId) === task) writeLocks.delete(run.workflowId)
-  }
+    // Prune: keep only the most recent MAX_RUNS_PER_WORKFLOW files per workflow
+    await pruneRuns(run.workflowId)
+  })
 }
 
 /** Remove oldest run files beyond the retention limit. */

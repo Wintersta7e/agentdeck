@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { mkdtempSync, rmSync, writeFileSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -41,18 +41,57 @@ describe('session-history', () => {
     expect(row.filesChanged).toBe(0)
   })
 
-  it('noteWrite increments filesChanged', () => {
+  it('noteActivity with a write type increments filesChanged', () => {
     const h = createSessionHistory()
     h.startSession(makeRec())
-    h.noteWrite('s1')
-    h.noteWrite('s1')
+    h.noteActivity('s1', 'write')
+    h.noteActivity('s1', 'write')
     const row = h.getHistory(1)[0]!
     expect(row.filesChanged).toBe(2)
   })
 
-  it('noteWrite on unknown session is a no-op', () => {
+  it('noteActivity with a non-write type advances activity but not filesChanged', () => {
     const h = createSessionHistory()
-    expect(() => h.noteWrite('unknown')).not.toThrow()
+    // startedAt is 60s ago, so any activity recorded "now" advances lastActivityAt.
+    h.startSession(makeRec())
+    h.noteActivity('s1', 'read')
+    const row = h.getHistory(1)[0]!
+    expect(row.filesChanged).toBe(0)
+    expect(row.lastActivityAt).toBeGreaterThan(row.startedAt)
+  })
+
+  it('noteActivity on unknown session is a no-op', () => {
+    const h = createSessionHistory()
+    expect(() => h.noteActivity('unknown', 'write')).not.toThrow()
+  })
+
+  it('startSession seeds lastActivityAt to startedAt', () => {
+    const h = createSessionHistory()
+    h.startSession(makeRec())
+    const row = h.getHistory(1)[0]!
+    expect(row.lastActivityAt).toBe(row.startedAt)
+  })
+
+  it('endSession returns lastActivityAt at the last activity, leaving the idle tail out', () => {
+    vi.useFakeTimers()
+    try {
+      const start = Date.parse('2026-06-07T10:00:00Z')
+      vi.setSystemTime(start)
+      const h = createSessionHistory()
+      h.startSession(makeRec({ startedAt: start }))
+
+      vi.setSystemTime(start + 5 * 60_000) // last activity 5 min in
+      h.noteActivity('s1', 'write')
+
+      vi.setSystemTime(start + 3 * 60 * 60_000) // closed 3h in (idle ~2h55m)
+      const rec = h.endSession('s1', { endedAt: Date.now(), status: 'exited' })
+
+      expect(rec).not.toBeNull()
+      expect(rec!.lastActivityAt).toBe(start + 5 * 60_000)
+      expect(rec!.endedAt).toBe(start + 3 * 60 * 60_000)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('endSession sets endedAt and status', () => {
@@ -78,11 +117,46 @@ describe('session-history', () => {
     expect(h.getHistory(1)).toHaveLength(0)
   })
 
+  it('endSession is idempotent — a second call returns null and preserves the first end', () => {
+    const h = createSessionHistory()
+    h.startSession(makeRec())
+    const first = h.endSession('s1', { endedAt: NOW, status: 'exited' })
+    expect(first).not.toBeNull()
+    // A duplicate end (e.g. two exit listeners firing) must not re-apply.
+    const second = h.endSession('s1', { endedAt: NOW + 5000, status: 'error' })
+    expect(second).toBeNull()
+    const row = h.getHistory(1)[0]!
+    expect(row.endedAt).toBe(NOW)
+    expect(row.status).toBe('exited')
+  })
+
+  it('noteActivity after endSession is a no-op (finalized record is not re-mutated)', () => {
+    vi.useFakeTimers()
+    try {
+      const start = Date.parse('2026-06-15T10:00:00Z')
+      vi.setSystemTime(start)
+      const h = createSessionHistory()
+      h.startSession(makeRec({ startedAt: start }))
+      vi.setSystemTime(start + 60_000)
+      h.noteActivity('s1', 'write')
+      h.endSession('s1', { endedAt: start + 120_000, status: 'exited' })
+      // A late activity event (e.g. a buffered PTY flush after exit) must not
+      // advance lastActivityAt or bump filesChanged on the finalized record.
+      vi.setSystemTime(start + 999_999)
+      h.noteActivity('s1', 'write')
+      const row = h.getHistory(1)[0]!
+      expect(row.filesChanged).toBe(1)
+      expect(row.lastActivityAt).toBe(start + 60_000)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('persists and reloads across instances (survives restart)', () => {
     const store = tmpStore()
     const h1 = createSessionHistory(store)
     h1.startSession(makeRec())
-    h1.noteWrite('s1')
+    h1.noteActivity('s1', 'write')
     h1.endSession('s1', { endedAt: NOW, status: 'exited' })
     h1.flush()
 
@@ -95,6 +169,36 @@ describe('session-history', () => {
     expect(row.status).toBe('exited')
 
     rmSync(store, { force: true })
+  })
+
+  it('persists lastActivityAt across flush+reload (idle-trim survives restart)', () => {
+    // usage-history computes activeMs = lastActivityAt - startedAt, so a
+    // serialization regression that dropped lastActivityAt (resetting it to
+    // startedAt via the onLoad back-compat default) would silently zero out
+    // every reloaded session's active time. Pin time so the advance is exact.
+    vi.useFakeTimers()
+    try {
+      const start = Date.parse('2026-06-15T10:00:00Z')
+      const store = tmpStore()
+
+      const h1 = createSessionHistory(store)
+      h1.startSession(makeRec({ startedAt: start }))
+      vi.setSystemTime(start + 5 * 60_000) // activity 5 min after start
+      h1.noteActivity('s1', 'write')
+      h1.flush()
+
+      const h2 = createSessionHistory(store)
+      const row = h2.getHistory(1)[0]!
+      expect(row.startedAt).toBe(start)
+      // The reloaded row must carry the advanced lastActivityAt, NOT startedAt.
+      expect(row.lastActivityAt).toBe(start + 5 * 60_000)
+      expect(row.lastActivityAt).toBeGreaterThan(row.startedAt)
+      expect(row.filesChanged).toBe(1)
+
+      rmSync(store, { force: true })
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('discards records written at an incompatible version', () => {

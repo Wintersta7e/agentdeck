@@ -1,5 +1,9 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { mkdtempSync, rmSync } from 'node:fs'
+import { join } from 'node:path'
+import { tmpdir } from 'node:os'
 import type { PtyManager } from '../pty-manager'
+import { AgentRegistry } from '../agent-registry'
 import { makeHandlersMap, makeIpcCall, makeIpcElectronMock } from '../../__test__/ipc-harness'
 
 const handlers = makeHandlersMap()
@@ -23,7 +27,7 @@ const call = makeIpcCall(handlers)
 
 const stubSessionHistory = (): Parameters<typeof registerPtyHandlers>[1]['sessionHistory'] => ({
   startSession: vi.fn(),
-  noteWrite: vi.fn(),
+  noteActivity: vi.fn(),
   endSession: vi.fn(() => null),
   getHistory: vi.fn(() => []),
   flush: vi.fn(),
@@ -34,6 +38,14 @@ const stubUsageHistory = (): Parameters<typeof registerPtyHandlers>[1]['usageHis
   getHistory: vi.fn(() => []),
   flush: vi.fn(),
 })
+
+// Builtins-only registry (no agents.toml on disk) for the gate checks that only
+// care about builtins / unknown ids. The custom-id case uses a temp-backed one.
+const stubRegistry = (): AgentRegistry => {
+  const reg = new AgentRegistry(join(tmpdir(), 'agdeck-pty-spawn-nonexistent.toml'))
+  reg.load()
+  return reg
+}
 
 describe('pty:spawn IPC validation', () => {
   let mgr: { spawn: ReturnType<typeof vi.fn> }
@@ -51,6 +63,7 @@ describe('pty:spawn IPC validation', () => {
       } as unknown as Parameters<typeof registerPtyHandlers>[1]['reviewTracker'],
       sessionHistory: stubSessionHistory(),
       usageHistory: stubUsageHistory(),
+      agentRegistry: stubRegistry(),
     })
   })
 
@@ -132,6 +145,26 @@ describe('pty:spawn IPC validation', () => {
     expect(passedEnv?.['NORMAL']).toBe('ok')
   })
 
+  it('strips the wider shared BLOCKED_ENV_KEYS (e.g. BASH_ENV) the old local set missed', () => {
+    // BASH_ENV / LD_AUDIT are in the shared denylist but were NOT in the old
+    // local 5-key BLOCKED_ENV; they must now be stripped on the renderer path.
+    call(
+      'pty:spawn',
+      'sess-1',
+      80,
+      24,
+      '/p',
+      undefined,
+      { BASH_ENV: '/evil.sh', LD_AUDIT: '/evil.so', NORMAL: 'ok' },
+      'claude-code',
+    )
+    const passedEnv = mgr.spawn.mock.calls[0]?.[5] as Record<string, string> | undefined
+    expect(passedEnv).toBeDefined()
+    expect(passedEnv?.['BASH_ENV']).toBeUndefined()
+    expect(passedEnv?.['LD_AUDIT']).toBeUndefined()
+    expect(passedEnv?.['NORMAL']).toBe('ok')
+  })
+
   it('rejects projectPath over 1024 characters', () => {
     const longPath = '/home/' + 'x'.repeat(1100)
     expect(() => call('pty:spawn', 'sess-1', 80, 24, longPath)).toThrow(/projectPath/)
@@ -158,6 +191,7 @@ describe('pty:spawn IPC validation', () => {
       } as unknown as Parameters<typeof registerPtyHandlers>[1]['reviewTracker'],
       sessionHistory: stubSessionHistory(),
       usageHistory: stubUsageHistory(),
+      agentRegistry: stubRegistry(),
     })
     expect(() => call('pty:spawn', 'sess-1', 80, 24, '/p')).toThrow(/PTY manager not initialized/)
   })
@@ -174,12 +208,19 @@ describe('pty:spawn exit-code → session recording', () => {
     onceSpy.mockClear()
 
     const sessionHistoryStub = stubSessionHistory()
+    // lastActivityAt is deliberately DISTINCT from endedAt: usage-history must
+    // be fed the last-activity instant (idle-trim source), not the wall-clock
+    // end. A regression passing rec.endedAt would inflate active time and still
+    // satisfy a bare "recordSession was called" assertion — so we pin a
+    // recognizable lastActivityAt and assert it propagates verbatim.
+    const lastActivityAt = 1_700_000_000_000
     const rec = {
       sessionId: 'sess-exit',
       projectId: 'proj-1',
       agent: 'claude-code',
       startedAt: Date.now() - 5000,
-      endedAt: null as number | null,
+      lastActivityAt,
+      endedAt: (lastActivityAt + 60_000) as number | null,
       status: 'exited' as 'exited' | 'error',
       filesChanged: 2,
     }
@@ -198,6 +239,7 @@ describe('pty:spawn exit-code → session recording', () => {
       } as unknown as Parameters<typeof registerPtyHandlers>[1]['reviewTracker'],
       sessionHistory: sessionHistoryStub,
       usageHistory: usageHistoryStub,
+      agentRegistry: stubRegistry(),
     })
 
     call('pty:spawn', 'sess-exit', 80, 24, '/proj', undefined, undefined, 'claude-code')
@@ -210,35 +252,46 @@ describe('pty:spawn exit-code → session recording', () => {
     // Invoke the exit callback with the given exitCode
     exitCb(exitCode)
 
-    return { sessionHistoryStub, usageHistoryStub }
+    return { sessionHistoryStub, usageHistoryStub, lastActivityAt }
   }
 
   it('records session when exitCode is 0 (clean exit)', async () => {
-    const { sessionHistoryStub, usageHistoryStub } = await makeSetup(0)
+    const { sessionHistoryStub, usageHistoryStub, lastActivityAt } = await makeSetup(0)
     expect(sessionHistoryStub.endSession).toHaveBeenCalledWith('sess-exit', {
       endedAt: expect.any(Number),
       status: 'exited',
     })
     expect(usageHistoryStub.recordSession).toHaveBeenCalledTimes(1)
+    // Active time is derived from lastActivityAt, not endedAt — recordSession
+    // must receive the record's lastActivityAt verbatim (idle-trim source).
+    expect(usageHistoryStub.recordSession).toHaveBeenCalledWith(
+      expect.objectContaining({ lastActivityAt }),
+    )
   })
 
   it('records session when exitCode is null (SIGTERM / user kill)', async () => {
-    const { sessionHistoryStub, usageHistoryStub } = await makeSetup(null)
+    const { sessionHistoryStub, usageHistoryStub, lastActivityAt } = await makeSetup(null)
     expect(sessionHistoryStub.endSession).toHaveBeenCalledWith('sess-exit', {
       endedAt: expect.any(Number),
       status: 'exited',
     })
     expect(usageHistoryStub.recordSession).toHaveBeenCalledTimes(1)
+    expect(usageHistoryStub.recordSession).toHaveBeenCalledWith(
+      expect.objectContaining({ lastActivityAt }),
+    )
   })
 
   it('records session even when exitCode is non-zero (maps to error status)', async () => {
-    const { sessionHistoryStub, usageHistoryStub } = await makeSetup(1)
+    const { sessionHistoryStub, usageHistoryStub, lastActivityAt } = await makeSetup(1)
     expect(sessionHistoryStub.endSession).toHaveBeenCalledWith('sess-exit', {
       endedAt: expect.any(Number),
       status: 'error',
     })
     // All sessions are recorded regardless of status
     expect(usageHistoryStub.recordSession).toHaveBeenCalledTimes(1)
+    expect(usageHistoryStub.recordSession).toHaveBeenCalledWith(
+      expect.objectContaining({ lastActivityAt }),
+    )
   })
 })
 
@@ -260,6 +313,7 @@ describe('pty:spawn review-detection wiring', () => {
       } as unknown as Parameters<typeof registerPtyHandlers>[1]['reviewTracker'],
       sessionHistory: stubSessionHistory(),
       usageHistory: stubUsageHistory(),
+      agentRegistry: stubRegistry(),
     })
 
     call('pty:spawn', 'sess-known', 80, 24, '/known/path', undefined, undefined, 'claude-code')
@@ -284,6 +338,7 @@ describe('pty:spawn review-detection wiring', () => {
       } as unknown as Parameters<typeof registerPtyHandlers>[1]['reviewTracker'],
       sessionHistory: stubSessionHistory(),
       usageHistory: stubUsageHistory(),
+      agentRegistry: stubRegistry(),
     })
 
     call('pty:spawn', 'sess-orphan', 80, 24, '/unknown/path', undefined, undefined, 'claude-code')
@@ -308,10 +363,116 @@ describe('pty:spawn review-detection wiring', () => {
       } as unknown as Parameters<typeof registerPtyHandlers>[1]['reviewTracker'],
       sessionHistory: stubSessionHistory(),
       usageHistory: stubUsageHistory(),
+      agentRegistry: stubRegistry(),
     })
 
     call('pty:spawn', 'sess-no-project', 80, 24)
 
     expect(onceSpy).not.toHaveBeenCalled()
+  })
+})
+
+describe('pty:spawn session-reuse (no double session-init)', () => {
+  // pty-manager.spawn returns { reused: true } when an existing PTY is reused
+  // (e.g. a session moved between panes). The handler must NOT re-run
+  // startSession (which would reset the record) or register a second exit
+  // listener (which would double-count usage on exit).
+  it('skips startSession and exit-listener registration when the PTY was reused', async () => {
+    handlers.clear()
+    const { ptyBus } = await import('../pty-bus')
+    const onceSpy = vi.mocked(ptyBus.once)
+    onceSpy.mockClear()
+
+    const sessionHistoryStub = stubSessionHistory()
+    const mgr = { spawn: vi.fn(() => ({ ok: true, reused: true })) }
+    registerPtyHandlers(() => mgr as unknown as PtyManager, {
+      getMainWindow: () => null,
+      getProjectId: () => 'proj-1',
+      reviewTracker: {
+        addReview: vi.fn(),
+        getReviews: vi.fn(() => []),
+        dismissReview: vi.fn(),
+      } as unknown as Parameters<typeof registerPtyHandlers>[1]['reviewTracker'],
+      sessionHistory: sessionHistoryStub,
+      usageHistory: stubUsageHistory(),
+      agentRegistry: stubRegistry(),
+    })
+
+    call('pty:spawn', 'sess-reuse', 80, 24, '/proj', undefined, undefined, 'claude-code')
+
+    expect(sessionHistoryStub.startSession).not.toHaveBeenCalled()
+    expect(onceSpy).not.toHaveBeenCalled()
+  })
+
+  it('runs startSession and registers exactly one exit listener on a fresh spawn', async () => {
+    handlers.clear()
+    const { ptyBus } = await import('../pty-bus')
+    const onceSpy = vi.mocked(ptyBus.once)
+    onceSpy.mockClear()
+
+    const sessionHistoryStub = stubSessionHistory()
+    const mgr = { spawn: vi.fn(() => ({ ok: true, reused: false })) }
+    registerPtyHandlers(() => mgr as unknown as PtyManager, {
+      getMainWindow: () => null,
+      getProjectId: () => 'proj-1',
+      reviewTracker: {
+        addReview: vi.fn(),
+        getReviews: vi.fn(() => []),
+        dismissReview: vi.fn(),
+      } as unknown as Parameters<typeof registerPtyHandlers>[1]['reviewTracker'],
+      sessionHistory: sessionHistoryStub,
+      usageHistory: stubUsageHistory(),
+      agentRegistry: stubRegistry(),
+    })
+
+    call('pty:spawn', 'sess-fresh', 80, 24, '/proj', undefined, undefined, 'claude-code')
+
+    expect(sessionHistoryStub.startSession).toHaveBeenCalledTimes(1)
+    expect(onceSpy).toHaveBeenCalledWith('exit:sess-fresh', expect.any(Function))
+  })
+})
+
+describe('pty:spawn custom-agent gate (registry.has)', () => {
+  let regDir: string
+  let registry: AgentRegistry
+  let mgr: { spawn: ReturnType<typeof vi.fn> }
+
+  beforeEach(async () => {
+    handlers.clear()
+    regDir = mkdtempSync(join(tmpdir(), 'agdeck-pty-spawn-reg-'))
+    registry = new AgentRegistry(join(regDir, 'agents.toml'))
+    registry.load()
+    // A persisted custom agent that the spawn gate must now accept.
+    await registry.saveCustom({ id: 'my-agent', binary: 'my-agent-bin', ui: { name: 'My Agent' } })
+
+    mgr = { spawn: vi.fn(() => ({ ok: true })) }
+    registerPtyHandlers(() => mgr as unknown as PtyManager, {
+      getMainWindow: () => null,
+      getProjectId: () => null,
+      reviewTracker: {
+        addReview: vi.fn(),
+        getReviews: vi.fn(() => []),
+        dismissReview: vi.fn(),
+      } as unknown as Parameters<typeof registerPtyHandlers>[1]['reviewTracker'],
+      sessionHistory: stubSessionHistory(),
+      usageHistory: stubUsageHistory(),
+      agentRegistry: registry,
+    })
+  })
+
+  afterEach(() => rmSync(regDir, { recursive: true, force: true }))
+
+  it('accepts a custom registry agent id and delegates to the pty manager', () => {
+    expect(() =>
+      call('pty:spawn', 'sess-c', 80, 24, '/p', undefined, undefined, 'my-agent'),
+    ).not.toThrow()
+    expect(mgr.spawn).toHaveBeenCalled()
+  })
+
+  it('still rejects an id that is neither a builtin nor a registered custom agent', () => {
+    expect(() =>
+      call('pty:spawn', 'sess-c', 80, 24, '/p', undefined, undefined, 'gpt-hacker'),
+    ).toThrow(/agent/)
+    expect(mgr.spawn).not.toHaveBeenCalled()
   })
 })

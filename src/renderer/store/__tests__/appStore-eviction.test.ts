@@ -45,8 +45,13 @@ describe('removeSession eviction (LEAK-03)', () => {
     expect(state.activityFeeds['s-0']).toBeUndefined()
     expect(state.writeCountBySession['s-0']).toBeUndefined()
     expect(state.worktreePaths['s-0']).toBeUndefined()
-    // s-1 through s-N are retained
+    // s-1 through s-N are retained — and so are THEIR auxiliary maps. Eviction
+    // must prune only the evicted session's entries, never a survivor's.
     expect(state.sessions['s-1']).toBeDefined()
+    expect(state.activityFeeds['s-1']).toBeDefined()
+    expect(state.activityFeeds['s-1']).toHaveLength(1)
+    expect(state.writeCountBySession['s-1']).toBe(1)
+    expect(state.worktreePaths['s-1']).toEqual({ path: '/tmp/s-1', isolated: false })
   })
 })
 

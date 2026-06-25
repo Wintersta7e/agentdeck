@@ -1,0 +1,7 @@
+# gitleaks suppressions — one finding fingerprint per line.
+# Get a fingerprint from a scan: `gitleaks git . -v` prints it as
+#   <commit>:<file>:<rule-id>:<line>
+# Paste that line here to suppress a confirmed false positive, or annotate the
+# source with an inline `# gitleaks:allow` comment instead.
+#
+# History is currently clean — nothing to suppress.

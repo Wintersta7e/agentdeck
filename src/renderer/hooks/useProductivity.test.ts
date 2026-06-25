@@ -54,6 +54,23 @@ describe('computeTodayProductivity', () => {
     expect(r.activeMs).toBe(120000 + 60000)
   })
 
+  it("counts a 'starting' session started today (still initializing, not yet 'running')", () => {
+    const sessions = {
+      init: session({ id: 'init', startedAt: midnight + 1000, status: 'starting' }),
+    }
+    const r = computeTodayProductivity({
+      usageHistory: persisted,
+      sessions,
+      writeCounts: { init: 0 },
+      midnight,
+      now: midnight + 6000, // 5s into the session
+    })
+    // The predicate counts both 'running' and 'starting'; a session mid-spawn
+    // must still contribute so productivity isn't zeroed while it initializes.
+    expect(r.sessions).toBe(3)
+    expect(r.activeMs).toBe(120000 + 5000)
+  })
+
   it('does not double-count an exited session already in persisted history', () => {
     const persistedWithExited: DailyUsageEntry[] = [
       {

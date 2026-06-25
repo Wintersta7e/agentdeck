@@ -61,6 +61,21 @@ describe('ipc-projects', () => {
     ).resolves.toBeNull()
   })
 
+  it('projects:detectStack rejects path traversal', async () => {
+    await expect(call('projects:detectStack', '/home/../etc') as Promise<unknown>).rejects.toThrow(
+      /traversal/,
+    )
+    await expect(
+      call('projects:detectStack', 'C:\\home\\..\\secret') as Promise<unknown>,
+    ).rejects.toThrow(/traversal/)
+  })
+
+  it('projects:detectStack accepts a clean path with a `..` substring', async () => {
+    await expect(
+      call('projects:detectStack', '/home/user/foo..bar') as Promise<unknown>,
+    ).resolves.toBeDefined()
+  })
+
   it('projects:readFile rejects filenames outside the allowlist', async () => {
     await expect(
       call('projects:readFile', '/home/user/project', 'passwd') as Promise<unknown>,

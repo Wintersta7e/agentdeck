@@ -26,7 +26,7 @@ interface TabDef {
  * Sits directly below the Titlebar and replaces the sidebar as primary
  * navigation. Each tab corresponds to a top-level screen. Sub-views
  * (session detail, project detail, diff review, wizard, etc.) render
- * under their owning tab via tabParams.
+ * under their owning tab.
  */
 export const TABS: readonly TabDef[] = [
   { id: 'home', label: 'Home', view: 'home', shortcut: 'Alt+1' },

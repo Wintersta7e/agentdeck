@@ -8,21 +8,43 @@ import type { EnvVar, Project, Role, LegacyTemplate } from '../shared/types'
 import { migrateProjectAgents } from '../shared/agent-helpers'
 import { createLogger } from './logger'
 import { validateId } from './validation'
+import { createKeyMutex } from './key-mutex'
 import { toWslPath } from './wsl-utils'
 
 const log = createLogger('project-store')
 
+// Persistable Project fields copied verbatim from renderer input on save
+// (id/path/envVars are handled explicitly). Anything not listed here is dropped
+// so the store can't accumulate arbitrary keys. `satisfies` guards against typos;
+// keep in sync when adding a Project field that should persist.
+const PROJECT_PATCH_FIELDS = [
+  'name',
+  'pinned',
+  'lastOpened',
+  'badge',
+  'attachedTemplates',
+  'wslDistro',
+  'notes',
+  'startupCommands',
+  'agent',
+  'agentFlags',
+  'agents',
+  'contextFile',
+  'identity',
+  'autoOpen',
+  'scrollbackLines',
+  'fontSize',
+  'shell',
+  'meta',
+] as const satisfies readonly (keyof Project)[]
+
 // Promise-based write lock prevents concurrent read-modify-write races.
 // All mutating handlers (save/delete for projects, templates, roles) are serialized
 // through this lock so a second IPC call waits for the first to finish writing.
-let writeLock = Promise.resolve()
+const writeLock = createKeyMutex()
+// One global key serializes every mutation of the single store file.
 function serialized<T>(fn: () => T): Promise<T> {
-  const p = writeLock.then(fn)
-  writeLock = p.then(
-    () => {},
-    () => {},
-  )
-  return p
+  return writeLock('store', fn)
 }
 
 function encryptEnvVars(envVars: EnvVar[] | undefined): EnvVar[] | undefined {
@@ -287,18 +309,24 @@ export function registerStoreHandlers(store: AppStore): void {
       // windowsToWsl (e.g. an older PathInput, a manual store edit) can't leak
       // Windows-style paths into the store and trip files:listDir validation.
       const normalizedPath = typeof p.path === 'string' ? toWslPath(p.path) : p.path
-      const withId = {
-        ...p,
-        id,
-        ...(normalizedPath !== undefined && { path: normalizedPath }),
-        envVars: encryptEnvVars(p.envVars),
-      } as Project
+      // Copy only known Project fields (id/path/envVars handled explicitly
+      // below) so a buggy or compromised renderer can't persist arbitrary
+      // extra keys. Only fields actually present in the input are carried, so
+      // partial updates still merge cleanly with the existing record.
+      const withId: Partial<Project> = { id }
+      for (const k of PROJECT_PATCH_FIELDS) {
+        const v = p[k]
+        if (v !== undefined) (withId as Record<string, unknown>)[k] = v
+      }
+      if (normalizedPath !== undefined) withId.path = normalizedPath
+      withId.envVars = encryptEnvVars(p.envVars)
       const idx = projects.findIndex((existing) => existing.id === id)
       const existing = idx >= 0 ? projects[idx] : undefined
       if (existing !== undefined) {
         projects[idx] = { ...existing, ...withId }
       } else {
-        projects.push(withId)
+        // A create always carries name+path from the renderer; the cast is safe.
+        projects.push(withId as Project)
       }
       store.set('projects', projects)
       const savedIdx = idx >= 0 ? idx : projects.length - 1
@@ -373,6 +401,14 @@ export function registerStoreHandlers(store: AppStore): void {
 }
 
 /** Read roles directly from the store (for use in main process only). */
+export function projectPathById(store: AppStore, projectId: string): string | null {
+  return store.get('projects')?.find((p) => p.id === projectId)?.path ?? null
+}
+
+export function projectIdByPath(store: AppStore, projectPath: string): string | null {
+  return store.get('projects')?.find((p) => p.path === projectPath)?.id ?? null
+}
+
 export function getRolesFromStore(store: AppStore): Role[] {
   return store.get('roles')
 }

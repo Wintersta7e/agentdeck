@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useCallback } from 'react'
 import { useAppStore } from '../../store/appStore'
-import { AGENTS } from '../../../shared/agents'
+import { selectAgentMeta } from '../../utils/agent-ui'
+import { useAgentRegistry } from '../../hooks/useAgentRegistry'
 import './ReviewQueue.css'
-
-const AGENT_META = new Map<string, (typeof AGENTS)[number]>(AGENTS.map((a) => [a.id, a]))
 
 export function ReviewQueue(): React.JSX.Element {
   const projectIds = useAppStore((s) => s.projects.map((p) => p.id).join(','))
   const reviewItems = useAppStore((s) => s.reviewItems)
   const setReviewItems = useAppStore((s) => s.setReviewItems)
   const dismissReview = useAppStore((s) => s.dismissReview)
+  const registry = useAgentRegistry()
 
   const refetchReviews = useCallback(() => {
     const ids = projectIds ? projectIds.split(',') : []
@@ -63,10 +63,10 @@ export function ReviewQueue(): React.JSX.Element {
         <div className="panel-empty">No pending reviews</div>
       ) : (
         pending.map((r) => {
-          const meta = AGENT_META.get(r.agentId)
+          const meta = selectAgentMeta(registry, r.agentId)
           return (
             <div key={r.id} className="review-item">
-              <span className="review-agent">{meta?.name ?? r.agentId}</span>
+              <span className="review-agent">{meta.name}</span>
               <span className="review-diff">
                 {r.totalInsertions > 0 && <span className="review-plus">+{r.totalInsertions}</span>}
                 {r.totalDeletions > 0 && <span className="review-minus">-{r.totalDeletions}</span>}

@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { useTemplates } from '../../hooks/useTemplates'
-import { AGENTS } from '../../../shared/agents'
+import { useAgentRegistry } from '../../hooks/useAgentRegistry'
 import { getDefaultAgent, getProjectAgents } from '../../../shared/agent-helpers'
 import { ScreenShell } from '../../components/shared/ScreenShell'
-import { AGENT_BY_ID, agentColorVar, agentShort } from '../../utils/agent-ui'
+import { agentColorVar } from '../../utils/agent-ui'
 import { useEffectiveContext, badgeLabelFor } from '../../hooks/useEffectiveContext'
 import type { AgentType, OpenSessionSeed, Project, Template } from '../../../shared/types'
 import './NewSessionScreen.css'
@@ -39,6 +39,7 @@ function Section({ eyebrow, title, sub, children }: ComposerSectionProps): React
 }
 
 export function NewSessionScreen(): React.JSX.Element {
+  const registry = useAgentRegistry()
   const projects = useAppStore((s) => s.projects)
   const activeSessionId = useAppStore((s) => s.activeSessionId)
   const activeSession = useAppStore((s) =>
@@ -99,8 +100,8 @@ export function NewSessionScreen(): React.JSX.Element {
     () => (project ? getProjectAgents(project).find((config) => config.agent === agentId) : null),
     [agentId, project],
   )
-  const agent = AGENT_BY_ID.get(agentId)
-  const colorVar = agentColorVar(agentId)
+  const agent = useMemo(() => registry.find((a) => a.id === agentId), [registry, agentId])
+  const colorVar = agent?.colorVar ?? agentColorVar(agentId)
   const ctxResolved = useEffectiveContext(agentId)
 
   const approvedCount = Object.values(approve).filter(Boolean).length
@@ -324,7 +325,7 @@ export function NewSessionScreen(): React.JSX.Element {
               </div>
             ) : null}
             <div className="ns-target__agent-list">
-              {AGENTS.map((a) => {
+              {registry.map((a) => {
                 const active = agentId === (a.id as AgentType)
                 return (
                   <button
@@ -338,13 +339,13 @@ export function NewSessionScreen(): React.JSX.Element {
                       })
                     }
                     style={{
-                      ['--sel-color' as 'color']: `var(${agentColorVar(a.id)})`,
+                      ['--sel-color' as 'color']: `var(${a.colorVar})`,
                     }}
                   >
                     <span className="ns-agent-pill__glyph" aria-hidden="true">
                       {a.icon}
                     </span>
-                    <span className="ns-agent-pill__short">{agentShort(a.id)}</span>
+                    <span className="ns-agent-pill__short">{a.short}</span>
                   </button>
                 )
               })}

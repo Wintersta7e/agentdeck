@@ -2,7 +2,7 @@ import { CH } from '../../shared/ipc-channels'
 import { ipcRenderer } from 'electron'
 import type { AgentDeckBridge, AgentVersionInfo } from '../../shared/bridge'
 import type { ContextResult } from '../../shared/context-types'
-import { onIpc } from './events'
+import { onIpc, onIpcNoData } from './events'
 
 type ProjectsAgentsBridge = Pick<AgentDeckBridge, 'store' | 'agents' | 'projects' | 'skills'>
 
@@ -38,6 +38,12 @@ export function createProjectsAgentsBridge(): ProjectsAgentsBridge {
         >,
       setContextOverride: (args) => ipcRenderer.invoke(CH.agentsSetContextOverride, args),
       getOverrides: () => ipcRenderer.invoke(CH.agentsGetOverrides),
+      getRegistry: () => ipcRenderer.invoke(CH.agentsGetRegistry),
+      getCustomSpec: (id) => ipcRenderer.invoke(CH.agentsGetCustomSpec, id),
+      saveCustom: (spec) => ipcRenderer.invoke(CH.agentsSaveCustom, spec),
+      deleteCustom: (id) => ipcRenderer.invoke(CH.agentsDeleteCustom, id),
+      onRegistryChange: (cb) => onIpcNoData(CH.agentsRegistryChange, cb),
+      onParseError: (cb) => onIpc<{ warnings: string[] }>(CH.agentsParseError, cb),
     },
     projects: {
       detectStack: (path, distro) => ipcRenderer.invoke(CH.projectsDetectStack, path, distro),

@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useAppStore } from '../store/appStore'
 import type { CodexLimits, PlanWindow, Project, Session } from '../../shared/types'
 import { USAGE_REFRESH_INTERVAL_MS } from '../../shared/constants'
 import { resolveSessionAgent } from '../utils/resolve-session-agent'
+import { usePollEffect } from './usePollEffect'
 
 export interface ResolvedWindow {
   usedPercent: number
@@ -88,23 +89,15 @@ export function usePlanLimits(): PlanLimitsData {
   const sessions = useAppStore((s) => s.sessions)
   const projects = useAppStore((s) => s.projects)
 
-  useEffect(() => {
-    let cancelled = false
-    async function load(): Promise<void> {
-      try {
-        const next = await window.agentDeck.limits.getCodex()
-        if (!cancelled) setCodex(next)
-      } catch {
-        /* best-effort */
-      }
-    }
-    void load()
-    const interval = setInterval(() => void load(), USAGE_REFRESH_INTERVAL_MS)
-    return () => {
-      cancelled = true
-      clearInterval(interval)
+  const load = useCallback(async (isActive: () => boolean) => {
+    try {
+      const next = await window.agentDeck.limits.getCodex()
+      if (isActive()) setCodex(next)
+    } catch {
+      /* best-effort */
     }
   }, [])
+  usePollEffect(load, USAGE_REFRESH_INTERVAL_MS)
 
   // Computed per render (not memoized) so the rolling-5h window stays current on
   // every 30s poll re-render — `codex` is the polled state, not `sessions`, so a

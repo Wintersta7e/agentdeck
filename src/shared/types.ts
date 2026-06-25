@@ -97,6 +97,12 @@ export interface LegacyTemplate {
 // ── Template types (v6.1.0 file-based) ─────────────────────────────
 export type TemplateScope = 'user' | 'project'
 
+/** A single `templates:change` event emitted by the main-process TemplateStore. */
+export type TemplateChangeEvent =
+  | { kind: 'add'; scope: TemplateScope; projectId: string | null; template: Template }
+  | { kind: 'update'; scope: TemplateScope; projectId: string | null; template: Template }
+  | { kind: 'delete'; scope: TemplateScope; projectId: string | null; id: string }
+
 /** Persisted JSON on disk. Derived fields are NOT in the file. */
 export interface TemplateFile {
   id: string
@@ -319,11 +325,13 @@ export interface WorkflowMeta {
 export type WorkflowNodeStatus = 'idle' | 'running' | 'done' | 'error' | 'paused' | 'skipped'
 export type WorkflowStatus = 'idle' | 'running' | 'done' | 'error' | 'stopped'
 
-export type WorkflowEventType =
+export type WorkflowLevelEventType =
   | 'workflow:started'
   | 'workflow:stopped'
   | 'workflow:done'
   | 'workflow:error'
+
+export type NodeLevelEventType =
   | 'node:started'
   | 'node:output'
   | 'node:done'
@@ -334,19 +342,32 @@ export type WorkflowEventType =
   | 'node:skipped'
   | 'node:loopIteration'
 
-export interface WorkflowEvent {
-  id: string
-  type: WorkflowEventType
+export type WorkflowEventType = WorkflowLevelEventType | NodeLevelEventType
+
+/** Fields shared by every workflow event (the log UI reads these generically). */
+interface WorkflowEventFields {
   workflowId: string
-  nodeId?: string | undefined
   message: string
-  timestamp: number
+  /** node:retry only. */
   attempt?: number | undefined
   maxAttempts?: number | undefined
+  /** node:loopIteration only. */
   iteration?: number | undefined
   maxIterations?: number | undefined
+  /** condition node:done only. */
   branch?: 'true' | 'false' | undefined
 }
+
+/**
+ * Event payload emitted by the engine; `id`/`timestamp` are stamped on dispatch
+ * (see WorkflowEvent). Workflow-level events carry no nodeId, every node-level
+ * event requires one — so consumers narrow on `type` instead of guarding nodeId.
+ */
+export type WorkflowEventInput =
+  | (WorkflowEventFields & { type: WorkflowLevelEventType; nodeId?: undefined })
+  | (WorkflowEventFields & { type: NodeLevelEventType; nodeId: string })
+
+export type WorkflowEvent = WorkflowEventInput & { id: string; timestamp: number }
 
 export interface WorkflowVariable {
   name: string
@@ -483,7 +504,9 @@ export interface SessionUsageRecord {
   agent: string
   projectId: string
   startedAt: number
-  endedAt: number
+  /** Timestamp of the session's last activity — active time is measured to here,
+   *  not to endedAt, so a session left open idle doesn't inflate the total. */
+  lastActivityAt: number
   filesChanged: number
 }
 
@@ -493,6 +516,8 @@ export interface SessionRecord {
   projectId: string
   agent: string
   startedAt: number
+  /** Last activity timestamp; seeded to startedAt, advanced on each activity event. */
+  lastActivityAt: number
   endedAt: number | null // null while running
   status: 'exited' | 'error'
   filesChanged: number

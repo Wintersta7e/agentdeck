@@ -1,6 +1,6 @@
 {
   "name": "agentdeck",
-  "version": "6.10.0",
+  "version": "7.0.0",
   "description": "Electron desktop app for managing WSL agent sessions",
   "main": "./out/main/index.js",
   "license": "Elastic-2.0",
@@ -33,7 +33,7 @@
     "build": "node node_modules/electron-vite/bin/electron-vite.js build",
     "dist": "node node_modules/electron-vite/bin/electron-vite.js build && node node_modules/electron-builder/out/cli/cli.js --win portable",
     "release-portable": "bash scripts/build-portable.sh",
-    "postinstall": "node node_modules/@electron/rebuild/lib/cli.js -f -w node-pty",
+    "postinstall": "node node_modules/@electron/rebuild/lib/cli.js -w node-pty",
     "lint": "node node_modules/eslint/bin/eslint.js src/ --max-warnings=0",
     "lint:fix": "node node_modules/eslint/bin/eslint.js src/ --fix --max-warnings=0",
     "lint:check": "node node_modules/eslint/bin/eslint.js src/ --max-warnings=0",
@@ -45,6 +45,7 @@
     "test:main": "node node_modules/vitest/vitest.mjs run --project main",
     "test:renderer": "node node_modules/vitest/vitest.mjs run --project renderer",
     "typecheck": "node node_modules/typescript/bin/tsc -p tsconfig.node.json --noEmit && node node_modules/typescript/bin/tsc -p tsconfig.web.json --noEmit",
+    "security": "gitleaks git . --no-banner --redact && osv-scanner scan source -r . && trivy fs --scanners vuln,secret,misconfig --skip-dirs node_modules,dist,dist-release,out --no-progress . && semgrep scan --config auto src/ --exclude-rule javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal --exclude-rule javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp",
     "debug:context-resolution": "npx vite-node scripts/debug-context-resolution.ts",
     "prepare": "node node_modules/husky/bin.js"
   },
@@ -58,7 +59,16 @@
     ]
   },
   "overrides": {
-    "node-abi": "^4.30.0"
+    "node-abi": "^4.30.0",
+    "esbuild": "^0.28.1",
+    "@babel/core": "^7.29.6",
+    "js-yaml": "^4.2.0",
+    "tar": "^7.5.16",
+    "undici": "^7.28.0",
+    "vite": "^7.3.5",
+    "node-gyp": {
+      "undici": "^6.27.0"
+    }
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -72,30 +82,30 @@
     "@xterm/addon-unicode11": "^0.9.0",
     "@xterm/addon-webgl": "^0.19.0",
     "@xterm/xterm": "^5.5.0",
-    "@xyflow/react": "^12.10.2",
+    "@xyflow/react": "^12.11.0",
     "electron-store": "^11.0.2",
     "jsonc-parser": "^3.3.1",
-    "lucide-react": "^1.16.0",
+    "lucide-react": "^1.21.0",
     "node-pty": "^1.0.0",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "react-window": "^2.2.7",
     "smol-toml": "^1.6.1",
     "yaml": "^2.9.0",
-    "zustand": "^5.0.13"
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@electron/rebuild": "^4.0.4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
-    "@types/node": "^25.9.1",
-    "@types/react": "^19.2.15",
+    "@types/node": "^25.9.3",
+    "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.4",
-    "@vitest/coverage-v8": "^4.1.7",
-    "electron": "^42.2.0",
-    "electron-builder": "^26.8.1",
+    "@vitest/coverage-v8": "^4.1.9",
+    "electron": "^42.5.0",
+    "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",
@@ -103,10 +113,10 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "husky": "^9.1.7",
     "jsdom": "^29.1.1",
-    "lint-staged": "^17.0.5",
-    "prettier": "^3.8.3",
+    "lint-staged": "^17.0.8",
+    "prettier": "^3.8.4",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.59.4",
+    "typescript-eslint": "^8.62.0",
     "vitest": "^4.1.7"
   }
 }

@@ -1,5 +1,6 @@
 import { useAppStore } from '../../store/appStore'
-import { AGENT_BY_ID, getSessionAgentId } from '../../utils/agent-ui'
+import { getSessionAgentId, selectAgentMeta } from '../../utils/agent-ui'
+import { useAgentRegistry } from '../../hooks/useAgentRegistry'
 import './ConfigTab.css'
 
 /**
@@ -16,18 +17,20 @@ export function ConfigTab(): React.JSX.Element {
     activeSessionId ? s.worktreePaths[activeSessionId] : undefined,
   )
   const openProjectSettings = useAppStore((s) => s.openSettings)
+  const registry = useAgentRegistry()
 
   if (!activeSessionId || !session) {
     return <div className="ri-tab__empty">Open a session to see its config.</div>
   }
 
   const agentId = getSessionAgentId(session, project)
-  const agent = AGENT_BY_ID.get(agentId)
+  const meta = selectAgentMeta(registry, agentId)
+  const binary = registry.find((d) => d.id === agentId)?.binary
 
   const rows: Array<{ label: string; value: string; kind?: 'mono' | 'accent' }> = [
     { label: 'Session ID', value: session.id.slice(-12), kind: 'mono' },
-    { label: 'Agent', value: agent?.name ?? agentId, kind: 'accent' },
-    { label: 'Binary', value: agent?.binary ?? '—', kind: 'mono' },
+    { label: 'Agent', value: meta.name, kind: 'accent' },
+    { label: 'Binary', value: binary ?? '—', kind: 'mono' },
     { label: 'Agent flags', value: session.agentFlagsOverride ?? '(defaults)', kind: 'mono' },
     { label: 'Project', value: project?.name ?? (session.projectId || 'ad-hoc') },
     { label: 'Project path', value: project?.path ?? '—', kind: 'mono' },

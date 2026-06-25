@@ -15,14 +15,12 @@ import { ProjectCardB1 } from '../home/ProjectCardB1'
 import { ProductivityPanel } from '../home/ProductivityPanel'
 import { PlanLimitsPanel } from '../home/PlanLimitsPanel'
 import { Mascot } from '../Mascot/Mascot'
-import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
+import { selectAgentMeta } from '../../utils/agent-ui'
+import { useAgentRegistry } from '../../hooks/useAgentRegistry'
 import { getProjectAgents } from '../../../shared/agent-helpers'
 import type { AgentConfig, Project } from '../../../shared/types'
+import { formatClock } from '../../utils/format-date'
 import './HomeScreen.css'
-
-const AGENT_META_MAP = new Map<string, (typeof SHARED_AGENTS)[number]>(
-  SHARED_AGENTS.map((a) => [a.id, a]),
-)
 
 function getGreeting(hour: number): string {
   if (hour < 12) return 'Good morning'
@@ -40,14 +38,6 @@ function formatDateCaption(d: Date): string {
     .toUpperCase()
 }
 
-function formatClock(d: Date): string {
-  return d.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  })
-}
-
 interface HomeScreenProps {
   onOpenProject: (project: Project) => void
   onOpenProjectWithAgent: (project: Project, agentConfig: AgentConfig) => void
@@ -58,6 +48,7 @@ export function HomeScreen({
   onOpenProjectWithAgent,
 }: HomeScreenProps): React.JSX.Element {
   const projects = useAppStore((s) => s.projects)
+  const registry = useAgentRegistry()
   const templates = useTemplates()
   const openWizard = useAppStore((s) => s.openWizard)
   const openCommandPalette = useAppStore((s) => s.openCommandPalette)
@@ -340,7 +331,7 @@ export function HomeScreen({
             >
               <div className="home-context-header">Launch with…</div>
               {projectAgents.map((ac) => {
-                const agentMeta = AGENT_META_MAP.get(ac.agent)
+                const agentMeta = selectAgentMeta(registry, ac.agent)
                 return (
                   <button
                     key={ac.agent}
@@ -351,8 +342,8 @@ export function HomeScreen({
                       setCardMenu(null)
                     }}
                   >
-                    <span className="home-ctx-agent-icon">{agentMeta?.icon ?? '◈'}</span>
-                    <span className="home-ctx-agent-name">{agentMeta?.name ?? ac.agent}</span>
+                    <span className="home-ctx-agent-icon">{agentMeta.icon}</span>
+                    <span className="home-ctx-agent-name">{agentMeta.name}</span>
                     {ac.isDefault && <span className="home-ctx-agent-badge">DEFAULT</span>}
                   </button>
                 )

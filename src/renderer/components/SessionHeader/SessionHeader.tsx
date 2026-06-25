@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import { useAppStore } from '../../store/appStore'
-import { AGENT_BY_ID, agentColorVar, getSessionAgentId } from '../../utils/agent-ui'
+import { getSessionAgentId } from '../../utils/agent-ui'
+import { useAgentMeta } from '../../hooks/useAgentRegistry'
 import { getActionButtons } from '../../selectors/session-actions'
 import { rerunSession } from '../../utils/rerun-session'
 import type { Session } from '../../../shared/types'
@@ -25,11 +26,13 @@ export const SessionHeader = memo(function SessionHeader(): React.JSX.Element | 
   )
   const gitStatus = useAppStore((s) => (session ? s.gitStatuses[session.projectId] : undefined))
   const setApprovalState = useAppStore((s) => s.setApprovalState)
+  // `getSessionAgentId` is null-safe; resolving before the guard keeps the
+  // `useAgentMeta` hook call unconditional. When session/project are null we
+  // return null below anyway, so the resolved id is unused.
+  const meta = useAgentMeta(getSessionAgentId(session, project))
 
   if (!session || !project) return null
 
-  const agentId = getSessionAgentId(session, project)
-  const agent = AGENT_BY_ID.get(agentId)
   const buttons = getActionButtons(session)
   const dirtyCount = gitStatus
     ? gitStatus.staged + gitStatus.unstaged + gitStatus.untracked
@@ -44,12 +47,23 @@ export const SessionHeader = memo(function SessionHeader(): React.JSX.Element | 
   return (
     <div
       className="session-header"
-      style={{ ['--agent-accent' as never]: `var(${agentColorVar(agentId)})` }}
+      style={{ ['--agent-accent' as never]: `var(${meta.colorVar})` }}
     >
       <span className="session-header__glyph" aria-hidden>
-        {agent?.icon ?? '●'}
+        {meta.icon}
       </span>
-      <span className="session-header__agent">{agent?.name ?? 'agent'}</span>
+      <span
+        className="session-header__agent"
+        {...(meta.isRegistered ? {} : { title: 'Agent no longer registered' })}
+      >
+        {meta.name}
+        {!meta.isRegistered && (
+          <span className="session-header__unregistered" aria-hidden>
+            {' '}
+            ⚠
+          </span>
+        )}
+      </span>
       <span className="session-header__divider" aria-hidden />
       <span className="session-header__project">{project.name}</span>
       <span className="session-header__path">{project.path}</span>

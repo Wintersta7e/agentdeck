@@ -6,6 +6,7 @@ import { createWorkflowsSlice, type WorkflowsSlice } from './slices/workflows'
 import { createTemplatesSlice, type TemplatesSlice } from './slices/templates'
 import { createNotificationsSlice, type NotificationsSlice } from './slices/notifications'
 import { createHomeSlice, type HomeSlice } from './slices/home'
+import { createCustomAgentsSlice, type CustomAgentsSlice } from './slices/customAgents'
 
 export type AppState = SessionsSlice &
   UiSlice &
@@ -13,7 +14,8 @@ export type AppState = SessionsSlice &
   WorkflowsSlice &
   TemplatesSlice &
   NotificationsSlice &
-  HomeSlice
+  HomeSlice &
+  CustomAgentsSlice
 
 export const useAppStore = create<AppState>()((...a) => ({
   ...createSessionsSlice(...a),
@@ -23,4 +25,5 @@ export const useAppStore = create<AppState>()((...a) => ({
   ...createTemplatesSlice(...a),
   ...createNotificationsSlice(...a),
   ...createHomeSlice(...a),
+  ...createCustomAgentsSlice(...a),
 }))

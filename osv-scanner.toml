@@ -1,0 +1,9 @@
+# osv-scanner suppressions. Suppress a confirmed false positive or accepted risk
+# by adding a block like:
+#
+#   [[IgnoredVulns]]
+#   id = "GHSA-xxxx-xxxx-xxxx"
+#   ignoreUntil = 2026-12-31  # re-evaluate after this date
+#   reason = "not reachable from our code path"
+#
+# No vulnerabilities to suppress — the dependency tree is clean.

@@ -7,17 +7,16 @@
  */
 import { spawn, execFile, type ChildProcess, type ExecException } from 'child_process'
 import { createLogger } from './logger'
-import type { AgentNode, ShellNode, WorkflowEvent, Role } from '../shared/types'
+import type { AgentNode, ShellNode, WorkflowEventInput, Role } from '../shared/types'
 import {
-  AGENT_BINARY_MAP,
-  AGENT_PRINT_FLAGS_MAP,
+  AGENT_BY_ID,
   AGENT_CD_FLAG_MAP,
   AGENT_ENGINE_FLAGS_MAP,
   AGENT_SUPPORTS_SKILLS_MAP,
-  KNOWN_AGENT_IDS,
   SAFE_FLAGS_RE,
   getPermissionFlags,
 } from '../shared/agents'
+import type { AgentRegistry } from './agent-registry'
 import {
   AGENT_IDLE_TIMEOUT,
   DEFAULT_AGENT_TIMEOUT,
@@ -27,11 +26,16 @@ import {
 } from '../shared/constants'
 import { NODE_INIT } from './wsl-utils'
 import { SAFE_SKILL_RE } from './skill-scanner'
+import { BLOCKED_ENV_KEYS } from '../shared/custom-agents'
 
 const log = createLogger('node-runners')
 
 // Re-export for callers that previously imported these from this module.
 export { AGENT_IDLE_TIMEOUT, MAX_TIER_CONCURRENCY }
+
+/** Max stdout+stderr a shell node may buffer before execFile aborts it.
+ *  Node's 1 MiB default is too small for verbose build/test logs. */
+const SHELL_MAX_BUFFER = 16 * 1024 * 1024
 
 // ── Utility functions ────────────────────────────────────────────────
 
@@ -80,12 +84,14 @@ export function extractSkillPrefix(skillId: string | undefined, agentName: strin
 export interface NodeRunnerDeps {
   workflowId: string
   projectPath: string | undefined
-  push: (event: Omit<WorkflowEvent, 'id' | 'timestamp'>) => void
+  push: (event: WorkflowEventInput) => void
   nodeOutputs: Map<string, string>
   conditionOutputs: Map<string, string>
   nodeExitCodes: Map<string, number>
   activeChildProcesses: Set<ChildProcess>
   isStopped: () => boolean
+  /** Merged builtin + custom agent registry: id membership, binary, args, custom flag. */
+  agentRegistry: AgentRegistry
 }
 
 // ── Node runners ─────────────────────────────────────────────────────
@@ -93,8 +99,8 @@ export interface NodeRunnerDeps {
 /** Session cache of resolved PATH dir prefixes, keyed by agent binary name. */
 const agentPathCache = new Map<string, string>()
 
-/** Test-only: clear the per-session agent PATH-resolution cache. */
-export function _resetAgentPathCache(): void {
+/** Drop the per-session agent PATH-resolution cache (after an agent update, or between tests). */
+export function invalidateAgentPathCache(): void {
   agentPathCache.clear()
 }
 
@@ -106,8 +112,9 @@ export function _resetAgentPathCache(): void {
  * and `node` (needed by codex's `#!/usr/bin/env node` shebang), are otherwise
  * absent from PATH. Returns a colon-joined list of absolute dirs to prepend to
  * PATH, or '' if unresolved. Parses only absolute paths (ignores shell-init
- * noise / stderr). Cached per binary for the session. `bin` is a validated
- * registry id (KNOWN_AGENT_IDS), so it is safe to interpolate.
+ * noise / stderr). Cached per binary for the session. `bin` can be a custom
+ * agent's binary (arbitrary user string), so it is shell-quoted before being
+ * spliced into the `bash -lic` command line.
  */
 function resolveAgentPathPrefix(bin: string): Promise<string> {
   const cached = agentPathCache.get(bin)
@@ -115,7 +122,12 @@ function resolveAgentPathPrefix(bin: string): Promise<string> {
   return new Promise<string>((resolve) => {
     execFile(
       'wsl.exe',
-      ['--', 'bash', '-lic', `command -v ${bin} 2>/dev/null; command -v node 2>/dev/null`],
+      [
+        '--',
+        'bash',
+        '-lic',
+        `command -v ${shellQuote(bin)} 2>/dev/null; command -v node 2>/dev/null`,
+      ],
       { timeout: 15_000 },
       (_err, stdout) => {
         const dirs: string[] = []
@@ -150,10 +162,10 @@ export async function runAgentNode(
   let prompt = promptParts.join('\n\n')
 
   const agentName = node.agent ?? 'claude-code'
-  if (!KNOWN_AGENT_IDS.has(agentName)) {
-    // Loud-fail on unknown agents instead of falling through to '--print'
-    // and AGENT_BINARY_MAP[id] ?? id — that pair would silently invoke
-    // whatever string the renderer sent as a binary name.
+  if (!deps.agentRegistry.has(agentName)) {
+    // Loud-fail on unknown agents instead of falling through to a `?? agentName`
+    // footgun that would silently invoke whatever string the renderer sent as a
+    // binary name. Membership covers both builtins and registered custom agents.
     throw new Error(`Unknown agent: ${agentName}`)
   }
 
@@ -173,8 +185,20 @@ export async function runAgentNode(
 
   if (!prompt) return
 
-  const bin = AGENT_BINARY_MAP[agentName] ?? agentName
-  const printFlags = AGENT_PRINT_FLAGS_MAP[agentName] ?? ['--print']
+  const bin = deps.agentRegistry.binaryFor(agentName)
+  if (bin === undefined) {
+    // Membership already guaranteed a binary; this satisfies the type and
+    // guards against a registry that knows the id but has no binary for it.
+    throw new Error(`No binary registered for agent: ${agentName}`)
+  }
+  // Custom agents are console/TUI agents with no headless --print mode, so they
+  // get no print flags; their default launch args (argsFor) are appended
+  // instead. Builtins keep their canonical print-mode flags exactly.
+  const isCustom = deps.agentRegistry.isCustom(agentName)
+  const printFlags: readonly string[] = isCustom
+    ? []
+    : (AGENT_BY_ID.get(agentName)?.printFlags ?? ['--print'])
+  const customArgs = isCustom ? deps.agentRegistry.argsFor(agentName) : []
 
   let sanitizedFlags = ''
   if (node.agentFlags) {
@@ -207,6 +231,8 @@ export async function runAgentNode(
   const pathExport = pathPrefix ? `export PATH="${pathPrefix}:$PATH"; ` : ''
   const cdFlag = AGENT_CD_FLAG_MAP[agentName]
   const flagStr = printFlags.length > 0 ? printFlags.join(' ') + ' ' : ''
+  // Custom-agent launch args (arbitrary user strings) shell-quoted individually.
+  const customArgsStr = customArgs.length > 0 ? customArgs.map(shellQuote).join(' ') + ' ' : ''
   const cdFlagStr = deps.projectPath && cdFlag ? `${cdFlag} ${shellQuote(deps.projectPath)} ` : ''
   const engineFlags = AGENT_ENGINE_FLAGS_MAP[agentName]
   const engineFlagStr = engineFlags ? engineFlags.join(' ') + ' ' : ''
@@ -216,7 +242,7 @@ export async function runAgentNode(
   const runParts: string[] = []
   if (deps.projectPath && !cdFlag) runParts.push(`cd ${shellQuote(deps.projectPath)}`)
   runParts.push(
-    `${shellQuote(bin)} ${flagStr}${cdFlagStr}${engineFlagStr}${permFlagStr}${sanitizedFlags}`.trimEnd(),
+    `${shellQuote(bin)} ${flagStr}${customArgsStr}${cdFlagStr}${engineFlagStr}${permFlagStr}${sanitizedFlags}`.trimEnd(),
   )
   const fullCmd = pathExport + runParts.join(' && ')
 
@@ -248,8 +274,21 @@ export async function runAgentNode(
     // E_UNEXPECTED. We write the prompt to stdin (NODE_INIT does not consume it),
     // then close the pipe so the agent sees EOF.
     const startTime = Date.now()
+    // A custom agent's non-secret env (e.g. OLLAMA_HOST) must reach the workflow
+    // child the same way it reaches a PTY session — via the child's env option,
+    // never serialized into the bash command string. Builtins contribute {} here.
+    // Filter BLOCKED_ENV_KEYS as defense-in-depth against an edited agents.toml
+    // (mirrors pty-manager). Spreading process.env keeps the runner's nvm/PATH.
+    const mergedEnv: NodeJS.ProcessEnv = { ...process.env }
+    if (isCustom) {
+      for (const [k, v] of Object.entries(deps.agentRegistry.envFor(agentName))) {
+        if (BLOCKED_ENV_KEYS.has(k)) continue
+        mergedEnv[k] = v
+      }
+    }
     const child = spawn('wsl.exe', ['--', 'bash', '-lc', NODE_INIT + fullCmd], {
       stdio: ['pipe', 'pipe', 'pipe'],
+      env: mergedEnv,
     })
     child.stdin?.write(prompt)
     child.stdin?.end()
@@ -385,14 +424,28 @@ export function runShellNode(node: ShellNode, deps: NodeRunnerDeps): Promise<voi
     // Use projectPath as cwd context for shell commands
     const fullCmd = deps.projectPath ? `cd ${shellQuote(deps.projectPath)} && ${cmd}` : cmd
 
+    const timeoutMs = node.timeout ?? 60000
+    let settled = false
+
     const child = execFile(
       'wsl.exe',
       ['--', 'bash', '-lc', NODE_INIT + fullCmd],
-      { timeout: node.timeout ?? 60000 },
+      // No execFile `timeout`: it only SIGTERMs wsl.exe and orphans the Linux
+      // process inside WSL — we enforce it ourselves via forceKillTree below.
+      // A generous maxBuffer keeps a chatty-but-successful command (verbose
+      // build/test logs) from being killed and misreported as a failure.
+      { maxBuffer: SHELL_MAX_BUFFER },
       (err, stdout, stderr) => {
+        if (settled) return
+        settled = true
+        clearTimeout(timer)
         deps.activeChildProcesses.delete(child)
-        // Extract real exit code from ExecException instead of hardcoding 1
-        const exitCode = err ? ((err as ExecException).code ?? 1) : 0
+        // execFile surfaces the OS exit code as a number; a non-numeric code
+        // (e.g. 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER' when maxBuffer overflows)
+        // means Node killed the child — treat it as a generic failure rather
+        // than letting a string leak into the numeric exit-code map.
+        const raw = (err as ExecException | null)?.code
+        const exitCode = typeof raw === 'number' ? raw : err ? 1 : 0
         deps.nodeExitCodes.set(node.id, exitCode)
         const out = stripAnsi(stdout + stderr)
         deps.nodeOutputs.set(node.id, out)
@@ -407,6 +460,19 @@ export function runShellNode(node: ShellNode, deps: NodeRunnerDeps): Promise<voi
         else resolve()
       },
     )
+
+    // Enforce the timeout by killing the whole WSL process tree (taskkill /F /T),
+    // mirroring the agent-node path. 124 is the conventional timeout exit code.
+    const timer = setTimeout(() => {
+      if (settled) return
+      settled = true
+      log.warn('Shell node timeout', { workflowId: deps.workflowId, nodeId: node.id, timeoutMs })
+      forceKillTree(child)
+      deps.activeChildProcesses.delete(child)
+      deps.nodeExitCodes.set(node.id, 124)
+      reject(new Error(`Shell command timed out after ${timeoutMs / 1000}s`))
+    }, timeoutMs)
+
     // Track child process so stop() can kill it
     deps.activeChildProcesses.add(child)
   })

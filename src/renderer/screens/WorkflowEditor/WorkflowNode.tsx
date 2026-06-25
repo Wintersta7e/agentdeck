@@ -7,9 +7,10 @@ import type {
   WorkflowNodeType as NodeType,
   AgentType,
 } from '../../../shared/types'
-import { AGENTS } from '../../../shared/agents'
-import { agentColorVar } from '../../utils/agent-ui'
+import { selectAgentMeta } from '../../utils/agent-ui'
+import { useAgentRegistry } from '../../hooks/useAgentRegistry'
 import { useRolesMap } from '../../hooks/useRolesMap'
+import type { AgentDescriptorWire } from '../../../shared/custom-agents'
 import './WorkflowNode.css'
 
 export interface WorkflowNodeData {
@@ -23,16 +24,16 @@ export interface WorkflowNodeData {
 
 export type WfNode = Node<WorkflowNodeData, 'workflowNode'>
 
-const KNOWN_AGENTS: AgentType[] = AGENTS.map((a) => a.id)
-
 /**
  * Picks the CSS variable that drives a node's accent border, glow, glyph,
- * and type-notch colour. Agent nodes get their agent's signature token;
- * the other types map to a stable palette slot so a graph of mixed node
- * types still reads as a coloured flow.
+ * and type-notch colour. Agent nodes get their agent's signature token
+ * (resolved from the live registry so custom agents colour correctly); the
+ * other types map to a stable palette slot so a graph of mixed node types
+ * still reads as a coloured flow.
  */
-function getNodeAccentVar(node: WorkflowNodeType): string {
-  if (node.type === 'agent' && node.agent) return `var(${agentColorVar(node.agent)})`
+function getNodeAccentVar(node: WorkflowNodeType, registry: AgentDescriptorWire[]): string {
+  if (node.type === 'agent' && node.agent)
+    return `var(${selectAgentMeta(registry, node.agent).colorVar})`
   if (node.type === 'shell') return 'var(--green)'
   if (node.type === 'condition') return 'var(--purple)'
   if (node.type === 'checkpoint') return 'var(--blue)'
@@ -71,6 +72,7 @@ function getTypeIcon(type: NodeType): React.ReactNode {
 function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Element {
   const { node, status, onUpdateNode, onDeleteNode, onDuplicateNode } = data
   const rolesMap = useRolesMap()
+  const registry = useAgentRegistry()
   // Pre-narrow agent-only fields so dep arrays and child reads stay typecheckable.
   const agentNode = node.type === 'agent' ? node : null
   const nodeAgent: AgentType = agentNode?.agent ?? 'claude-code'
@@ -177,7 +179,7 @@ function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Ele
   const className = ['wf-node-inner', status, selected ? 'selected' : ''].filter(Boolean).join(' ')
 
   const nodeText = getNodeText(node)
-  const accentStyle = { '--node-accent': getNodeAccentVar(node) } as React.CSSProperties
+  const accentStyle = { '--node-accent': getNodeAccentVar(node, registry) } as React.CSSProperties
 
   return (
     <div
@@ -242,7 +244,9 @@ function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Ele
         {node.type === 'agent' && (
           <div className="wf-node-field">
             <div className="wf-node-field-label">Agent</div>
-            <div className="wf-node-field-value">{node.agent ?? 'claude-code'}</div>
+            <div className="wf-node-field-value">
+              {selectAgentMeta(registry, node.agent ?? 'claude-code').name}
+            </div>
           </div>
         )}
 
@@ -280,9 +284,9 @@ function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Ele
               value={editAgent}
               onChange={(e) => setEditAgent(e.target.value as AgentType)}
             >
-              {KNOWN_AGENTS.map((a) => (
-                <option key={a} value={a}>
-                  {a}
+              {registry.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
                 </option>
               ))}
             </select>

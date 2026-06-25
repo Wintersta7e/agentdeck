@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { writeFile } from 'node:fs/promises'
 import type { GitStatus } from '../shared/types'
 import { toWslPath } from './wsl-utils'
@@ -107,20 +107,23 @@ export function initGitStatusCache(userDataPath: string): void {
   }
 }
 
+function buildCacheFile(): DiskCacheFile {
+  return {
+    version: CACHE_VERSION,
+    entries: Array.from(cache.entries()).map(([key, val]) => ({
+      key,
+      status: val.status,
+      fetchedAt: val.fetchedAt,
+    })),
+  }
+}
+
 function scheduleDiskFlush(): void {
   if (flushTimer || !diskCachePath) return
   flushTimer = setTimeout(() => {
     flushTimer = null
     if (!diskCachePath) return
-    const file: DiskCacheFile = {
-      version: CACHE_VERSION,
-      entries: Array.from(cache.entries()).map(([key, val]) => ({
-        key,
-        status: val.status,
-        fetchedAt: val.fetchedAt,
-      })),
-    }
-    writeFile(diskCachePath, JSON.stringify(file), 'utf8').catch((err: unknown) => {
+    writeFile(diskCachePath, JSON.stringify(buildCacheFile()), 'utf8').catch((err: unknown) => {
       // Best-effort persistence — log so EACCES/ENOSPC/EROFS don't fail silently
       // (cache never persisting silently is the symptom: every restart pays full
       // git rescan cost and the user sees "Loading…" flicker on every tile).
@@ -130,6 +133,27 @@ function scheduleDiskFlush(): void {
       })
     })
   }, 5000)
+}
+
+/**
+ * Cancel any pending debounced flush and write the cache synchronously. Called
+ * from before-quit so a just-fetched status isn't lost and the pending 5s timer
+ * doesn't keep the event loop alive, delaying process exit.
+ */
+export function flushGitStatusCache(): void {
+  if (flushTimer) {
+    clearTimeout(flushTimer)
+    flushTimer = null
+  }
+  if (!diskCachePath) return
+  try {
+    writeFileSync(diskCachePath, JSON.stringify(buildCacheFile()), 'utf8')
+  } catch (err) {
+    log.warn('Failed to flush git-status disk cache on quit', {
+      path: diskCachePath,
+      err: err instanceof Error ? err.message : String(err),
+    })
+  }
 }
 
 function normalizePath(p: string): string {

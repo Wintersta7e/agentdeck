@@ -88,6 +88,26 @@ describe('closeSession orchestrator', () => {
     expect(useAppStore.getState().sessions['s1']).toBeDefined()
   })
 
+  it('auto-keep path (unmerged commits, no working changes): keeps the worktree, never discards', async () => {
+    ;(window.agentDeck.worktree.inspect as ReturnType<typeof vi.fn>).mockImplementation(
+      async () => {
+        invocations.push('inspect')
+        // Committed-but-unmerged work with a clean working tree -> auto 'keep'.
+        return { hasChanges: false, hasUnmerged: true, branch: 'feature' }
+      },
+    )
+    const { closeSession } = await import('./session-close')
+    await closeSession('s1')
+    // Single inspect (the discard-only re-inspect window is skipped on keep),
+    // then kill -> keep -> releasePrimary.
+    expect(invocations).toEqual(['inspect', 'pty.kill', 'keep', 'releasePrimary'])
+    // A discard/keep swap would silently destroy committed worktree work.
+    expect(invocations).toContain('keep')
+    expect(invocations).not.toContain('discard')
+    expect(useAppStore.getState().sessions['s1']).toBeUndefined()
+    expect(useAppStore.getState().worktreePaths['s1']).toBeUndefined()
+  })
+
   it('unknown id: no-op', async () => {
     const { closeSession } = await import('./session-close')
     await expect(closeSession('nope')).resolves.toBeUndefined()

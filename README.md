@@ -5,8 +5,8 @@
 **A desktop deck for your WSL coding agents.**
 
 Launch, watch, and orchestrate Claude Code, Codex, Aider, and four more agents
-from a single window — split terminals, visual workflows, and live cost
-tracking, all running through your own WSL environment.
+from a single window — split terminals, visual workflows, and productivity +
+plan-limit tracking, all running through your own WSL environment.
 
 [![Electron](https://img.shields.io/badge/Electron-42-47848F?logo=electron&logoColor=white)](https://www.electronjs.org)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev)
@@ -18,7 +18,7 @@ tracking, all running through your own WSL environment.
 
 <br>
 
-<img src="screenshots/home-dashboard.png" alt="AgentDeck home dashboard — scope viz, daily digest, live activity, agent grid, and 7-day cost" width="900">
+<img src="screenshots/home-dashboard.png" alt="AgentDeck home dashboard — scope viz, daily digest, live activity, agent grid, productivity and plan limits" width="900">
 
 </div>
 
@@ -44,7 +44,7 @@ build it, but there's no adoption goal and no support guarantees.
 
 ## Status
 
-Actively developed personal tool, currently at **v6.8.0**. The app is mature
+Actively developed personal tool, currently at **v6.10.0**. The app is mature
 and in daily use — a large Vitest suite under a zero-warning lint + typecheck
 gate — but it's shaped around exactly one setup (Windows 11 + WSL2), so your
 mileage outside that will vary.
@@ -56,15 +56,17 @@ mileage outside that will vary.
 - Visual workflow engine — agent / shell / checkpoint / condition nodes,
   branching, loops, `{{VAR}}` variables, and per-run history
 - Per-session git worktree isolation with a Keep / Discard review flow
-- Live cost + token tracking (Claude Code and Codex)
-- Home dashboard — daily digest, live session grid, 7-day cost, project cards
+- Productivity tracking (sessions · active time · files changed) for every agent,
+  plus real Codex plan-limit gauges (5h / weekly), persisted across restarts
+- Home dashboard — daily digest, live session grid, 7-day activity, plan limits,
+  project cards
 - Prompt templates, command palette, three themes
 
 **Rough edges / not done:**
 - Windows + WSL2 only — it spawns `wsl.exe`, so there's no native Linux/macOS
   build
-- Cost / token parsing exists for Claude Code and Codex only; the other five
-  agents run fine but report no cost
+- Real subscription plan-limit data is Codex-only (the only agent that exposes
+  it on disk); every other agent shows a rolling-5h activity tile instead
 - Ships as a portable `.exe` — no installer, no auto-update
 
 **Explicitly declined (not on the roadmap):**
@@ -82,9 +84,11 @@ mileage outside that will vary.
 - New-session composer: pick an agent, drop in a prompt, set branch mode, launch
 
 ### Home dashboard
-- Daily digest — session count, cost, exit rate, top agent
-- Live session grid with activity pulse and token gauge
-- Cost dashboard with per-agent breakdown and a 7-day sparkline
+- Daily digest — session count, active time, files changed, exit rate, top agent
+- Live session grid with activity pulse
+- Productivity panel — sessions · active time · files changed, with a 7-day sparkline
+- Plan-limits panel — real Codex 5h / weekly gauges; rolling-5h activity per agent
+- Timeline + HISTORY persist across restarts (disk-backed per-session log)
 - Project cards with git status; proactive suggestions; quick actions
 
 ### Workflows
@@ -150,7 +154,7 @@ npm test            # Vitest
 npm run release-portable
 ```
 
-Output: `dist/AgentDeck-{version}-portable.exe` (~93 MB).
+Output: `dist/AgentDeck-{version}-portable.exe` (~94 MB).
 
 ## Stack
 

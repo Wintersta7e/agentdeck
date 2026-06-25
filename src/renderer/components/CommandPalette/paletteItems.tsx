@@ -9,7 +9,6 @@ import {
   Plus,
   ClipboardList,
 } from 'lucide-react'
-import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
 import type { Project, Template } from '../../../shared/types'
 
 export type ScopeTab = 'projects' | 'templates' | 'sessions' | 'tools'
@@ -43,12 +42,6 @@ export const SECTION_ORDER: { type: ResultType; label: string }[] = [
   { type: 'template', label: 'Templates' },
   { type: 'action', label: 'Tools' },
 ]
-
-export const ALL_AGENTS = SHARED_AGENTS.map((a) => ({
-  id: a.id,
-  label: a.name,
-  desc: a.description,
-}))
 
 interface SessionEntry {
   id: string

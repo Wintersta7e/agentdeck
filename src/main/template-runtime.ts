@@ -1,5 +1,5 @@
 import { createLogger } from './logger'
-import type { AppStore } from './project-store'
+import { projectPathById, type AppStore } from './project-store'
 import { createLegacyStoreAdapter } from './template-legacy-store'
 import { runTemplateMigration } from './template-migration'
 import { createTemplateStore, type TemplateStore } from './template-store'
@@ -60,10 +60,7 @@ export async function initializeTemplateRuntime(
   try {
     templateStore = await createTemplateStore({
       userRoot: templateUserRoot,
-      getProjectPath: (projectId) => {
-        const projects = appStore.get('projects') ?? []
-        return projects.find((project) => project.id === projectId)?.path ?? null
-      },
+      getProjectPath: (projectId) => projectPathById(appStore, projectId),
     })
   } catch (err) {
     log.error('createTemplateStore failed - legacy-only template access', {

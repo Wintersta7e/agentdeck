@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { ScreenShell, FilterChip } from '../../components/shared/ScreenShell'
-import { AGENTS } from '../../../shared/agents'
-import { getSessionAgentId } from '../../utils/agent-ui'
+import { getSessionAgentId, selectAgentMeta } from '../../utils/agent-ui'
+import { useAgentRegistry } from '../../hooks/useAgentRegistry'
 import type { Session, SessionStatus } from '../../../shared/types'
 import './SessionsScreen.css'
 
@@ -41,8 +41,6 @@ function statusLabel(s: SessionStatus): string {
   return s.toUpperCase()
 }
 
-const AGENT_META_MAP = new Map(AGENTS.map((a) => [a.id, a]))
-
 function isActive(status: SessionStatus): boolean {
   return status === 'running' || status === 'starting'
 }
@@ -71,9 +69,9 @@ function matchesFilter(status: SessionStatus, filter: FilterId): boolean {
 export function SessionsScreen(): React.JSX.Element {
   const sessions = useAppStore((s) => s.sessions)
   const projects = useAppStore((s) => s.projects)
+  const registry = useAgentRegistry()
   const activityFeeds = useAppStore((s) => s.activityFeeds)
   const setActiveSession = useAppStore((s) => s.setActiveSession)
-  const setTab = useAppStore((s) => s.setTab)
   const setCurrentView = useAppStore((s) => s.setCurrentView)
   const openCommandPalette = useAppStore((s) => s.openCommandPalette)
 
@@ -121,9 +119,8 @@ export function SessionsScreen(): React.JSX.Element {
       setActiveSession(session.id)
       // Keep currentView synchronous so SplitView/RightPanel see session immediately
       setCurrentView('sessions')
-      setTab('sessions', { sessionId: session.id })
     },
-    [setActiveSession, setCurrentView, setTab],
+    [setActiveSession, setCurrentView],
   )
 
   return (
@@ -200,7 +197,7 @@ export function SessionsScreen(): React.JSX.Element {
           filtered.map((session) => {
             const project = projectById.get(session.projectId)
             const agentId = getSessionAgentId(session, project)
-            const agent = AGENT_META_MAP.get(agentId)
+            const meta = selectAgentMeta(registry, agentId)
             const feed = activityFeeds[session.id]
             const lastEvent = feed && feed.length > 0 ? feed[feed.length - 1] : undefined
             const activity = lastEvent
@@ -224,9 +221,9 @@ export function SessionsScreen(): React.JSX.Element {
                 </span>
                 <span className="sessions-row__agent">
                   <span className="sessions-row__agent-glyph" aria-hidden="true">
-                    {agent?.icon ?? '◈'}
+                    {meta.icon}
                   </span>
-                  <span className="sessions-row__agent-name">{agent?.name ?? agentId}</span>
+                  <span className="sessions-row__agent-name">{meta.name}</span>
                 </span>
                 <span className="sessions-row__project">
                   <span className="sessions-row__project-name">

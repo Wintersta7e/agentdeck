@@ -11,7 +11,7 @@
   padding: 0 var(--sp-1) var(--sp-1_5);
   border-bottom: 1px dotted var(--border-bright);
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-xxs);
   letter-spacing: 0.18em;
   color: var(--text3);
 }

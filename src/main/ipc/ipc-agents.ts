@@ -2,6 +2,7 @@ import { CH } from '../../shared/ipc-channels'
 import { ipcMain } from 'electron'
 import type { BrowserWindow } from 'electron'
 import type { AppStore } from '../project-store'
+import type { AgentRegistry } from '../agent-registry'
 import { detectAgents } from '../agent-detector'
 import { checkAllUpdates, updateAgent } from '../agent-updater'
 import { AGENTS, KNOWN_AGENT_IDS } from '../../shared/agents'
@@ -9,19 +10,58 @@ import { getEffectiveContextWindow } from '../../shared/context-window'
 import { resolveActiveModel, invalidateAll as invalidateModelCache } from '../active-model-cache'
 import { isValidContextOverride } from '../validation'
 import { createLogger } from '../logger'
-import type { AgentType } from '../../shared/types'
+import { resolveWslUsername } from '../wsl-utils'
 
 const log = createLogger('ipc-agents')
 
-/** Agent IPC handlers: detection, visibility, version checks, updates, WSL username, context resolution. */
+/** Per-agent default context windows, keyed by agent id. Hoisted so the three
+ *  effective-context handlers share one computation. */
+const AGENT_CONTEXT_DEFAULTS = Object.fromEntries(AGENTS.map((a) => [a.id, a.contextWindow]))
+
+/** Agent IPC handlers: detection, visibility, version checks, updates, WSL username, context resolution, custom-agent registry. */
 export function registerAgentHandlers(
   getWindow: () => BrowserWindow | null,
   store: AppStore,
+  registry: AgentRegistry,
 ): void {
   /* ── Agent detection (async, non-blocking) ──────────────────────── */
   ipcMain.handle(CH.agentsCheck, () => {
     invalidateModelCache()
     return detectAgents(log)
+  })
+
+  /* ── Custom-agent registry (live singleton) ─────────────────────── */
+  ipcMain.handle(CH.agentsGetRegistry, () => registry.all())
+
+  // Full custom spec (args/env/versionArgs) for non-lossy edit/clone in the
+  // modal; null for builtins / unknown ids. Returns env because it is the
+  // user's own non-secret config (secrets blocked at validation).
+  ipcMain.handle(
+    CH.agentsGetCustomSpec,
+    (_, id: unknown) => registry.getSpec(typeof id === 'string' ? id : '') ?? null,
+  )
+
+  /** Surface non-fatal agents.toml warnings (raised on a CRUD reload) to the
+   *  renderer as a banner, mirroring the templates parse-error path. */
+  const emitParseWarnings = (warnings: string[]): void => {
+    if (warnings.length === 0) return
+    getWindow()?.webContents.send(CH.agentsParseError, { warnings })
+  }
+
+  ipcMain.handle(CH.agentsSaveCustom, async (_, spec: unknown) => {
+    const res = await registry.saveCustom(spec)
+    if (res.ok) {
+      getWindow()?.webContents.send(CH.agentsRegistryChange)
+      emitParseWarnings(res.warnings)
+    }
+    return res
+  })
+
+  ipcMain.handle(CH.agentsDeleteCustom, async (_, id: unknown) => {
+    const safeId = typeof id === 'string' ? id : ''
+    const ok = await registry.deleteCustom(safeId)
+    if (ok) getWindow()?.webContents.send(CH.agentsRegistryChange)
+    return ok
   })
 
   /* ── Agent visibility ─────────────────────────────────────────── */
@@ -30,7 +70,7 @@ export function registerAgentHandlers(
   })
   ipcMain.handle(CH.agentsSetVisible, (_, agents: string[]) => {
     if (!Array.isArray(agents)) return store.get('appPrefs').visibleAgents ?? null
-    const safe = agents.filter((a) => typeof a === 'string' && KNOWN_AGENT_IDS.has(a))
+    const safe = agents.filter((a) => typeof a === 'string' && registry.has(a))
     store.set('appPrefs', { ...store.get('appPrefs'), visibleAgents: safe })
     return safe
   })
@@ -39,8 +79,13 @@ export function registerAgentHandlers(
   ipcMain.handle(CH.agentsCheckUpdates, (_, installedAgents: unknown) => {
     if (!installedAgents || typeof installedAgents !== 'object' || Array.isArray(installedAgents))
       return
+    // Keep only boolean values — the cast alone wouldn't reject a non-boolean.
+    const checked: Record<string, boolean> = {}
+    for (const [id, v] of Object.entries(installedAgents)) {
+      if (typeof v === 'boolean') checked[id] = v
+    }
     const win = getWindow()
-    if (win) checkAllUpdates(win, installedAgents as Record<string, boolean>)
+    if (win) checkAllUpdates(win, checked)
   })
 
   ipcMain.handle(CH.agentsUpdate, async (_, agentId: string) => {
@@ -50,14 +95,20 @@ export function registerAgentHandlers(
     return updateAgent(agentId)
   })
 
+  /** Builtin defaults with the (possibly custom) agent's own context window
+   *  layered on top, so a custom agent resolves to its declared window. */
+  const agentDefaultsFor = (agentId: string): Record<string, number> => ({
+    ...AGENT_CONTEXT_DEFAULTS,
+    [agentId]: registry.contextWindowFor(agentId),
+  })
+
   /* ── Effective context (auto-detect) ───────────────────────────── */
   ipcMain.handle(CH.agentsGetEffectiveContext, async (_, agentId: unknown) => {
-    if (typeof agentId !== 'string' || !KNOWN_AGENT_IDS.has(agentId)) {
+    if (typeof agentId !== 'string' || !registry.has(agentId)) {
       return { error: 'invalid agentId' }
     }
-    const detector = await resolveActiveModel(agentId as AgentType)
+    const detector = await resolveActiveModel(agentId)
     const prefs = store.get('appPrefs')
-    const defaults = Object.fromEntries(AGENTS.map((a) => [a.id, a.contextWindow]))
     return getEffectiveContextWindow({
       agentId,
       activeModel: detector.modelId,
@@ -68,22 +119,20 @@ export function registerAgentHandlers(
         agent: prefs.agentContextOverrides ?? {},
         model: prefs.modelContextOverrides ?? {},
       },
-      agentDefaults: defaults,
+      agentDefaults: agentDefaultsFor(agentId),
     })
   })
 
   /* ── Effective context for launch snapshot (force-refresh + frozen prefs) ── */
   ipcMain.handle(CH.agentsGetEffectiveContextForLaunch, async (_, agentId: unknown) => {
-    if (typeof agentId !== 'string' || !KNOWN_AGENT_IDS.has(agentId)) {
+    if (typeof agentId !== 'string' || !registry.has(agentId)) {
       return { error: 'invalid agentId' }
     }
     // Freeze appPrefs BEFORE the detector I/O so a save during the read can't leak in.
     const prefs = store.get('appPrefs')
     const agentOverrides = prefs.agentContextOverrides ?? {}
     const modelOverrides = prefs.modelContextOverrides ?? {}
-    const typed = agentId as AgentType
-    const detector = await resolveActiveModel(typed, { forceRefresh: true })
-    const defaults = Object.fromEntries(AGENTS.map((a) => [a.id, a.contextWindow]))
+    const detector = await resolveActiveModel(agentId, { forceRefresh: true })
     return getEffectiveContextWindow({
       agentId,
       activeModel: detector.modelId,
@@ -91,7 +140,7 @@ export function registerAgentHandlers(
         ? { cliContextOverride: detector.cliContextOverride }
         : {}),
       overrides: { agent: agentOverrides, model: modelOverrides },
-      agentDefaults: defaults,
+      agentDefaults: agentDefaultsFor(agentId),
     })
   })
 
@@ -99,14 +148,13 @@ export function registerAgentHandlers(
   ipcMain.handle(
     CH.agentsGetEffectiveContextForModel,
     async (_, agentId: unknown, modelId: unknown) => {
-      if (typeof agentId !== 'string' || !KNOWN_AGENT_IDS.has(agentId)) {
+      if (typeof agentId !== 'string' || !registry.has(agentId)) {
         return { error: 'invalid agentId' }
       }
       if (typeof modelId !== 'string' || modelId.length === 0) {
         return { error: 'invalid modelId' }
       }
       const prefs = store.get('appPrefs')
-      const defaults = Object.fromEntries(AGENTS.map((a) => [a.id, a.contextWindow]))
       return getEffectiveContextWindow({
         agentId,
         activeModel: modelId,
@@ -114,7 +162,7 @@ export function registerAgentHandlers(
           agent: prefs.agentContextOverrides ?? {},
           model: prefs.modelContextOverrides ?? {},
         },
-        agentDefaults: defaults,
+        agentDefaults: agentDefaultsFor(agentId),
       })
     },
   )
@@ -130,7 +178,7 @@ export function registerAgentHandlers(
     const prefs = store.get('appPrefs')
     if (kind === 'agent') {
       const { agentId } = args as { agentId?: unknown }
-      if (typeof agentId !== 'string' || !KNOWN_AGENT_IDS.has(agentId)) {
+      if (typeof agentId !== 'string' || !registry.has(agentId)) {
         return { ok: false, error: 'invalid agentId' }
       }
       const prev = prefs.agentContextOverrides ?? {}
@@ -164,29 +212,5 @@ export function registerAgentHandlers(
   })
 
   /* ── WSL username ─────────────────────────────────────────────── */
-  ipcMain.handle(CH.appWslUsername, async () => {
-    const { execFile } = await import('child_process')
-    const tryCmd = (args: string[]): Promise<string> =>
-      new Promise((resolve) => {
-        execFile('wsl.exe', args, { timeout: 10000 }, (err, stdout) => {
-          const out = stdout?.trim() ?? ''
-          if (err || !out) {
-            resolve('')
-            return
-          }
-          resolve(out)
-        })
-      })
-
-    // Race all approaches in parallel — first non-empty result wins.
-    // On cold WSL boot, sequential attempts can stall for 45s total.
-    const results = await Promise.all([
-      tryCmd(['--', 'bash', '-lc', 'whoami']),
-      tryCmd(['--', 'whoami']),
-      tryCmd(['--', 'bash', '-lc', 'echo $USER']),
-    ])
-    const result = results.find((r) => r !== '') ?? ''
-    if (!result) log.warn('Failed to detect WSL username')
-    return result
-  })
+  ipcMain.handle(CH.appWslUsername, () => resolveWslUsername())
 }

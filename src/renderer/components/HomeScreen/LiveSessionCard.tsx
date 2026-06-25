@@ -1,12 +1,10 @@
 import { useMemo } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { useElapsedTime } from '../../hooks/useElapsedTime'
-import { AGENTS } from '../../../shared/agents'
 import { getSessionAgentId } from '../../utils/agent-ui'
+import { useAgentMeta } from '../../hooks/useAgentRegistry'
 import type { ActivityEvent } from '../../../shared/types'
 import './LiveSessionCard.css'
-
-const AGENT_META = new Map(AGENTS.map((a) => [a.id, a]))
 
 function getPulseClass(event: ActivityEvent | undefined): string {
   if (!event || event.status !== 'active') return 'idle'
@@ -50,7 +48,7 @@ export function LiveSessionCard({ sessionId }: LiveSessionCardProps): React.JSX.
   )
 
   const agentId = getSessionAgentId(session, project)
-  const meta = AGENT_META.get(agentId)
+  const meta = useAgentMeta(agentId)
   const pulseClass = getPulseClass(latestActivity ?? undefined)
 
   if (!session) return <div className="live-card live-card-empty" />
@@ -58,8 +56,8 @@ export function LiveSessionCard({ sessionId }: LiveSessionCardProps): React.JSX.
   return (
     <div className="live-card">
       <div className="live-card-head">
-        <span className="live-card-agent-icon">{meta?.icon ?? '\u25C8'}</span>
-        <span className="live-card-agent-name">{meta?.name ?? agentId}</span>
+        <span className="live-card-agent-icon">{meta.icon}</span>
+        <span className="live-card-agent-name">{meta.name}</span>
         <span className="live-card-project">{project?.name ?? 'Unknown'}</span>
         <span className="live-card-elapsed">{elapsed}</span>
       </div>

@@ -8,6 +8,7 @@ function makeRecord(overrides: Partial<SessionRecord> = {}): SessionRecord {
     projectId: 'proj-1',
     agent: 'claude-code',
     startedAt: 1000,
+    lastActivityAt: 2000,
     endedAt: 2000,
     status: 'exited',
     filesChanged: 3,

@@ -3,11 +3,36 @@ import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/re
 import { NewSessionScreen } from './NewSessionScreen'
 import { useAppStore } from '../../store/appStore'
 import type { Project, Template } from '../../../shared/types'
+import type { AgentDescriptorWire } from '../../../shared/custom-agents'
 
 const getEffectiveContext = vi.fn()
 const getEffectiveContextForLaunch = vi.fn()
 const saveTemplate = vi.fn()
 const incrementUsage = vi.fn()
+
+const builtinAgent: AgentDescriptorWire = {
+  id: 'codex',
+  binary: 'codex',
+  name: 'Codex',
+  icon: '◈',
+  short: 'CX',
+  colorVar: '--accent',
+  description: 'OpenAI CLI agent',
+  contextWindow: 400_000,
+  source: 'builtin',
+}
+
+const customAgent: AgentDescriptorWire = {
+  id: 'my-bot',
+  binary: 'mybot',
+  name: 'My Bot',
+  icon: '★',
+  short: 'MB',
+  colorVar: '--green',
+  description: 'A user-defined console agent',
+  contextWindow: 0,
+  source: 'user',
+}
 
 function project(overrides: Partial<Project>): Project {
   return {
@@ -60,6 +85,7 @@ beforeEach(() => {
 
   useAppStore.setState({
     ...useAppStore.getInitialState(),
+    agentRegistry: [builtinAgent, customAgent],
     projects: [
       project({
         id: 'p1',
@@ -148,6 +174,20 @@ describe('NewSessionScreen', () => {
         projectId: null,
       })
     })
+  })
+
+  it('renders a custom agent from the live registry as a pickable pill', () => {
+    render(<NewSessionScreen />)
+
+    // The custom agent's 2-letter mnemonic appears as a selectable pill.
+    const pill = screen.getByText('MB')
+    expect(pill).toBeInTheDocument()
+    const button = pill.closest('button')
+    expect(button).not.toBeNull()
+
+    // Selecting it makes it the active agent and surfaces it in the launch target.
+    fireEvent.click(button as HTMLButtonElement)
+    expect(screen.getByText('My Bot')).toBeInTheDocument()
   })
 
   it('saves the prompt as a user template', async () => {

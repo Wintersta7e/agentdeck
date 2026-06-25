@@ -1,0 +1,6 @@
+# trivy suppressions — one vulnerability / misconfig / secret ID per line, e.g.
+#   CVE-2024-12345
+#   AVD-DS-0002
+# Add a trailing `# <reason / expiry>` comment when you suppress something.
+#
+# No findings to suppress — vuln + secret + misconfig scans are clean.

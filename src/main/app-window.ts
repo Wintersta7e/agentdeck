@@ -5,6 +5,7 @@ import { join } from 'path'
 import { DEFAULT_STARTUP_BG, THEME_STARTUP_BG } from '../shared/themes'
 import { createLogger } from './logger'
 import { createPtyManager, type PtyManager } from './pty-manager'
+import type { AgentRegistry } from './agent-registry'
 import { toWslPath } from './wsl-utils'
 import { createWorkflowEngine, type WorkflowEngine } from './workflow-engine'
 import type { AppStore } from './project-store'
@@ -35,7 +36,7 @@ function installContentSecurityPolicy(mainWindow: BrowserWindow): void {
       responseHeaders: {
         ...details.responseHeaders,
         'Content-Security-Policy': [
-          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:; connect-src 'none'",
+          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'",
         ],
       },
     })
@@ -89,7 +90,11 @@ function loadRenderer(mainWindow: BrowserWindow): void {
   }
 }
 
-export function createAppWindow(store: AppStore, onClosed?: () => void): AppWindowRuntime {
+export function createAppWindow(
+  store: AppStore,
+  onClosed: (() => void) | undefined,
+  agentRegistry: AgentRegistry,
+): AppWindowRuntime {
   const mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -108,10 +113,11 @@ export function createAppWindow(store: AppStore, onClosed?: () => void): AppWind
 
   installContentSecurityPolicy(mainWindow)
 
-  const ptyManager = createPtyManager(mainWindow)
+  const ptyManager = createPtyManager(mainWindow, agentRegistry)
   const workflowEngine = createWorkflowEngine(
     ptyManager,
     mainWindow,
+    agentRegistry,
     () => store.get('roles') ?? [],
   )
 

@@ -4,6 +4,31 @@ import './Mascot.css'
 
 type MascotState = 'greet' | 'idle' | 'bored' | 'working' | 'alert' | 'sleep' | 'hover'
 
+interface MascotInputs {
+  greeting: boolean
+  hovering: boolean
+  errorCount: number
+  runningCount: number
+  /** Local hour (0–23); the sleep window is 23:00–05:59. */
+  hour: number
+}
+
+/** Pure derivation of the mascot's pose from live inputs (exported for tests). */
+export function deriveMascotState({
+  greeting,
+  hovering,
+  errorCount,
+  runningCount,
+  hour,
+}: MascotInputs): MascotState {
+  if (greeting) return 'greet'
+  if (hovering) return 'hover'
+  if (errorCount > 0) return 'alert'
+  if (hour >= 23 || hour < 6) return 'sleep'
+  if (runningCount >= 1) return 'working'
+  return 'bored'
+}
+
 interface MascotProps {
   /** Pixel size. Default 140. */
   size?: number
@@ -57,15 +82,14 @@ export function Mascot({ size = 140, onClick }: MascotProps): React.JSX.Element 
     }
   }, [])
 
-  const state = useMemo<MascotState>(() => {
-    const hour = new Date().getHours()
-    if (greeting) return 'greet'
-    if (hovering) return 'hover'
-    if (errorCount > 0) return 'alert'
-    if (hour >= 23 || hour < 6) return 'sleep'
-    if (runningCount >= 1) return 'working'
-    return 'bored'
-  }, [greeting, hovering, errorCount, runningCount])
+  // new Date() is re-read every render; the rAF tick re-renders ~20fps while
+  // mounted, so `hour` (a memo dep) stays current and the sleep window flips at
+  // the 23:00 / 06:00 boundary instead of staying stale until another dep changes.
+  const hour = new Date().getHours()
+  const state = useMemo<MascotState>(
+    () => deriveMascotState({ greeting, hovering, errorCount, runningCount, hour }),
+    [greeting, hovering, errorCount, runningCount, hour],
+  )
 
   const breath = 1 + Math.sin(tick * 0.9) * 0.012
 

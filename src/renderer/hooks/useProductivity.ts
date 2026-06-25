@@ -1,9 +1,10 @@
-import { useEffect, useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useAppStore } from '../store/appStore'
 import type { DailyUsageEntry, Session } from '../../shared/types'
 import { useMidnight } from './useMidnight'
 import { isoKeyFromTs } from '../../shared/date-keys'
 import { USAGE_REFRESH_INTERVAL_MS } from '../../shared/constants'
+import { usePollEffect } from './usePollEffect'
 
 export interface TodayProductivity {
   sessions: number
@@ -56,23 +57,18 @@ export function useProductivity(): ProductivityData {
   const sessions = useAppStore((s) => s.sessions)
   const writeCounts = useAppStore((s) => s.writeCountBySession)
 
-  useEffect(() => {
-    let cancelled = false
-    async function load(): Promise<void> {
+  const load = useCallback(
+    async (isActive: () => boolean) => {
       try {
         const history = await window.agentDeck.usage.getHistory(7)
-        if (!cancelled) setUsageHistory(history)
+        if (isActive()) setUsageHistory(history)
       } catch {
         /* ignore IPC errors */
       }
-    }
-    void load()
-    const interval = setInterval(() => void load(), USAGE_REFRESH_INTERVAL_MS)
-    return () => {
-      cancelled = true
-      clearInterval(interval)
-    }
-  }, [setUsageHistory])
+    },
+    [setUsageHistory],
+  )
+  usePollEffect(load, USAGE_REFRESH_INTERVAL_MS)
 
   const midnight = useMidnight()
 

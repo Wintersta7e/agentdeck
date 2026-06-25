@@ -1,5 +1,6 @@
 import { usePlanLimits, resolveWindow, type ResolvedWindow } from '../../hooks/usePlanLimits'
-import { AGENT_BY_ID } from '../../utils/agent-ui'
+import { selectAgentMeta } from '../../utils/agent-ui'
+import { useAgentRegistry } from '../../hooks/useAgentRegistry'
 import { formatDuration } from '../../utils/format-duration'
 import './PlanLimitsPanel.css'
 
@@ -31,6 +32,7 @@ function Gauge({ label, w }: { label: string; w: ResolvedWindow }): React.JSX.El
 
 export function PlanLimitsPanel(): React.JSX.Element {
   const { codex, activity } = usePlanLimits()
+  const registry = useAgentRegistry()
   // render-time snapshot (see usePlanLimits for the convention)
   // eslint-disable-next-line react-hooks/purity
   const now = Date.now()
@@ -60,9 +62,9 @@ export function PlanLimitsPanel(): React.JSX.Element {
 
       {/* Per-agent activity tiles */}
       {activityRows.map(({ agent, sessions, activeMs }) => {
-        const meta = AGENT_BY_ID.get(agent as Parameters<(typeof AGENT_BY_ID)['get']>[0])
-        const icon = meta?.icon
-        const name = meta?.name ?? agent
+        const meta = selectAgentMeta(registry, agent)
+        const icon = meta.icon
+        const name = meta.name
         return (
           <div key={agent} className="plan-limits__agent">
             <span className="plan-limits__agent-name plan-limits__agent-name--row">

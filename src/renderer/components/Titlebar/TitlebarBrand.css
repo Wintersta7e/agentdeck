@@ -80,7 +80,7 @@
 
 .titlebar-brand__search-kbd {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-xxs);
   letter-spacing: 0.1em;
   padding: 1px 5px;
   color: var(--text3);

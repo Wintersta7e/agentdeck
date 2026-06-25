@@ -27,6 +27,31 @@ export function toWslPath(p: string): string {
 }
 
 /**
+ * Resolve the WSL default user's name. Races three detection commands in
+ * parallel — on a cold WSL boot, sequential attempts can stall ~45s total.
+ * Returns '' when none succeed.
+ */
+export async function resolveWslUsername(): Promise<string> {
+  const tryCmd = (args: string[]): Promise<string> =>
+    new Promise((resolve) => {
+      execFile('wsl.exe', args, { timeout: 10000 }, (err, stdout) => {
+        const out = stdout?.trim() ?? ''
+        resolve(err || !out ? '' : out)
+      })
+    })
+
+  // Race all approaches — first non-empty result wins.
+  const results = await Promise.all([
+    tryCmd(['--', 'bash', '-lc', 'whoami']),
+    tryCmd(['--', 'whoami']),
+    tryCmd(['--', 'bash', '-lc', 'echo $USER']),
+  ])
+  const result = results.find((r) => r !== '') ?? ''
+  if (!result) log.warn('Failed to detect WSL username')
+  return result
+}
+
+/**
  * Prefix sourced before every WSL command in bash -lc (non-interactive).
  * Login shells don't source .bashrc, so nvm/fnm/volta aren't on PATH.
  * This explicitly initialises the most common node version managers.
@@ -72,6 +97,18 @@ export function wslPathToWindows(wslPath: string, distro = FALLBACK_DISTRO): str
     throw new Error(`Invalid WSL distro name: ${distro}`)
   }
   return `\\\\wsl.localhost\\${distro}${wslPath.replace(/\//g, '\\')}`
+}
+
+/**
+ * Resolve a project path (WSL or Windows) to a Windows-accessible path. Windows
+ * drive-letter paths (e.g. `C:\…`) are already usable and returned as-is; WSL
+ * paths are converted via `wslPathToWindows`. Pass `distro` when it's already
+ * resolved to skip the async detection.
+ */
+export async function resolveToWindowsPath(projectPath: string, distro?: string): Promise<string> {
+  if (/^[A-Za-z]:/.test(projectPath)) return projectPath
+  const d = distro ?? (await getDefaultDistroAsync())
+  return wslPathToWindows(projectPath, d)
 }
 
 /**

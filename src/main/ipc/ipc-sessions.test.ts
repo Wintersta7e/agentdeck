@@ -17,7 +17,7 @@ describe('ipc-sessions', () => {
     const getHistory = vi.fn(() => [])
     registerSessionHistoryHandlers({
       startSession: vi.fn(),
-      noteWrite: vi.fn(),
+      noteActivity: vi.fn(),
       endSession: vi.fn(),
       getHistory,
       flush: vi.fn(),
@@ -30,7 +30,7 @@ describe('ipc-sessions', () => {
     const getHistory = vi.fn(() => [])
     registerSessionHistoryHandlers({
       startSession: vi.fn(),
-      noteWrite: vi.fn(),
+      noteActivity: vi.fn(),
       endSession: vi.fn(),
       getHistory,
       flush: vi.fn(),
@@ -43,7 +43,7 @@ describe('ipc-sessions', () => {
     const getHistory = vi.fn(() => [])
     registerSessionHistoryHandlers({
       startSession: vi.fn(),
-      noteWrite: vi.fn(),
+      noteActivity: vi.fn(),
       endSession: vi.fn(),
       getHistory,
       flush: vi.fn(),
@@ -56,7 +56,7 @@ describe('ipc-sessions', () => {
     const getHistory = vi.fn(() => [])
     registerSessionHistoryHandlers({
       startSession: vi.fn(),
-      noteWrite: vi.fn(),
+      noteActivity: vi.fn(),
       endSession: vi.fn(),
       getHistory,
       flush: vi.fn(),

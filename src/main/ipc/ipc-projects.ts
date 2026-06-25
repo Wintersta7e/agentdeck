@@ -7,7 +7,7 @@ import type { Project, ProjectMeta } from '../../shared/types'
 import type { AppStore } from '../project-store'
 import { detectStack } from '../detect-stack'
 import { scanSkillDirectory, invalidateProjectCache } from '../skill-scanner'
-import { getDefaultDistroAsync, wslPathToWindows, withUncFallback } from '../wsl-utils'
+import { getDefaultDistroAsync, resolveToWindowsPath, withUncFallback } from '../wsl-utils'
 import { createLogger } from '../logger'
 import { isEnoent } from '../fs-errors'
 import { validateId } from '../validation'
@@ -28,6 +28,15 @@ export function registerProjectHandlers(
     // Validate path and distro inputs
     if (typeof p !== 'string' || !p || p.length > 1024) {
       throw new Error('projects:detectStack requires a valid path')
+    }
+    // Reject path traversal, mirroring projects:readFile. (`..` as a substring
+    // — e.g. foo..bar — is fine; only real `..` path segments are rejected.)
+    const slashified = p.replace(/\\/g, '/')
+    if (
+      slashified !== path.posix.normalize(slashified) ||
+      /(?:^|\/)\.\.(?:\/|$)/.test(slashified)
+    ) {
+      throw new Error('projects:detectStack rejects path traversal')
     }
     if (distro !== undefined && typeof distro !== 'string') {
       throw new Error('projects:detectStack requires a string distro')
@@ -59,16 +68,8 @@ export function registerProjectHandlers(
       throw new Error('File not permitted')
     }
     try {
-      // Determine the Windows-readable path
-      let windowsPath: string
-      if (/^[A-Za-z]:/.test(projectPath)) {
-        // Already a Windows path (e.g., E:\H\LocalAI)
-        windowsPath = projectPath
-      } else {
-        // WSL path — convert to Windows
-        const distro = await getDefaultDistroAsync()
-        windowsPath = wslPathToWindows(projectPath, distro)
-      }
+      // Determine the Windows-readable path (Windows paths pass through; WSL paths convert)
+      const windowsPath = await resolveToWindowsPath(projectPath)
 
       // Try root path first, then .claude/ subdirectory (Claude Code convention)
       const candidates = [
@@ -136,9 +137,7 @@ export function registerProjectHandlers(
       filesToCheck.push(project.contextFile)
     }
     for (const filename of filesToCheck) {
-      const windowsPath = /^[A-Za-z]:/.test(projectPath)
-        ? projectPath
-        : wslPathToWindows(projectPath, distro)
+      const windowsPath = await resolveToWindowsPath(projectPath, distro)
       const candidates = [
         path.join(windowsPath, filename),
         path.join(windowsPath, '.claude', filename),

@@ -5,14 +5,13 @@ import { useProjects } from '../../hooks/useProjects'
 import { useGitStatusBatch } from '../../hooks/useGitStatus'
 import { ProjectCardV2 } from '../../components/HomeScreen/ProjectCardV2'
 import { ScreenShell, FilterChip } from '../../components/shared/ScreenShell'
-import { AGENTS as SHARED_AGENTS } from '../../../shared/agents'
+import { selectAgentMeta } from '../../utils/agent-ui'
+import { useAgentRegistry } from '../../hooks/useAgentRegistry'
 import { getProjectAgents } from '../../../shared/agent-helpers'
 import type { AgentConfig, Project } from '../../../shared/types'
 import './ProjectsScreen.css'
 
 type FilterId = 'all' | 'pinned' | 'dirty'
-
-const AGENT_META_MAP = new Map(SHARED_AGENTS.map((a) => [a.id, a]))
 
 interface ProjectsScreenProps {
   onOpenProject: (project: Project) => void
@@ -25,6 +24,7 @@ export function ProjectsScreen({
 }: ProjectsScreenProps): React.JSX.Element {
   const projects = useAppStore((s) => s.projects)
   const gitStatusesByProject = useAppStore((s) => s.gitStatuses)
+  const registry = useAgentRegistry()
   const openWizard = useAppStore((s) => s.openWizard)
   const openSettings = useAppStore((s) => s.openSettings)
 
@@ -198,7 +198,7 @@ export function ProjectsScreen({
             >
               <div className="projects-screen__menu-head">Launch with…</div>
               {projectAgents.map((ac) => {
-                const agentMeta = AGENT_META_MAP.get(ac.agent)
+                const agentMeta = selectAgentMeta(registry, ac.agent)
                 return (
                   <button
                     key={ac.agent}
@@ -210,8 +210,8 @@ export function ProjectsScreen({
                       setCardMenu(null)
                     }}
                   >
-                    <span className="projects-screen__menu-icon">{agentMeta?.icon ?? '◈'}</span>
-                    <span>{agentMeta?.name ?? ac.agent}</span>
+                    <span className="projects-screen__menu-icon">{agentMeta.icon}</span>
+                    <span>{agentMeta.name}</span>
                     {ac.isDefault && <span className="projects-screen__menu-badge">DEFAULT</span>}
                   </button>
                 )

@@ -70,6 +70,16 @@ describe('atomicWrite', () => {
     await expect(atomicWrite(bogus, 'x')).rejects.toThrow()
   })
 
+  it('does not leave a .tmp file behind when the rename fails', async () => {
+    // Target is an existing directory: writeFile(tmp) succeeds but renaming the
+    // tmp over a directory fails, exercising the rename-failure cleanup path.
+    const target = path.join(tmpDir, 'a-dir')
+    fs.mkdirSync(target)
+    await expect(atomicWrite(target, 'x')).rejects.toThrow()
+    const leftovers = fs.readdirSync(tmpDir).filter((f) => f.includes('.tmp'))
+    expect(leftovers).toEqual([])
+  })
+
   it('writes utf-8 multi-byte content correctly', async () => {
     const target = path.join(tmpDir, 'unicode.txt')
     const payload = '日本語テスト 🚀 emoji'

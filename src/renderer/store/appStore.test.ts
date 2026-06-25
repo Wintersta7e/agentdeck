@@ -148,26 +148,15 @@ describe('Activity feeds', () => {
     expect(useAppStore.getState().activityFeeds['ghost']).toBeUndefined()
     expect(useAppStore.getState().writeCountBySession['ghost']).toBeUndefined()
   })
-
-  it('clears activity feed', () => {
-    useAppStore.getState().addSession('s1', 'proj-1')
-    useAppStore.getState().addActivityEvent('s1', makeActivityEvent())
-    useAppStore.getState().clearActivityFeed('s1')
-    expect(useAppStore.getState().activityFeeds['s1']).toHaveLength(0)
-  })
 })
 
 describe('Top-level tab navigation (setTab)', () => {
-  it('setTab switches currentView and resets tabParams', () => {
+  it('setTab switches currentView', () => {
     useAppStore.getState().setTab('sessions')
-    let state = useAppStore.getState()
-    expect(state.currentView).toBe('sessions')
-    expect(state.tabParams).toEqual({})
+    expect(useAppStore.getState().currentView).toBe('sessions')
 
-    useAppStore.getState().setTab('projects', { projectId: 'p-7' })
-    state = useAppStore.getState()
-    expect(state.currentView).toBe('projects')
-    expect(state.tabParams).toEqual({ projectId: 'p-7' })
+    useAppStore.getState().setTab('projects')
+    expect(useAppStore.getState().currentView).toBe('projects')
   })
 
   it('setTab does NOT push the previous view onto viewStack', () => {
@@ -178,22 +167,6 @@ describe('Top-level tab navigation (setTab)', () => {
     useAppStore.getState().setTab('agents')
     useAppStore.getState().setTab('alerts')
     expect(useAppStore.getState().viewStack).toEqual([])
-  })
-
-  it('setTab with undefined params clears previous tabParams', () => {
-    useAppStore.getState().setTab('sessions', { sessionId: 's1' })
-    expect(useAppStore.getState().tabParams).toEqual({ sessionId: 's1' })
-    useAppStore.getState().setTab('projects')
-    expect(useAppStore.getState().tabParams).toEqual({})
-  })
-
-  it('setTabParams mutates params without touching currentView or viewStack', () => {
-    useAppStore.getState().setTab('projects')
-    useAppStore.getState().setTabParams({ projectId: 'alpha' })
-    const state = useAppStore.getState()
-    expect(state.currentView).toBe('projects')
-    expect(state.tabParams).toEqual({ projectId: 'alpha' })
-    expect(state.viewStack).toEqual([])
   })
 })
 

@@ -2,10 +2,15 @@ import { CH } from '../shared/ipc-channels'
 import { app, safeStorage, type BrowserWindow } from 'electron'
 import { join } from 'path'
 import type { PtyManager } from './pty-manager'
-import { createProjectStore, registerStoreHandlers, type AppStore } from './project-store'
+import {
+  createProjectStore,
+  registerStoreHandlers,
+  projectPathById,
+  type AppStore,
+} from './project-store'
 import { seedTemplates, seedRoles } from './store-seeds'
 import type { TemplateStore } from './template-store'
-import { initGitStatusCache } from './git-status'
+import { initGitStatusCache, flushGitStatusCache } from './git-status'
 import { initLogger, createLogger, closeLogger } from './logger'
 import { seedWorkflows } from './workflow-seeds'
 import type { WorkflowEngine } from './workflow-engine'
@@ -15,6 +20,8 @@ import { createSessionHistory } from './session-history'
 import { ptyBus } from './pty-bus'
 import { createAppWindow } from './app-window'
 import { registerAppIpcHandlers } from './app-ipc'
+import { createReviewTracker } from './review-tracker'
+import { AgentRegistry } from './agent-registry'
 import {
   registerUsageHandlers,
   registerLimitsHandlers,
@@ -29,11 +36,14 @@ import { publishWslAvailability, resolveWslHome } from './wsl-runtime'
 
 const usageHistory = createUsageHistory(join(app.getPath('userData'), 'usage-history.json'))
 const sessionHistory = createSessionHistory(join(app.getPath('userData'), 'session-history.json'))
+const reviewTracker = createReviewTracker()
+const agentRegistry = new AgentRegistry(join(app.getPath('userData'), 'agents.toml'))
 const log = createLogger('app')
 
-// Count file-write activity events for the per-session history record.
+// Feed every activity event to the per-session history record: any activity
+// advances the active-time clock, and write events also bump the file count.
 ptyBus.on('activity', (payload: { sessionId: string; type: string }) => {
-  if (payload.type === 'write') sessionHistory.noteWrite(payload.sessionId)
+  sessionHistory.noteActivity(payload.sessionId, payload.type)
 })
 
 let mainWindow: BrowserWindow | null = null
@@ -63,6 +73,11 @@ app
     initGitStatusCache(app.getPath('userData'))
     log.info('App ready', { version: app.getVersion() })
 
+    const registryLoad = agentRegistry.load()
+    for (const warning of registryLoad.warnings) {
+      log.warn('Agent registry', { warning })
+    }
+
     appStore = createProjectStore()
     registerStoreHandlers(appStore)
     seedTemplates(appStore)
@@ -81,7 +96,7 @@ app
       codexHome: process.env['CODEX_HOME'] ?? null,
       agentdeckRoot,
       templateUserRoot: templateRuntime.templateUserRoot,
-      getProjectPath: (id) => appStore?.get('projects').find((p) => p.id === id)?.path ?? null,
+      getProjectPath: (id) => (appStore ? projectPathById(appStore, id) : null),
     })
 
     registerFilesIpc()
@@ -95,11 +110,17 @@ app
       getWorktreeManager: () => worktreeManager,
       sessionHistory,
       usageHistory,
+      reviewTracker,
+      agentRegistry,
     })
 
-    const windowRuntime = createAppWindow(appStore, () => {
-      mainWindow = null
-    })
+    const windowRuntime = createAppWindow(
+      appStore,
+      () => {
+        mainWindow = null
+      },
+      agentRegistry,
+    )
     mainWindow = windowRuntime.mainWindow
     ptyManager = windowRuntime.ptyManager
     workflowEngine = windowRuntime.workflowEngine
@@ -112,6 +133,16 @@ app
     registerUsageHandlers(usageHistory)
     registerLimitsHandlers()
     registerSessionHistoryHandlers(sessionHistory)
+
+    // Surface non-fatal agents.toml parse warnings (captured at load above,
+    // before the window existed) to the renderer as a banner once it loads —
+    // mirrors the safeStorage notice and the templates parse-error path.
+    if (registryLoad.warnings.length > 0 && mainWindow) {
+      const warnings = registryLoad.warnings
+      mainWindow.webContents.once('did-finish-load', () => {
+        mainWindow?.webContents.send(CH.agentsParseError, { warnings })
+      })
+    }
 
     // Warn renderer if encryption is unavailable (secrets stored as plaintext)
     if (!safeStorage.isEncryptionAvailable() && mainWindow) {
@@ -165,6 +196,7 @@ app.on('before-quit', () => {
   ptyManager?.killAll()
   sessionHistory.flush()
   usageHistory.flush()
+  flushGitStatusCache()
   templateEventsOff?.()
   templateStore?.dispose()
   closeLogger()

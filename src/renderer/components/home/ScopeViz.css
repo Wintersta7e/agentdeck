@@ -127,7 +127,7 @@
   left: 50%;
   transform: translate(-50%, calc(-50% + 40px));
   color: var(--text2);
-  font-size: 9px;
+  font-size: var(--fs-xxs);
   letter-spacing: 0.4em;
 }
 
