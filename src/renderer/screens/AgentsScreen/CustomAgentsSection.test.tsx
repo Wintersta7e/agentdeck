@@ -25,14 +25,17 @@ const builtin = descriptor({ id: 'claude-code', name: 'Claude Code', source: 'bu
 let saveCustom: ReturnType<typeof vi.fn>
 let deleteCustom: ReturnType<typeof vi.fn>
 let getCustomSpec: ReturnType<typeof vi.fn>
+let saveProject: ReturnType<typeof vi.fn>
 
 beforeEach(() => {
   useAppStore.setState(useAppStore.getInitialState())
   saveCustom = vi.fn(async () => ({ ok: true as const, warnings: [] }))
   deleteCustom = vi.fn(async () => true)
   getCustomSpec = vi.fn(async () => null)
+  saveProject = vi.fn(async (p: Project) => p)
   ;(window as unknown as { agentDeck: unknown }).agentDeck = {
     agents: { saveCustom, deleteCustom, getCustomSpec },
+    store: { saveProject },
     log: { send: vi.fn() },
   }
 })
@@ -173,6 +176,32 @@ describe('CustomAgentsSection', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
     await waitFor(() => expect(deleteCustom).toHaveBeenCalledWith('my-agent'))
+  })
+
+  it('removing an agent strips it from projects that pinned it and persists', async () => {
+    const projects: Project[] = [
+      {
+        id: 'p1',
+        name: 'P1',
+        path: '/home/u/p1',
+        agents: [{ agent: 'claude-code', isDefault: true }, { agent: 'my-agent' }],
+      },
+    ] as Project[]
+    useAppStore.setState({ agentRegistry: [descriptor()], projects })
+    render(<CustomAgentsSection />)
+    fireEvent.click(screen.getByRole('button', { name: /Delete My Agent/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
+
+    await waitFor(() => expect(deleteCustom).toHaveBeenCalledWith('my-agent'))
+    await waitFor(() => expect(saveProject).toHaveBeenCalledTimes(1))
+    const saved = saveProject.mock.calls[0]?.[0] as Project
+    expect(saved.id).toBe('p1')
+    expect(saved.agents).toEqual([{ agent: 'claude-code', isDefault: true }])
+    await waitFor(() =>
+      expect(useAppStore.getState().projects[0]?.agents).toEqual([
+        { agent: 'claude-code', isDefault: true },
+      ]),
+    )
   })
 
   it('delete confirm shows the project reference count when in use', () => {

@@ -40,3 +40,29 @@ export function migrateProjectAgents(project: Project): Project {
     agentFlags: undefined,
   }
 }
+
+/**
+ * Remove every reference to `agentId` from a project's agent config — both the
+ * `agents[]` array and the legacy singular `agent`/`agentFlags` fields. When the
+ * removed entry was the default and other agents remain, the first survivor is
+ * promoted to default. Returns the same project reference when it never
+ * referenced the agent, so callers can skip persisting an unchanged project.
+ */
+export function removeAgentFromProject(project: Project, agentId: string): Project {
+  const inArray = project.agents?.some((a) => a.agent === agentId) ?? false
+  const inLegacy = project.agent === agentId
+  if (!inArray && !inLegacy) return project
+
+  const next: Project = { ...project }
+
+  if (inArray && project.agents) {
+    const remaining = project.agents.filter((a) => a.agent !== agentId)
+    const hasDefault = remaining.some((a) => a.isDefault)
+    next.agents = remaining.map((a, i) => (i === 0 && !hasDefault ? { ...a, isDefault: true } : a))
+  }
+  if (inLegacy) {
+    next.agent = undefined
+    next.agentFlags = undefined
+  }
+  return next
+}

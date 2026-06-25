@@ -15,6 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   value — is now expressible and round-trips losslessly; the shared validator no
   longer rejects whitespace within an argument.
 
+### Fixed
+
+- **Removing a custom agent now clears it from projects that pinned it.**
+  Previously a deleted agent stayed referenced in a project's agent list, so
+  starting a session with it failed with "Invalid agent". Deletion now cascades
+  to every project, promoting another agent to default when the removed one was
+  the default.
+
 ### Security
 
 - **asar-integrity fuses** — the packaged binary now loads application code only
