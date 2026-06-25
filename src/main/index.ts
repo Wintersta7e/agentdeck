@@ -21,7 +21,7 @@ import { ptyBus } from './pty-bus'
 import { createAppWindow } from './app-window'
 import { registerAppIpcHandlers } from './app-ipc'
 import { createReviewTracker } from './review-tracker'
-import { AgentRegistry } from './agent-registry'
+import { AgentRegistry, type SecretCrypto } from './agent-registry'
 import {
   registerUsageHandlers,
   registerLimitsHandlers,
@@ -33,11 +33,21 @@ import {
 import { initializeTemplateRuntime } from './template-runtime'
 import { initializeWorktreeManager } from './worktree-runtime'
 import { publishWslAvailability, resolveWslHome } from './wsl-runtime'
+import { getWindowsHostIp } from './wsl-utils'
 
 const usageHistory = createUsageHistory(join(app.getPath('userData'), 'usage-history.json'))
 const sessionHistory = createSessionHistory(join(app.getPath('userData'), 'session-history.json'))
 const reviewTracker = createReviewTracker()
-const agentRegistry = new AgentRegistry(join(app.getPath('userData'), 'agents.toml'))
+// safeStorage-backed crypto for custom-agent secret env. `available` is a getter
+// so it's evaluated lazily (after the app is ready), never at module init.
+const secretCrypto: SecretCrypto = {
+  get available() {
+    return safeStorage.isEncryptionAvailable()
+  },
+  encrypt: (plain) => safeStorage.encryptString(plain).toString('base64'),
+  decrypt: (stored) => safeStorage.decryptString(Buffer.from(stored, 'base64')),
+}
+const agentRegistry = new AgentRegistry(join(app.getPath('userData'), 'agents.toml'), secretCrypto)
 const log = createLogger('app')
 
 // Feed every activity event to the per-session history record: any activity
@@ -77,6 +87,9 @@ app
     for (const warning of registryLoad.warnings) {
       log.warn('Agent registry', { warning })
     }
+
+    // Warm the Windows-host IP cache so {{WINDOWS_HOST}} resolves on the first spawn.
+    void getWindowsHostIp()
 
     appStore = createProjectStore()
     registerStoreHandlers(appStore)

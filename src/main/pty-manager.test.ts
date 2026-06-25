@@ -37,6 +37,7 @@ vi.mock('./pty-bus', () => ({
 import { createPtyManager } from './pty-manager'
 import { AgentRegistry } from './agent-registry'
 import * as pty from 'node-pty'
+import * as wslUtils from './wsl-utils'
 
 // A real builtins-only registry (no agents.toml on disk → `binaryFor` falls back
 // to AGENT_BINARY_MAP, `isCustom` is false for every id). Used by every existing
@@ -666,6 +667,63 @@ name = "Ollama"
       expect(writtenCmd).toBeDefined()
       expect(writtenCmd).not.toContain('OLLAMA_HOST')
       expect(writtenCmd).not.toContain('11434')
+    })
+
+    it('injects decrypted secret env into the process env, never the command string', async () => {
+      const crypto = {
+        available: true,
+        encrypt: (p: string) => Buffer.from(`enc:${p}`).toString('base64'),
+        decrypt: (b: string) => Buffer.from(b, 'base64').toString().slice(4),
+      }
+      const reg = new AgentRegistry(join(dir, 'secret-agents.toml'), crypto)
+      await reg.saveCustom({
+        id: 'ep',
+        binary: 'aider',
+        ui: { name: 'EP' },
+        secretEnv: { OPENAI_API_KEY: 'sk-secret' },
+      })
+      const mgr = createPtyManager(makeMockWindow(), reg)
+      mgr.spawn('s1', 80, 24, undefined, undefined, undefined, 'ep')
+      vi.advanceTimersByTime(600)
+
+      expect(pty.spawn).toHaveBeenCalledWith(
+        'wsl.exe',
+        [],
+        expect.objectContaining({
+          env: expect.objectContaining({ OPENAI_API_KEY: 'sk-secret' }),
+        }),
+      )
+      const writtenCmd = vi.mocked(pty.spawn).mock.results[0]?.value.write.mock.calls[0]?.[0] as
+        | string
+        | undefined
+      expect(writtenCmd).not.toContain('sk-secret')
+      expect(writtenCmd).not.toContain('OPENAI_API_KEY')
+    })
+
+    it('resolves {{WINDOWS_HOST}} in env values and args to the host IP', () => {
+      vi.spyOn(wslUtils, 'peekWindowsHostIp').mockReturnValue('10.0.0.5')
+      writeFileSync(
+        join(dir, 'host-agents.toml'),
+        `[[agent]]\nid = "ep"\nbinary = "aider"\nargs = ["--api-base", "http://{{WINDOWS_HOST}}:11434"]\n[agent.env]\nOPENAI_API_BASE = "http://{{WINDOWS_HOST}}:11434/v1"\n[agent.ui]\nname = "EP"\n`,
+      )
+      const reg = new AgentRegistry(join(dir, 'host-agents.toml'))
+      reg.load()
+      const mgr = createPtyManager(makeMockWindow(), reg)
+      mgr.spawn('s1', 80, 24, undefined, undefined, undefined, 'ep')
+      vi.advanceTimersByTime(600)
+
+      expect(pty.spawn).toHaveBeenCalledWith(
+        'wsl.exe',
+        [],
+        expect.objectContaining({
+          env: expect.objectContaining({ OPENAI_API_BASE: 'http://10.0.0.5:11434/v1' }),
+        }),
+      )
+      const writtenCmd = vi.mocked(pty.spawn).mock.results[0]?.value.write.mock.calls[0]?.[0] as
+        | string
+        | undefined
+      expect(writtenCmd).toContain('10.0.0.5')
+      expect(writtenCmd).not.toContain('{{WINDOWS_HOST}}')
     })
 
     it('leaves a builtin agent launch string unchanged (no quoting)', () => {

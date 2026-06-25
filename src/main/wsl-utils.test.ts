@@ -5,7 +5,12 @@ vi.mock('child_process', () => ({
   execFile: vi.fn(),
 }))
 
-import { wslPathToWindows, toWslPath } from './wsl-utils'
+import {
+  wslPathToWindows,
+  toWslPath,
+  parseDefaultGateway,
+  substituteWindowsHost,
+} from './wsl-utils'
 import { execFile } from 'child_process'
 
 const mockedExecFile = vi.mocked(execFile)
@@ -51,6 +56,67 @@ describe('wslPathToWindows', () => {
 
   it('converts forward slashes to backslashes in rest of path', () => {
     expect(wslPathToWindows('/mnt/c/a/b/c/d.txt')).toBe('C:\\a\\b\\c\\d.txt')
+  })
+})
+
+describe('parseDefaultGateway', () => {
+  it('extracts the gateway IP from `ip route show default` output', () => {
+    expect(parseDefaultGateway('default via 172.21.240.1 dev eth0 proto kernel \n')).toBe(
+      '172.21.240.1',
+    )
+  })
+
+  it('returns null when there is no default route', () => {
+    expect(parseDefaultGateway('10.0.0.0/24 dev eth0 scope link\n')).toBeNull()
+  })
+
+  it('picks the default line among several routes', () => {
+    expect(parseDefaultGateway('192.168.0.0/24 dev eth0\ndefault via 192.168.0.1 dev eth0\n')).toBe(
+      '192.168.0.1',
+    )
+  })
+})
+
+describe('substituteWindowsHost', () => {
+  it('replaces every {{WINDOWS_HOST}} token with the host IP', () => {
+    expect(substituteWindowsHost('http://{{WINDOWS_HOST}}:11434/v1', '172.21.240.1')).toBe(
+      'http://172.21.240.1:11434/v1',
+    )
+  })
+
+  it('leaves text without the token unchanged', () => {
+    expect(substituteWindowsHost('http://localhost:11434', '172.21.240.1')).toBe(
+      'http://localhost:11434',
+    )
+  })
+})
+
+describe('getWindowsHostIp', () => {
+  it('resolves the WSL default gateway via wsl.exe', async () => {
+    vi.resetModules()
+    mockedExecFile.mockImplementation(
+      (_cmd: unknown, _args: unknown, _opts: unknown, cb: unknown) => {
+        ;(cb as (err: null, stdout: string) => void)(
+          null,
+          'default via 172.21.240.1 dev eth0 proto kernel \n',
+        )
+        return undefined as never
+      },
+    )
+    const { getWindowsHostIp: fresh } = await import('./wsl-utils')
+    expect(await fresh()).toBe('172.21.240.1')
+  })
+
+  it('returns null on wsl.exe error', async () => {
+    vi.resetModules()
+    mockedExecFile.mockImplementation(
+      (_cmd: unknown, _args: unknown, _opts: unknown, cb: unknown) => {
+        ;(cb as (err: Error) => void)(new Error('wsl.exe not found'))
+        return undefined as never
+      },
+    )
+    const { getWindowsHostIp: fresh } = await import('./wsl-utils')
+    expect(await fresh()).toBeNull()
   })
 })
 

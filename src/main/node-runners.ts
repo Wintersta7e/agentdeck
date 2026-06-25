@@ -24,7 +24,7 @@ import {
   LINE_FLUSH_MS,
   MAX_TIER_CONCURRENCY,
 } from '../shared/constants'
-import { NODE_INIT } from './wsl-utils'
+import { NODE_INIT, peekWindowsHostIp, substituteWindowsHost } from './wsl-utils'
 import { SAFE_SKILL_RE } from './skill-scanner'
 import { BLOCKED_ENV_KEYS } from '../shared/custom-agents'
 
@@ -200,6 +200,12 @@ export async function runAgentNode(
     : (AGENT_BY_ID.get(agentName)?.printFlags ?? ['--print'])
   const customArgs = isCustom ? deps.agentRegistry.argsFor(agentName) : []
 
+  // {{WINDOWS_HOST}} resolves to the WSL gateway IP (the Windows host) in custom-agent
+  // env values and default args — mirrors the PTY session path so a Windows-side agent
+  // behaves identically in a workflow node. Warmed at startup; null leaves the token.
+  const hostIp = peekWindowsHostIp()
+  const subHost = (s: string): string => (hostIp ? substituteWindowsHost(s, hostIp) : s)
+
   let sanitizedFlags = ''
   if (node.agentFlags) {
     if (SAFE_FLAGS_RE.test(node.agentFlags)) {
@@ -232,7 +238,8 @@ export async function runAgentNode(
   const cdFlag = AGENT_CD_FLAG_MAP[agentName]
   const flagStr = printFlags.length > 0 ? printFlags.join(' ') + ' ' : ''
   // Custom-agent launch args (arbitrary user strings) shell-quoted individually.
-  const customArgsStr = customArgs.length > 0 ? customArgs.map(shellQuote).join(' ') + ' ' : ''
+  const customArgsStr =
+    customArgs.length > 0 ? customArgs.map((a) => shellQuote(subHost(a))).join(' ') + ' ' : ''
   const cdFlagStr = deps.projectPath && cdFlag ? `${cdFlag} ${shellQuote(deps.projectPath)} ` : ''
   const engineFlags = AGENT_ENGINE_FLAGS_MAP[agentName]
   const engineFlagStr = engineFlags ? engineFlags.join(' ') + ' ' : ''
@@ -274,16 +281,21 @@ export async function runAgentNode(
     // E_UNEXPECTED. We write the prompt to stdin (NODE_INIT does not consume it),
     // then close the pipe so the agent sees EOF.
     const startTime = Date.now()
-    // A custom agent's non-secret env (e.g. OLLAMA_HOST) must reach the workflow
-    // child the same way it reaches a PTY session — via the child's env option,
-    // never serialized into the bash command string. Builtins contribute {} here.
-    // Filter BLOCKED_ENV_KEYS as defense-in-depth against an edited agents.toml
-    // (mirrors pty-manager). Spreading process.env keeps the runner's nvm/PATH.
+    // A custom agent's env (incl. decrypted secretEnv) must reach the workflow child
+    // the same way it reaches a PTY session — via the child's env option, never
+    // serialized into the bash command string, so a secret never appears on the
+    // command line. Builtins contribute {} here. Filter BLOCKED_ENV_KEYS as
+    // defense-in-depth against an edited agents.toml (mirrors pty-manager).
+    // Spreading process.env keeps the runner's nvm/PATH.
     const mergedEnv: NodeJS.ProcessEnv = { ...process.env }
     if (isCustom) {
-      for (const [k, v] of Object.entries(deps.agentRegistry.envFor(agentName))) {
+      const customEnv = {
+        ...deps.agentRegistry.envFor(agentName),
+        ...deps.agentRegistry.secretEnvFor(agentName),
+      }
+      for (const [k, v] of Object.entries(customEnv)) {
         if (BLOCKED_ENV_KEYS.has(k)) continue
-        mergedEnv[k] = v
+        mergedEnv[k] = subHost(v)
       }
     }
     const child = spawn('wsl.exe', ['--', 'bash', '-lc', NODE_INIT + fullCmd], {

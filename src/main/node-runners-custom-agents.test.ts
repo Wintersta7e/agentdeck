@@ -13,6 +13,7 @@ import { EventEmitter } from 'events'
 import type { ChildProcess } from 'child_process'
 import type { AgentNode, Role } from '../shared/types'
 import type { AgentRegistry } from './agent-registry'
+import * as wslUtils from './wsl-utils'
 
 const { mockSpawn, mockExecFile } = vi.hoisted(() => ({
   mockSpawn: vi.fn(),
@@ -54,6 +55,7 @@ function customRegistry(
   binary: string,
   args: string[] = [],
   env: Record<string, string> = {},
+  secretEnv: Record<string, string> = {},
 ): AgentRegistry {
   return {
     has: (q: string) => q === id,
@@ -61,6 +63,7 @@ function customRegistry(
     binaryFor: (q: string) => (q === id ? binary : undefined),
     argsFor: (q: string) => (q === id ? args : []),
     envFor: (q: string) => (q === id ? env : {}),
+    secretEnvFor: (q: string) => (q === id ? secretEnv : {}),
   } as unknown as AgentRegistry
 }
 
@@ -72,6 +75,7 @@ function emptyRegistry(): AgentRegistry {
     binaryFor: () => undefined,
     argsFor: () => [],
     envFor: () => ({}),
+    secretEnvFor: () => ({}),
   } as unknown as AgentRegistry
 }
 
@@ -183,6 +187,45 @@ describe('runAgentNode — custom agents', () => {
     const env = (mockSpawn.mock.calls[0] as [string, string[], { env?: NodeJS.ProcessEnv }])[2]?.env
     expect(env?.['LD_PRELOAD']).toBeUndefined()
     expect(env?.['SAFE']).toBe('ok')
+  })
+
+  it('injects decrypted secret env into the workflow child env, never the command', async () => {
+    const child = createMockChild()
+    mockSpawn.mockReturnValue(child)
+    const deps = makeDeps(
+      customRegistry('my-agent', 'my-agent-bin', [], {}, { OPENAI_API_KEY: 'sk-secret' }),
+    )
+
+    const promise = runAgentNode(makeAgentNode({ agent: 'my-agent' }), '', emptyRoles, deps)
+    await spawnThenClose(child)
+    await promise
+
+    const spawnCall = mockSpawn.mock.calls[0] as [string, string[], { env?: NodeJS.ProcessEnv }]
+    expect(spawnCall[2]?.env?.['OPENAI_API_KEY']).toBe('sk-secret')
+    const bashCmd = spawnCall[1]?.[3] ?? ''
+    expect(bashCmd).not.toContain('sk-secret')
+    expect(bashCmd).not.toContain('OPENAI_API_KEY')
+  })
+
+  it('resolves {{WINDOWS_HOST}} in env values and args for a workflow node', async () => {
+    vi.spyOn(wslUtils, 'peekWindowsHostIp').mockReturnValue('10.0.0.5')
+    const child = createMockChild()
+    mockSpawn.mockReturnValue(child)
+    const deps = makeDeps(
+      customRegistry('my-agent', 'my-agent-bin', ['--api-base', 'http://{{WINDOWS_HOST}}:11434'], {
+        OPENAI_API_BASE: 'http://{{WINDOWS_HOST}}:11434/v1',
+      }),
+    )
+
+    const promise = runAgentNode(makeAgentNode({ agent: 'my-agent' }), '', emptyRoles, deps)
+    await spawnThenClose(child)
+    await promise
+
+    const spawnCall = mockSpawn.mock.calls[0] as [string, string[], { env?: NodeJS.ProcessEnv }]
+    expect(spawnCall[2]?.env?.['OPENAI_API_BASE']).toBe('http://10.0.0.5:11434/v1')
+    const bashCmd = spawnCall[1]?.[3] ?? ''
+    expect(bashCmd).toContain('10.0.0.5')
+    expect(bashCmd).not.toContain('{{WINDOWS_HOST}}')
   })
 
   it('shell-quotes the binary in the command -v PATH-resolution probe (injection regression)', async () => {

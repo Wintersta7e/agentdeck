@@ -4,7 +4,7 @@ import type { IPty } from 'node-pty'
 import * as pty from 'node-pty'
 import { createLogger } from './logger'
 import { ptyBus } from './pty-bus'
-import { toWslPath } from './wsl-utils'
+import { toWslPath, peekWindowsHostIp, substituteWindowsHost } from './wsl-utils'
 import { AGENT_BINARY_MAP, SAFE_FLAGS_RE } from '../shared/agents'
 import { BLOCKED_ENV_KEYS } from '../shared/custom-agents'
 import { shellQuote } from './node-runners'
@@ -141,13 +141,21 @@ export function createPtyManager(mainWindow: BrowserWindow, registry: AgentRegis
     // sending OSC 10/11 color queries that leak as visible text in xterm.js.
     const mergedEnv = { COLORFGBG: '15;0', ...process.env, ...env } as Record<string, string>
 
-    // A custom agent's non-secret env reaches the child via the process env, never
-    // a shell string. Validation already rejects BLOCKED_ENV_KEYS, but drop them
-    // here too as defense-in-depth against a hostile/edited agents.toml.
+    // {{WINDOWS_HOST}} resolves to the WSL gateway IP (the Windows host, reachable
+    // under NAT networking) — warmed at startup; a null cache on a cold first spawn
+    // leaves the token untouched.
+    const hostIp = peekWindowsHostIp()
+    const subHost = (s: string): string => (hostIp ? substituteWindowsHost(s, hostIp) : s)
+
+    // A custom agent's env reaches the child via the process env, never a shell
+    // string. Validation already rejects BLOCKED_ENV_KEYS, but drop them here too as
+    // defense-in-depth against a hostile/edited agents.toml. Secret env is merged the
+    // same way (decrypted in main) so a secret never appears in the command line.
     if (agent) {
-      for (const [k, v] of Object.entries(registry.envFor(agent))) {
+      const customEnv = { ...registry.envFor(agent), ...registry.secretEnvFor(agent) }
+      for (const [k, v] of Object.entries(customEnv)) {
         if (BLOCKED_ENV_KEYS.has(k)) continue
-        mergedEnv[k] = v
+        mergedEnv[k] = subHost(v)
       }
     }
 
@@ -197,7 +205,7 @@ export function createPtyManager(mainWindow: BrowserWindow, registry: AgentRegis
         if (agentBins.has(trimmed)) return false
         return true
       })
-      commands.push(...filtered)
+      commands.push(...filtered.map(subHost))
     }
 
     let sanitizedFlags = agentFlags
@@ -225,7 +233,10 @@ export function createPtyManager(mainWindow: BrowserWindow, registry: AgentRegis
         // Custom agent: quote the binary and every default arg so a charset-valid
         // (but space/metachar-free) command can't reshape the shell command. The
         // npm-symlink fix is builtin-only (NPM_AGENT_PACKAGES has no custom ids).
-        const parts = [shellQuote(bin), ...registry.argsFor(agent).map(shellQuote)]
+        const parts = [
+          shellQuote(bin),
+          ...registry.argsFor(agent).map((a) => shellQuote(subHost(a))),
+        ]
         if (sanitizedFlags) parts.push(sanitizedFlags)
         commands.push(parts.join(' '))
       } else {

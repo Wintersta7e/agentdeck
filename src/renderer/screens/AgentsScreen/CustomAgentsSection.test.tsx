@@ -164,6 +164,34 @@ describe('CustomAgentsSection', () => {
     expect(screen.getByText(/looks like a credential/i)).toBeInTheDocument()
   })
 
+  it('routes a secret-marked env row to secretEnv on save', async () => {
+    useAppStore.setState({ agentRegistry: [] })
+    render(<CustomAgentsSection />)
+    fireEvent.click(screen.getByRole('button', { name: /Add agent/i }))
+    fireEvent.change(screen.getByPlaceholderText('My Agent'), { target: { value: 'Tool' } })
+    fireEvent.change(screen.getByPlaceholderText('my-agent-bin'), { target: { value: 'aider' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /Advanced/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Add variable/i }))
+    fireEvent.change(screen.getByLabelText('Env key 1'), { target: { value: 'OPENAI_API_KEY' } })
+    fireEvent.change(screen.getByLabelText('Env value 1'), { target: { value: 'sk-xyz' } })
+    // A credential key in plaintext env fails validation; marking it secret routes
+    // it to secretEnv and re-enables Save.
+    fireEvent.click(screen.getByRole('button', { name: /secret for env row 1/i }))
+
+    const save = screen.getByRole('button', { name: 'Save' })
+    expect(save).not.toBeDisabled()
+    fireEvent.click(save)
+
+    await waitFor(() => expect(saveCustom).toHaveBeenCalledTimes(1))
+    const spec = saveCustom.mock.calls[0]?.[0] as {
+      env?: Record<string, string>
+      secretEnv?: Record<string, string>
+    }
+    expect(spec.secretEnv).toEqual({ OPENAI_API_KEY: 'sk-xyz' })
+    expect(spec.env).toBeUndefined()
+  })
+
   it('delete routes through the confirm and calls deleteCustom', async () => {
     useAppStore.setState({ agentRegistry: [descriptor()] })
     render(<CustomAgentsSection />)

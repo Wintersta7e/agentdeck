@@ -18,6 +18,18 @@ import { atomicWrite } from './fs-atomic'
 
 export type { AgentDescriptorWire }
 
+/**
+ * Encrypt/decrypt for custom-agent secret env values. Injected so the registry
+ * stays Electron-free and unit-testable; production backs it with `safeStorage`.
+ * `encrypt` returns base64 of the ciphertext; `decrypt` reverses it (throwing on
+ * failure). `available` is false when the OS keychain can't be used.
+ */
+export interface SecretCrypto {
+  available: boolean
+  encrypt(plain: string): string
+  decrypt(stored: string): string
+}
+
 const BUILTIN_IDS: ReadonlySet<string> = new Set(AGENTS.map((a) => a.id))
 
 function builtinDescriptors(): AgentDescriptorWire[] {
@@ -51,12 +63,37 @@ function toTomlEntry(spec: CustomAgentSpec): Record<string, unknown> {
   const entry: Record<string, unknown> = { id: spec.id, binary: spec.binary }
   if (spec.args !== undefined) entry['args'] = spec.args
   if (spec.env !== undefined) entry['env'] = spec.env
+  // secretEnv values are already encrypted by the caller (writeFile).
+  if (spec.secretEnv !== undefined) entry['secretEnv'] = spec.secretEnv
   entry['ui'] = ui
   return entry
 }
 
+/**
+ * Merge an incoming secretEnv with the prior stored one. The renderer never
+ * receives decrypted secret values, so an unchanged secret round-trips as '' —
+ * a blank incoming value therefore means "keep the existing secret". A blank
+ * value with no prior is dropped. Returns undefined when nothing remains.
+ */
+function mergeSecretEnv(
+  incoming: Record<string, string> | undefined,
+  prior: Record<string, string> | undefined,
+): Record<string, string> | undefined {
+  if (!incoming) return undefined
+  const out: Record<string, string> = {}
+  for (const [k, v] of Object.entries(incoming)) {
+    if (v === '') {
+      if (prior && prior[k] !== undefined) out[k] = prior[k]
+    } else {
+      out[k] = v
+    }
+  }
+  return Object.keys(out).length > 0 ? out : undefined
+}
+
 export class AgentRegistry {
   private readonly filePath: string
+  private readonly crypto: SecretCrypto | null
   private custom = new Map<string, CustomAgentSpec>()
   private descriptors: AgentDescriptorWire[] = builtinDescriptors()
   private ids: Set<string> = new Set(BUILTIN_IDS)
@@ -64,8 +101,9 @@ export class AgentRegistry {
    *  from committed in-memory state (no snapshot-before-await race). */
   private writeChain: Promise<unknown> = Promise.resolve()
 
-  constructor(filePath: string) {
+  constructor(filePath: string, crypto?: SecretCrypto) {
     this.filePath = filePath
+    this.crypto = crypto ?? null
   }
 
   /** Read + validate + merge agents.toml. Missing file is fine; bad entries are
@@ -96,7 +134,9 @@ export class AgentRegistry {
     const arr = (parsed as Record<string, unknown>)['agent']
     if (Array.isArray(arr)) {
       for (const raw of arr) {
-        const res = validateCustomAgent(raw, BUILTIN_IDS)
+        // Decrypt secret env to plaintext before validation (which sees plaintext).
+        const decrypted = this.decryptRawSecrets(raw, warnings)
+        const res = validateCustomAgent(decrypted, BUILTIN_IDS)
         if (!res.ok) {
           warnings.push(`agents.toml: skipped invalid agent — ${res.error}`)
           continue
@@ -120,10 +160,24 @@ export class AgentRegistry {
     const res = validateCustomAgent(spec, BUILTIN_IDS)
     if (!res.ok) return { ok: false, error: res.error }
     return this.serialize(async () => {
+      // A blank incoming secret means "keep the existing one" (renderer never sees
+      // decrypted values). Resolve against the prior stored spec.
+      const prior = this.custom.get(res.value.id)
+      const mergedSecret = mergeSecretEnv(res.value.secretEnv, prior?.secretEnv)
+      if (mergedSecret && !this.crypto?.available) {
+        return {
+          ok: false as const,
+          error: 'secure storage unavailable — cannot save secret env vars',
+        }
+      }
+      const finalSpec: CustomAgentSpec = { ...res.value }
+      if (mergedSecret !== undefined) finalSpec.secretEnv = mergedSecret
+      else delete finalSpec.secretEnv
+
       const next = new Map(this.custom)
-      next.set(res.value.id, res.value)
+      next.set(finalSpec.id, finalSpec)
       await this.writeFile([...next.values()])
-      return { ok: true, warnings: this.load().warnings }
+      return { ok: true as const, warnings: this.load().warnings }
     })
   }
 
@@ -140,7 +194,48 @@ export class AgentRegistry {
   }
 
   private async writeFile(specs: CustomAgentSpec[]): Promise<void> {
-    await atomicWrite(this.filePath, stringifyToml({ agent: specs.map(toTomlEntry) }))
+    const entries = specs.map((s) => this.encryptSpecSecrets(s)).map(toTomlEntry)
+    await atomicWrite(this.filePath, stringifyToml({ agent: entries }))
+  }
+
+  /** Return a copy of `spec` with its secretEnv values encrypted for storage. */
+  private encryptSpecSecrets(spec: CustomAgentSpec): CustomAgentSpec {
+    if (!spec.secretEnv || Object.keys(spec.secretEnv).length === 0) return spec
+    if (!this.crypto?.available) {
+      // Guarded by saveCustom; defensive so a plaintext secret is never written.
+      throw new Error('secure storage unavailable — refusing to write secret env')
+    }
+    const enc: Record<string, string> = {}
+    for (const [k, v] of Object.entries(spec.secretEnv)) enc[k] = this.crypto.encrypt(v)
+    return { ...spec, secretEnv: enc }
+  }
+
+  /** Decrypt a raw TOML entry's secretEnv to plaintext (or drop it, with a warning). */
+  private decryptRawSecrets(raw: unknown, warnings: string[]): unknown {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return raw
+    const r = raw as Record<string, unknown>
+    const se = r['secretEnv']
+    if (!se || typeof se !== 'object' || Array.isArray(se)) return raw
+    if (!this.crypto?.available) {
+      // Known low-risk limitation: on Linux/macOS a transient keychain outage drops
+      // secrets here, and a later registry write would not re-persist them. On the
+      // Windows/DPAPI target `safeStorage` is always available, so this is effectively
+      // unreachable in practice — hence no extra clobber-prevention machinery.
+      warnings.push('agents.toml: secret env present but secure storage is unavailable — dropped')
+      const rest: Record<string, unknown> = { ...r }
+      delete rest['secretEnv']
+      return rest
+    }
+    const out: Record<string, string> = {}
+    for (const [k, v] of Object.entries(se as Record<string, unknown>)) {
+      if (typeof v !== 'string') continue
+      try {
+        out[k] = this.crypto.decrypt(v)
+      } catch {
+        warnings.push(`agents.toml: could not decrypt secret "${k}" — dropped`)
+      }
+    }
+    return { ...r, secretEnv: out }
   }
 
   /** Run a read-modify-write-reload mutation only after any in-flight one has
@@ -175,14 +270,18 @@ export class AgentRegistry {
   }
 
   /**
-   * Full custom spec (args/env/versionArgs) for non-lossy edit/clone in the
-   * renderer; undefined for builtins and unknown ids. Unlike the redacted
-   * `AgentDescriptorWire`, this returns env — acceptable because it is the
-   * user's own non-secret config from their own agents.toml (secrets are
-   * blocked at validation; real secrets arrive in Phase 2 secure storage).
+   * Full custom spec for non-lossy edit/clone in the renderer; undefined for
+   * builtins and unknown ids. Returns non-secret env, but secret VALUES are
+   * REDACTED to '' — the renderer learns which secret keys exist without ever
+   * receiving plaintext secrets (an unchanged secret round-trips as '' on save).
    */
   getSpec(id: string): CustomAgentSpec | undefined {
-    return this.custom.get(id)
+    const c = this.custom.get(id)
+    if (!c) return undefined
+    if (!c.secretEnv) return c
+    const redacted: Record<string, string> = {}
+    for (const k of Object.keys(c.secretEnv)) redacted[k] = ''
+    return { ...c, secretEnv: redacted }
   }
 
   knownIds(): ReadonlySet<string> {
@@ -204,6 +303,11 @@ export class AgentRegistry {
   /** Non-secret env (custom only); {} for builtins/unknown. */
   envFor(id: string): Record<string, string> {
     return this.custom.get(id)?.env ?? {}
+  }
+
+  /** Decrypted secret env (custom only, main-internal); {} for builtins/unknown. */
+  secretEnvFor(id: string): Record<string, string> {
+    return this.custom.get(id)?.secretEnv ?? {}
   }
 
   /** Last-resort context window: custom ui value, builtin default, else 0. */

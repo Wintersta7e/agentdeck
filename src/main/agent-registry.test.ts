@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
+import { mkdtempSync, writeFileSync, rmSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { AgentRegistry } from './agent-registry'
@@ -11,6 +11,95 @@ beforeEach(() => {
   file = join(dir, 'agents.toml')
 })
 afterEach(() => rmSync(dir, { recursive: true, force: true }))
+
+const crypto = {
+  available: true,
+  encrypt: (p: string) => Buffer.from(`enc:${p}`).toString('base64'),
+  decrypt: (b: string) => {
+    const s = Buffer.from(b, 'base64').toString()
+    if (!s.startsWith('enc:')) throw new Error('decrypt failed')
+    return s.slice(4)
+  },
+}
+const noCrypto = {
+  available: false,
+  encrypt: () => {
+    throw new Error('unavailable')
+  },
+  decrypt: () => {
+    throw new Error('unavailable')
+  },
+}
+
+describe('AgentRegistry secret env', () => {
+  it('encrypts secretEnv at rest and decrypts it in memory', async () => {
+    const r = new AgentRegistry(file, crypto)
+    const res = await r.saveCustom({
+      id: 'ep',
+      binary: 'aider',
+      ui: { name: 'EP' },
+      secretEnv: { OPENAI_API_KEY: 'sk-secret' },
+    })
+    expect(res.ok).toBe(true)
+    expect(readFileSync(file, 'utf8')).not.toContain('sk-secret')
+
+    const r2 = new AgentRegistry(file, crypto)
+    r2.load()
+    expect(r2.secretEnvFor('ep')).toEqual({ OPENAI_API_KEY: 'sk-secret' })
+  })
+
+  it('refuses to save secretEnv when secure storage is unavailable', async () => {
+    const r = new AgentRegistry(file, noCrypto)
+    const res = await r.saveCustom({
+      id: 'ep',
+      binary: 'aider',
+      ui: { name: 'EP' },
+      secretEnv: { OPENAI_API_KEY: 'sk' },
+    })
+    expect(res.ok).toBe(false)
+  })
+
+  it('redacts secret values from getSpec (renderer-facing)', async () => {
+    const r = new AgentRegistry(file, crypto)
+    await r.saveCustom({
+      id: 'ep',
+      binary: 'aider',
+      ui: { name: 'EP' },
+      secretEnv: { OPENAI_API_KEY: 'sk-secret' },
+    })
+    expect(r.getSpec('ep')?.secretEnv).toEqual({ OPENAI_API_KEY: '' })
+  })
+
+  it('preserves an existing secret when re-saved with an empty value', async () => {
+    const r = new AgentRegistry(file, crypto)
+    await r.saveCustom({
+      id: 'ep',
+      binary: 'aider',
+      ui: { name: 'EP' },
+      secretEnv: { OPENAI_API_KEY: 'sk-secret' },
+    })
+    await r.saveCustom({
+      id: 'ep',
+      binary: 'aider',
+      ui: { name: 'EP2' },
+      secretEnv: { OPENAI_API_KEY: '' },
+    })
+    expect(r.secretEnvFor('ep')).toEqual({ OPENAI_API_KEY: 'sk-secret' })
+    expect(r.byId('ep')?.name).toBe('EP2')
+  })
+
+  it('drops undecryptable secrets on load when crypto is unavailable, with a warning', () => {
+    writeFileSync(
+      file,
+      `[[agent]]\nid="ep"\nbinary="aider"\n[agent.ui]\nname="EP"\n[agent.secretEnv]\nOPENAI_API_KEY="ZW5jOnNr"\n`,
+    )
+    const r = new AgentRegistry(file, noCrypto)
+    const res = r.load()
+    expect(r.has('ep')).toBe(true)
+    expect(r.secretEnvFor('ep')).toEqual({})
+    expect(res.warnings.some((w) => /secure storage|secret/i.test(w))).toBe(true)
+  })
+})
 
 describe('AgentRegistry.load', () => {
   it('has only builtins when the file is missing', () => {
