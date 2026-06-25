@@ -116,6 +116,30 @@ describe('CustomAgentsSection', () => {
     expect(spec.args).toEqual(['--system-prompt', 'You are a helpful assistant'])
   })
 
+  it('edit mode round-trips a multi-word arg through hydrate and save', async () => {
+    // The hydrate path (getCustomSpec -> setArgRows) is what makes a space-bearing
+    // arg survive an edit; the old join('') behaviour would split it into pieces.
+    getCustomSpec.mockResolvedValue({
+      id: 'my-agent',
+      binary: 'my-agent-bin',
+      args: ['--system-prompt', 'You are a helpful assistant'],
+      ui: { name: 'My Agent' },
+      source: 'user',
+    })
+    useAppStore.setState({ agentRegistry: [descriptor()] })
+    render(<CustomAgentsSection />)
+    fireEvent.click(screen.getByRole('button', { name: /Edit My Agent/i }))
+
+    // Each arg hydrates into its own row — the multi-word value stays intact.
+    expect(await screen.findByDisplayValue('You are a helpful assistant')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('--system-prompt')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(saveCustom).toHaveBeenCalledTimes(1))
+    const spec = saveCustom.mock.calls[0]?.[0] as { args?: string[] }
+    expect(spec.args).toEqual(['--system-prompt', 'You are a helpful assistant'])
+  })
+
   it('edit mode locks the id (read-only)', () => {
     useAppStore.setState({ agentRegistry: [descriptor()] })
     render(<CustomAgentsSection />)
