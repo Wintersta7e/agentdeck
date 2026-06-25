@@ -5,6 +5,22 @@ All notable changes to AgentDeck will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.0.0] - 2026-06-25
+
+### Changed
+
+- **Custom-agent arguments are edited one per row** — the Agents screen replaces
+  the single space-separated args field with a one-argument-per-row editor (like
+  the environment rows). An argument that contains spaces — e.g. a system-prompt
+  value — is now expressible and round-trips losslessly; the shared validator no
+  longer rejects whitespace within an argument.
+
+### Security
+
+- **asar-integrity fuses** — the packaged binary now loads application code only
+  from its signed `app.asar` and refuses to start if the archive was tampered
+  with (`onlyLoadAppFromAsar` + `enableEmbeddedAsarIntegrityValidation`).
+
 ## [6.11.0] - 2026-06-24
 
 ### Added
