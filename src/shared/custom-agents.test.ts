@@ -125,12 +125,21 @@ describe('validateCustomAgent', () => {
     )
   })
 
-  it('rejects args/versionArgs entries containing whitespace (lossy-edit guard)', () => {
-    // The Agents modal stores args in one whitespace-joined field and re-splits
-    // on save, so an arg with embedded whitespace cannot round-trip losslessly.
-    expect(
-      err({ id: 'x', binary: 'x', ui: { name: 'X' }, args: ['--system-prompt=hello world'] }),
-    ).toMatch(/whitespace|space/i)
+  it('accepts args entries containing whitespace and preserves them verbatim', () => {
+    // The Agents modal now edits args one-per-row, so an arg with embedded
+    // whitespace (e.g. a system-prompt value) round-trips losslessly — no split.
+    const v = ok({
+      id: 'x',
+      binary: 'x',
+      ui: { name: 'X' },
+      args: ['--system-prompt', 'You are a helpful assistant'],
+    })
+    expect(v.args).toEqual(['--system-prompt', 'You are a helpful assistant'])
+  })
+
+  it('rejects versionArgs entries containing whitespace (single-token field)', () => {
+    // versionArgs is still edited as one whitespace-joined field, so each entry
+    // must remain a single token.
     expect(err({ id: 'x', binary: 'x', ui: { name: 'X', versionArgs: ['--foo bar'] } })).toMatch(
       /whitespace|space/i,
     )

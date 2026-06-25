@@ -95,6 +95,27 @@ describe('CustomAgentsSection', () => {
     expect(spec.ui.name).toBe('My Tool')
   })
 
+  it('Save sends args one-per-row, preserving a multi-word arg', async () => {
+    useAppStore.setState({ agentRegistry: [] })
+    render(<CustomAgentsSection />)
+    fireEvent.click(screen.getByRole('button', { name: /Add agent/i }))
+
+    fireEvent.change(screen.getByPlaceholderText('My Agent'), { target: { value: 'My Tool' } })
+    fireEvent.change(screen.getByPlaceholderText('my-agent-bin'), { target: { value: 'mytool' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /Add argument/i }))
+    fireEvent.change(screen.getByLabelText('Argument 1'), { target: { value: '--system-prompt' } })
+    fireEvent.click(screen.getByRole('button', { name: /Add argument/i }))
+    fireEvent.change(screen.getByLabelText('Argument 2'), {
+      target: { value: 'You are a helpful assistant' },
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(saveCustom).toHaveBeenCalledTimes(1))
+    const spec = saveCustom.mock.calls[0]?.[0] as { args?: string[] }
+    expect(spec.args).toEqual(['--system-prompt', 'You are a helpful assistant'])
+  })
+
   it('edit mode locks the id (read-only)', () => {
     useAppStore.setState({ agentRegistry: [descriptor()] })
     render(<CustomAgentsSection />)

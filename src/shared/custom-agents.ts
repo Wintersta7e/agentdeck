@@ -230,11 +230,9 @@ export function validateCustomAgent(raw: unknown, builtinIds: ReadonlySet<string
     if (argsRaw.length > LIMIT.argCount) return fail(`args must have <= ${LIMIT.argCount} items`)
     if (argsRaw.some((a) => a.length > LIMIT.argLen))
       return fail(`each arg must be <= ${LIMIT.argLen} chars`)
-    // The Agents modal edits args as one whitespace-joined field and re-splits
-    // on save, so a whitespace-bearing arg cannot round-trip losslessly. Reject
-    // it here so the data model matches what the modal can faithfully represent.
-    if (argsRaw.some((a) => /\s/.test(a)))
-      return fail('each arg must be a single token (no whitespace)')
+    // The Agents modal edits args one-per-row, so an arg may contain whitespace
+    // (e.g. a system-prompt value) and still round-trip losslessly — each row is
+    // one discrete token regardless of its contents.
     args = argsRaw
   }
 

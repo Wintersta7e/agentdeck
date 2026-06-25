@@ -70,7 +70,8 @@ export function CustomAgentModal({
   // args/env/versionArgs are main-only (not on the redacted wire descriptor).
   // In edit/clone mode they're hydrated from the full spec via getCustomSpec
   // (effect below) so a save doesn't wipe them; add mode starts blank.
-  const [argsText, setArgsText] = useState('')
+  // Args are edited one-per-row so an arg may legitimately contain spaces.
+  const [argRows, setArgRows] = useState<string[]>([])
   const [icon, setIcon] = useState(initial?.icon ?? '●')
   const [short, setShort] = useState(initial?.short ?? '')
   const [colorVar, setColorVar] = useState<string>(
@@ -88,7 +89,8 @@ export function CustomAgentModal({
   const [serverError, setServerError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
-  const parsedArgs = useMemo(() => splitArgs(argsText), [argsText])
+  // Drop blank rows; keep each remaining arg verbatim (spaces are significant).
+  const parsedArgs = useMemo(() => argRows.filter((a) => a.trim() !== ''), [argRows])
   const parsedVersionArgs = useMemo(() => splitArgs(versionArgsText), [versionArgsText])
 
   // Build a candidate spec and validate it live with the shared validator.
@@ -143,7 +145,11 @@ export function CustomAgentModal({
 
   const launchLine = useMemo(() => {
     const bin = binary || '<binary>'
-    const rest = parsedArgs.length > 0 ? ` ${parsedArgs.join(' ')}` : ''
+    // Quote args that contain whitespace so the preview reads unambiguously.
+    const rest =
+      parsedArgs.length > 0
+        ? ` ${parsedArgs.map((a) => (/\s/.test(a) ? JSON.stringify(a) : a)).join(' ')}`
+        : ''
     return `cd <project> && ${bin}${rest}`
   }, [binary, parsedArgs])
 
@@ -159,7 +165,7 @@ export function CustomAgentModal({
       .getCustomSpec(id)
       .then((spec) => {
         if (cancelled || !spec) return
-        if (spec.args && spec.args.length > 0) setArgsText(spec.args.join(' '))
+        if (spec.args && spec.args.length > 0) setArgRows(spec.args)
         if (spec.env) {
           const rows = Object.entries(spec.env).map(([key, value]) => ({ key, value }))
           if (rows.length > 0) setEnvRows(rows)
@@ -197,6 +203,10 @@ export function CustomAgentModal({
     },
     [onClose],
   )
+
+  const updateArgRow = useCallback((index: number, value: string) => {
+    setArgRows((rows) => rows.map((r, i) => (i === index ? value : r)))
+  }, [])
 
   const updateEnvRow = useCallback((index: number, patch: Partial<EnvRow>) => {
     setEnvRows((rows) => rows.map((r, i) => (i === index ? { ...r, ...patch } : r)))
@@ -308,17 +318,39 @@ export function CustomAgentModal({
               />
             </label>
 
-            <label className="cam-field">
+            <div className="cam-field">
               <span className="cam-field__label">Args</span>
-              <input
-                className="cam-input cam-input--mono"
-                type="text"
-                value={argsText}
-                onChange={(e) => setArgsText(e.target.value)}
-                placeholder="run llama3"
-              />
-              <span className="cam-hint">Space-separated launch args.</span>
-            </label>
+              {argRows.map((arg, i) => (
+                <div className="cam-arg-row" key={i}>
+                  <input
+                    className="cam-input cam-input--mono"
+                    type="text"
+                    value={arg}
+                    aria-label={`Argument ${i + 1}`}
+                    placeholder="run"
+                    onChange={(e) => updateArgRow(i, e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="cam-arg-remove"
+                    aria-label={`Remove argument ${i + 1}`}
+                    onClick={() => setArgRows((rows) => rows.filter((_, j) => j !== i))}
+                  >
+                    <X size={14} aria-hidden="true" />
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                className="cam-arg-add"
+                onClick={() => setArgRows((rows) => [...rows, ''])}
+              >
+                + Add argument
+              </button>
+              <span className="cam-hint">
+                One argument per row. Spaces are allowed within an argument.
+              </span>
+            </div>
 
             <div className="cam-launch">
               <span className="cam-launch__label">Launches</span>

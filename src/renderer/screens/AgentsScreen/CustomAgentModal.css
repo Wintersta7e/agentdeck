@@ -337,6 +337,14 @@
   color: var(--accent);
 }
 
+/* ── Arg rows ── */
+.cam-arg-row {
+  display: grid;
+  grid-template-columns: 1fr 32px;
+  gap: var(--sp-2);
+  align-items: center;
+}
+
 /* ── Env rows ── */
 .cam-env-row {
   display: grid;
@@ -345,7 +353,8 @@
   align-items: center;
 }
 
-.cam-env-remove {
+.cam-env-remove,
+.cam-arg-remove {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -361,12 +370,14 @@
     border-color var(--duration-fast) var(--ease-out);
 }
 
-.cam-env-remove:hover {
+.cam-env-remove:hover,
+.cam-arg-remove:hover {
   color: var(--red);
   border-color: var(--red-border);
 }
 
-.cam-env-remove:focus-visible {
+.cam-env-remove:focus-visible,
+.cam-arg-remove:focus-visible {
   outline: 1px solid var(--accent);
   outline-offset: 2px;
 }
@@ -380,7 +391,8 @@
   color: var(--red);
 }
 
-.cam-env-add {
+.cam-env-add,
+.cam-arg-add {
   align-self: flex-start;
   background: transparent;
   border: 1px solid var(--border);
@@ -396,12 +408,14 @@
     border-color var(--duration-fast) var(--ease-out);
 }
 
-.cam-env-add:hover {
+.cam-env-add:hover,
+.cam-arg-add:hover {
   color: var(--text0);
   border-color: var(--accent-border);
 }
 
-.cam-env-add:focus-visible {
+.cam-env-add:focus-visible,
+.cam-arg-add:focus-visible {
   outline: 1px solid var(--accent);
   outline-offset: 2px;
 }
