@@ -5,6 +5,22 @@ All notable changes to AgentDeck will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Windows-side custom agents** — a custom agent can target the Windows side
+  without leaving WSL. Set its binary to a Windows `.exe` on your PATH (e.g.
+  `ollama.exe`) to launch it via WSL interop, and use the `{{WINDOWS_HOST}}` token
+  in any env value, default arg, or startup command to reach a Windows-hosted
+  endpoint — it resolves at launch to the WSL gateway IP (the Windows host under
+  NAT networking).
+- **Encrypted secret env for custom agents** — each environment row has a lock
+  toggle; a marked value is stored encrypted in `agents.toml` via `safeStorage`
+  instead of plaintext, so an API key is allowed (decrypted only in the main
+  process at spawn, never on the command line). Saving a secret is refused when
+  secure storage is unavailable.
+
 ## [7.0.0] - 2026-06-25
 
 ### Changed

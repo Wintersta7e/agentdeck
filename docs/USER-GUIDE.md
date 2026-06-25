@@ -674,7 +674,7 @@ Open the **Agents** tab (**Alt+4**) and find the **Custom Agents** section. Clic
 - **Name** — Display name shown in pickers and on cards
 - **Binary** — A PATH-resolvable command to launch (e.g. `ollama`). No spaces or leading dash.
 - **Launch arguments** — Default CLI args, edited **one per row** (like the env rows below). Each argument is its own field, so a value that contains spaces — a system-prompt string, for example — is expressed as a single argument and round-trips losslessly.
-- **Environment variables** — Optional non-secret `KEY=value` rows passed to the agent process.
+- **Environment variables** — Optional `KEY=value` rows passed to the agent process. Toggle the **lock** on a row to store its value encrypted (see Secrets below).
 - **Appearance** — Optional id, icon, colour swatch, short label, description, and context window used to render the agent throughout the UI.
 
 Save to add the agent. It appears immediately in the Custom Agents section.
@@ -698,9 +698,13 @@ Custom agents are not second-class citizens. Once added, they appear in:
 
 and they launch in both terminal sessions and workflow runs, exactly like a built-in.
 
-### No secrets yet
+### Secrets
 
-Environment variables on a custom agent are stored in **plaintext** in `agents.toml`, and a value that looks like an API key or credential is rejected. Secure storage for local-model endpoint secrets is planned for a later release — for now, keep secrets out of custom-agent config.
+Each environment row has a **lock** toggle. Enable it and the value is stored **encrypted** in `agents.toml` via your OS keychain (`safeStorage`) instead of as plaintext — so an API key is allowed (a credential-shaped key left in a plaintext row is still rejected). On edit, a stored secret shows blank: leave it blank to keep it, or type a new value to replace it. If your OS can't provide secure storage, saving a secret is refused rather than written in the clear.
+
+### Reaching a Windows-side endpoint
+
+Agents run inside WSL, so a Windows-side service (e.g. a local model server) isn't on `localhost` from WSL's view. Use the **`{{WINDOWS_HOST}}`** token in any env value, default arg, or startup command — it resolves at launch to the Windows host (the WSL gateway IP). For example, point a CLI at a Windows model server with `OPENAI_API_BASE = "http://{{WINDOWS_HOST}}:11434/v1"` and put its API key in a secret row. The Windows service must listen on an interface reachable from WSL (bind `0.0.0.0`, not only `127.0.0.1`). A Windows program also runs directly — set the binary to a `.exe` on your PATH (e.g. `ollama.exe`) and it launches via interop.
 
 ---
 
