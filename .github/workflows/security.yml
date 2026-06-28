@@ -25,7 +25,7 @@ jobs:
     name: Secrets (gitleaks)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # full history so gitleaks can scan every commit
       - name: Install gitleaks
@@ -39,7 +39,7 @@ jobs:
     name: Dependencies (osv-scanner)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Install osv-scanner
         run: |
           curl -sSL https://github.com/google/osv-scanner/releases/download/v2.3.8/osv-scanner_linux_amd64 \
@@ -52,13 +52,13 @@ jobs:
     name: Vulns + secrets (trivy)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Install trivy
         run: |
           curl -sSL https://github.com/aquasecurity/trivy/releases/download/v0.71.0/trivy_0.71.0_Linux-64bit.tar.gz \
             | tar -xz -C /usr/local/bin trivy
       - name: Cache trivy vulnerability DB
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/trivy
           key: trivy-db-${{ github.run_id }}
@@ -81,7 +81,7 @@ jobs:
     name: Static analysis (semgrep, advisory)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       # Advisory: semgrep findings surface in the log but never fail the build.
       # The two excluded rules are inherently noisy for this codebase — it
       # legitimately joins validated IDs into paths (guarded by allowlist /
