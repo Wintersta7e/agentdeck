@@ -34,8 +34,9 @@ export function registerAgentHandlers(
   ipcMain.handle(CH.agentsGetRegistry, () => registry.all())
 
   // Full custom spec (args/env/versionArgs) for non-lossy edit/clone in the
-  // modal; null for builtins / unknown ids. Returns env because it is the
-  // user's own non-secret config (secrets blocked at validation).
+  // modal; null for builtins / unknown ids. Non-secret env is returned as-is;
+  // secret values are REDACTED to '' by getSpec, so plaintext secrets never
+  // cross to the renderer (the modal re-enters or keeps them blank).
   ipcMain.handle(
     CH.agentsGetCustomSpec,
     (_, id: unknown) => registry.getSpec(typeof id === 'string' ? id : '') ?? null,

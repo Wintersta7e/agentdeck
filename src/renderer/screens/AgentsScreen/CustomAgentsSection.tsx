@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { Edit, Copy, Trash2, Plus } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import { useAgentRegistry } from '../../hooks/useAgentRegistry'
-import { getProjectAgents } from '../../../shared/agent-helpers'
+import { getProjectAgents, removeAgentFromProject } from '../../../shared/agent-helpers'
 import type { AgentDescriptorWire } from '../../../shared/custom-agents'
 import type { Project } from '../../../shared/types'
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog'
@@ -30,6 +30,7 @@ function countProjectRefs(projects: Project[], agentId: string): number {
 export function CustomAgentsSection(): React.JSX.Element {
   const registry = useAgentRegistry()
   const projects = useAppStore((s) => s.projects)
+  const setProjects = useAppStore((s) => s.setProjects)
   const addNotification = useAppStore((s) => s.addNotification)
 
   const [modal, setModal] = useState<ModalState>({ kind: 'closed' })
@@ -50,13 +51,30 @@ export function CustomAgentsSection(): React.JSX.Element {
     setModal({ kind: 'closed' })
     window.agentDeck.agents
       .deleteCustom(id)
-      .then((ok) => {
-        if (!ok) addNotification('error', `Could not remove agent "${id}"`)
+      .then(async (ok) => {
+        if (!ok) {
+          addNotification('error', `Could not remove agent "${id}"`)
+          return
+        }
+        // Cascade: strip the deleted agent from every project that pinned it, so
+        // a later session can't try to launch a now-unknown agent and fail the
+        // spawn validator ("Invalid agent"). Persist each changed project.
+        const current = useAppStore.getState().projects
+        const cleaned = current.map((p) => removeAgentFromProject(p, id))
+        const changed = cleaned.filter((p, i) => p !== current[i])
+        if (changed.length === 0) return
+        try {
+          const saved = await Promise.all(changed.map((p) => window.agentDeck.store.saveProject(p)))
+          const savedById = new Map(saved.map((s) => [s.id, s]))
+          setProjects(current.map((p) => savedById.get(p.id) ?? p))
+        } catch (err) {
+          addNotification('error', `Removed "${id}" but failed to update projects: ${String(err)}`)
+        }
       })
       .catch((err: unknown) => {
         addNotification('error', `Failed to remove agent "${id}": ${String(err)}`)
       })
-  }, [pendingDelete, addNotification])
+  }, [pendingDelete, addNotification, setProjects])
 
   return (
     <section className="cas" aria-labelledby="cas-heading">

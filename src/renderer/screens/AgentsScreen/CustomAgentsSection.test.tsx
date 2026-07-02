@@ -25,14 +25,17 @@ const builtin = descriptor({ id: 'claude-code', name: 'Claude Code', source: 'bu
 let saveCustom: ReturnType<typeof vi.fn>
 let deleteCustom: ReturnType<typeof vi.fn>
 let getCustomSpec: ReturnType<typeof vi.fn>
+let saveProject: ReturnType<typeof vi.fn>
 
 beforeEach(() => {
   useAppStore.setState(useAppStore.getInitialState())
   saveCustom = vi.fn(async () => ({ ok: true as const, warnings: [] }))
   deleteCustom = vi.fn(async () => true)
   getCustomSpec = vi.fn(async () => null)
+  saveProject = vi.fn(async (p: Project) => p)
   ;(window as unknown as { agentDeck: unknown }).agentDeck = {
     agents: { saveCustom, deleteCustom, getCustomSpec },
+    store: { saveProject },
     log: { send: vi.fn() },
   }
 })
@@ -116,6 +119,30 @@ describe('CustomAgentsSection', () => {
     expect(spec.args).toEqual(['--system-prompt', 'You are a helpful assistant'])
   })
 
+  it('edit mode round-trips a multi-word arg through hydrate and save', async () => {
+    // The hydrate path (getCustomSpec -> setArgRows) is what makes a space-bearing
+    // arg survive an edit; the old join('') behaviour would split it into pieces.
+    getCustomSpec.mockResolvedValue({
+      id: 'my-agent',
+      binary: 'my-agent-bin',
+      args: ['--system-prompt', 'You are a helpful assistant'],
+      ui: { name: 'My Agent' },
+      source: 'user',
+    })
+    useAppStore.setState({ agentRegistry: [descriptor()] })
+    render(<CustomAgentsSection />)
+    fireEvent.click(screen.getByRole('button', { name: /Edit My Agent/i }))
+
+    // Each arg hydrates into its own row — the multi-word value stays intact.
+    expect(await screen.findByDisplayValue('You are a helpful assistant')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('--system-prompt')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(saveCustom).toHaveBeenCalledTimes(1))
+    const spec = saveCustom.mock.calls[0]?.[0] as { args?: string[] }
+    expect(spec.args).toEqual(['--system-prompt', 'You are a helpful assistant'])
+  })
+
   it('edit mode locks the id (read-only)', () => {
     useAppStore.setState({ agentRegistry: [descriptor()] })
     render(<CustomAgentsSection />)
@@ -137,6 +164,34 @@ describe('CustomAgentsSection', () => {
     expect(screen.getByText(/looks like a credential/i)).toBeInTheDocument()
   })
 
+  it('routes a secret-marked env row to secretEnv on save', async () => {
+    useAppStore.setState({ agentRegistry: [] })
+    render(<CustomAgentsSection />)
+    fireEvent.click(screen.getByRole('button', { name: /Add agent/i }))
+    fireEvent.change(screen.getByPlaceholderText('My Agent'), { target: { value: 'Tool' } })
+    fireEvent.change(screen.getByPlaceholderText('my-agent-bin'), { target: { value: 'aider' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /Advanced/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Add variable/i }))
+    fireEvent.change(screen.getByLabelText('Env key 1'), { target: { value: 'OPENAI_API_KEY' } })
+    fireEvent.change(screen.getByLabelText('Env value 1'), { target: { value: 'sk-xyz' } })
+    // A credential key in plaintext env fails validation; marking it secret routes
+    // it to secretEnv and re-enables Save.
+    fireEvent.click(screen.getByRole('button', { name: /secret for env row 1/i }))
+
+    const save = screen.getByRole('button', { name: 'Save' })
+    expect(save).not.toBeDisabled()
+    fireEvent.click(save)
+
+    await waitFor(() => expect(saveCustom).toHaveBeenCalledTimes(1))
+    const spec = saveCustom.mock.calls[0]?.[0] as {
+      env?: Record<string, string>
+      secretEnv?: Record<string, string>
+    }
+    expect(spec.secretEnv).toEqual({ OPENAI_API_KEY: 'sk-xyz' })
+    expect(spec.env).toBeUndefined()
+  })
+
   it('delete routes through the confirm and calls deleteCustom', async () => {
     useAppStore.setState({ agentRegistry: [descriptor()] })
     render(<CustomAgentsSection />)
@@ -149,6 +204,32 @@ describe('CustomAgentsSection', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
     await waitFor(() => expect(deleteCustom).toHaveBeenCalledWith('my-agent'))
+  })
+
+  it('removing an agent strips it from projects that pinned it and persists', async () => {
+    const projects: Project[] = [
+      {
+        id: 'p1',
+        name: 'P1',
+        path: '/home/u/p1',
+        agents: [{ agent: 'claude-code', isDefault: true }, { agent: 'my-agent' }],
+      },
+    ] as Project[]
+    useAppStore.setState({ agentRegistry: [descriptor()], projects })
+    render(<CustomAgentsSection />)
+    fireEvent.click(screen.getByRole('button', { name: /Delete My Agent/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
+
+    await waitFor(() => expect(deleteCustom).toHaveBeenCalledWith('my-agent'))
+    await waitFor(() => expect(saveProject).toHaveBeenCalledTimes(1))
+    const saved = saveProject.mock.calls[0]?.[0] as Project
+    expect(saved.id).toBe('p1')
+    expect(saved.agents).toEqual([{ agent: 'claude-code', isDefault: true }])
+    await waitFor(() =>
+      expect(useAppStore.getState().projects[0]?.agents).toEqual([
+        { agent: 'claude-code', isDefault: true },
+      ]),
+    )
   })
 
   it('delete confirm shows the project reference count when in use', () => {

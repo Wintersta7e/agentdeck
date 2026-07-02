@@ -39,6 +39,8 @@ export interface CustomAgentSpec {
   binary: string
   args?: string[]
   env?: Record<string, string>
+  /** Secret env values — encrypted at rest (safeStorage), decrypted only in main at spawn. */
+  secretEnv?: Record<string, string>
   ui: CustomAgentUi
   source: 'user'
 }
@@ -152,6 +154,41 @@ function deriveShort(name: string): string {
 }
 
 /**
+ * Validate one custom-agent env map. Shared by `env` and `secretEnv`, which apply
+ * the same key charset, BLOCKED_ENV_KEYS denylist, key count and value type/length
+ * rules. `rejectCredentialKeys` (env only) steers credential-shaped keys to
+ * secretEnv; `conflictWith` (secretEnv only) is the already-parsed `env`, rejecting
+ * a key present in both maps. Returns the parsed map or an error string.
+ */
+function validateEnvMap(
+  raw: unknown,
+  label: 'env' | 'secretEnv',
+  rejectCredentialKeys: boolean,
+  conflictWith?: Record<string, string>,
+): { error: string } | { map: Record<string, string> } {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw))
+    return { error: `${label} must be an object` }
+  const entries = Object.entries(raw as Record<string, unknown>)
+  if (entries.length > LIMIT.envCount)
+    return { error: `${label} must have <= ${LIMIT.envCount} keys` }
+  const out: Record<string, string> = {}
+  for (const [k, val] of entries) {
+    if (!ENV_KEY_RE.test(k)) return { error: `invalid ${label} key "${k}"` }
+    if (BLOCKED_ENV_KEYS.has(k)) return { error: `${label} key "${k}" is not allowed` }
+    if (rejectCredentialKeys && looksLikeCredentialKey(k))
+      return {
+        error: `env key "${k}" looks like a secret — mark it secret (stored encrypted) instead`,
+      }
+    if (conflictWith && k in conflictWith)
+      return { error: `key "${k}" is in both env and secretEnv` }
+    if (typeof val !== 'string' || val.length > LIMIT.envValLen)
+      return { error: `${label} value for "${k}" must be a string <= ${LIMIT.envValLen} chars` }
+    out[k] = val
+  }
+  return { map: out }
+}
+
+/**
  * Validate one raw agent entry against the Phase-1 rules. `builtinIds` is the set
  * of reserved built-in ids that a custom agent may not shadow.
  */
@@ -237,23 +274,20 @@ export function validateCustomAgent(raw: unknown, builtinIds: ReadonlySet<string
   }
 
   let env: Record<string, string> | undefined
-  const envRaw = r['env']
-  if (envRaw !== undefined) {
-    if (!envRaw || typeof envRaw !== 'object' || Array.isArray(envRaw))
-      return fail('env must be an object')
-    const entries = Object.entries(envRaw as Record<string, unknown>)
-    if (entries.length > LIMIT.envCount) return fail(`env must have <= ${LIMIT.envCount} keys`)
-    const out: Record<string, string> = {}
-    for (const [k, val] of entries) {
-      if (!ENV_KEY_RE.test(k)) return fail(`invalid env key "${k}"`)
-      if (BLOCKED_ENV_KEYS.has(k)) return fail(`env key "${k}" is not allowed`)
-      if (looksLikeCredentialKey(k))
-        return fail(`env key "${k}" looks like a secret — secrets arrive in Phase 2 secure storage`)
-      if (typeof val !== 'string' || val.length > LIMIT.envValLen)
-        return fail(`env value for "${k}" must be a string <= ${LIMIT.envValLen} chars`)
-      out[k] = val
-    }
-    env = out
+  if (r['env'] !== undefined) {
+    const res = validateEnvMap(r['env'], 'env', true)
+    if ('error' in res) return fail(res.error)
+    env = res.map
+  }
+
+  // Secret env: same key safety rules as `env` (a process-hijack key is rejected
+  // regardless of secrecy) but credential-shaped keys are ALLOWED here — that is the
+  // point. Values are validated as plaintext; the registry encrypts them at rest.
+  let secretEnv: Record<string, string> | undefined
+  if (r['secretEnv'] !== undefined) {
+    const res = validateEnvMap(r['secretEnv'], 'secretEnv', false, env)
+    if ('error' in res) return fail(res.error)
+    secretEnv = res.map
   }
 
   const ui: CustomAgentUi = {
@@ -272,6 +306,7 @@ export function validateCustomAgent(raw: unknown, builtinIds: ReadonlySet<string
     source: 'user',
     ...(args !== undefined ? { args } : {}),
     ...(env !== undefined ? { env } : {}),
+    ...(secretEnv !== undefined ? { secretEnv } : {}),
   }
   return { ok: true, value }
 }

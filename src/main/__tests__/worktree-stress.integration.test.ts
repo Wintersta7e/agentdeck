@@ -21,7 +21,7 @@ const NON_GIT_DIR = path.posix.join(
   'agentdeck-test',
   'non-git-project',
 )
-const REGISTRY_DIR = path.join(process.env['TEMP'] ?? '/tmp', `agentdeck-stress-${Date.now()}`)
+const REGISTRY_DIR = path.join(homedir(), 'agentdeck-test', `stress-registry-${Date.now()}`)
 const WSL_WORKTREE_DIR = `/tmp/agentdeck-stress-wt-${Date.now()}`
 
 function wslAvailable(): boolean {

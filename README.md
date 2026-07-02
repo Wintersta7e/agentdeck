@@ -4,9 +4,10 @@
 
 **A desktop deck for your WSL coding agents.**
 
-Launch, watch, and orchestrate Claude Code, Codex, Aider, and four more agents
-from a single window — split terminals, visual workflows, and productivity +
-plan-limit tracking, all running through your own WSL environment.
+Launch, watch, and orchestrate Claude Code, Codex, Aider, four more built-in
+agents — and your own custom CLIs — from a single window: split terminals,
+visual workflows, and productivity + plan-limit tracking, all running through
+your own WSL environment.
 
 [![Electron](https://img.shields.io/badge/Electron-42-47848F?logo=electron&logoColor=white)](https://www.electronjs.org)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev)
@@ -44,13 +45,16 @@ build it, but there's no adoption goal and no support guarantees.
 
 ## Status
 
-Actively developed personal tool, currently at **v6.10.0**. The app is mature
+Actively developed personal tool, currently at **v7.0.0**. The app is mature
 and in daily use — a large Vitest suite under a zero-warning lint + typecheck
 gate — but it's shaped around exactly one setup (Windows 11 + WSL2), so your
 mileage outside that will vary.
 
 **Implemented:**
-- 7 agents: Claude Code, Codex, Aider, Goose, Gemini CLI, Amazon Q, OpenCode
+- 7 built-in agents: Claude Code, Codex, Aider, Goose, Gemini CLI, Amazon Q,
+  OpenCode — plus **custom agents** (bring your own CLI, e.g. a local model
+  runner or a personal wrapper), first-class in the picker, palette, project
+  defaults, and workflows
 - Split terminal sessions (up to 3 panes) with caching, search, and live
   activity parsing
 - Visual workflow engine — agent / shell / checkpoint / condition nodes,
@@ -108,7 +112,11 @@ mileage outside that will vary.
 - Pin favourites to the home grid
 
 ### Agents
-- A single registry drives CLI flags, colour, and capabilities for all 7 agents
+- A single registry drives CLI flags, colour, and capabilities for all 7 built-ins
+- **Custom agents (bring-your-own)** — register your own CLI (Ollama, a local
+  model runner, a personal wrapper) from the Agents screen or `agents.toml`:
+  binary, one-argument-per-row launch args, env, and display metadata, first-class
+  across the picker, palette, project defaults, and workflow nodes
 - Startup update check + one-click npm update with rollback
 - Auto-detection via the WSL `PATH`
 
@@ -164,7 +172,7 @@ Output: `dist/AgentDeck-{version}-portable.exe` (~94 MB).
 | UI | [React 19][react] + [TypeScript 6][ts] | Strict mode, all `.ts` / `.tsx` |
 | Build | [electron-vite 5][evite] | Vite for the renderer, esbuild for main/preload |
 | Terminal | [xterm.js 5][xterm] + [node-pty][nodepty] | WebGL renderer over WSL PTYs |
-| State | [Zustand][zustand] | One flat store composed from 7 slices |
+| State | [Zustand][zustand] | One flat store composed from 8 slices |
 | Workflows | [React Flow][reactflow] | Visual DAG editor |
 | Storage | [electron-store][estore] | JSON on disk; `safeStorage` for secrets |
 | Test / lint | [Vitest 4][vitest] + [ESLint 9][eslint] | Dual workspace, zero-warning |

@@ -167,3 +167,67 @@ export function getDefaultDistroAsync(): Promise<string> {
     )
   })
 }
+
+/**
+ * Extract the gateway IP from `ip route show default` output, e.g.
+ * "default via 172.21.240.1 dev eth0 proto kernel". Returns null if absent.
+ */
+export function parseDefaultGateway(routeOutput: string): string | null {
+  for (const line of routeOutput.split('\n')) {
+    const m = line.match(/^\s*default\s+via\s+(\d{1,3}(?:\.\d{1,3}){3})\b/)
+    if (m && m[1]) return m[1]
+  }
+  return null
+}
+
+/** Token replaced at spawn with the Windows host IP in custom-agent env / args / startup. */
+export const WINDOWS_HOST_TOKEN = '{{WINDOWS_HOST}}'
+
+/** Replace every {{WINDOWS_HOST}} occurrence in `text` with `hostIp`. */
+export function substituteWindowsHost(text: string, hostIp: string): string {
+  return text.split(WINDOWS_HOST_TOKEN).join(hostIp)
+}
+
+/**
+ * The Windows host as seen from inside WSL is the WSL default gateway — in NAT
+ * networking a Windows-side service is reached at this IP, not at localhost.
+ * Resolved via `wsl.exe -- ip route show default` and cached. Returns null on failure.
+ *
+ * The gateway IP can change across a WSL restart; the cache refreshes only on app
+ * restart, which is the dominant case (app + WSL boot together).
+ */
+let cachedWindowsHostIp: string | null = null
+export function getWindowsHostIp(): Promise<string | null> {
+  if (cachedWindowsHostIp) return Promise.resolve(cachedWindowsHostIp)
+  return new Promise<string | null>((resolve) => {
+    execFile(
+      'wsl.exe',
+      ['--', 'ip', 'route', 'show', 'default'],
+      { timeout: 10000 },
+      (err, stdout) => {
+        if (err) {
+          log.warn('Failed to resolve Windows host IP (WSL default gateway)', { err: String(err) })
+          resolve(null)
+          return
+        }
+        const ip = parseDefaultGateway(typeof stdout === 'string' ? stdout : '')
+        if (!ip) {
+          log.warn('Could not parse WSL default gateway from `ip route` output')
+          resolve(null)
+          return
+        }
+        cachedWindowsHostIp = ip
+        resolve(ip)
+      },
+    )
+  })
+}
+
+/**
+ * Synchronous accessor for the last-resolved Windows host IP (null until warmed).
+ * The spawn path is synchronous, so it reads this; warm the cache at startup with
+ * `getWindowsHostIp()`.
+ */
+export function peekWindowsHostIp(): string | null {
+  return cachedWindowsHostIp
+}

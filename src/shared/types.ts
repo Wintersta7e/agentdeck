@@ -69,14 +69,7 @@ export interface Project {
 }
 
 export type TemplateCategory =
-  | 'Orient'
-  | 'Review'
-  | 'Fix'
-  | 'Test'
-  | 'Refactor'
-  | 'Debug'
-  | 'Docs'
-  | 'Git'
+  'Orient' | 'Review' | 'Fix' | 'Test' | 'Refactor' | 'Debug' | 'Docs' | 'Git'
 
 /**
  * Legacy flat Template shape — persisted in electron-store under the `templates`
@@ -326,10 +319,7 @@ export type WorkflowNodeStatus = 'idle' | 'running' | 'done' | 'error' | 'paused
 export type WorkflowStatus = 'idle' | 'running' | 'done' | 'error' | 'stopped'
 
 export type WorkflowLevelEventType =
-  | 'workflow:started'
-  | 'workflow:stopped'
-  | 'workflow:done'
-  | 'workflow:error'
+  'workflow:started' | 'workflow:stopped' | 'workflow:done' | 'workflow:error'
 
 export type NodeLevelEventType =
   | 'node:started'

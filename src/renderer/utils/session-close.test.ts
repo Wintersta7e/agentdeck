@@ -78,8 +78,7 @@ describe('closeSession orchestrator', () => {
     )
     setTimeout(() => {
       const n = useAppStore.getState().notifications.at(-1) as
-        | { resolve: (v: string) => void }
-        | undefined
+        { resolve: (v: string) => void } | undefined
       n?.resolve('cancel')
     }, 10)
     const { closeSession } = await import('./session-close')

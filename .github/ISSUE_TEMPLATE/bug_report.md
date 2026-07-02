@@ -26,7 +26,7 @@ What actually happened.
 
 ## Environment
 
-- **AgentDeck version**: (e.g. 6.5.0)
+- **AgentDeck version**: (e.g. 7.0.0)
 - **Windows version**: (e.g. Windows 11 23H2)
 - **WSL distro**: (e.g. Ubuntu 24.04)
 - **Node.js version**: (e.g. 22.22.1)

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useState } from 'react'
-import { AlertTriangle, ChevronDown, ChevronRight, X } from 'lucide-react'
+import { AlertTriangle, ChevronDown, ChevronRight, Lock, X } from 'lucide-react'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { AGENTS } from '../../../shared/agents'
 import {
@@ -26,6 +26,8 @@ export function slugifyId(name: string): string {
 interface EnvRow {
   key: string
   value: string
+  /** When true the value is stored encrypted (safeStorage) as secretEnv, not env. */
+  secret?: boolean
 }
 
 export interface CustomAgentModalProps {
@@ -96,8 +98,11 @@ export function CustomAgentModal({
   // Build a candidate spec and validate it live with the shared validator.
   const candidate = useMemo(() => {
     const env: Record<string, string> = {}
+    const secretEnv: Record<string, string> = {}
     for (const row of envRows) {
-      if (row.key) env[row.key] = row.value
+      if (!row.key) continue
+      if (row.secret) secretEnv[row.key] = row.value
+      else env[row.key] = row.value
     }
     const ctx = contextWindow.trim() === '' ? undefined : Number(contextWindow)
     return {
@@ -105,6 +110,7 @@ export function CustomAgentModal({
       binary,
       ...(parsedArgs.length > 0 ? { args: parsedArgs } : {}),
       ...(Object.keys(env).length > 0 ? { env } : {}),
+      ...(Object.keys(secretEnv).length > 0 ? { secretEnv } : {}),
       ui: {
         name,
         icon,
@@ -133,13 +139,16 @@ export function CustomAgentModal({
   const validation = useMemo(() => validateCustomAgent(candidate, BUILTIN_IDS), [candidate])
   const isValid = validation.ok
 
-  // Per-field credential warnings (advisory; validator also blocks them).
-  const envWarnings = useMemo(
+  // Per-field env warnings (advisory; validator also enforces these).
+  const envWarnings = useMemo<(string | null)[]>(
     () =>
-      envRows.map(
-        (row) =>
-          row.key !== '' && (looksLikeCredentialKey(row.key) || BLOCKED_ENV_KEYS.has(row.key)),
-      ),
+      envRows.map((row) => {
+        if (row.key === '') return null
+        if (BLOCKED_ENV_KEYS.has(row.key)) return 'This key is not allowed.'
+        if (!row.secret && looksLikeCredentialKey(row.key))
+          return 'Looks like a credential — enable the lock to store it encrypted.'
+        return null
+      }),
     [envRows],
   )
 
@@ -166,10 +175,13 @@ export function CustomAgentModal({
       .then((spec) => {
         if (cancelled || !spec) return
         if (spec.args && spec.args.length > 0) setArgRows(spec.args)
-        if (spec.env) {
-          const rows = Object.entries(spec.env).map(([key, value]) => ({ key, value }))
-          if (rows.length > 0) setEnvRows(rows)
-        }
+        const rows: EnvRow[] = []
+        if (spec.env) for (const [key, value] of Object.entries(spec.env)) rows.push({ key, value })
+        // Secret values come back redacted ('') — the key shows; the value is
+        // re-entered to change it, or left blank to keep the stored secret.
+        if (spec.secretEnv)
+          for (const key of Object.keys(spec.secretEnv)) rows.push({ key, value: '', secret: true })
+        if (rows.length > 0) setEnvRows(rows)
         if (spec.ui.versionArgs && spec.ui.versionArgs.length > 0) {
           setVersionArgsText(spec.ui.versionArgs.join(' '))
         }
@@ -306,7 +318,7 @@ export function CustomAgentModal({
               </span>
             </div>
 
-            <label className="cam-field">
+            <div className="cam-field">
               <span className="cam-field__label">Binary</span>
               <input
                 className="cam-input cam-input--mono"
@@ -316,7 +328,11 @@ export function CustomAgentModal({
                 onChange={(e) => setBinary(e.target.value)}
                 placeholder="my-agent-bin"
               />
-            </label>
+              <span className="cam-hint">
+                A WSL command, or a Windows <code>.exe</code> on your PATH (e.g.{' '}
+                <code>ollama.exe</code>) via interop.
+              </span>
+            </div>
 
             <div className="cam-field">
               <span className="cam-field__label">Args</span>
@@ -453,15 +469,16 @@ export function CustomAgentModal({
                 <p className="cam-note">
                   <AlertTriangle size={13} aria-hidden="true" />
                   <span>
-                    Env vars are stored in plaintext. Do not put secrets here — secure storage
-                    arrives in Phase 2.
+                    Plain env is stored as written. For a credential (e.g. an API key), enable the
+                    lock on its row to store it encrypted via your OS keychain. Use{' '}
+                    <code>{'{{WINDOWS_HOST}}'}</code> in a value to reach a Windows-side endpoint.
                   </span>
                 </p>
 
                 <div className="cam-field">
                   <span className="cam-field__label">Environment</span>
                   {envRows.map((row, i) => {
-                    const warn = envWarnings[i] === true
+                    const warn = envWarnings[i]
                     return (
                       <div className="cam-env-row" key={i}>
                         <input
@@ -474,12 +491,21 @@ export function CustomAgentModal({
                         />
                         <input
                           className="cam-input cam-input--mono"
-                          type="text"
+                          type={row.secret ? 'password' : 'text'}
                           value={row.value}
                           aria-label={`Env value ${i + 1}`}
-                          placeholder="127.0.0.1:11434"
+                          placeholder={row.secret ? 'stored encrypted' : '127.0.0.1:11434'}
                           onChange={(e) => updateEnvRow(i, { value: e.target.value })}
                         />
+                        <button
+                          type="button"
+                          className={`cam-env-secret${row.secret ? ' cam-env-secret--on' : ''}`}
+                          aria-label={`Toggle secret for env row ${i + 1}`}
+                          aria-pressed={row.secret === true}
+                          onClick={() => updateEnvRow(i, { secret: !row.secret })}
+                        >
+                          <Lock size={13} aria-hidden="true" />
+                        </button>
                         <button
                           type="button"
                           className="cam-env-remove"
@@ -491,7 +517,7 @@ export function CustomAgentModal({
                         {warn && (
                           <span className="cam-env-warn" role="alert">
                             <AlertTriangle size={12} aria-hidden="true" />
-                            This key looks like a credential and is blocked.
+                            {warn}
                           </span>
                         )}
                       </div>

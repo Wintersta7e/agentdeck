@@ -4,14 +4,7 @@ import type { ViewType } from '../../../shared/types'
 import './TopTabBar.css'
 
 type TabId =
-  | 'home'
-  | 'sessions'
-  | 'projects'
-  | 'agents'
-  | 'workflows'
-  | 'history'
-  | 'alerts'
-  | 'settings'
+  'home' | 'sessions' | 'projects' | 'agents' | 'workflows' | 'history' | 'alerts' | 'settings'
 
 interface TabDef {
   id: TabId

@@ -88,6 +88,43 @@ describe('validateCustomAgent', () => {
     )
   })
 
+  it('accepts a credential-shaped key in secretEnv and preserves it', () => {
+    const v = ok({
+      id: 'x',
+      binary: 'x',
+      ui: { name: 'X' },
+      secretEnv: { OPENAI_API_KEY: 'sk-123' },
+    })
+    expect(v.secretEnv).toEqual({ OPENAI_API_KEY: 'sk-123' })
+  })
+
+  it('still rejects a process-hijack key in secretEnv', () => {
+    expect(
+      err({ id: 'x', binary: 'x', ui: { name: 'X' }, secretEnv: { LD_PRELOAD: '/evil.so' } }),
+    ).toMatch(/not allowed|secretenv/i)
+  })
+
+  it('rejects a malformed secretEnv key or over-long value', () => {
+    expect(err({ id: 'x', binary: 'x', ui: { name: 'X' }, secretEnv: { '1bad': 'v' } })).toMatch(
+      /secretenv/i,
+    )
+    expect(
+      err({ id: 'x', binary: 'x', ui: { name: 'X' }, secretEnv: { TOKEN: 'v'.repeat(513) } }),
+    ).toMatch(/secretenv/i)
+  })
+
+  it('rejects a key present in both env and secretEnv', () => {
+    expect(
+      err({
+        id: 'x',
+        binary: 'x',
+        ui: { name: 'X' },
+        env: { BASE_URL: 'u' },
+        secretEnv: { BASE_URL: 'v' },
+      }),
+    ).toMatch(/both|secretenv/i)
+  })
+
   it('rejects process-hijack (BLOCKED_ENV) keys', () => {
     expect(err({ id: 'x', binary: 'x', ui: { name: 'X' }, env: { LD_PRELOAD: '/x.so' } })).toMatch(
       /not allowed|blocked/i,

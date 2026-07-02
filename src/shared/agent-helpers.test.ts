@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { getDefaultAgent, getProjectAgents, migrateProjectAgents } from './agent-helpers'
+import {
+  getDefaultAgent,
+  getProjectAgents,
+  migrateProjectAgents,
+  removeAgentFromProject,
+} from './agent-helpers'
 import type { Project, AgentConfig } from './types'
 
 function makeProject(overrides: Partial<Project> = {}): Project {
@@ -10,6 +15,41 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     ...overrides,
   }
 }
+
+describe('removeAgentFromProject', () => {
+  it('removes the agent entry from agents[] and keeps the existing default', () => {
+    const p = makeProject({
+      agents: [{ agent: 'claude-code', isDefault: true }, { agent: 'python-repl' }],
+    })
+    const out = removeAgentFromProject(p, 'python-repl')
+    expect(out.agents).toEqual([{ agent: 'claude-code', isDefault: true }])
+  })
+
+  it('promotes a survivor to default when the removed entry was the default', () => {
+    const p = makeProject({
+      agents: [{ agent: 'python-repl', isDefault: true }, { agent: 'codex' }],
+    })
+    const out = removeAgentFromProject(p, 'python-repl')
+    expect(out.agents).toEqual([{ agent: 'codex', isDefault: true }])
+  })
+
+  it('leaves an empty agents[] when the only configured agent is removed', () => {
+    const p = makeProject({ agents: [{ agent: 'python-repl', isDefault: true }] })
+    expect(removeAgentFromProject(p, 'python-repl').agents).toEqual([])
+  })
+
+  it('clears the legacy singular agent (and its flags) when it matches', () => {
+    const p = makeProject({ agent: 'python-repl', agentFlags: '--foo' })
+    const out = removeAgentFromProject(p, 'python-repl')
+    expect(out.agent).toBeUndefined()
+    expect(out.agentFlags).toBeUndefined()
+  })
+
+  it('returns the same reference when the project never referenced the agent', () => {
+    const p = makeProject({ agents: [{ agent: 'claude-code', isDefault: true }] })
+    expect(removeAgentFromProject(p, 'python-repl')).toBe(p)
+  })
+})
 
 describe('getDefaultAgent', () => {
   it('returns the agent marked isDefault from agents array', () => {

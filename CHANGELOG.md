@@ -5,6 +5,22 @@ All notable changes to AgentDeck will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Windows-side custom agents** — a custom agent can target the Windows side
+  without leaving WSL. Set its binary to a Windows `.exe` on your PATH (e.g.
+  `ollama.exe`) to launch it via WSL interop, and use the `{{WINDOWS_HOST}}` token
+  in any env value, default arg, or startup command to reach a Windows-hosted
+  endpoint — it resolves at launch to the WSL gateway IP (the Windows host under
+  NAT networking).
+- **Encrypted secret env for custom agents** — each environment row has a lock
+  toggle; a marked value is stored encrypted in `agents.toml` via `safeStorage`
+  instead of plaintext, so an API key is allowed (decrypted only in the main
+  process at spawn, never on the command line). Saving a secret is refused when
+  secure storage is unavailable.
+
 ## [7.0.0] - 2026-06-25
 
 ### Changed
@@ -14,6 +30,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the environment rows). An argument that contains spaces — e.g. a system-prompt
   value — is now expressible and round-trips losslessly; the shared validator no
   longer rejects whitespace within an argument.
+
+### Fixed
+
+- **Removing a custom agent now clears it from projects that pinned it.**
+  Previously a deleted agent stayed referenced in a project's agent list, so
+  starting a session with it failed with "Invalid agent". Deletion now cascades
+  to every project, promoting another agent to default when the removed one was
+  the default.
 
 ### Security
 
@@ -34,6 +58,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   per-project default, and workflow nodes, and launch in both terminal sessions
   and workflow runs (workflow nodes run them best-effort, raw output). Secrets
   for local-model endpoints are deferred to a later release.
+
+### Changed
+
+- Refreshed Electron to 42.5.0 and tightened packaging (dropped a forced
+  node-pty rebuild).
+- Removed dead store actions and an unused tab-params code path.
+
+### Security
+
+- **Hardened the workflow shell node** — bounded output (16 MiB `maxBuffer`),
+  numeric exit-code coercion, tree-kill on timeout, and cancellation of parallel
+  siblings on a hard failure.
+- **Tightened untrusted renderer input handling** — a path-traversal guard on
+  stack detection, a project-field whitelist on save, and a stricter Content
+  Security Policy (`base-uri` / `form-action`).
+- **Hardened custom-agent validation and registry writes** — bounded icon /
+  short metadata and serialized registry writes.
+- **Disabled Node-runtime abuse vectors on the packaged binary** — the
+  `runAsNode`, `enableNodeOptionsEnvironmentVariable`, and
+  `enableNodeCliInspectArguments` fuses are now off.
+
+### Fixed
+
+- Fixed an atomic-write temp-file leak when a rename failed.
 
 ## [6.10.0] - 2026-06-07
 
