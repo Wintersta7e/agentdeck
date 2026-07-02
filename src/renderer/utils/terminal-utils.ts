@@ -190,8 +190,7 @@ export interface SelectionBufferLine {
 /** Minimal terminal shape for getLogicalSelection — read-only buffer view. */
 export interface SelectionTerminal {
   getSelectionPosition: () =>
-    | { start: { x: number; y: number }; end: { x: number; y: number } }
-    | undefined
+    { start: { x: number; y: number }; end: { x: number; y: number } } | undefined
   buffer: { active: { getLine: (y: number) => SelectionBufferLine | undefined } }
 }
 

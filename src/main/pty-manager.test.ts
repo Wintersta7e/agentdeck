@@ -694,8 +694,7 @@ name = "Ollama"
         }),
       )
       const writtenCmd = vi.mocked(pty.spawn).mock.results[0]?.value.write.mock.calls[0]?.[0] as
-        | string
-        | undefined
+        string | undefined
       expect(writtenCmd).not.toContain('sk-secret')
       expect(writtenCmd).not.toContain('OPENAI_API_KEY')
     })
@@ -720,8 +719,7 @@ name = "Ollama"
         }),
       )
       const writtenCmd = vi.mocked(pty.spawn).mock.results[0]?.value.write.mock.calls[0]?.[0] as
-        | string
-        | undefined
+        string | undefined
       expect(writtenCmd).toContain('10.0.0.5')
       expect(writtenCmd).not.toContain('{{WINDOWS_HOST}}')
     })
