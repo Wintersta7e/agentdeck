@@ -97,7 +97,8 @@ async function saveRegistry(registryDir: string, entries: WorktreeEntry[]): Prom
   const data: RegistryData = { entries }
   const json = JSON.stringify(data, null, 2)
   const tmpFile = `${file}.${randomBytes(6).toString('hex')}.tmp`
-  await fs.promises.writeFile(tmpFile, json, 'utf-8')
+  // Owner-only perms + exclusive create (CWE-377/378): no world-readable temp, no clobber.
+  await fs.promises.writeFile(tmpFile, json, { encoding: 'utf-8', mode: 0o600, flag: 'wx' })
   await fs.promises.rename(tmpFile, file)
 }
 
