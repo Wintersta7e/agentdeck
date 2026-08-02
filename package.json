@@ -95,7 +95,7 @@
     "node-pty": "^1.0.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "react-window": "^2.2.7",
+    "react-window": "^2.3.0",
     "smol-toml": "^1.7.0",
     "yaml": "^2.9.0",
     "zustand": "^5.0.14"
