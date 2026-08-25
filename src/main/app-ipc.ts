@@ -25,7 +25,7 @@ interface RegisterAppIpcHandlersOptions {
   getAppStore: () => AppStore | null
   getPtyManager: () => PtyManager | null
   getWorkflowEngine: () => WorkflowEngine | null
-  getWorktreeManager: () => WorktreeManager | null
+  getWorktreeManager: () => Promise<WorktreeManager | null>
   sessionHistory: SessionHistory
   usageHistory: UsageHistory
   reviewTracker: ReviewTracker

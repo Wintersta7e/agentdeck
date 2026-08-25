@@ -29,7 +29,7 @@ describe('ipc-worktree', () => {
       keep: vi.fn(() => Promise.resolve()),
       discard: vi.fn(() => Promise.resolve()),
     }
-    registerWorktreeHandlers(() => manager as unknown as WorktreeManager)
+    registerWorktreeHandlers(() => Promise.resolve(manager as unknown as WorktreeManager))
   })
 
   it('worktree:acquire rejects unsafe projectId', async () => {
@@ -47,5 +47,24 @@ describe('ipc-worktree', () => {
   it('worktree:acquire delegates to manager on valid input', async () => {
     await (call('worktree:acquire', 'proj-1', 'sess-1') as Promise<unknown>)
     expect(manager.acquire).toHaveBeenCalled()
+  })
+
+  it('worktree:acquire re-asks the getter on every call', async () => {
+    // The getter initialises on demand, so a call that arrives while WSL is
+    // still cold must not stop a later call from getting a live manager.
+    handlers.clear()
+    const getter = vi
+      .fn<() => Promise<WorktreeManager | null>>()
+      .mockResolvedValueOnce(null)
+      .mockResolvedValue(manager as unknown as WorktreeManager)
+    registerWorktreeHandlers(getter)
+
+    await expect(call('worktree:acquire', 'proj-1', 'sess-1') as Promise<unknown>).rejects.toThrow(
+      /Worktree isolation unavailable/,
+    )
+    await (call('worktree:acquire', 'proj-1', 'sess-1') as Promise<unknown>)
+
+    expect(manager.acquire).toHaveBeenCalledTimes(1)
+    expect(getter).toHaveBeenCalledTimes(2)
   })
 })

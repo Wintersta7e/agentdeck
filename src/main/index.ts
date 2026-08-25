@@ -14,7 +14,7 @@ import { initGitStatusCache, flushGitStatusCache } from './git-status'
 import { initLogger, createLogger, closeLogger } from './logger'
 import { seedWorkflows } from './workflow-seeds'
 import type { WorkflowEngine } from './workflow-engine'
-import type { WorktreeManager } from './worktree-manager'
+import { createWorktreeProvider, type WorktreeProvider } from './worktree-provider'
 import { createUsageHistory } from './usage-history'
 import { createSessionHistory } from './session-history'
 import { ptyBus } from './pty-bus'
@@ -60,7 +60,7 @@ let mainWindow: BrowserWindow | null = null
 let ptyManager: PtyManager | null = null
 let workflowEngine: WorkflowEngine | null = null
 let appStore: AppStore | null = null
-let worktreeManager: WorktreeManager | null = null
+let worktreeProvider: WorktreeProvider | null = null
 let templateStore: TemplateStore | null = null
 let templateEventsOff: (() => void) | null = null
 
@@ -98,7 +98,18 @@ app
     await seedWorkflows(appStore)
 
     const wslHome = await resolveWslHome()
-    worktreeManager = await initializeWorktreeManager(appStore, wslHome)
+    const storeForWorktrees = appStore
+    worktreeProvider = createWorktreeProvider({
+      // Re-resolve $HOME when startup couldn't: the first wsl.exe call after a
+      // Windows boot can time out while the distro spins up.
+      create: async () =>
+        initializeWorktreeManager(storeForWorktrees, wslHome ?? (await resolveWslHome())),
+      onReady: (mgr) => {
+        mgr.pruneOrphans().catch((err: unknown) => {
+          log.warn('Worktree prune failed', { err: String(err) })
+        })
+      },
+    })
 
     const agentdeckRoot = wslHome ? `${wslHome}/.agentdeck` : app.getPath('userData')
     const templateRuntime = await initializeTemplateRuntime(appStore, agentdeckRoot)
@@ -120,7 +131,7 @@ app
       getAppStore: () => appStore,
       getPtyManager: () => ptyManager,
       getWorkflowEngine: () => workflowEngine,
-      getWorktreeManager: () => worktreeManager,
+      getWorktreeManager: () => worktreeProvider?.get() ?? Promise.resolve(null),
       sessionHistory,
       usageHistory,
       reviewTracker,
@@ -165,33 +176,10 @@ app
       })
     }
 
-    // Prune orphaned worktrees from previous sessions (fire-and-forget).
-    worktreeManager?.pruneOrphans().catch((err: unknown) => {
-      log.warn('Worktree prune failed', { err: String(err) })
-    })
-
-    // If WSL was slow at startup and worktreeManager couldn't initialize,
-    // retry once after a delay — by then WSL has usually warmed up from
-    // other operations (agent detection, project listing). One retry only;
-    // if it still fails the user is missing WSL2 or has a broken distro.
-    if (!worktreeManager && appStore) {
-      const capturedStore = appStore
-      setTimeout(() => {
-        void (async () => {
-          if (worktreeManager) return
-          const retryHome = await resolveWslHome()
-          if (!retryHome) return
-          const retryMgr = await initializeWorktreeManager(capturedStore, retryHome)
-          if (retryMgr) {
-            worktreeManager = retryMgr
-            log.info('Worktree manager initialised on retry (WSL $HOME resolved late)')
-            retryMgr.pruneOrphans().catch((err: unknown) => {
-              log.warn('Worktree prune failed (late init)', { err: String(err) })
-            })
-          }
-        })()
-      }, 15_000)
-    }
+    // Warm the manager so worktrees orphaned by previous sessions are pruned at
+    // startup. If WSL isn't awake yet this resolves null and the provider
+    // retries on the first session start instead of latching off for good.
+    void worktreeProvider.get()
 
     if (mainWindow) {
       publishWslAvailability(mainWindow)

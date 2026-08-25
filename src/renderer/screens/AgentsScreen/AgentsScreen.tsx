@@ -55,7 +55,12 @@ function AgentTile({
         ? { label: 'Update available', tone: 'update' }
         : { label: 'Up to date', tone: 'installed' }
 
-  const canUpdate = installed && Boolean(agent.updateCmd) && !updating
+  // A missing binary has to stay actionable. An update can leave an agent
+  // unlinked (npm resolves the platform-specific optional dep badly and skips
+  // the bin symlink), and gating the button on `installed` meant the app that
+  // broke the binary offered no way to put it back.
+  const canAct =
+    Boolean(agent.updateCmd) && !updating && (!installed || Boolean(version?.updateAvailable))
 
   return (
     <article
@@ -96,7 +101,7 @@ function AgentTile({
         <button
           type="button"
           className="agent-tile__update-btn"
-          disabled={!canUpdate || !updateAvailable}
+          disabled={!canAct}
           onClick={() => onUpdate(agent.id)}
           title={
             !installed
@@ -106,7 +111,13 @@ function AgentTile({
                 : 'Already up to date'
           }
         >
-          {updating ? 'Updating…' : updateAvailable ? 'Update' : 'Up to date'}
+          {updating
+            ? 'Updating…'
+            : !installed
+              ? 'Install'
+              : updateAvailable
+                ? 'Update'
+                : 'Up to date'}
         </button>
       </div>
       {updating && (
