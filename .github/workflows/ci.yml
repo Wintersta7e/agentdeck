@@ -12,29 +12,42 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# Default GITHUB_TOKEN to read-only; this workflow doesn't write anything.
-permissions:
-  contents: read
+# No workflow-wide token: each job opts in to the scopes it needs.
+permissions: {}
 
+# Third-party actions are pinned to commit SHAs, not tags. A tag is mutable and
+# the trivy-action tags were hijacked in a March 2026 supply-chain attack; a SHA
+# cannot be repointed at new code. The trailing comment records the version.
 jobs:
   lint-and-test:
+    name: Lint, typecheck, test, build
     runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
 
     strategy:
+      # Report every Node version's result; don't let the first red hide the rest.
+      fail-fast: false
       matrix:
-        node-version: [22]
+        node-version: [22, 24]
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
+
+      # npm ci must not rewrite the lockfile. If it does, the lockfile was
+      # hand-edited or committed out of sync with package.json.
+      - name: Lockfile is in sync
+        run: git diff --exit-code package-lock.json
 
       - name: Lint
         run: npm run lint
@@ -51,14 +64,35 @@ jobs:
       - name: Build
         run: npm run build
 
-  coverage:
+  workflows:
+    name: Workflow lint (actionlint)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install actionlint
+        run: |
+          curl -sSL https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz \
+            | tar -xz -C /usr/local/bin actionlint
+
+      - name: Lint workflow files (blocking)
+        run: actionlint -color
+
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Use Node.js 22
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
           cache: 'npm'
@@ -66,12 +100,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Thresholds live in vitest.config.mts; a drop below them fails here.
       - name: Collect coverage (lcov)
         run: npm run test:coverage
 
       - name: Upload to Codecov
-        uses: codecov/codecov-action@v7
+        uses: codecov/codecov-action@0b35c9ecc4f0529d0eb674914510c22f85b196b4 # v7.1.0
         with:
           files: coverage/lcov.info
-          fail_ci_if_error: false
+          fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}
