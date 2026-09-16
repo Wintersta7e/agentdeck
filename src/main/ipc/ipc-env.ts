@@ -36,7 +36,7 @@ export interface EnvCtx {
  *   truth for project-scope lookups.
  */
 export function registerEnvIpc(ctx: EnvCtx): void {
-  ipcMain.handle(CH.envGetAgentPaths, async () => ({
+  ipcMain.handle(CH.envGetAgentPaths, () => ({
     claudeConfigDir: ctx.claudeConfigDir,
     codexHome: ctx.codexHome,
     agentdeckRoot: ctx.agentdeckRoot,

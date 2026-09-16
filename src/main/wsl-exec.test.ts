@@ -103,22 +103,22 @@ describe('wslRun', () => {
   })
 
   it('rejects with stderr text when the command fails', async () => {
-    respond('', 'permission denied\n', new Error('exit code 1') as NodeJS.ErrnoException)
+    respond('', 'permission denied\n', new Error('exit code 1'))
     await expect(wslRun('do thing')).rejects.toThrow('permission denied')
   })
 
   it('falls back to the error message when stderr is empty', async () => {
-    respond('', '', new Error('spawn ENOENT') as NodeJS.ErrnoException)
+    respond('', '', new Error('spawn ENOENT'))
     await expect(wslRun('x')).rejects.toThrow('spawn ENOENT')
   })
 
   it('returns stdout instead of throwing when fallbackStderrAsOutput is set and stdout was produced', async () => {
-    respond('1.2.3\n', 'warning: blah', new Error('exit 1') as NodeJS.ErrnoException)
+    respond('1.2.3\n', 'warning: blah', new Error('exit 1'))
     await expect(wslRun('npm -v', { fallbackStderrAsOutput: true })).resolves.toBe('1.2.3')
   })
 
   it('still rejects when fallbackStderrAsOutput is set but stdout is empty', async () => {
-    respond('', 'real failure', new Error('exit 2') as NodeJS.ErrnoException)
+    respond('', 'real failure', new Error('exit 2'))
     await expect(wslRun('x', { fallbackStderrAsOutput: true })).rejects.toThrow('real failure')
   })
 })
@@ -130,7 +130,7 @@ describe('wslTry', () => {
   })
 
   it('resolves to null on failure (default silent log)', async () => {
-    respond('', 'ENOENT', new Error('no such file') as NodeJS.ErrnoException)
+    respond('', 'ENOENT', new Error('no such file'))
     await expect(wslTry('cat /missing')).resolves.toBeNull()
   })
 

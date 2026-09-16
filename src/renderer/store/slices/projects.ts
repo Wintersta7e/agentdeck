@@ -40,12 +40,7 @@ export interface ProjectsSlice {
 
 export const createProjectsSlice: StateCreator<AppState, [], [], ProjectsSlice> = (set, get) => ({
   projects: [],
-  setProjects: (projects) =>
-    // Single set call so subscribers see one consistent transition rather
-    // than an intermediate state where projects updated but gitStatuses
-    // still has entries for deleted projects. Inline the prune calculation
-    // — the matching `pruneGitStatuses` action stays on HomeSlice for
-    // standalone callers.
+  setProjects: (projects) => {
     set((state) => {
       const liveIds = new Set(projects.map((p) => p.id))
       const next: typeof state.gitStatuses = {}
@@ -55,10 +50,13 @@ export const createProjectsSlice: StateCreator<AppState, [], [], ProjectsSlice> 
         else pruned = true
       }
       return pruned ? { projects, gitStatuses: next } : { projects }
-    }),
+    })
+  },
 
   agentStatus: {},
-  setAgentStatus: (status) => set({ agentStatus: status }),
+  setAgentStatus: (status) => {
+    set({ agentStatus: status })
+  },
   agentRefreshing: false,
   refreshAgentStatus: async () => {
     set({ agentRefreshing: true })
@@ -87,7 +85,7 @@ export const createProjectsSlice: StateCreator<AppState, [], [], ProjectsSlice> 
 
   agentVersions: {},
 
-  setAgentVersion: (agentId, info) =>
+  setAgentVersion: (agentId, info) => {
     set((state) => ({
       agentVersions: {
         ...state.agentVersions,
@@ -97,9 +95,10 @@ export const createProjectsSlice: StateCreator<AppState, [], [], ProjectsSlice> 
           updating: state.agentVersions[agentId]?.updating ?? false,
         },
       },
-    })),
+    }))
+  },
 
-  setAgentUpdating: (agentId, updating) =>
+  setAgentUpdating: (agentId, updating) => {
     set((state) => {
       const existing = state.agentVersions[agentId]
       if (!existing) return state
@@ -109,7 +108,8 @@ export const createProjectsSlice: StateCreator<AppState, [], [], ProjectsSlice> 
           [agentId]: { ...existing, updating },
         },
       }
-    }),
+    })
+  },
 
   // Visible Agents
   visibleAgents: null,
@@ -125,6 +125,10 @@ export const createProjectsSlice: StateCreator<AppState, [], [], ProjectsSlice> 
   // Cached HomeScreen data
   wslUsername: '',
   wslDistro: '',
-  setWslUsername: (name) => set({ wslUsername: name }),
-  setWslDistro: (distro) => set({ wslDistro: distro }),
+  setWslUsername: (name) => {
+    set({ wslUsername: name })
+  },
+  setWslDistro: (distro) => {
+    set({ wslDistro: distro })
+  },
 })

@@ -9,13 +9,16 @@ const log = createLogger('ipc-skills')
 export function registerSkillHandlers(): void {
   ipcMain.handle(
     CH.skillsList,
-    async (_, opts: { projectPath?: string; includeGlobal?: boolean }) => {
-      if (opts && typeof opts !== 'object') {
+    // `unknown`, not a declared options shape: the payload crosses IPC, so the
+    // checks below are what establishes it — including that it arrived at all.
+    async (_, opts: unknown) => {
+      if (opts !== undefined && (opts === null || typeof opts !== 'object')) {
         throw new Error('skills:list expects an options object')
       }
+      const raw = opts as { projectPath?: unknown; includeGlobal?: unknown } | undefined
       const projectPath =
-        typeof opts?.projectPath === 'string' && opts.projectPath.length > 0
-          ? opts.projectPath
+        typeof raw?.projectPath === 'string' && raw.projectPath.length > 0
+          ? raw.projectPath
           : undefined
 
       if (projectPath) {
@@ -32,7 +35,7 @@ export function registerSkillHandlers(): void {
         }
       }
 
-      const includeGlobal = opts?.includeGlobal !== false
+      const includeGlobal = raw?.includeGlobal !== false
       log.debug(CH.skillsList, { projectPath, includeGlobal })
       return listSkills({ projectPath, includeGlobal })
     },

@@ -13,8 +13,7 @@ function statusTone(status: WorkflowStatus | undefined): string {
   if (status === 'running') return 'running'
   if (status === 'done') return 'done'
   if (status === 'error') return 'error'
-  if (status === 'stopped') return 'stopped'
-  return 'idle'
+  return 'stopped'
 }
 
 function statusLabel(status: WorkflowStatus | undefined): string {
@@ -93,7 +92,9 @@ export function WorkflowsScreen(): React.JSX.Element {
                 key={wf.id}
                 type="button"
                 className={`workflow-card workflow-card--${tone}`}
-                onClick={() => handleOpen(wf)}
+                onClick={() => {
+                  handleOpen(wf)
+                }}
                 title={`Open ${wf.name}`}
               >
                 <div className="workflow-card__head">

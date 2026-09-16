@@ -38,14 +38,14 @@ export function parseGitStatusPorcelainV2(output: string): ParsedPorcelain {
     if (line.startsWith('# branch.head ')) {
       branch = line.slice('# branch.head '.length)
     } else if (line.startsWith('# branch.ab ')) {
-      const match = line.match(/\+(\d+) -(\d+)/)
+      const match = /\+(\d+) -(\d+)/.exec(line)
       if (match?.[1] && match[2]) {
         ahead = parseInt(match[1], 10)
         behind = parseInt(match[2], 10)
       }
     } else if (line.startsWith('1 ') || line.startsWith('2 ')) {
       const xy = line.slice(2, 4)
-      if (xy[0] !== '.') staged++
+      if (!xy.startsWith('.')) staged++
       if (xy[1] !== '.') unstaged++
     } else if (line.startsWith('? ')) {
       untracked++
@@ -56,8 +56,8 @@ export function parseGitStatusPorcelainV2(output: string): ParsedPorcelain {
 }
 
 export function parseGitDiffStat(output: string): { insertions: number; deletions: number } {
-  const match = output.match(/(\d+) insertion[s]?\(\+\)/)
-  const matchDel = output.match(/(\d+) deletion[s]?\(-\)/)
+  const match = /(\d+) insertion[s]?\(\+\)/.exec(output)
+  const matchDel = /(\d+) deletion[s]?\(-\)/.exec(output)
   return {
     insertions: match?.[1] ? parseInt(match[1], 10) : 0,
     deletions: matchDel?.[1] ? parseInt(matchDel[1], 10) : 0,
@@ -81,7 +81,7 @@ const CACHE_VERSION = 1
 
 interface DiskCacheFile {
   version: number
-  entries: Array<{ key: string; status: GitStatus; fetchedAt: number }>
+  entries: { key: string; status: GitStatus; fetchedAt: number }[]
 }
 
 /** Initialize disk cache path — call once at startup with app.getPath('userData') */
@@ -98,6 +98,7 @@ export function initGitStatusCache(userDataPath: string): void {
         ? (parsed.entries ?? [])
         : []
     for (const entry of entries) {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the JSON.parse cast above asserts a shape the file on disk may not have
       if (entry.key && entry.status) {
         cache.set(entry.key, { status: entry.status, fetchedAt: entry.fetchedAt })
       }

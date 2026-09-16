@@ -70,9 +70,7 @@ export function PanelDivider({
         cleanupRef.current = null
         setDragging(false)
 
-        if (panel) {
-          onResizeEnd(panel.offsetWidth)
-        }
+        onResizeEnd(panel.offsetWidth)
 
         // Signal terminals to re-fit after panel resize
         window.dispatchEvent(new CustomEvent('agentdeck:pane-resize-end'))

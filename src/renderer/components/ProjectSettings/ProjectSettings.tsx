@@ -119,14 +119,22 @@ export function ProjectSettings(): React.JSX.Element | null {
           <div
             className="project-icon-large"
             style={{ background: accentColor }}
-            onClick={() => setActiveTab(4)}
+            onClick={() => {
+              setActiveTab(4)
+            }}
           >
             {icon}
           </div>
           <div className="project-header-info">
             <div className="project-title-row">
               <div className="project-title">{draft.name || 'Untitled'}</div>
-              <button type="button" className="project-title-edit" onClick={() => setActiveTab(0)}>
+              <button
+                type="button"
+                className="project-title-edit"
+                onClick={() => {
+                  setActiveTab(0)
+                }}
+              >
                 rename
               </button>
             </div>
@@ -155,7 +163,13 @@ export function ProjectSettings(): React.JSX.Element | null {
             >
               {isRunning ? 'Switch to session' : 'Open session'}
             </button>
-            <button type="button" className="header-action-btn" onClick={() => setActiveTab(5)}>
+            <button
+              type="button"
+              className="header-action-btn"
+              onClick={() => {
+                setActiveTab(5)
+              }}
+            >
               Remove project
             </button>
           </div>
@@ -167,7 +181,9 @@ export function ProjectSettings(): React.JSX.Element | null {
               key={tab}
               type="button"
               className={`settings-tab${i === activeTab ? ' active' : ''}`}
-              onClick={() => setActiveTab(i)}
+              onClick={() => {
+                setActiveTab(i)
+              }}
             >
               {tab}
             </button>

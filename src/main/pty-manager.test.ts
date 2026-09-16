@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 // Track onData/onExit callbacks for each spawned PTY
-type PtyCallbacks = {
+interface PtyCallbacks {
   onData: ((data: string) => void)[]
   onExit: ((e: { exitCode: number }) => void)[]
 }
@@ -568,7 +568,7 @@ describe('createPtyManager', () => {
       // The activity should still be detected after buffer cap
       const activityCalls = vi
         .mocked(win.webContents.send)
-        .mock.calls.filter((c) => (c[0] as string).startsWith('pty:activity:'))
+        .mock.calls.filter((c) => c[0].startsWith('pty:activity:'))
       // COV-13: The test validates buffer capping doesn't crash. Activity detection
       // requires setImmediate (not covered by fake timers), so we verify no throw
       // occurred and the PTY manager is still functional after the 8KB cap.

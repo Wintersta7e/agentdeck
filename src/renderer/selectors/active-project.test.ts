@@ -3,7 +3,7 @@ import { getActiveProjectId } from './active-project'
 
 describe('getActiveProjectId', () => {
   it('returns null when activeSessionId is null', () => {
-    expect(getActiveProjectId({ activeSessionId: null, sessions: {} } as never)).toBeNull()
+    expect(getActiveProjectId({ activeSessionId: null, sessions: {} })).toBeNull()
   })
 
   it('returns null when active session has no projectId', () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { promisify } from 'node:util'
 
-let stubs: Array<{ stdout: string; err: Error | undefined }> = []
+let stubs: { stdout: string; err: Error | undefined }[] = []
 
 vi.mock('node:child_process', () => {
   const mockFn = vi.fn((_cmd, _args, _opts, cb) => {
@@ -18,13 +18,10 @@ vi.mock('node:child_process', () => {
   // Add custom promisify handler to match execFile behavior
   const customPromisifySymbol = promisify.custom as unknown as string | symbol
   ;(
-    mockFn as unknown as {
-      [K in string | symbol]: (
-        cmd: string,
-        args: string[],
-        opts: unknown,
-      ) => Promise<{ stdout: string; stderr: string }>
-    }
+    mockFn as unknown as Record<
+      string | symbol,
+      (cmd: string, args: string[], opts: unknown) => Promise<{ stdout: string; stderr: string }>
+    >
   )[customPromisifySymbol] = (cmd: string, args: string[], opts: unknown) => {
     return new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
       mockFn(cmd, args, opts, (err: Error | null, stdout: string, stderr: string) => {
@@ -46,7 +43,7 @@ describe('readAmazonQActiveModel', () => {
     stubs = []
   })
 
-  function stubOnce(stdout: string, err: Error | undefined = undefined) {
+  function stubOnce(stdout: string, err?: Error) {
     stubs.push({ stdout, err })
   }
 

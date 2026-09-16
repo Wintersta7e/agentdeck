@@ -86,7 +86,7 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
   // atomically with the session mutation so subscribers never see a pane
   // grid that points at sessions that don't exist or vice versa.
   // workflows.ts/closeWorkflow has the symmetric coupling on activeSessionId.
-  addSession: (sessionId, projectId, overrides) =>
+  addSession: (sessionId, projectId, overrides) => {
     set((state) => {
       const paneSessions = [...state.paneSessions]
       // Place new session in the focused pane so it's always visible
@@ -127,7 +127,8 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
         paneSessions,
         openSessionIds,
       }
-    }),
+    })
+  },
 
   captureSessionSnapshot: async (sessionId, agentId) => {
     try {
@@ -156,7 +157,7 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
     }
   },
 
-  setSessionStatus: (sessionId, status) =>
+  setSessionStatus: (sessionId, status) => {
     set((state) => {
       const existing = state.sessions[sessionId]
       if (!existing) return state
@@ -166,9 +167,10 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
           [sessionId]: { ...existing, status },
         },
       }
-    }),
+    })
+  },
 
-  applySessionStatus: (id, next, reason) =>
+  applySessionStatus: (id, next, reason) => {
     set((state) => {
       const sess = state.sessions[id]
       if (!sess) return {}
@@ -185,21 +187,24 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
             ),
       }
       return { sessions: { ...state.sessions, [id]: updated } }
-    }),
+    })
+  },
 
-  setApprovalState: (id, nextState) =>
+  setApprovalState: (id, nextState) => {
     set((state) => {
       const sess = state.sessions[id]
       if (!sess) return {}
       return { sessions: { ...state.sessions, [id]: { ...sess, approvalState: nextState } } }
-    }),
+    })
+  },
 
-  setSeedTemplateId: (id, templateId) =>
+  setSeedTemplateId: (id, templateId) => {
     set((state) => {
       const sess = state.sessions[id]
       if (!sess) return {}
       return { sessions: { ...state.sessions, [id]: { ...sess, seedTemplateId: templateId } } }
-    }),
+    })
+  },
 
   openSession: (seed) => {
     // Cryptographically-random suffix — Math.random() is flagged by CodeQL
@@ -231,7 +236,7 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
     return id
   },
 
-  pruneSessionFromTabs: (id) =>
+  pruneSessionFromTabs: (id) => {
     set((state) => {
       if (!state.sessions[id]) return {}
       const openSessionIds = state.openSessionIds.filter((x) => x !== id)
@@ -248,9 +253,10 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
       }
       const { [id]: _removed, ...sessions } = state.sessions
       return { sessions, openSessionIds, paneSessions, activeSessionId: nextActive }
-    }),
+    })
+  },
 
-  setActiveSession: (sessionId) =>
+  setActiveSession: (sessionId) => {
     set((state) => {
       const paneSessions = [...state.paneSessions]
       // If session isn't already in a visible pane, put it in the focused pane
@@ -263,11 +269,14 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
         paneSessions[targetPane] = sessionId
       }
       return { activeSessionId: sessionId, currentView: 'sessions' as const, paneSessions }
-    }),
+    })
+  },
 
-  clearActiveSession: () => set({ activeSessionId: null }),
+  clearActiveSession: () => {
+    set({ activeSessionId: null })
+  },
 
-  removeSession: (sessionId) =>
+  removeSession: (sessionId) => {
     set((state) => {
       // Keep the session in the sessions map (for timeline/digest after close)
       // but mark it as exited. Only remove from pane slots and tab navigation.
@@ -339,7 +348,8 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
         activeWorkflowId: nextWorkflowId,
         paneSessions,
       }
-    }),
+    })
+  },
 
   getSessionForProject: (projectId) => {
     const { sessions } = get()
@@ -351,7 +361,7 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
   activityFeeds: {},
   writeCountBySession: {},
 
-  addActivityEvent: (sessionId, event) =>
+  addActivityEvent: (sessionId, event) => {
     set((state) => {
       // Drop late-arriving events for sessions that have been evicted from the
       // store. Without this guard a buffered pty:activity IPC firing after the
@@ -371,15 +381,18 @@ export const createSessionsSlice: StateCreator<AppState, [], [], SessionsSlice> 
         [sessionId]: (state.writeCountBySession[sessionId] ?? 0) + 1,
       }
       return { activityFeeds, writeCountBySession }
-    }),
+    })
+  },
 
   // Worktree isolation paths
   worktreePaths: {},
-  setWorktreePath: (sessionId, result) =>
-    set((s) => ({ worktreePaths: { ...s.worktreePaths, [sessionId]: result } })),
-  clearWorktreePath: (sessionId) =>
+  setWorktreePath: (sessionId, result) => {
+    set((s) => ({ worktreePaths: { ...s.worktreePaths, [sessionId]: result } }))
+  },
+  clearWorktreePath: (sessionId) => {
     set((s) => {
       const { [sessionId]: _, ...rest } = s.worktreePaths
       return { worktreePaths: rest }
-    }),
+    })
+  },
 })

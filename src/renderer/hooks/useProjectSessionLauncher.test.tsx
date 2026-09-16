@@ -20,7 +20,7 @@ vi.mock('./useProjects', () => ({
 import { useProjectSessionLauncher } from './useProjectSessionLauncher'
 
 function project(over: Partial<Project>): Project {
-  return { id: 'p1', name: 'P1', path: '/home/u/p1', ...over } as Project
+  return { id: 'p1', name: 'P1', path: '/home/u/p1', ...over }
 }
 
 beforeEach(() => {

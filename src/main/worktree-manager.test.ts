@@ -40,8 +40,12 @@ vi.mock('fs', () => {
     // Async fs.promises versions for the updated worktree-manager
     promises: {
       readFile: vi.fn(async (filepath: string) => readFn(filepath)),
-      writeFile: vi.fn(async (filepath: string, data: string) => writeFn(filepath, data)),
-      rename: vi.fn(async (src: string, dest: string) => renameFn(src, dest)),
+      writeFile: vi.fn(async (filepath: string, data: string) => {
+        writeFn(filepath, data)
+      }),
+      rename: vi.fn(async (src: string, dest: string) => {
+        renameFn(src, dest)
+      }),
       mkdir: vi.fn(async () => mkdirFn()),
     },
   }
@@ -306,7 +310,7 @@ describe('WorktreeManager — acquire', () => {
 
 async function setupWorktreeSession(
   git: ReturnType<typeof createMockGit>,
-  projectPath: string = '/home/user/project-a',
+  projectPath = '/home/user/project-a',
 ): Promise<{
   mgr: Awaited<ReturnType<typeof createWorktreeManager>>
   primaryId: string
@@ -524,8 +528,8 @@ describe('WorktreeManager — pruneOrphans', () => {
 
     // Read registry from the in-memory fs store, set lastUsed to 25h ago, write back
     const regPath = `${REGISTRY_DIR}/registry.json`
-    const raw = vi.mocked(fs.readFileSync)(regPath, 'utf-8') as string
-    const data = JSON.parse(raw) as { entries: Array<{ lastUsed: number }> }
+    const raw = vi.mocked(fs.readFileSync)(regPath, 'utf-8')
+    const data = JSON.parse(raw) as { entries: { lastUsed: number }[] }
     for (const entry of data.entries) {
       entry.lastUsed = Date.now() - 25 * 60 * 60 * 1000
     }
@@ -620,6 +624,8 @@ describe('WorktreeManager — releasePrimary', () => {
     const mgr = await createWorktreeManager(git, lookup, REGISTRY_DIR)
 
     // Should not throw
-    expect(() => mgr.releasePrimary('nonexistent', 'sess-1')).not.toThrow()
+    expect(() => {
+      mgr.releasePrimary('nonexistent', 'sess-1')
+    }).not.toThrow()
   })
 })

@@ -1,5 +1,5 @@
 import type { AgentType } from '../shared/types'
-import type { ActiveModelReader, DetectorOutput } from './active-model-detectors'
+import type { DetectorOutput } from './active-model-detectors'
 import { DETECTORS } from './active-model-detectors'
 import { isBuiltinAgent } from '../shared/agents'
 
@@ -36,8 +36,9 @@ export async function resolveActiveModel(
   opts: ResolveOpts = {},
 ): Promise<DetectorOutput> {
   if (!isBuiltinAgent(agentId)) return { modelId: null }
-  const reader: ActiveModelReader | undefined = DETECTORS[agentId]
-  if (!reader) return { modelId: null }
+  // DETECTORS is exhaustive over BuiltinAgentId by construction, and agentId is
+  // narrowed to one above, so there is no missing-reader case to guard.
+  const reader = DETECTORS[agentId]
 
   if (opts.forceRefresh) {
     const seq = ++nextSeq

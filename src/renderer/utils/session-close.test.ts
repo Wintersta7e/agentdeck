@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import type { Mock } from 'vitest'
 import { useAppStore } from '../store/appStore'
+
+// Typed as the bridge declares it, so a promise-returning mock is correct.
+type InspectFn = typeof window.agentDeck.worktree.inspect
 
 const invocations: string[] = []
 const makeMock = () => {
@@ -55,7 +59,6 @@ describe('closeSession orchestrator', () => {
       notifications: [],
       worktreePaths: { s1: { isolated: true, path: '/tmp/wt' } },
     } as never)
-    globalThis.window = globalThis.window || ({} as Window & typeof globalThis)
     // @ts-expect-error patching window.agentDeck with a minimal test shim
     window.agentDeck = makeMock()
   })
@@ -70,7 +73,7 @@ describe('closeSession orchestrator', () => {
   })
 
   it('cancel path: returns without calling pty.kill or mutating sessions', async () => {
-    ;(window.agentDeck.worktree.inspect as ReturnType<typeof vi.fn>).mockImplementation(
+    ;(window.agentDeck.worktree.inspect as unknown as Mock<InspectFn>).mockImplementation(
       async () => {
         invocations.push('inspect')
         return { hasChanges: true, hasUnmerged: false, branch: 'x' }
@@ -88,7 +91,7 @@ describe('closeSession orchestrator', () => {
   })
 
   it('auto-keep path (unmerged commits, no working changes): keeps the worktree, never discards', async () => {
-    ;(window.agentDeck.worktree.inspect as ReturnType<typeof vi.fn>).mockImplementation(
+    ;(window.agentDeck.worktree.inspect as unknown as Mock<InspectFn>).mockImplementation(
       async () => {
         invocations.push('inspect')
         // Committed-but-unmerged work with a clean working tree -> auto 'keep'.
@@ -116,12 +119,16 @@ describe('closeSession orchestrator', () => {
     const { closeSession, __resetCloseSessionGuardForTest } = await import('./session-close')
     __resetCloseSessionGuardForTest()
 
-    type Inspection = { hasChanges: boolean; hasUnmerged: boolean; branch: string }
+    interface Inspection {
+      hasChanges: boolean
+      hasUnmerged: boolean
+      branch: string
+    }
     // Slow the first worktree.inspect so the second closeSession call lands
     // while the first is still in orchestration. Resolver is exposed via the
     // closure so the test can unblock the first inspect deterministically.
     const gate: { resolve: (v: Inspection) => void } = { resolve: () => {} }
-    ;(window.agentDeck.worktree.inspect as ReturnType<typeof vi.fn>).mockImplementationOnce(
+    ;(window.agentDeck.worktree.inspect as unknown as Mock<InspectFn>).mockImplementationOnce(
       () =>
         new Promise<Inspection>((resolve) => {
           invocations.push('inspect')

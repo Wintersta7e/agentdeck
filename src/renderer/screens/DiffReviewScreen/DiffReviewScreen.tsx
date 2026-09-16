@@ -81,7 +81,9 @@ export function DiffReviewScreen(): React.JSX.Element {
       .catch((err: unknown) => {
         addNotification('error', `Keep failed: ${String(err)}`)
       })
-      .finally(() => setInflight(null))
+      .finally(() => {
+        setInflight(null)
+      })
   }, [activeSessionId, addNotification, clearWorktreePath, removeSession, setCurrentView])
 
   const handleDiscard = useCallback(() => {
@@ -98,7 +100,9 @@ export function DiffReviewScreen(): React.JSX.Element {
       .catch((err: unknown) => {
         addNotification('error', `Discard failed: ${String(err)}`)
       })
-      .finally(() => setInflight(null))
+      .finally(() => {
+        setInflight(null)
+      })
   }, [activeSessionId, addNotification, clearWorktreePath, removeSession, setCurrentView])
 
   const handleRequestChanges = useCallback(() => {
@@ -119,7 +123,9 @@ export function DiffReviewScreen(): React.JSX.Element {
       .catch((err: unknown) => {
         addNotification('error', `Send failed: ${String(err)}`)
       })
-      .finally(() => setInflight(null))
+      .finally(() => {
+        setInflight(null)
+      })
   }, [activeSessionId, comment, addNotification, setCurrentView])
 
   return (
@@ -210,7 +216,9 @@ export function DiffReviewScreen(): React.JSX.Element {
                   <button
                     type="button"
                     className="dr-link"
-                    onClick={() => setCurrentView('sessions')}
+                    onClick={() => {
+                      setCurrentView('sessions')
+                    }}
                   >
                     Return to session →
                   </button>
@@ -235,7 +243,9 @@ export function DiffReviewScreen(): React.JSX.Element {
             <div className="dr-panel__body">
               <textarea
                 value={comment}
-                onChange={(e) => setComment(e.target.value)}
+                onChange={(e) => {
+                  setComment(e.target.value)
+                }}
                 placeholder="Leave feedback here — it gets piped straight into the agent's stdin when you click Request changes."
                 className="dr-textarea"
                 rows={6}

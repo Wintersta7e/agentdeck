@@ -139,7 +139,9 @@ function PaletteInner({
     const rafId = requestAnimationFrame(() => {
       inputRef.current?.focus()
     })
-    return () => cancelAnimationFrame(rafId)
+    return () => {
+      cancelAnimationFrame(rafId)
+    }
   }, [])
 
   // Stable session snapshot — only changes when session list or statuses change,
@@ -189,7 +191,14 @@ function PaletteInner({
 
   const handleThemeSelect = useCallback(
     (themeId: string, x?: number, y?: number) => {
-      applyThemeWithTransition(themeId, () => setTheme(themeId), x, y)
+      applyThemeWithTransition(
+        themeId,
+        () => {
+          setTheme(themeId)
+        },
+        x,
+        y,
+      )
       closePalette()
     },
     [setTheme, closePalette],
@@ -328,7 +337,9 @@ function PaletteInner({
 
     // Use capture phase so Escape is caught before App's handler
     window.addEventListener('keydown', handleKeyDown, true)
-    return () => window.removeEventListener('keydown', handleKeyDown, true)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, true)
+    }
   }, [subMenu, closePalette, flatItems, executeItem])
 
   // Scroll selected item into view
@@ -382,7 +393,9 @@ function PaletteInner({
             placeholder="Open project, run template, switch session..."
             aria-label="Command palette search"
             value={query}
-            onChange={(e) => handleQueryChange(e.target.value)}
+            onChange={(e) => {
+              handleQueryChange(e.target.value)
+            }}
           />
           <span className="palette-esc">ESC</span>
         </div>
@@ -393,7 +406,9 @@ function PaletteInner({
             <button
               key={tab.value}
               className={`scope-tab${scope === tab.value ? ' active' : ''}`}
-              onClick={() => handleScopeChange(tab.value)}
+              onClick={() => {
+                handleScopeChange(tab.value)
+              }}
             >
               {tab.label}
             </button>
@@ -440,8 +455,12 @@ function PaletteInner({
                       <div
                         key={item.id}
                         className={`result-item${isSelected ? ' selected' : ''}${item.disabled ? ' disabled' : ''}`}
-                        onClick={() => !item.disabled && executeItem(item)}
-                        onMouseEnter={() => setSelectedIndex(flatIdx)}
+                        onClick={() => {
+                          if (!item.disabled) executeItem(item)
+                        }}
+                        onMouseEnter={() => {
+                          setSelectedIndex(flatIdx)
+                        }}
                       >
                         <div className={`result-icon${item.iconClass ? ` ${item.iconClass}` : ''}`}>
                           {item.icon}

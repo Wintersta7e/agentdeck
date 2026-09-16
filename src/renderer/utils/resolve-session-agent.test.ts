@@ -11,7 +11,7 @@ function makeSession(over: Partial<Session>): Session {
     approvalState: 'idle',
     seedTemplateId: null,
     ...over,
-  } as Session
+  }
 }
 
 function makeProject(over: Partial<Project>): Project {
@@ -20,7 +20,7 @@ function makeProject(over: Partial<Project>): Project {
     name: 'Project 1',
     path: '/home/user/project',
     ...over,
-  } as Project
+  }
 }
 
 describe('resolveSessionAgent', () => {

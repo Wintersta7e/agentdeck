@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react'
 import type {
   WorkflowNode,
   WorkflowNodeStatus,
-  AgentType,
   AgentPermission,
   SkillInfo,
 } from '../../../shared/types'
@@ -179,7 +178,9 @@ export default function WorkflowNodeEditorPanel({
           <input
             className="wf-ne-input"
             value={node.name}
-            onChange={(e) => update({ name: e.target.value })}
+            onChange={(e) => {
+              update({ name: e.target.value })
+            }}
           />
         </div>
 
@@ -203,7 +204,7 @@ export default function WorkflowNodeEditorPanel({
               className="wf-ne-select"
               value={node.agent ?? 'claude-code'}
               onChange={(e) => {
-                const newAgent = e.target.value as AgentType
+                const newAgent = e.target.value
                 const patch: Partial<typeof node> = { agent: newAgent }
                 if (newAgent !== 'codex' && node.skillId) {
                   patch.skillId = undefined
@@ -232,7 +233,9 @@ export default function WorkflowNodeEditorPanel({
             <select
               className="wf-ne-select"
               value={node.permission ?? 'read'}
-              onChange={(e) => update({ permission: e.target.value as AgentPermission })}
+              onChange={(e) => {
+                update({ permission: e.target.value as AgentPermission })
+              }}
             >
               <option value="read">Read-only</option>
               <option value="edit">Edit (read + write files)</option>
@@ -256,7 +259,9 @@ export default function WorkflowNodeEditorPanel({
                 <button
                   className="wf-ne-skill-chip-clear"
                   type="button"
-                  onClick={() => update({ skillId: undefined })}
+                  onClick={() => {
+                    update({ skillId: undefined })
+                  }}
                   title="Remove skill"
                 >
                   {'\u00D7'}
@@ -266,7 +271,9 @@ export default function WorkflowNodeEditorPanel({
             <select
               className="wf-ne-select"
               value={node.skillId ?? ''}
-              onChange={(e) => update({ skillId: e.target.value || undefined })}
+              onChange={(e) => {
+                update({ skillId: e.target.value || undefined })
+              }}
             >
               <option value="">None</option>
               {(() => {
@@ -307,7 +314,9 @@ export default function WorkflowNodeEditorPanel({
               <select
                 className="wf-ne-select wf-ne-role-select"
                 value={roleFormMode === 'create' ? NEW_ROLE_SENTINEL : (node.roleId ?? '')}
-                onChange={(e) => handleRoleDropdownChange(e.target.value)}
+                onChange={(e) => {
+                  handleRoleDropdownChange(e.target.value)
+                }}
               >
                 <option value="">No role</option>
                 {roles.map((r) => (
@@ -374,15 +383,13 @@ export default function WorkflowNodeEditorPanel({
                   ? (node.prompt ?? '')
                   : node.type === 'shell'
                     ? (node.command ?? '')
-                    : node.type === 'checkpoint'
-                      ? (node.message ?? '')
-                      : ''
+                    : (node.message ?? '')
               }
               rows={5}
               onChange={(e) => {
                 if (node.type === 'agent') update({ prompt: e.target.value })
                 else if (node.type === 'shell') update({ command: e.target.value })
-                else if (node.type === 'checkpoint') update({ message: e.target.value })
+                else update({ message: e.target.value })
               }}
             />
           </div>
@@ -396,9 +403,9 @@ export default function WorkflowNodeEditorPanel({
               <select
                 className="wf-ne-select"
                 value={node.conditionMode ?? 'exitCode'}
-                onChange={(e) =>
+                onChange={(e) => {
                   update({ conditionMode: e.target.value as 'exitCode' | 'outputMatch' })
-                }
+                }}
               >
                 <option value="exitCode">Exit Code (0 = true)</option>
                 <option value="outputMatch">Output Match (regex)</option>
@@ -411,7 +418,9 @@ export default function WorkflowNodeEditorPanel({
                   type="text"
                   className="wf-ne-input"
                   value={node.conditionPattern ?? ''}
-                  onChange={(e) => update({ conditionPattern: e.target.value })}
+                  onChange={(e) => {
+                    update({ conditionPattern: e.target.value })
+                  }}
                   placeholder="e.g. PASS|SUCCESS|No errors"
                 />
               </div>
@@ -435,7 +444,9 @@ export default function WorkflowNodeEditorPanel({
               className="wf-ne-input"
               value={node.agentFlags ?? ''}
               placeholder="Optional CLI flags"
-              onChange={(e) => update({ agentFlags: e.target.value })}
+              onChange={(e) => {
+                update({ agentFlags: e.target.value })
+              }}
             />
           </div>
         )}

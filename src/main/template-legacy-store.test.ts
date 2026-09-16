@@ -3,19 +3,16 @@ import type { Template, TemplateFile } from '../shared/types'
 import { createLegacyStoreAdapter } from './template-legacy-store'
 
 interface MiniStore {
-  get: <T>(key: string) => T
-  set: <T>(key: string, value: T) => void
+  get: (key: string) => unknown
+  set: (key: string, value: unknown) => void
   has: (key: string) => boolean
 }
 
 const makeStore = (initial: unknown[] = []): MiniStore => {
   let state = initial
   return {
-    get: <T>(key: string): T => {
-      if (key === 'templates') return state as T
-      return undefined as T
-    },
-    set: <T>(key: string, v: T): void => {
+    get: (key: string): unknown => (key === 'templates' ? state : undefined),
+    set: (key: string, v: unknown): void => {
       if (key === 'templates') state = v as unknown[]
     },
     has: (key: string): boolean => key === 'templates',
@@ -51,6 +48,6 @@ describe('template-legacy-store', () => {
       pinned: false,
     }
     await adapter.save(file)
-    expect(store.get<unknown[]>('templates')).toHaveLength(1)
+    expect(store.get('templates') as unknown[]).toHaveLength(1)
   })
 })

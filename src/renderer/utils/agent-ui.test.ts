@@ -42,7 +42,9 @@ describe('AGENT_BY_ID / AGENT_IDS', () => {
 
   it('AGENT_IDS length matches AGENTS length and preserves order', () => {
     expect(AGENT_IDS).toHaveLength(AGENTS.length)
-    AGENT_IDS.forEach((id, i) => expect(id).toBe(AGENTS[i]?.id))
+    AGENT_IDS.forEach((id, i) => {
+      expect(id).toBe(AGENTS[i]?.id)
+    })
   })
 })
 

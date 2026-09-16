@@ -55,7 +55,7 @@ export const createNotificationsSlice: StateCreator<AppState, [], [], Notificati
   notifications: [],
   silencedToastIds: [],
 
-  addNotification: (type, message) =>
+  addNotification: (type, message) => {
     set((state) => {
       const next: BasicNotification = {
         id: `n-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -67,7 +67,8 @@ export const createNotificationsSlice: StateCreator<AppState, [], [], Notificati
       return {
         notifications: [...state.notifications, next].slice(-MAX_NOTIFICATIONS),
       }
-    }),
+    })
+  },
 
   addConfirmNotification: (payload) => {
     return new Promise((resolve) => {
@@ -86,7 +87,7 @@ export const createNotificationsSlice: StateCreator<AppState, [], [], Notificati
       // leak their inFlight guard forever.
       const timeoutHandle = setTimeout(() => {
         if (settled) return
-        void window.agentDeck.log.send(
+        window.agentDeck.log.send(
           'warn',
           'notifications',
           `confirm "${payload.title}" timed out after ${CONFIRM_TIMEOUT_MS}ms — resolving as cancel`,
@@ -104,7 +105,7 @@ export const createNotificationsSlice: StateCreator<AppState, [], [], Notificati
     })
   },
 
-  dismissNotification: (id) =>
+  dismissNotification: (id) => {
     set((state) => {
       const inNotifications = state.notifications.some((n) => n.id === id)
       const inSilenced = state.silencedToastIds.includes(id)
@@ -117,12 +118,14 @@ export const createNotificationsSlice: StateCreator<AppState, [], [], Notificati
           ? state.silencedToastIds.filter((x) => x !== id)
           : state.silencedToastIds,
       }
-    }),
+    })
+  },
 
-  silenceToast: (id) =>
+  silenceToast: (id) => {
     set((state) =>
       state.silencedToastIds.includes(id)
         ? state
         : { silencedToastIds: [...state.silencedToastIds, id].slice(-MAX_NOTIFICATIONS) },
-    ),
+    )
+  },
 })

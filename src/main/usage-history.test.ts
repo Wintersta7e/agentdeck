@@ -143,6 +143,8 @@ describe('usage-history', () => {
   it('flush is a no-op when no storePath is provided', () => {
     const h = createUsageHistory()
     h.recordSession(rec())
-    expect(() => h.flush()).not.toThrow()
+    expect(() => {
+      h.flush()
+    }).not.toThrow()
   })
 })

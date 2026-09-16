@@ -49,7 +49,7 @@ export async function detectStack(
     entries = await withUncFallback(windowsPath, (p) => readdir(p))
   } catch (err: unknown) {
     {
-      const code = (err as NodeJS.ErrnoException)?.code
+      const code = (err as NodeJS.ErrnoException | null)?.code
       if (code === 'ENOENT') return null
       log.error(`Failed to read directory ${windowsPath}`, { err: String(err) })
       return null

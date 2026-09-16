@@ -31,8 +31,12 @@ export function SessionMetricsStrip({ sessionId }: SessionMetricsStripProps): Re
 
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 1000)
-    return () => window.clearInterval(id)
+    const id = window.setInterval(() => {
+      setNow(Date.now())
+    }, 1000)
+    return () => {
+      window.clearInterval(id)
+    }
   }, [])
 
   const meta = useAgentMeta(getSessionAgentId(session, project))

@@ -27,11 +27,7 @@ export { stripAnsi, shellQuote, AGENT_IDLE_TIMEOUT } from './node-runners'
 const log = createLogger('workflow-engine')
 
 export interface WorkflowEngine {
-  run: (
-    workflow: Workflow,
-    projectPath?: string | undefined,
-    variables?: Record<string, string> | undefined,
-  ) => void
+  run: (workflow: Workflow, projectPath?: string, variables?: Record<string, string>) => void
   stop: (workflowId: string) => void
   resume: (workflowId: string, nodeId: string) => void
   isRunning: (workflowId: string) => boolean
@@ -46,7 +42,7 @@ export function createWorkflowEngine(
   _ptyManager: PtyManager,
   mainWindow: BrowserWindow,
   agentRegistry: AgentRegistry,
-  getRoles?: (() => Role[]) | undefined,
+  getRoles?: () => Role[],
 ): WorkflowEngine {
   const activeRuns = new Map<string, { stop: () => void; resume: (nodeId: string) => void }>()
 
@@ -61,8 +57,8 @@ export function createWorkflowEngine(
 
   function runWorkflow(
     inputWorkflow: Workflow,
-    projectPath?: string | undefined,
-    variables?: Record<string, string> | undefined,
+    projectPath?: string,
+    variables?: Record<string, string>,
   ): void {
     // Substitute {{VAR}} placeholders in node fields before execution
     const workflow =
@@ -133,7 +129,9 @@ export function createWorkflowEngine(
     const deps: NodeRunnerDeps = {
       workflowId: workflow.id,
       projectPath,
-      push: (event) => push(workflow.id, event),
+      push: (event) => {
+        push(workflow.id, event)
+      },
       nodeOutputs,
       conditionOutputs,
       nodeExitCodes,
@@ -270,6 +268,7 @@ export function createWorkflowEngine(
               message: node.message ?? 'Waiting for user to continue...',
             })
             await onCheckpoint(node.id)
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- flipped from a closure; TS narrows it to the literal `false` and cannot see that
             if (stopped) return 'stopped'
             push(workflow.id, {
               type: 'node:resumed',

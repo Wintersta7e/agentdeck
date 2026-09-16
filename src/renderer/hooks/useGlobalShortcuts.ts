@@ -9,7 +9,9 @@ interface UseGlobalShortcutsOptions {
 
 function syncZoom(promise: Promise<number>): void {
   promise
-    .then((zoomFactor) => useAppStore.getState().setZoomFactor(zoomFactor))
+    .then((zoomFactor) => {
+      useAppStore.getState().setZoomFactor(zoomFactor)
+    })
     .catch((err: unknown) => {
       window.agentDeck.log.send('warn', 'app', 'Zoom IPC failed', { err: String(err) })
     })
@@ -126,6 +128,8 @@ export function useGlobalShortcuts({
     }
 
     window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
   }, [onNewTerminal, onToggleShortcuts])
 }

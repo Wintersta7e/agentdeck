@@ -60,7 +60,9 @@ export default function WorkflowRunDialog({
       }
     }
     document.addEventListener('keydown', handleKeyDown, true)
-    return () => document.removeEventListener('keydown', handleKeyDown, true)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown, true)
+    }
   }, [onCancel])
 
   // Click on backdrop closes dialog
@@ -86,7 +88,8 @@ export default function WorkflowRunDialog({
   const canStart = variables.every((v) => !isRequired(v) || values[v.name]?.trim())
 
   const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
+    // Not React.FormEvent: @types/react deprecates it ("doesn't actually exist").
+    (e: React.SyntheticEvent<HTMLFormElement>) => {
       e.preventDefault()
       setSubmitted(true)
       if (canStart) {

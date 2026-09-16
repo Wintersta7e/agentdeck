@@ -60,7 +60,9 @@ export function Titlebar(): React.JSX.Element {
     <div className="titlebar">
       <div
         className="titlebar-logo"
-        onClick={() => setCurrentView('home')}
+        onClick={() => {
+          setCurrentView('home')
+        }}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault()
@@ -84,7 +86,9 @@ export function Titlebar(): React.JSX.Element {
             <div
               key={wfId}
               className={`tab tab-workflow${wfId === activeWorkflowId && currentView === 'workflow' ? ' active' : ''}${closingTabs.has(wfId) ? ' closing' : ''}`}
-              onClick={() => openWorkflow(wfId)}
+              onClick={() => {
+                openWorkflow(wfId)
+              }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault()
@@ -158,7 +162,9 @@ export function Titlebar(): React.JSX.Element {
       <div className="window-controls">
         <button
           className="window-btn"
-          onClick={() => window.agentDeck.window.minimize()}
+          onClick={() => {
+            void window.agentDeck.window.minimize()
+          }}
           title="Minimize"
           aria-label="Minimize"
         >
@@ -166,7 +172,9 @@ export function Titlebar(): React.JSX.Element {
         </button>
         <button
           className="window-btn"
-          onClick={() => window.agentDeck.window.maximize()}
+          onClick={() => {
+            void window.agentDeck.window.maximize()
+          }}
           title="Maximize"
           aria-label="Maximize"
         >
@@ -174,7 +182,9 @@ export function Titlebar(): React.JSX.Element {
         </button>
         <button
           className="window-btn window-btn-close"
-          onClick={() => window.agentDeck.window.close()}
+          onClick={() => {
+            void window.agentDeck.window.close()
+          }}
           title="Close"
           aria-label="Close window"
         >

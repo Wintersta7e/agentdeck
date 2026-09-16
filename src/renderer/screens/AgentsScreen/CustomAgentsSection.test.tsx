@@ -87,7 +87,9 @@ describe('CustomAgentsSection', () => {
     expect(save).not.toBeDisabled()
     fireEvent.click(save)
 
-    await waitFor(() => expect(saveCustom).toHaveBeenCalledTimes(1))
+    await waitFor(() => {
+      expect(saveCustom).toHaveBeenCalledTimes(1)
+    })
     const spec = saveCustom.mock.calls[0]?.[0] as {
       id: string
       binary: string
@@ -114,7 +116,9 @@ describe('CustomAgentsSection', () => {
     })
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(saveCustom).toHaveBeenCalledTimes(1))
+    await waitFor(() => {
+      expect(saveCustom).toHaveBeenCalledTimes(1)
+    })
     const spec = saveCustom.mock.calls[0]?.[0] as { args?: string[] }
     expect(spec.args).toEqual(['--system-prompt', 'You are a helpful assistant'])
   })
@@ -138,7 +142,9 @@ describe('CustomAgentsSection', () => {
     expect(screen.getByDisplayValue('--system-prompt')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(saveCustom).toHaveBeenCalledTimes(1))
+    await waitFor(() => {
+      expect(saveCustom).toHaveBeenCalledTimes(1)
+    })
     const spec = saveCustom.mock.calls[0]?.[0] as { args?: string[] }
     expect(spec.args).toEqual(['--system-prompt', 'You are a helpful assistant'])
   })
@@ -183,7 +189,9 @@ describe('CustomAgentsSection', () => {
     expect(save).not.toBeDisabled()
     fireEvent.click(save)
 
-    await waitFor(() => expect(saveCustom).toHaveBeenCalledTimes(1))
+    await waitFor(() => {
+      expect(saveCustom).toHaveBeenCalledTimes(1)
+    })
     const spec = saveCustom.mock.calls[0]?.[0] as {
       env?: Record<string, string>
       secretEnv?: Record<string, string>
@@ -203,7 +211,9 @@ describe('CustomAgentsSection', () => {
     expect(screen.getByText(/Remove My Agent\?/i)).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
-    await waitFor(() => expect(deleteCustom).toHaveBeenCalledWith('my-agent'))
+    await waitFor(() => {
+      expect(deleteCustom).toHaveBeenCalledWith('my-agent')
+    })
   })
 
   it('removing an agent strips it from projects that pinned it and persists', async () => {
@@ -220,16 +230,20 @@ describe('CustomAgentsSection', () => {
     fireEvent.click(screen.getByRole('button', { name: /Delete My Agent/i }))
     fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
 
-    await waitFor(() => expect(deleteCustom).toHaveBeenCalledWith('my-agent'))
-    await waitFor(() => expect(saveProject).toHaveBeenCalledTimes(1))
+    await waitFor(() => {
+      expect(deleteCustom).toHaveBeenCalledWith('my-agent')
+    })
+    await waitFor(() => {
+      expect(saveProject).toHaveBeenCalledTimes(1)
+    })
     const saved = saveProject.mock.calls[0]?.[0] as Project
     expect(saved.id).toBe('p1')
     expect(saved.agents).toEqual([{ agent: 'claude-code', isDefault: true }])
-    await waitFor(() =>
+    await waitFor(() => {
       expect(useAppStore.getState().projects[0]?.agents).toEqual([
         { agent: 'claude-code', isDefault: true },
-      ]),
-    )
+      ])
+    })
   })
 
   it('delete confirm shows the project reference count when in use', () => {

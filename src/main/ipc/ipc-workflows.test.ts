@@ -86,13 +86,11 @@ describe('ipc-workflows', () => {
   })
 
   it('workflows:save accepts new workflows without an id', () => {
-    const saveSpy = vi.fn()
     handlers.clear()
     // Re-register so we capture saveWorkflow mock state
     registerWorkflowHandlers(() => null, fakeRegistry())
     // The concrete call should not throw; the underlying saveWorkflow mock just resolves.
     expect(() => call('workflows:save', { name: 'Fresh', nodes: [], edges: [] })).not.toThrow()
-    void saveSpy
   })
 
   it('workflows:save rejects a present-but-unsafe id at the IPC boundary', () => {
@@ -167,7 +165,9 @@ describe('ipc-workflows :: workflows:import', () => {
       () => null,
       fakeRegistry(),
       () => getRolesMock(),
-      (r) => saveRoleMock(r),
+      (r) => {
+        saveRoleMock(r)
+      },
     )
   })
 
@@ -247,13 +247,13 @@ describe('ipc-workflows :: workflows:import', () => {
       workflow: Workflow
       warnings: string[]
     }
-    const saved = saveWorkflowMock.mock.calls[0]?.[0] as Workflow
+    const saved = saveWorkflowMock.mock.calls[0]![0]
     const node = saved.nodes.find((n) => n.id === 'a')
     expect(node?.type).toBe('agent')
     if (node?.type === 'agent') {
       expect(node.permission).toBe('edit')
     }
-    expect(result.warnings.some((w) => /downgraded to "edit"/.test(w))).toBe(true)
+    expect(result.warnings.some((w) => w.includes('downgraded to "edit"'))).toBe(true)
   })
 
   it('warns when a builtin role is not present locally and clears the roleId on agent nodes', async () => {
@@ -271,7 +271,7 @@ describe('ipc-workflows :: workflows:import', () => {
     expect(result.warnings).toHaveLength(1)
     expect(result.warnings[0]).toMatch(/GoneBuiltin/)
     // Saved workflow should have the agent node's roleId cleared
-    const saved = saveWorkflowMock.mock.calls[0]?.[0] as Workflow
+    const saved = saveWorkflowMock.mock.calls[0]![0]
     const agentNode = saved.nodes.find((n) => n.id === 'a1')
     expect(agentNode?.type).toBe('agent')
     if (agentNode?.type === 'agent') {
@@ -307,7 +307,7 @@ describe('ipc-workflows :: workflows:import', () => {
       workflow: wf,
       roles: [{ id: 'imported-role-id', name: 'Reviewer', icon: '★', persona: 'p', builtin: true }],
     })
-    const saved = saveWorkflowMock.mock.calls[0]?.[0] as Workflow
+    const saved = saveWorkflowMock.mock.calls[0]![0]
     const agentNode = saved.nodes.find((n) => n.id === 'a1')
     if (agentNode?.type === 'agent') {
       expect(agentNode.roleId).toBe(localBuiltin.id)
@@ -347,7 +347,7 @@ describe('ipc-workflows :: workflows:import', () => {
       { [importedRoleId]: 'skip' },
     )
     expect(savedRoles).toEqual([])
-    const saved = saveWorkflowMock.mock.calls[0]?.[0] as Workflow
+    const saved = saveWorkflowMock.mock.calls[0]![0]
     const agentNode = saved.nodes.find((n) => n.id === 'a1')
     if (agentNode?.type === 'agent') {
       expect(agentNode.roleId).toBe(local.id)
@@ -390,7 +390,7 @@ describe('ipc-workflows :: workflows:import', () => {
     expect(savedRoles[0]?.name).toBe('MyRole (imported)')
     expect(savedRoles[0]?.id).not.toBe(importedRoleId)
     // The agent node should reference the new role id, not the imported one
-    const saved = saveWorkflowMock.mock.calls[0]?.[0] as Workflow
+    const saved = saveWorkflowMock.mock.calls[0]![0]
     const agentNode = saved.nodes.find((n) => n.id === 'a1')
     if (agentNode?.type === 'agent') {
       expect(agentNode.roleId).toBe(savedRoles[0]?.id)

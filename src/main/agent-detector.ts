@@ -15,9 +15,9 @@ export async function detectAgents(log: Logger): Promise<Record<string, boolean>
   const wslDiag = (label: string, args: string[]): Promise<string> =>
     new Promise((resolve) => {
       execFile('wsl.exe', args, { timeout: 10000 }, (err, stdout, stderr) => {
-        const out = stdout?.trim() ?? ''
+        const out = stdout.trim()
         const errMsg = err ? ` [err: ${(err as NodeJS.ErrnoException).code ?? err.message}]` : ''
-        const stderrMsg = stderr?.trim() ? ` [stderr: ${stderr.trim()}]` : ''
+        const stderrMsg = stderr.trim() ? ` [stderr: ${stderr.trim()}]` : ''
         log.debug(`WSL diag ${label}: "${out}"${errMsg}${stderrMsg}`)
         resolve(out)
       })
@@ -32,7 +32,9 @@ export async function detectAgents(log: Logger): Promise<Record<string, boolean>
     wslDiag('PATH', ['--', 'bash', '-lic', 'echo "$PATH"']),
     wslDiag('npm-global-bin', ['--', 'bash', '-lic', 'npm bin -g 2>/dev/null']),
     wslDiag('node-version', ['--', 'bash', '-lic', 'node --version 2>/dev/null']),
-  ]).then(() => log.debug(`WSL diagnostics completed in ${Date.now() - t0}ms`))
+  ]).then(() => {
+    log.debug(`WSL diagnostics completed in ${Date.now() - t0}ms`)
+  })
 
   // Check each agent binary — first via PATH, then search common locations
   const check = (bin: string): Promise<boolean> =>
@@ -49,12 +51,13 @@ export async function detectAgents(log: Logger): Promise<Record<string, boolean>
         (err, stdout, stderr) => {
           if (!err) {
             log.info(`Agent check: ${bin} → found (${stdout.trim()}) (${Date.now() - t1}ms)`)
-            return resolve(true)
+            resolve(true)
+            return
           }
           const errCode = (err as NodeJS.ErrnoException).code ?? err.message
           log.debug(
             `Agent check: ${bin} not in PATH [${errCode}]` +
-              `${stderr?.trim() ? ` [stderr: ${stderr.trim()}]` : ''}` +
+              (stderr.trim() ? ` [stderr: ${stderr.trim()}]` : '') +
               ` — trying fallback search`,
           )
           // 2) Fallback: search common install locations.
@@ -110,7 +113,7 @@ export async function detectAgents(log: Logger): Promise<Record<string, boolean>
   const MAX_CONCURRENT = 3
   const entries = Object.entries(AGENT_BINARY_MAP)
   const checkWithLimit = async (): Promise<boolean[]> => {
-    const results: boolean[] = new Array(entries.length)
+    const results: boolean[] = new Array<boolean>(entries.length)
     let idx = 0
     const run = async (): Promise<void> => {
       while (idx < entries.length) {
@@ -124,8 +127,5 @@ export async function detectAgents(log: Logger): Promise<Record<string, boolean>
   }
   const [, results] = await Promise.all([diagnosticsPromise, checkWithLimit()])
   log.info(`Agent detection total: ${Date.now() - t0}ms`)
-  return Object.fromEntries(entries.map(([name], i) => [name, results[i] ?? false])) as Record<
-    string,
-    boolean
-  >
+  return Object.fromEntries(entries.map(([name], i) => [name, results[i] ?? false]))
 }

@@ -26,7 +26,9 @@ export function StepPanel({ steps, currentStep, onGoTo }: StepPanelProps): React
             <div
               key={index}
               className="step-row"
-              onClick={() => onGoTo(index)}
+              onClick={() => {
+                onGoTo(index)
+              }}
               role="button"
               tabIndex={0}
               onKeyDown={(e) => {

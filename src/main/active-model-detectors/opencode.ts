@@ -8,7 +8,7 @@ let warnedOnce = false
 
 export async function readOpenCodeActiveModel(): Promise<DetectorOutput> {
   const envFile = await readWslEnv('OPENCODE_CONFIG')
-  const expr = envFile ? envFile : '$HOME/.config/opencode/opencode.json'
+  const expr = envFile || '$HOME/.config/opencode/opencode.json'
   const resolved = await resolveWslPath(expr)
   if (!resolved) return { modelId: null }
 

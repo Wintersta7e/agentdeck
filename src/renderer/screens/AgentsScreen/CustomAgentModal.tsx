@@ -187,7 +187,7 @@ export function CustomAgentModal({
         }
       })
       .catch((err: unknown) => {
-        void window.agentDeck.log.send('warn', 'agents', 'getCustomSpec failed', {
+        window.agentDeck.log.send('warn', 'agents', 'getCustomSpec failed', {
           id,
           err: String(err),
         })
@@ -206,7 +206,9 @@ export function CustomAgentModal({
       }
     }
     document.addEventListener('keydown', onKey, true)
-    return () => document.removeEventListener('keydown', onKey, true)
+    return () => {
+      document.removeEventListener('keydown', onKey, true)
+    }
   }, [onClose])
 
   const handleBackdropClick = useCallback(
@@ -289,7 +291,9 @@ export function CustomAgentModal({
                 type="text"
                 value={name}
                 maxLength={64}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  setName(e.target.value)
+                }}
                 placeholder="My Agent"
               />
             </label>
@@ -304,7 +308,9 @@ export function CustomAgentModal({
                   type="text"
                   value={id}
                   maxLength={128}
-                  onChange={(e) => setIdOverride(e.target.value)}
+                  onChange={(e) => {
+                    setIdOverride(e.target.value)
+                  }}
                   aria-describedby={`${uid}-id-hint`}
                   placeholder="my-agent"
                 />
@@ -325,7 +331,9 @@ export function CustomAgentModal({
                 type="text"
                 value={binary}
                 maxLength={256}
-                onChange={(e) => setBinary(e.target.value)}
+                onChange={(e) => {
+                  setBinary(e.target.value)
+                }}
                 placeholder="my-agent-bin"
               />
               <span className="cam-hint">
@@ -344,13 +352,17 @@ export function CustomAgentModal({
                     value={arg}
                     aria-label={`Argument ${i + 1}`}
                     placeholder="run"
-                    onChange={(e) => updateArgRow(i, e.target.value)}
+                    onChange={(e) => {
+                      updateArgRow(i, e.target.value)
+                    }}
                   />
                   <button
                     type="button"
                     className="cam-arg-remove"
                     aria-label={`Remove argument ${i + 1}`}
-                    onClick={() => setArgRows((rows) => rows.filter((_, j) => j !== i))}
+                    onClick={() => {
+                      setArgRows((rows) => rows.filter((_, j) => j !== i))
+                    }}
                   >
                     <X size={14} aria-hidden="true" />
                   </button>
@@ -359,7 +371,9 @@ export function CustomAgentModal({
               <button
                 type="button"
                 className="cam-arg-add"
-                onClick={() => setArgRows((rows) => [...rows, ''])}
+                onClick={() => {
+                  setArgRows((rows) => [...rows, ''])
+                }}
               >
                 + Add argument
               </button>
@@ -386,7 +400,9 @@ export function CustomAgentModal({
                   type="text"
                   value={icon}
                   maxLength={4}
-                  onChange={(e) => setIcon(e.target.value)}
+                  onChange={(e) => {
+                    setIcon(e.target.value)
+                  }}
                   placeholder="●"
                 />
               </label>
@@ -397,7 +413,9 @@ export function CustomAgentModal({
                   type="text"
                   value={short}
                   maxLength={4}
-                  onChange={(e) => setShort(e.target.value.toUpperCase())}
+                  onChange={(e) => {
+                    setShort(e.target.value.toUpperCase())
+                  }}
                   placeholder={deriveShort(name)}
                 />
               </label>
@@ -417,7 +435,9 @@ export function CustomAgentModal({
                     aria-label={`Colour ${cv.replace(/^--/, '')}`}
                     className={`cam-swatch${colorVar === cv ? ' cam-swatch--active' : ''}`}
                     style={{ '--cam-sw': `var(${cv})` } as React.CSSProperties}
-                    onClick={() => setColorVar(cv)}
+                    onClick={() => {
+                      setColorVar(cv)
+                    }}
                   />
                 ))}
               </div>
@@ -430,7 +450,9 @@ export function CustomAgentModal({
                 type="text"
                 value={description}
                 maxLength={200}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => {
+                  setDescription(e.target.value)
+                }}
                 placeholder="Local autonomous agent"
               />
             </label>
@@ -442,7 +464,9 @@ export function CustomAgentModal({
                 type="number"
                 min={0}
                 value={contextWindow}
-                onChange={(e) => setContextWindow(e.target.value)}
+                onChange={(e) => {
+                  setContextWindow(e.target.value)
+                }}
                 placeholder="128000"
               />
             </label>
@@ -454,7 +478,9 @@ export function CustomAgentModal({
               type="button"
               className="cam-disclosure"
               aria-expanded={advancedOpen}
-              onClick={() => setAdvancedOpen((v) => !v)}
+              onClick={() => {
+                setAdvancedOpen((v) => !v)
+              }}
             >
               {advancedOpen ? (
                 <ChevronDown size={14} aria-hidden="true" />
@@ -487,7 +513,9 @@ export function CustomAgentModal({
                           value={row.key}
                           aria-label={`Env key ${i + 1}`}
                           placeholder="OLLAMA_HOST"
-                          onChange={(e) => updateEnvRow(i, { key: e.target.value })}
+                          onChange={(e) => {
+                            updateEnvRow(i, { key: e.target.value })
+                          }}
                         />
                         <input
                           className="cam-input cam-input--mono"
@@ -495,14 +523,18 @@ export function CustomAgentModal({
                           value={row.value}
                           aria-label={`Env value ${i + 1}`}
                           placeholder={row.secret ? 'stored encrypted' : '127.0.0.1:11434'}
-                          onChange={(e) => updateEnvRow(i, { value: e.target.value })}
+                          onChange={(e) => {
+                            updateEnvRow(i, { value: e.target.value })
+                          }}
                         />
                         <button
                           type="button"
                           className={`cam-env-secret${row.secret ? ' cam-env-secret--on' : ''}`}
                           aria-label={`Toggle secret for env row ${i + 1}`}
                           aria-pressed={row.secret === true}
-                          onClick={() => updateEnvRow(i, { secret: !row.secret })}
+                          onClick={() => {
+                            updateEnvRow(i, { secret: !row.secret })
+                          }}
                         >
                           <Lock size={13} aria-hidden="true" />
                         </button>
@@ -510,7 +542,9 @@ export function CustomAgentModal({
                           type="button"
                           className="cam-env-remove"
                           aria-label={`Remove env row ${i + 1}`}
-                          onClick={() => setEnvRows((rows) => rows.filter((_, j) => j !== i))}
+                          onClick={() => {
+                            setEnvRows((rows) => rows.filter((_, j) => j !== i))
+                          }}
                         >
                           <X size={14} aria-hidden="true" />
                         </button>
@@ -526,7 +560,9 @@ export function CustomAgentModal({
                   <button
                     type="button"
                     className="cam-env-add"
-                    onClick={() => setEnvRows((rows) => [...rows, { key: '', value: '' }])}
+                    onClick={() => {
+                      setEnvRows((rows) => [...rows, { key: '', value: '' }])
+                    }}
                   >
                     + Add variable
                   </button>
@@ -538,7 +574,9 @@ export function CustomAgentModal({
                     className="cam-input cam-input--mono"
                     type="text"
                     value={versionArgsText}
-                    onChange={(e) => setVersionArgsText(e.target.value)}
+                    onChange={(e) => {
+                      setVersionArgsText(e.target.value)
+                    }}
                     placeholder="--version"
                   />
                 </label>

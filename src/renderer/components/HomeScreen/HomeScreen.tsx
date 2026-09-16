@@ -74,8 +74,12 @@ export function HomeScreen({
   // Live clock — ticks every 15s, keeps "now" stable across children
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 15_000)
-    return () => window.clearInterval(id)
+    const id = window.setInterval(() => {
+      setNow(Date.now())
+    }, 15_000)
+    return () => {
+      window.clearInterval(id)
+    }
   }, [])
   const nowDate = useMemo(() => new Date(now), [now])
   const greeting = getGreeting(nowDate.getHours())
@@ -151,7 +155,9 @@ export function HomeScreen({
             <button
               type="button"
               className="home-cta home-cta--primary"
-              onClick={() => openCommandPalette(undefined, 'all')}
+              onClick={() => {
+                openCommandPalette(undefined, 'all')
+              }}
             >
               ▸ NEW SESSION
             </button>
@@ -166,7 +172,9 @@ export function HomeScreen({
             <button
               type="button"
               className="home-cta home-cta--ghost"
-              onClick={() => setTab('alerts')}
+              onClick={() => {
+                setTab('alerts')
+              }}
             >
               REVIEW ALERTS{alertCount > 0 ? ` · ${alertCount}` : ''}
             </button>
@@ -258,7 +266,9 @@ export function HomeScreen({
                   <ProjectCardB1
                     key={p.id}
                     project={p}
-                    onOpen={() => onOpenProject(p)}
+                    onOpen={() => {
+                      onOpenProject(p)
+                    }}
                     onContextMenu={(e) => {
                       e.preventDefault()
                       setCardMenu({ x: e.clientX, y: e.clientY, projectId: p.id })

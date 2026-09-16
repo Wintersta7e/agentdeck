@@ -17,7 +17,9 @@ const customAgent: AgentDescriptorWire = {
 }
 
 describe('SessionHeader', () => {
-  afterEach(() => cleanup())
+  afterEach(() => {
+    cleanup()
+  })
   beforeEach(() => {
     useAppStore.setState({
       ...useAppStore.getInitialState(),
@@ -80,7 +82,7 @@ describe('SessionHeader', () => {
     expect(screen.queryByText('my-bot')).not.toBeInTheDocument()
     expect(container.querySelector('.session-header__glyph')?.textContent).toBe('★')
     // Custom-agent colour resolves to its picked var, not the neutral --accent.
-    const header = container.querySelector('.session-header') as HTMLElement
+    const header = container.querySelector<HTMLElement>('.session-header')!
     expect(header.style.getPropertyValue('--agent-accent')).toBe('var(--green)')
   })
 
@@ -100,7 +102,7 @@ describe('SessionHeader', () => {
       },
     } as never)
     const { container } = render(<SessionHeader />)
-    const agentLabel = container.querySelector('.session-header__agent') as HTMLElement
+    const agentLabel = container.querySelector('.session-header__agent')!
     expect(agentLabel.getAttribute('title')).toBe('Agent no longer registered')
     expect(container.querySelector('.session-header__unregistered')).toBeInTheDocument()
   })

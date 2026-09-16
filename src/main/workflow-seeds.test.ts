@@ -18,7 +18,7 @@ vi.mock('./workflow-store', () => ({
   getWorkflowsDir: () => '/fake/workflows',
 }))
 
-const getRolesFromStoreMock = vi.fn<() => Array<{ id: string; name: string; builtin?: boolean }>>()
+const getRolesFromStoreMock = vi.fn<() => { id: string; name: string; builtin?: boolean }[]>()
 vi.mock('./project-store', () => ({
   getRolesFromStore: () => getRolesFromStoreMock(),
 }))
@@ -104,7 +104,7 @@ vi.mock('./workflow-seed-blueprints', () => ({
 
 import { seedWorkflows } from './workflow-seeds'
 
-type Prefs = {
+interface Prefs {
   workflowSeedVersion?: number
   rolesSeedVersion?: number
   workflowLastRolesVersion?: number
@@ -212,8 +212,7 @@ describe('seedWorkflows', () => {
 
     const roleWorkflow = saveWorkflowMock.mock.calls
       .map(
-        (c) =>
-          c[0] as { id: string; nodes: Array<{ id: string; roleId?: string; _roleName?: string }> },
+        (c) => c[0] as { id: string; nodes: { id: string; roleId?: string; _roleName?: string }[] },
       )
       .find((w) => w.id === 'seed-wf-with-role')
 
@@ -239,7 +238,7 @@ describe('seedWorkflows', () => {
     await seedWorkflows(store as never)
 
     const saved = saveWorkflowMock.mock.calls.map(
-      (c) => c[0] as { id: string; nodes: Array<Record<string, unknown>> },
+      (c) => c[0] as { id: string; nodes: Record<string, unknown>[] },
     )
     const wf = saved.find((w) => w.id === 'seed-wf-fieldtest')!
     const agent = wf.nodes.find((n) => n['id'] === 'a')!

@@ -82,7 +82,7 @@ function getEvents(
   spy: ReturnType<typeof vi.fn>,
   workflowId: string,
   type?: string,
-): Array<Record<string, unknown>> {
+): Record<string, unknown>[] {
   return spy.mock.calls
     .filter(
       (call) =>
@@ -378,7 +378,7 @@ describe('concurrent execution', () => {
     // The surviving sibling's process tree should be force-killed (taskkill /F /T).
     const taskkillPids = mockExecFile.mock.calls
       .filter((c) => c[0] === 'taskkill')
-      .map((c) => (c[1] as string[])?.[3])
+      .map((c) => (c[1] as string[])[3])
     expect(taskkillPids).toContain(String(childB?.pid))
 
     // Let the run settle so no child/timer dangles.
@@ -1026,7 +1026,9 @@ describe('lifecycle events', () => {
       (cmd: string, _args: string[], _opts: unknown, cb?: (...a: unknown[]) => void) => {
         if (cmd === 'wsl.exe' && typeof cb === 'function') {
           // Shell node — invoke callback asynchronously (like real execFile)
-          process.nextTick(() => cb(null, 'shell output', ''))
+          process.nextTick(() => {
+            cb(null, 'shell output', '')
+          })
         } else if (typeof cb === 'function') {
           cb(null, '', '')
         }
@@ -1059,7 +1061,9 @@ describe('condition node with exitCode branching', () => {
       (cmd: string, _args: string[], _opts: unknown, cb?: (...a: unknown[]) => void) => {
         if (cmd === 'wsl.exe' && typeof cb === 'function') {
           // Shell node succeeds (exit 0)
-          process.nextTick(() => cb(null, 'shell output', ''))
+          process.nextTick(() => {
+            cb(null, 'shell output', '')
+          })
         } else if (typeof cb === 'function') {
           cb(null, '', '')
         }
@@ -1121,7 +1125,9 @@ describe('condition node with exitCode branching', () => {
           // Shell node fails (exit 1)
           const err = new Error('exit 1') as NodeJS.ErrnoException
           err.code = '1'
-          process.nextTick(() => cb(err, 'shell output', 'error output'))
+          process.nextTick(() => {
+            cb(err, 'shell output', 'error output')
+          })
         } else if (typeof cb === 'function') {
           cb(null, '', '')
         }
@@ -1282,7 +1288,9 @@ describe('loop escape on maxIterations exhaustion', () => {
         if (cmd === 'wsl.exe' && typeof cb === 'function') {
           const err = new Error('exit 1') as NodeJS.ErrnoException
           err.code = '1'
-          process.nextTick(() => cb(err, '', 'error output'))
+          process.nextTick(() => {
+            cb(err, '', 'error output')
+          })
         } else if (typeof cb === 'function') {
           cb(null, '', '')
         }
@@ -1372,9 +1380,13 @@ describe('shared escape target (in-degree > 1)', () => {
           if (JSON.stringify(args).includes('MIDFAIL')) {
             const err = new Error('exit 1') as NodeJS.ErrnoException
             err.code = '1'
-            process.nextTick(() => cb(err, 'mid output', 'err'))
+            process.nextTick(() => {
+              cb(err, 'mid output', 'err')
+            })
           } else {
-            process.nextTick(() => cb(null, 'build output', ''))
+            process.nextTick(() => {
+              cb(null, 'build output', '')
+            })
           }
         } else if (typeof cb === 'function') {
           cb(null, '', '')
@@ -1425,7 +1437,7 @@ describe('shared escape target (in-degree > 1)', () => {
     // iterations with no warning at all.
     const events = getEvents(sendSpy, 'wf-shared-escape')
     const firstWarn = events.findIndex(
-      (e) => e['type'] === 'node:output' && /did not converge/.test(String(e['message'])),
+      (e) => e['type'] === 'node:output' && String(e['message']).includes('did not converge'),
     )
     const firstEscape = events.findIndex(
       (e) => e['type'] === 'node:paused' && e['nodeId'] === 'escape',
@@ -1780,7 +1792,9 @@ describe('unreachable / stranded node detection', () => {
     mockExecFile.mockImplementation(
       (cmd: string, _args: string[], _opts: unknown, cb?: (...a: unknown[]) => void) => {
         if (cmd === 'wsl.exe' && typeof cb === 'function') {
-          process.nextTick(() => cb(null, 'ok', ''))
+          process.nextTick(() => {
+            cb(null, 'ok', '')
+          })
         } else if (typeof cb === 'function') {
           cb(null, '', '')
         }
@@ -1819,7 +1833,9 @@ describe('unreachable / stranded node detection', () => {
         if (cmd === 'wsl.exe' && typeof cb === 'function') {
           const err = new Error('exit 1') as NodeJS.ErrnoException
           err.code = '1'
-          process.nextTick(() => cb(err, '', 'boom'))
+          process.nextTick(() => {
+            cb(err, '', 'boom')
+          })
         } else if (typeof cb === 'function') {
           cb(null, '', '')
         }

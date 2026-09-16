@@ -9,9 +9,14 @@ export interface LegacyStoreAdapter {
 }
 
 interface Store {
-  get: <T>(key: string) => T
-  set: <T>(key: string, value: T) => void
+  /** Returns unknown: the legacy store is untyped JSON on disk. */
+  get: (key: string) => unknown
+  set: (key: string, value: unknown) => void
   has: (key: string) => boolean
+}
+
+function readTemplates(store: Store): LegacyTemplate[] {
+  return (store.get('templates') as LegacyTemplate[] | undefined) ?? []
 }
 
 function toTemplate(l: LegacyTemplate, extras: Partial<TemplateFile>): Template {
@@ -31,14 +36,14 @@ function toTemplate(l: LegacyTemplate, extras: Partial<TemplateFile>): Template 
   }
 }
 
+// Nothing here awaits: the legacy store is synchronous. The methods still
+// return promises because LegacyStoreAdapter is the async interface the
+// template IPC layer talks to.
 export function createLegacyStoreAdapter(store: Store): LegacyStoreAdapter {
   return {
-    listAll: async () => {
-      const raw = store.get<LegacyTemplate[] | undefined>('templates') ?? []
-      return raw.map((l) => toTemplate(l, {}))
-    },
-    save: async (file) => {
-      const raw = store.get<LegacyTemplate[] | undefined>('templates') ?? []
+    listAll: () => Promise.resolve(readTemplates(store).map((l) => toTemplate(l, {}))),
+    save: (file) => {
+      const raw = readTemplates(store)
       const idx = raw.findIndex((t) => t.id === file.id)
       const legacy: LegacyTemplate = {
         id: file.id,
@@ -50,20 +55,18 @@ export function createLegacyStoreAdapter(store: Store): LegacyStoreAdapter {
       if (idx >= 0) raw[idx] = legacy
       else raw.push(legacy)
       store.set('templates', raw)
-      return toTemplate(legacy, file)
+      return Promise.resolve(toTemplate(legacy, file))
     },
-    delete: async (id) => {
-      const raw = store.get<LegacyTemplate[] | undefined>('templates') ?? []
+    delete: (id) => {
       store.set(
         'templates',
-        raw.filter((t) => t.id !== id),
+        readTemplates(store).filter((t) => t.id !== id),
       )
+      return Promise.resolve()
     },
-    incrementUsage: async (_id) => {
-      /* usage counts aren't persisted by the legacy store */
-    },
-    setPinned: async (_id, _pinned) => {
-      /* pinning not persisted by the legacy store */
-    },
+    /* usage counts aren't persisted by the legacy store */
+    incrementUsage: (_id) => Promise.resolve(),
+    /* pinning not persisted by the legacy store */
+    setPinned: (_id, _pinned) => Promise.resolve(),
   }
 }

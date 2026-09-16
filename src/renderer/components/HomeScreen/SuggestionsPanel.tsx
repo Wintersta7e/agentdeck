@@ -28,7 +28,9 @@ export function SuggestionsPanel(): React.JSX.Element {
             </div>
             <button
               className="suggestion-dismiss"
-              onClick={() => handleDismiss(s.dismissKey)}
+              onClick={() => {
+                handleDismiss(s.dismissKey)
+              }}
               aria-label="Dismiss suggestion"
               type="button"
             >

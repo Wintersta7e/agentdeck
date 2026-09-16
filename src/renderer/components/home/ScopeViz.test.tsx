@@ -23,7 +23,9 @@ describe('ScopeViz', () => {
   beforeEach(() => {
     useAppStore.setState(useAppStore.getInitialState())
   })
-  afterEach(() => cleanup())
+  afterEach(() => {
+    cleanup()
+  })
 
   it('shows the running count and one blip per running session', () => {
     useAppStore.getState().addSession('s1', 'p-1', { agentOverride: 'claude-code' })

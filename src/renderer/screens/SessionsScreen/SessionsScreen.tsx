@@ -132,7 +132,9 @@ export function SessionsScreen(): React.JSX.Element {
         <button
           type="button"
           className="sessions-screen__new-btn"
-          onClick={() => openCommandPalette(undefined, 'all')}
+          onClick={() => {
+            openCommandPalette(undefined, 'all')
+          }}
           title="Launch a new session (Ctrl+K)"
         >
           ▸ NEW SESSION
@@ -140,20 +142,30 @@ export function SessionsScreen(): React.JSX.Element {
       }
       filters={
         <>
-          <FilterChip active={filter === 'all'} onClick={() => setFilter('all')} count={counts.all}>
+          <FilterChip
+            active={filter === 'all'}
+            onClick={() => {
+              setFilter('all')
+            }}
+            count={counts.all}
+          >
             All
           </FilterChip>
           <FilterChip
             active={filter === 'active'}
             dotColor="green"
-            onClick={() => setFilter('active')}
+            onClick={() => {
+              setFilter('active')
+            }}
             count={counts.active}
           >
             Active
           </FilterChip>
           <FilterChip
             active={filter === 'done'}
-            onClick={() => setFilter('done')}
+            onClick={() => {
+              setFilter('done')
+            }}
             count={counts.done}
           >
             Done
@@ -161,7 +173,9 @@ export function SessionsScreen(): React.JSX.Element {
           <FilterChip
             active={filter === 'error'}
             dotColor="red"
-            onClick={() => setFilter('error')}
+            onClick={() => {
+              setFilter('error')
+            }}
             count={counts.error}
           >
             Error
@@ -172,7 +186,9 @@ export function SessionsScreen(): React.JSX.Element {
             className="sessions-screen__search"
             placeholder="Search by project, agent, id…"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value)
+            }}
             aria-label="Filter sessions"
           />
         </>
@@ -210,7 +226,9 @@ export function SessionsScreen(): React.JSX.Element {
                 key={session.id}
                 type="button"
                 className={`sessions-table__row sessions-row--${tone}`}
-                onClick={() => handleRowClick(session)}
+                onClick={() => {
+                  handleRowClick(session)
+                }}
                 title={`Open session ${session.id}`}
               >
                 <span className="sessions-row__state">

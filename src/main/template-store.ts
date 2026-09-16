@@ -96,14 +96,21 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
   await fs.mkdir(userRoot, { recursive: true })
 
   const parseErrorListeners = new Set<(e: { path: string; error: string }) => void>()
-  const emitParseError = (e: { path: string; error: string }): void =>
-    parseErrorListeners.forEach((l) => l(e))
+  const emitParseError = (e: { path: string; error: string }): void => {
+    parseErrorListeners.forEach((l) => {
+      l(e)
+    })
+  }
 
   let userPool: Template[] = await scanDir(userRoot, 'user', null, emitParseError)
   const projectPools = new Map<string, Template[]>()
 
   const changeListeners = new Set<(e: TemplateChangeEvent) => void>()
-  const emitChange = (e: TemplateChangeEvent): void => changeListeners.forEach((l) => l(e))
+  const emitChange = (e: TemplateChangeEvent): void => {
+    changeListeners.forEach((l) => {
+      l(e)
+    })
+  }
 
   const serialize = createKeyMutex()
 
@@ -201,7 +208,7 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
         debounceTimer = null
         void rescan()
       }, 200)
-      debounceTimer.unref?.()
+      debounceTimer.unref()
     }
 
     const startPolling = (): void => {
@@ -217,7 +224,7 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
       pollTimer = setInterval(() => {
         void rescan()
       }, 10_000)
-      pollTimer.unref?.()
+      pollTimer.unref()
     }
 
     // Most projects don't have a per-project template dir; fs.watch throws
@@ -292,13 +299,15 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
   const projectWatchers = new Map<string, () => void>()
 
   return {
-    listAll: async (input) => {
+    // Synchronous: everything it reads is already in memory. It still returns
+    // a promise because TemplateStore is the async interface the IPC talks to.
+    listAll: (input) => {
       const merged: Template[] = [...userPool]
       if (input?.projectId) {
         const pool = projectPools.get(input.projectId) ?? []
         merged.push(...pool)
       }
-      return merged
+      return Promise.resolve(merged)
     },
 
     activateProject: async (projectId) => {
@@ -324,7 +333,9 @@ export async function createTemplateStore(opts: TemplateStoreOptions): Promise<T
         projectPools.set(projectId, next)
       }
       projectWatchers.set(projectId, setupWatcher(dir, rescan))
-      evictOldestFromMap(projectWatchers, MAX_PROJECT_WATCHERS, (_id, off) => off())
+      evictOldestFromMap(projectWatchers, MAX_PROJECT_WATCHERS, (_id, off) => {
+        off()
+      })
 
       return pool
     },

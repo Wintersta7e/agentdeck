@@ -16,7 +16,9 @@ export function EnvVarRow({ envVar, onChange }: EnvVarRowProps): React.JSX.Eleme
         value={envVar.key}
         placeholder="KEY"
         aria-label="Environment variable name"
-        onChange={(e) => onChange({ ...envVar, key: e.target.value })}
+        onChange={(e) => {
+          onChange({ ...envVar, key: e.target.value })
+        }}
       />
       <span className="env-eq">=</span>
       <input
@@ -25,12 +27,16 @@ export function EnvVarRow({ envVar, onChange }: EnvVarRowProps): React.JSX.Eleme
         value={envVar.value}
         placeholder="value"
         aria-label="Environment variable value"
-        onChange={(e) => onChange({ ...envVar, value: e.target.value })}
+        onChange={(e) => {
+          onChange({ ...envVar, value: e.target.value })
+        }}
       />
       <button
         type="button"
         className="secret-toggle"
-        onClick={() => onChange({ ...envVar, secret: !envVar.secret })}
+        onClick={() => {
+          onChange({ ...envVar, secret: !envVar.secret })
+        }}
         aria-label={envVar.secret ? 'Mark as not secret' : 'Mark as secret'}
       >
         {envVar.secret ? '\u{1F512}' : '\u{1F513}'}

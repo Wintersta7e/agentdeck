@@ -11,6 +11,8 @@
  * log scrapers that compare against rendered text.
  */
 
+/* eslint-disable no-control-regex -- this module exists to match ANSI escapes,
+   so ESC and BEL in its patterns are the subject, not a mistake. */
 export const ANSI_ESCAPES_RE =
   /\x1b\[[0-9;?]*[a-zA-Z~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[()#][A-Z0-9]|\x1b[=>NOMDEHc78]/g
 

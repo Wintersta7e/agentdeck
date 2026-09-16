@@ -110,7 +110,7 @@ function register(opts: {
     delete: s.delete,
     incrementUsage: s.incrementUsage,
     setPinned: s.setPinned,
-  } as unknown as ReturnType<typeof makeStore> & ReturnType<typeof makeLegacy>
+  }
 }
 
 const validDraft: TemplateDraft = {
@@ -268,18 +268,14 @@ describe('ipc-templates', () => {
     it('rejects non-boolean pinned (number)', async () => {
       register({ migrationComplete: true })
       await expect(
-        call('templates:setPinned', { id: 'tmpl-1', scope: 'user', projectId: null }, 1 as unknown),
+        call('templates:setPinned', { id: 'tmpl-1', scope: 'user', projectId: null }, 1),
       ).rejects.toThrow(/pinned must be a boolean/)
     })
 
     it('rejects non-boolean pinned (string)', async () => {
       register({ migrationComplete: true })
       await expect(
-        call(
-          'templates:setPinned',
-          { id: 'tmpl-1', scope: 'user', projectId: null },
-          'yes' as unknown,
-        ),
+        call('templates:setPinned', { id: 'tmpl-1', scope: 'user', projectId: null }, 'yes'),
       ).rejects.toThrow(/pinned must be a boolean/)
     })
 

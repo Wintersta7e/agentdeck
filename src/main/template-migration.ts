@@ -6,21 +6,31 @@ import { atomicWrite } from './fs-atomic'
 
 const log = createLogger('template-migration')
 
+/** The pre-v6.1.0 flat template array as it sits in electron-store. */
+interface StoredLegacyTemplate {
+  id: string
+  name: string
+  description: string
+  content?: string
+  category?: TemplateFile['category']
+}
+
 interface MigrationOptions {
   store: {
     has: (k: string) => boolean
-    get: <T>(k: string) => T
+    /** Returns unknown: electron-store holds untyped JSON. */
+    get: (k: string) => unknown
     set: (k: string, v: unknown) => void
     delete: (k: string) => void
   }
   userRoot: string
-  seeds?: Array<{
+  seeds?: {
     id: string
     name: string
     description: string
     content?: string
     category?: TemplateFile['category']
-  }>
+  }[]
 }
 
 interface MigrationResult {
@@ -49,24 +59,12 @@ function upgradeLegacyToFile(l: {
 }
 
 export async function runTemplateMigration(opts: MigrationOptions): Promise<MigrationResult> {
-  const prefs = (opts.store.get<{ templatesMigrated?: boolean } | undefined>('appPrefs') ?? {}) as {
-    templatesMigrated?: boolean
-  }
+  const prefs = (opts.store.get('appPrefs') as { templatesMigrated?: boolean } | undefined) ?? {}
   if (prefs.templatesMigrated === true) {
     return { status: 'skipped', count: 0 }
   }
 
-  const legacyRaw =
-    opts.store.get<
-      | Array<{
-          id: string
-          name: string
-          description: string
-          content?: string
-          category?: TemplateFile['category']
-        }>
-      | undefined
-    >('templates') ?? []
+  const legacyRaw = (opts.store.get('templates') as StoredLegacyTemplate[] | undefined) ?? []
 
   await fs.mkdir(opts.userRoot, { recursive: true })
   const staging = `${opts.userRoot}.migrating`

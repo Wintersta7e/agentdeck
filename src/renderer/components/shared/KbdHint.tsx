@@ -35,7 +35,10 @@ export function KbdHint({ keys, size = 'sm' }: KbdHintProps): React.JSX.Element 
   )
 }
 
-type Token = { kind: 'key' | 'sep'; value: string }
+interface Token {
+  kind: 'key' | 'sep'
+  value: string
+}
 
 function tokenize(input: string): Token[] {
   const result: Token[] = []

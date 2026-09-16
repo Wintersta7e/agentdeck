@@ -92,7 +92,7 @@ export function useAppIpcBridge(): void {
           )
       })
       .catch((err: unknown) => {
-        void window.agentDeck.log.send('warn', 'theme-migration', 'popMigration failed', {
+        window.agentDeck.log.send('warn', 'theme-migration', 'popMigration failed', {
           error: err instanceof Error ? err.message : String(err),
         })
       })

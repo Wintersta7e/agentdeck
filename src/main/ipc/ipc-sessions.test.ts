@@ -11,7 +11,9 @@ const { CH } = await import('../../shared/ipc-channels')
 const call = (ch: string, ...args: unknown[]) => handlers.get(ch)!(null, ...args)
 
 describe('ipc-sessions', () => {
-  beforeEach(() => handlers.clear())
+  beforeEach(() => {
+    handlers.clear()
+  })
 
   it('passes a valid days value through to getHistory', () => {
     const getHistory = vi.fn(() => [])

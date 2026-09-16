@@ -30,7 +30,9 @@ export const createCustomAgentsSlice: StateCreator<AppState, [], [], CustomAgent
 ) => ({
   agentRegistry: BUILTIN_DESCRIPTORS,
 
-  setAgentRegistry: (list) => set({ agentRegistry: list }),
+  setAgentRegistry: (list) => {
+    set({ agentRegistry: list })
+  },
 
   bootstrapAgentRegistry: async () => {
     // Idempotent: tear down any previous subscriptions first.
@@ -55,7 +57,9 @@ export const createCustomAgentsSlice: StateCreator<AppState, [], [], CustomAgent
     registryUnsub = window.agentDeck.agents.onRegistryChange(() => {
       void window.agentDeck.agents
         .getRegistry()
-        .then((registry) => set({ agentRegistry: registry }))
+        .then((registry) => {
+          set({ agentRegistry: registry })
+        })
         .catch((err: unknown) => {
           window.agentDeck.log.send('warn', 'agents', 'registry re-pull failed', {
             err: String(err),

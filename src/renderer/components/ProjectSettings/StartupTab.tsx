@@ -70,7 +70,9 @@ export function StartupTab({ draft, onChange }: TabProps): React.JSX.Element {
                 type="text"
                 className="settings-cmd-input"
                 value={item.value}
-                onChange={(e) => updateCommand(item.id, e.target.value)}
+                onChange={(e) => {
+                  updateCommand(item.id, e.target.value)
+                }}
                 placeholder="Enter command..."
               />
             )}

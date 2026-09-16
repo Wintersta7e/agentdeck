@@ -296,7 +296,7 @@ export function TemplateEditor(): React.JSX.Element {
         void handleSave()
       }
       if (e.key === 'Delete' && selectedId) {
-        const tag = (e.target as HTMLElement)?.tagName
+        const tag = (e.target as HTMLElement | null)?.tagName
         if (tag === 'INPUT' || tag === 'TEXTAREA') return
         e.preventDefault()
         // CQ-8: Confirm before deleting to prevent accidental loss
@@ -307,7 +307,9 @@ export function TemplateEditor(): React.JSX.Element {
       }
     }
     window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
   }, [handleSave, handleDelete, selectedId, templates])
 
   return (
@@ -333,7 +335,9 @@ export function TemplateEditor(): React.JSX.Element {
                 <div
                   key={t.id}
                   className={`te-row ${t.id === selectedId ? 'active' : ''}`}
-                  onClick={() => handleSelect(t.id)}
+                  onClick={() => {
+                    handleSelect(t.id)
+                  }}
                 >
                   <div className="te-row-icon">
                     <ClipboardList size={14} />
@@ -363,15 +367,18 @@ export function TemplateEditor(): React.JSX.Element {
                 placeholder="Template name..."
                 aria-label="Template name"
                 value={editingName}
-                onChange={(e) => setEditingName(e.target.value)}
+                onChange={(e) => {
+                  setEditingName(e.target.value)
+                }}
               />
               <div className="te-namebar-sep" />
               <select
                 className="te-category-select"
                 value={editingCategory ?? ''}
-                onChange={(e) =>
-                  setEditingCategory((e.target.value as TemplateCategory) || undefined)
-                }
+                onChange={(e) => {
+                  const next = e.target.value
+                  setEditingCategory(next === '' ? undefined : (next as TemplateCategory))
+                }}
               >
                 <option value="">No category</option>
                 {CATEGORY_ORDER.filter((c) => c !== 'Other').map((c) => (
@@ -404,7 +411,9 @@ export function TemplateEditor(): React.JSX.Element {
                   className="te-textarea"
                   placeholder="Write your prompt here..."
                   value={editingContent}
-                  onChange={(e) => setEditingContent(e.target.value)}
+                  onChange={(e) => {
+                    setEditingContent(e.target.value)
+                  }}
                   onScroll={handleTextareaScroll}
                 />
               </div>

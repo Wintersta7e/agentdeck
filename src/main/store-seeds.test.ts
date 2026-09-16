@@ -38,7 +38,7 @@ describe('seed roles', () => {
 
     const setCall = setSpy.mock.calls.find((c) => c[0] === 'roles')
     const roles = setCall?.[1] as Role[]
-    const role = roles?.find((r) => r.name === 'Adversarial Reviewer')
+    const role = roles.find((r) => r.name === 'Adversarial Reviewer')
     expect(role).toBeDefined()
     expect(role!.builtin).toBe(true)
     expect(role!.persona.length).toBeGreaterThan(0)

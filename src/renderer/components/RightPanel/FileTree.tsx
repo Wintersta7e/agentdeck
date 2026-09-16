@@ -142,7 +142,7 @@ export function FileTree({ projectPath, rootPath }: FileTreeProps): React.JSX.El
         const state = nodes[fullPath]
         const expanded = entry.isDir && state?.expanded === true
         out.push({ fullPath, parentPath: parent, entry, depth, expanded })
-        if (expanded && state?.children) {
+        if (expanded && state.children) {
           walk(state.children, fullPath, depth + 1)
         }
       }
@@ -226,7 +226,7 @@ export function FileTree({ projectPath, rootPath }: FileTreeProps): React.JSX.El
           if (cur.entry.isDir && !cur.expanded) toggleFolder(cur.fullPath)
           else if (cur.entry.isDir && cur.expanded) {
             const child = visible[safeIdx + 1]
-            if (child && child.parentPath === cur.fullPath) setActivePath(child.fullPath)
+            if (child?.parentPath === cur.fullPath) setActivePath(child.fullPath)
           }
           break
         }

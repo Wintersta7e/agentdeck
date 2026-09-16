@@ -2,16 +2,15 @@ import { describe, it, expect } from 'vitest'
 import { getActionButtons } from './session-actions'
 import type { Session } from '../../shared/types'
 
-const makeSession = (overrides: Partial<Session>): Session =>
-  ({
-    id: 's1',
-    projectId: 'p1',
-    status: 'running',
-    startedAt: 0,
-    approvalState: 'idle',
-    seedTemplateId: null,
-    ...overrides,
-  }) as Session
+const makeSession = (overrides: Partial<Session>): Session => ({
+  id: 's1',
+  projectId: 'p1',
+  status: 'running',
+  startedAt: 0,
+  approvalState: 'idle',
+  seedTemplateId: null,
+  ...overrides,
+})
 
 describe('getActionButtons', () => {
   it('exited + review -> KEEP + DISCARD', () => {

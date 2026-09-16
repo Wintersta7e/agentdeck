@@ -62,7 +62,9 @@ describe('session-history', () => {
 
   it('noteActivity on unknown session is a no-op', () => {
     const h = createSessionHistory()
-    expect(() => h.noteActivity('unknown', 'write')).not.toThrow()
+    expect(() => {
+      h.noteActivity('unknown', 'write')
+    }).not.toThrow()
   })
 
   it('startSession seeds lastActivityAt to startedAt', () => {
@@ -249,7 +251,9 @@ describe('session-history', () => {
   it('flush is a no-op when no storePath is provided', () => {
     const h = createSessionHistory()
     h.startSession(makeRec())
-    expect(() => h.flush()).not.toThrow()
+    expect(() => {
+      h.flush()
+    }).not.toThrow()
   })
 
   it('finalizes dangling endedAt:null records on load (crash recovery)', () => {

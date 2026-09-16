@@ -41,12 +41,20 @@ export function PathInput({
         type="text"
         className={`path-input-field${showError ? ' path-input-error' : ''}`}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => {
+          onChange(e.target.value)
+        }}
         placeholder={placeholder}
         aria-label={placeholder ?? 'Path input'}
         spellCheck={false}
       />
-      <button type="button" className="path-input-browse" onClick={handleBrowse}>
+      <button
+        type="button"
+        className="path-input-browse"
+        onClick={() => {
+          void handleBrowse()
+        }}
+      >
         Browse
       </button>
       {showError && (

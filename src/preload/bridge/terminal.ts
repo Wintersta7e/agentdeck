@@ -19,7 +19,9 @@ export function createPtyBridge(): AgentDeckBridge['pty'] {
         agentFlags,
       ),
     write: (sessionId, data) => ipcRenderer.invoke(CH.ptyWrite, sessionId, data),
-    resize: (sessionId, cols, rows) => ipcRenderer.send(CH.ptyResize, sessionId, cols, rows),
+    resize: (sessionId, cols, rows) => {
+      ipcRenderer.send(CH.ptyResize, sessionId, cols, rows)
+    },
     kill: (sessionId) => ipcRenderer.invoke(CH.ptyKill, sessionId),
     onData: (sessionId, cb) => onIpc<string>(ptyDataChannel(sessionId), cb),
     onExit: (sessionId, cb) => onIpc<number>(ptyExitChannel(sessionId), cb),

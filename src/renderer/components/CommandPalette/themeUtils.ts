@@ -53,6 +53,9 @@ export function applyThemeWithTransition(
     onApply?.()
   }
 
+  // Feature detection: lib.dom declares startViewTransition as always present,
+  // but it is a progressive-enhancement API and the fallback path is the point.
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (!document.startViewTransition) {
     apply()
     return

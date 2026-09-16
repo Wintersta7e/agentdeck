@@ -76,7 +76,7 @@ function parseActivityLine(line: string): { type: string; title: string; detail:
   if (/^[⏺●◆▶○◇▷]\s/.test(clean)) return { type: 'tool', title: 'Agent action', detail: clean }
 
   // Agent output: lines containing file paths (src/..., /home/..., ./...)
-  if (clean.length >= 20 && /(?:^|\s)[.\/~][^\s]*\.[a-z]{1,6}\b/i.test(clean))
+  if (clean.length >= 20 && /(?:^|\s)[./~][^\s]*\.[a-z]{1,6}\b/i.test(clean))
     return { type: 'read', title: 'File reference', detail: clean }
 
   // Completion / summary patterns
@@ -96,7 +96,7 @@ function parseActivityLine(line: string): { type: string; title: string; detail:
     // Skip if mostly box-drawing (>50% of non-whitespace chars are decoration)
     if (boxChars.length > nonWs.length * 0.5) {
       // Skip shell prompt patterns (e.g. "user@host:~/dir$", "PS1>")
-      if (!/^[\w@.~\/-]*[$#>❯➜%]\s*$/.test(clean)) {
+      if (!/^[\w@.~/-]*[$#>❯➜%]\s*$/.test(clean)) {
         return { type: 'tool', title: 'Agent active', detail: '' }
       }
     }

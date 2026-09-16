@@ -63,7 +63,9 @@ export function AdvancedTab({
                 type="number"
                 className="settings-input"
                 value={draft.scrollbackLines ?? 5000}
-                onChange={(e) => onChange({ scrollbackLines: Number(e.target.value) })}
+                onChange={(e) => {
+                  onChange({ scrollbackLines: Number(e.target.value) })
+                }}
                 min={100}
                 max={100000}
                 aria-label="Scrollback buffer"
@@ -81,7 +83,9 @@ export function AdvancedTab({
                 type="number"
                 className="settings-input"
                 value={draft.fontSize ?? 12}
-                onChange={(e) => onChange({ fontSize: Number(e.target.value) })}
+                onChange={(e) => {
+                  onChange({ fontSize: Number(e.target.value) })
+                }}
                 min={8}
                 max={24}
                 aria-label="Font size"
@@ -99,7 +103,9 @@ export function AdvancedTab({
                 type="text"
                 className="settings-input"
                 value={draft.shell ?? '/bin/bash'}
-                onChange={(e) => onChange({ shell: e.target.value })}
+                onChange={(e) => {
+                  onChange({ shell: e.target.value })
+                }}
                 placeholder="/bin/bash"
                 aria-label="Shell path"
               />
@@ -142,7 +148,13 @@ export function AdvancedTab({
             </div>
           </div>
           {!removeMode ? (
-            <button type="button" className="danger-btn" onClick={() => setRemoveMode(true)}>
+            <button
+              type="button"
+              className="danger-btn"
+              onClick={() => {
+                setRemoveMode(true)
+              }}
+            >
               Remove
             </button>
           ) : (
@@ -151,7 +163,9 @@ export function AdvancedTab({
                 type="text"
                 className="danger-confirm-input"
                 value={removeInput}
-                onChange={(e) => setRemoveInput(e.target.value)}
+                onChange={(e) => {
+                  setRemoveInput(e.target.value)
+                }}
                 placeholder={`Type "${draft.name}" to confirm`}
                 aria-label="Type project name to confirm removal"
               />

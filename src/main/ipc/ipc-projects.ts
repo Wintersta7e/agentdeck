@@ -22,7 +22,7 @@ const ALLOWED_FILES = new Set(['CLAUDE.md', 'AGENTS.md', 'README.md'])
  */
 export function registerProjectHandlers(
   getWindow: () => BrowserWindow | null,
-  getStore?: (() => AppStore | null) | undefined,
+  getStore?: () => AppStore | null,
 ): void {
   ipcMain.handle(CH.projectsDetectStack, async (_, p: string, distro?: string) => {
     // Validate path and distro inputs
@@ -117,7 +117,7 @@ export function registerProjectHandlers(
     const store = getStore?.()
     if (!store) throw new Error('Store not available')
 
-    const projects: Project[] = store.get('projects') ?? []
+    const projects: Project[] = store.get('projects')
     const project = projects.find((p) => p.id === projectId)
     if (!project) throw new Error(`Project not found: ${projectId}`)
 
@@ -182,9 +182,9 @@ export function registerProjectHandlers(
       lastScanned: Date.now(),
     }
 
-    const updatedProjects = (store.get('projects') ?? []).map((p: Project) =>
-      p.id === projectId ? { ...p, meta } : p,
-    )
+    const updatedProjects = store
+      .get('projects')
+      .map((p: Project) => (p.id === projectId ? { ...p, meta } : p))
     store.set('projects', updatedProjects)
 
     // 5. Invalidate cache

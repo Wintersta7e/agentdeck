@@ -36,7 +36,9 @@ export function StackBadgeSelector({
           type="button"
           className={`badge-pill${value === badge ? ' selected' : ''}`}
           data-badge={badge}
-          onClick={() => onChange(badge)}
+          onClick={() => {
+            onChange(badge)
+          }}
         >
           {badge}
         </button>

@@ -8,9 +8,12 @@ vi.mock('../active-model-detectors', () => {
     () => Promise<{ modelId: string | null; cliContextOverride?: number }>
   > = {}
   return {
-    DETECTORS: new Proxy({} as Record<string, unknown>, {
-      get: (_t, prop: string) => readers[prop] ?? (() => Promise.resolve({ modelId: null })),
-    }),
+    DETECTORS: new Proxy(
+      {},
+      {
+        get: (_t, prop: string) => readers[prop] ?? (() => Promise.resolve({ modelId: null })),
+      },
+    ),
     __setReader: (
       id: string,
       fn: () => Promise<{ modelId: string | null; cliContextOverride?: number }>,
@@ -40,11 +43,11 @@ const AGENTS_BY_ID = Object.fromEntries(AGENTS.map((a) => [a.id, a])) as Record<
   (typeof AGENTS)[number]
 >
 
-const ROWS: Array<{
+const ROWS: {
   agentId: AgentType
   detector: { modelId: string | null; cliContextOverride?: number | undefined }
   expected: { value: number; source: string }
-}> = [
+}[] = [
   {
     agentId: 'claude-code',
     detector: { modelId: 'claude-opus-4-7[1m]' },
@@ -83,7 +86,9 @@ const ROWS: Array<{
 ]
 
 describe('end-to-end context resolution per agent', () => {
-  beforeEach(() => __resetCacheForTests())
+  beforeEach(() => {
+    __resetCacheForTests()
+  })
 
   for (const row of ROWS) {
     it(`resolves ${row.agentId}`, async () => {

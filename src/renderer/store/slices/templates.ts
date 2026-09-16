@@ -167,6 +167,8 @@ export const createTemplatesSlice: StateCreator<AppState, [], [], TemplatesSlice
     },
 
     roles: [],
-    setRoles: (roles) => set({ roles }),
+    setRoles: (roles) => {
+      set({ roles })
+    },
   }
 }

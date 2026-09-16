@@ -71,71 +71,83 @@ export interface UiSlice {
 
 export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set) => ({
   currentView: 'home',
-  setCurrentView: (view) => set({ currentView: view }),
+  setCurrentView: (view) => {
+    set({ currentView: view })
+  },
 
   // Top-level tab navigation does NOT push to viewStack. The stack is
   // reserved for sub-view modals (wizard, settings, template-editor) so
   // switching tabs isn't unbounded memory.
-  setTab: (view) => set({ currentView: view }),
+  setTab: (view) => {
+    set({ currentView: view })
+  },
 
   settingsProjectId: null,
   viewStack: [] as ViewType[],
 
-  openWizard: () =>
+  openWizard: () => {
     set((state) => ({
       currentView: 'wizard' as const,
       viewStack: [...state.viewStack, state.currentView],
-    })),
-  closeWizard: () =>
+    }))
+  },
+  closeWizard: () => {
     set((state) => {
       const stack = [...state.viewStack]
       const prev = stack.pop() ?? 'home'
       return { currentView: prev, viewStack: stack }
-    }),
-  openSettings: (projectId) =>
+    })
+  },
+  openSettings: (projectId) => {
     set((state) => ({
       currentView: 'settings' as const,
       settingsProjectId: projectId,
       viewStack: [...state.viewStack, state.currentView],
-    })),
-  closeSettings: () =>
+    }))
+  },
+  closeSettings: () => {
     set((state) => {
       const stack = [...state.viewStack]
       const prev = stack.pop() ?? 'home'
       return { currentView: prev, settingsProjectId: null, viewStack: stack }
-    }),
-  openNewSessionComposer: () =>
+    })
+  },
+  openNewSessionComposer: () => {
     set((state) => ({
       currentView: 'new-session' as const,
       viewStack: [...state.viewStack, state.currentView],
-    })),
+    }))
+  },
 
   // Split View
   paneLayout: 1,
   focusedPane: 0,
   paneSessions: [],
 
-  setPaneLayout: (layout) =>
+  setPaneLayout: (layout) => {
     set((state) => ({
       paneLayout: layout,
       focusedPane: state.focusedPane >= layout ? 0 : state.focusedPane,
-    })),
+    }))
+  },
 
-  cyclePaneLayout: () =>
+  cyclePaneLayout: () => {
     set((state) => {
       const next = (state.paneLayout === MAX_PANE_COUNT ? 1 : state.paneLayout + 1) as PaneLayout
       return {
         paneLayout: next,
         focusedPane: state.focusedPane >= next ? 0 : state.focusedPane,
       }
-    }),
+    })
+  },
 
-  setFocusedPane: (pane) =>
+  setFocusedPane: (pane) => {
     set((state) => ({
       focusedPane: pane < state.paneLayout ? pane : state.focusedPane,
-    })),
+    }))
+  },
 
-  setPaneSession: (paneIndex, sessionId) =>
+  setPaneSession: (paneIndex, sessionId) => {
     set((state) => {
       const paneSessions = [...state.paneSessions]
       while (paneSessions.length <= paneIndex) {
@@ -143,47 +155,56 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set) => (
       }
       paneSessions[paneIndex] = sessionId
       return { paneSessions }
-    }),
+    })
+  },
 
   // Command Palette
   commandPaletteOpen: false,
   commandPaletteInitialSubMenu: null,
   commandPaletteMode: 'all',
-  openCommandPalette: (subMenu, mode) =>
+  openCommandPalette: (subMenu, mode) => {
     set({
       commandPaletteOpen: true,
       commandPaletteInitialSubMenu: subMenu ?? null,
       commandPaletteMode: mode ?? 'all',
-    }),
-  closeCommandPalette: () =>
+    })
+  },
+  closeCommandPalette: () => {
     set({
       commandPaletteOpen: false,
       commandPaletteInitialSubMenu: null,
       commandPaletteMode: 'all',
-    }),
+    })
+  },
 
   // Right Panel
   rightPanelOpen: false,
   rightPanelTab: 'files',
-  toggleRightPanel: () => set((state) => ({ rightPanelOpen: !state.rightPanelOpen })),
-  setRightPanelTab: (tab) => set({ rightPanelTab: tab }),
+  toggleRightPanel: () => {
+    set((state) => ({ rightPanelOpen: !state.rightPanelOpen }))
+  },
+  setRightPanelTab: (tab) => {
+    set({ rightPanelTab: tab })
+  },
 
   // Template Editor
   editingTemplateId: null,
 
-  openTemplateEditor: (templateId) =>
+  openTemplateEditor: (templateId) => {
     set((state) => ({
       currentView: 'template-editor' as const,
       viewStack: [...state.viewStack, state.currentView],
       editingTemplateId: templateId ?? null,
-    })),
+    }))
+  },
 
-  closeTemplateEditor: () =>
+  closeTemplateEditor: () => {
     set((state) => {
       const stack = [...state.viewStack]
       const prev = stack.pop() ?? 'home'
       return { currentView: prev, editingTemplateId: null, viewStack: stack }
-    }),
+    })
+  },
 
   // Layout (panels)
   rightPanelWidth: 240,
@@ -205,11 +226,15 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set) => (
 
   // WSL status
   wslAvailable: null,
-  setWslAvailable: (available) => set({ wslAvailable: available }),
+  setWslAvailable: (available) => {
+    set({ wslAvailable: available })
+  },
 
   // Zoom
   zoomFactor: 1.0,
-  setZoomFactor: (factor) => set({ zoomFactor: factor }),
+  setZoomFactor: (factor) => {
+    set({ zoomFactor: factor })
+  },
 
   // Theme
   // Read from DOM at store init — main.tsx sets data-theme before createRoot,

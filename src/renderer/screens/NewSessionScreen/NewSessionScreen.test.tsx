@@ -186,7 +186,7 @@ describe('NewSessionScreen', () => {
     expect(button).not.toBeNull()
 
     // Selecting it makes it the active agent and surfaces it in the launch target.
-    fireEvent.click(button as HTMLButtonElement)
+    fireEvent.click(button!)
     expect(screen.getByText('My Bot')).toBeInTheDocument()
   })
 

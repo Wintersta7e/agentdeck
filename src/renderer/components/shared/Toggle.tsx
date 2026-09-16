@@ -14,7 +14,9 @@ export function Toggle({ value, onChange, label }: ToggleProps): React.JSX.Eleme
         role="switch"
         aria-checked={value}
         className={`toggle ${value ? 'toggle-on' : ''}`}
-        onClick={() => onChange(!value)}
+        onClick={() => {
+          onChange(!value)
+        }}
       >
         <span className="toggle-thumb" />
       </button>

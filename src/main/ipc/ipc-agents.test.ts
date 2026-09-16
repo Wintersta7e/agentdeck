@@ -42,7 +42,9 @@ beforeEach(() => {
   registry = new AgentRegistry(join(regDir, 'agents.toml'))
   registry.load()
 })
-afterEach(() => rmSync(regDir, { recursive: true, force: true }))
+afterEach(() => {
+  rmSync(regDir, { recursive: true, force: true })
+})
 
 const VALID_SPEC = {
   id: 'my-agent',
@@ -390,14 +392,14 @@ describe('agents registry IPC', () => {
   })
 
   it('agents:getRegistry returns the builtins', async () => {
-    const r = (await call('agents:getRegistry')) as Array<{ id: string; source: string }>
+    const r = (await call('agents:getRegistry')) as { id: string; source: string }[]
     expect(r.some((a) => a.id === 'codex' && a.source === 'builtin')).toBe(true)
     expect(r.some((a) => a.source === 'user')).toBe(false)
   })
 
   it('agents:getRegistry includes a saved custom agent', async () => {
     await call('agents:saveCustom', VALID_SPEC)
-    const r = (await call('agents:getRegistry')) as Array<{ id: string; source: string }>
+    const r = (await call('agents:getRegistry')) as { id: string; source: string }[]
     expect(r.some((a) => a.id === 'my-agent' && a.source === 'user')).toBe(true)
   })
 
@@ -459,9 +461,9 @@ describe('agents registry IPC', () => {
 })
 
 describe('agents parse-error emission on save', () => {
-  function setup(): { sent: Array<{ channel: string; payload: unknown }> } {
+  function setup(): { sent: { channel: string; payload: unknown }[] } {
     handlers.clear()
-    const sent: Array<{ channel: string; payload: unknown }> = []
+    const sent: { channel: string; payload: unknown }[] = []
     const fakeWindow = {
       webContents: { send: (channel: string, payload: unknown) => sent.push({ channel, payload }) },
     }

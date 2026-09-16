@@ -19,13 +19,10 @@ vi.mock('node:child_process', () => {
   // Add custom promisify handler to match execFile behavior
   const customPromisifySymbol = promisify.custom as unknown as string | symbol
   ;(
-    mockFn as unknown as {
-      [K in string | symbol]: (
-        cmd: string,
-        args: string[],
-        opts: unknown,
-      ) => Promise<{ stdout: string; stderr: string }>
-    }
+    mockFn as unknown as Record<
+      string | symbol,
+      (cmd: string, args: string[], opts: unknown) => Promise<{ stdout: string; stderr: string }>
+    >
   )[customPromisifySymbol] = (cmd: string, args: string[], opts: unknown) => {
     return new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
       mockFn(cmd, args, opts, (err: Error | null, stdout: string, stderr: string) => {
@@ -47,7 +44,7 @@ describe('shared WSL primitives', () => {
     nextStub = null
   })
 
-  function stubOnce(stdout: string, err: Error | undefined = undefined) {
+  function stubOnce(stdout: string, err?: Error) {
     nextStub = { stdout, err }
   }
 

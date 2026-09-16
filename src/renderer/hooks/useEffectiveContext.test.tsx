@@ -22,7 +22,9 @@ describe('useEffectiveContext', () => {
   it('starts loading then returns value', async () => {
     const { result } = renderHook(() => useEffectiveContext('claude-code'))
     expect(result.current.loading).toBe(true)
-    await waitFor(() => expect(result.current.loading).toBe(false))
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false)
+    })
     expect(result.current.value).toBe(1_000_000)
     expect(result.current.source).toBe('registry-exact')
   })
@@ -30,7 +32,9 @@ describe('useEffectiveContext', () => {
   it('enabled:false skips the IPC call and immediately resolves to null', async () => {
     const { result } = renderHook(() => useEffectiveContext('claude-code', { enabled: false }))
     // Should already be settled — no async work to wait for
-    await waitFor(() => expect(result.current.loading).toBe(false))
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false)
+    })
     expect(result.current.value).toBeNull()
     expect(result.current.source).toBeNull()
     expect(result.current.modelId).toBeNull()

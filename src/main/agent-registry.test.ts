@@ -10,7 +10,9 @@ beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'agdeck-reg-'))
   file = join(dir, 'agents.toml')
 })
-afterEach(() => rmSync(dir, { recursive: true, force: true }))
+afterEach(() => {
+  rmSync(dir, { recursive: true, force: true })
+})
 
 const crypto = {
   available: true,

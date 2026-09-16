@@ -28,15 +28,23 @@ export function NotificationToast(): React.JSX.Element | null {
     const oldest = active[0]
     if (!oldest || oldest.type === 'error') return
     const remaining = Math.max(0, oldest.timestamp + 5000 - Date.now())
-    const timer = setTimeout(() => silenceToast(oldest.id), remaining)
-    return () => clearTimeout(timer)
+    const timer = setTimeout(() => {
+      silenceToast(oldest.id)
+    }, remaining)
+    return () => {
+      clearTimeout(timer)
+    }
   }, [active, silenceToast])
 
   const handleCopy = useCallback((e: React.MouseEvent, id: string, message: string) => {
     e.stopPropagation()
-    navigator.clipboard.writeText(message).catch(() => {})
+    navigator.clipboard.writeText(message).catch(() => {
+      /* clipboard permission denied — nothing to recover */
+    })
     setCopiedId(id)
-    setTimeout(() => setCopiedId(null), 1500)
+    setTimeout(() => {
+      setCopiedId(null)
+    }, 1500)
   }, [])
 
   // Clicking the toast expands it; clicking again hides the toast (silences,
@@ -65,7 +73,9 @@ export function NotificationToast(): React.JSX.Element | null {
           <div
             key={n.id}
             className={`toast toast-${n.type}${isExpanded ? ' toast-expanded' : ''}`}
-            onClick={() => handleClick(n.id)}
+            onClick={() => {
+              handleClick(n.id)
+            }}
             role={n.type === 'error' ? 'alert' : 'status'}
             aria-live={n.type === 'error' ? 'assertive' : 'polite'}
           >
@@ -81,7 +91,9 @@ export function NotificationToast(): React.JSX.Element | null {
             <span className="toast-message">{n.message}</span>
             <button
               className="toast-copy"
-              onClick={(e) => handleCopy(e, n.id, n.message)}
+              onClick={(e) => {
+                handleCopy(e, n.id, n.message)
+              }}
               aria-label="Copy message"
               type="button"
             >

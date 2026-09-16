@@ -4,7 +4,7 @@ import { useAppStore } from '../store/appStore'
  * Maps technical IPC error substrings to user-friendly messages.
  * Order matters — first match wins.
  */
-const ERROR_MAP: ReadonlyArray<readonly [pattern: string, friendly: string]> = [
+const ERROR_MAP: readonly (readonly [pattern: string, friendly: string])[] = [
   ['non-null object', 'Invalid data — please check your inputs'],
   ['Invalid id', 'Could not find that item — it may have been deleted'],
   ['Maximum concurrent sessions', 'Too many terminals open — close some before opening more'],

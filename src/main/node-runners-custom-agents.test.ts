@@ -164,11 +164,11 @@ describe('runAgentNode — custom agents', () => {
 
     const spawnCall = mockSpawn.mock.calls[0] as [string, string[], { env?: NodeJS.ProcessEnv }]
     // env reaches the child via the spawn options...
-    expect(spawnCall[2]?.env?.['OLLAMA_HOST']).toBe('127.0.0.1:11434')
+    expect(spawnCall[2].env?.['OLLAMA_HOST']).toBe('127.0.0.1:11434')
     // ...and the base process env is still inherited (nvm/PATH preserved).
-    expect(spawnCall[2]?.env).toMatchObject(process.env)
+    expect(spawnCall[2].env).toMatchObject(process.env)
     // ...but is NEVER serialized into the bash command string.
-    const bashCmd = spawnCall[1]?.[3] ?? ''
+    const bashCmd = spawnCall[1][3] ?? ''
     expect(bashCmd).not.toContain('OLLAMA_HOST')
     expect(bashCmd).not.toContain('127.0.0.1:11434')
   })
@@ -184,7 +184,7 @@ describe('runAgentNode — custom agents', () => {
     await spawnThenClose(child)
     await promise
 
-    const env = (mockSpawn.mock.calls[0] as [string, string[], { env?: NodeJS.ProcessEnv }])[2]?.env
+    const env = (mockSpawn.mock.calls[0] as [string, string[], { env?: NodeJS.ProcessEnv }])[2].env
     expect(env?.['LD_PRELOAD']).toBeUndefined()
     expect(env?.['SAFE']).toBe('ok')
   })
@@ -201,8 +201,8 @@ describe('runAgentNode — custom agents', () => {
     await promise
 
     const spawnCall = mockSpawn.mock.calls[0] as [string, string[], { env?: NodeJS.ProcessEnv }]
-    expect(spawnCall[2]?.env?.['OPENAI_API_KEY']).toBe('sk-secret')
-    const bashCmd = spawnCall[1]?.[3] ?? ''
+    expect(spawnCall[2].env?.['OPENAI_API_KEY']).toBe('sk-secret')
+    const bashCmd = spawnCall[1][3] ?? ''
     expect(bashCmd).not.toContain('sk-secret')
     expect(bashCmd).not.toContain('OPENAI_API_KEY')
   })
@@ -222,8 +222,8 @@ describe('runAgentNode — custom agents', () => {
     await promise
 
     const spawnCall = mockSpawn.mock.calls[0] as [string, string[], { env?: NodeJS.ProcessEnv }]
-    expect(spawnCall[2]?.env?.['OPENAI_API_BASE']).toBe('http://10.0.0.5:11434/v1')
-    const bashCmd = spawnCall[1]?.[3] ?? ''
+    expect(spawnCall[2].env?.['OPENAI_API_BASE']).toBe('http://10.0.0.5:11434/v1')
+    const bashCmd = spawnCall[1][3] ?? ''
     expect(bashCmd).toContain('10.0.0.5')
     expect(bashCmd).not.toContain('{{WINDOWS_HOST}}')
   })

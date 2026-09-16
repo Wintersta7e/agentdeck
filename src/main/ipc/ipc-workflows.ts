@@ -25,8 +25,8 @@ import { SAFE_ID_RE, validateId } from '../validation'
 export function registerWorkflowHandlers(
   getWorkflowEngine: () => WorkflowEngine | null,
   agentRegistry: AgentRegistry,
-  getRoles?: (() => Role[]) | undefined,
-  saveRole?: ((role: Role) => void) | undefined,
+  getRoles?: () => Role[],
+  saveRole?: (role: Role) => void,
 ): void {
   /* ── Workflow CRUD ──────────────────────────────────────────────── */
   ipcMain.handle(CH.workflowsList, () => listWorkflows())
@@ -34,14 +34,17 @@ export function registerWorkflowHandlers(
     validateId(id, 'workflow id')
     return loadWorkflow(id)
   })
-  ipcMain.handle(CH.workflowsSave, (_, workflow: Workflow) => {
+  // `unknown`, not `Workflow`: the payload crosses IPC, so the declared type
+  // would be a promise the renderer cannot keep — the checks below are what
+  // actually establishes the shape.
+  ipcMain.handle(CH.workflowsSave, (_, workflow: unknown) => {
     if (!workflow || typeof workflow !== 'object') throw new Error('Invalid workflow')
     // IPC bypasses TS — id can be missing or empty at runtime despite the Workflow
     // type. Both signal a new workflow; saveWorkflow mints a UUID via `id || uuid()`.
     // When a non-empty id is present, enforce SAFE_ID_RE consistent with peer handlers.
     const id: unknown = (workflow as { id?: unknown }).id
     if (id !== undefined && id !== '') validateId(id, 'workflow id')
-    return saveWorkflow(workflow, agentRegistry.knownIds())
+    return saveWorkflow(workflow as Workflow, agentRegistry.knownIds())
   })
   ipcMain.handle(CH.workflowsRename, (_, id: string, name: string) => {
     validateId(id, 'workflow id')
@@ -227,7 +230,14 @@ export function registerWorkflowHandlers(
   /* ── Workflow Execution ────────────────────────────────────────── */
   ipcMain.handle(
     CH.workflowRun,
-    async (_, workflowId: string, projectPath?: string, variables?: Record<string, string>) => {
+    async (
+      _,
+      workflowId: string,
+      projectPath?: string,
+      // `| null` is not decoration: the renderer can send null across IPC and
+      // `typeof null === 'object'` would sail past the shape check below.
+      variables?: Record<string, string> | null,
+    ) => {
       // Validate workflowId before filesystem access
       validateId(workflowId, 'workflow id')
       const workflow = await loadWorkflow(workflowId)

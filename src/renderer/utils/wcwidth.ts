@@ -14,7 +14,7 @@
  */
 
 /** Codepoint ranges (inclusive) whose chars have width 2. Sorted by start. */
-const WIDE_RANGES: ReadonlyArray<readonly [number, number]> = [
+const WIDE_RANGES: readonly (readonly [number, number])[] = [
   [0x1100, 0x115f], // Hangul Jamo
   [0x2329, 0x232a], // Angle brackets
   [0x2e80, 0x303e], // CJK Radicals + Kangxi + CJK Symbols
@@ -43,7 +43,7 @@ const WIDE_RANGES: ReadonlyArray<readonly [number, number]> = [
 ]
 
 /** Codepoint ranges (inclusive) whose chars have width 0 (combining marks). */
-const ZERO_WIDTH_RANGES: ReadonlyArray<readonly [number, number]> = [
+const ZERO_WIDTH_RANGES: readonly (readonly [number, number])[] = [
   [0x0300, 0x036f], // Combining Diacritical Marks
   [0x0483, 0x0489], // Cyrillic combining
   [0x0591, 0x05bd], // Hebrew points
@@ -83,7 +83,7 @@ const ZERO_WIDTH_RANGES: ReadonlyArray<readonly [number, number]> = [
   [0xe0100, 0xe01ef], // Variation Selectors Supplement
 ]
 
-function inRange(cp: number, ranges: ReadonlyArray<readonly [number, number]>): boolean {
+function inRange(cp: number, ranges: readonly (readonly [number, number])[]): boolean {
   let lo = 0
   let hi = ranges.length - 1
   while (lo <= hi) {

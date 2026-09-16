@@ -30,6 +30,15 @@ const DISABLED: HookState = {
   unknownModelHint: undefined,
 }
 
+/** The resolver reported an error, or the IPC itself rejected: stop loading. */
+const FAILED: HookState = {
+  loading: false,
+  value: null,
+  source: null,
+  modelId: null,
+  unknownModelHint: undefined,
+}
+
 export function badgeLabelFor(
   source: ContextSource | null,
   modelId: string | null,
@@ -61,26 +70,25 @@ export function useEffectiveContext(agentId: string, opts: HookOpts = {}): HookS
   useEffect(() => {
     if (!enabled) return
     let cancelled = false
-    window.agentDeck.agents.getEffectiveContext(agentId).then((r) => {
-      if (cancelled) return
-      if ('error' in r) {
+    window.agentDeck.agents
+      .getEffectiveContext(agentId)
+      .then((r) => {
+        if (cancelled) return
+        if ('error' in r) {
+          setAsyncState(FAILED)
+          return
+        }
         setAsyncState({
           loading: false,
-          value: null,
-          source: null,
-          modelId: null,
-          unknownModelHint: undefined,
+          value: r.value,
+          source: r.source,
+          modelId: r.modelId,
+          unknownModelHint: r.unknownModelHint,
         })
-        return
-      }
-      setAsyncState({
-        loading: false,
-        value: r.value,
-        source: r.source,
-        modelId: r.modelId,
-        unknownModelHint: r.unknownModelHint,
       })
-    })
+      .catch(() => {
+        if (!cancelled) setAsyncState(FAILED)
+      })
     return () => {
       cancelled = true
     }
@@ -109,26 +117,25 @@ export function useEffectiveContextForModel(
   useEffect(() => {
     if (!enabled) return
     let cancelled = false
-    window.agentDeck.agents.getEffectiveContextForModel(agentId, modelId).then((r) => {
-      if (cancelled) return
-      if ('error' in r) {
+    window.agentDeck.agents
+      .getEffectiveContextForModel(agentId, modelId)
+      .then((r) => {
+        if (cancelled) return
+        if ('error' in r) {
+          setAsyncState(FAILED)
+          return
+        }
         setAsyncState({
           loading: false,
-          value: null,
-          source: null,
-          modelId: null,
-          unknownModelHint: undefined,
+          value: r.value,
+          source: r.source,
+          modelId: r.modelId,
+          unknownModelHint: r.unknownModelHint,
         })
-        return
-      }
-      setAsyncState({
-        loading: false,
-        value: r.value,
-        source: r.source,
-        modelId: r.modelId,
-        unknownModelHint: r.unknownModelHint,
       })
-    })
+      .catch(() => {
+        if (!cancelled) setAsyncState(FAILED)
+      })
     return () => {
       cancelled = true
     }

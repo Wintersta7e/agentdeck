@@ -180,7 +180,7 @@ export function NewSessionScreen(): React.JSX.Element {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       addNotification('error', `Failed to save template: ${message}`)
-      void window.agentDeck.log.send('warn', 'new-session', 'save template failed', {
+      window.agentDeck.log.send('warn', 'new-session', 'save template failed', {
         err: message,
       })
     }
@@ -201,7 +201,9 @@ export function NewSessionScreen(): React.JSX.Element {
       }
     }
     window.addEventListener('keydown', handleKeyDown, { capture: true })
-    return () => window.removeEventListener('keydown', handleKeyDown, { capture: true })
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, { capture: true })
+    }
   }, [activeSessionId, handleLaunch, setCurrentView])
 
   return (
@@ -231,7 +233,9 @@ export function NewSessionScreen(): React.JSX.Element {
                       key={t.id}
                       type="button"
                       className={`ns-template${active ? ' is-active' : ''}`}
-                      onClick={() => handlePickTemplate(t)}
+                      onClick={() => {
+                        handlePickTemplate(t)
+                      }}
                     >
                       <div className="ns-template__cat">{t.category ?? 'TEMPLATE'}</div>
                       <div className="ns-template__name">{t.name}</div>
@@ -246,7 +250,9 @@ export function NewSessionScreen(): React.JSX.Element {
             <div className="ns-prompt">
               <textarea
                 value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
+                onChange={(e) => {
+                  setPrompt(e.target.value)
+                }}
                 placeholder="e.g. Add jittered exponential backoff to the WebSocket reconnect path. Start from src/ws/reconnect.rs. Run the failing test and iterate until it passes."
                 className="ns-prompt__input"
                 rows={8}
@@ -269,7 +275,9 @@ export function NewSessionScreen(): React.JSX.Element {
                       key={k}
                       type="button"
                       className={`ns-toggle${approve[k] ? ' is-on' : ''}`}
-                      onClick={() => setApprove((prev) => ({ ...prev, [k]: !prev[k] }))}
+                      onClick={() => {
+                        setApprove((prev) => ({ ...prev, [k]: !prev[k] }))
+                      }}
                       aria-pressed={approve[k]}
                     >
                       {k.toUpperCase()}
@@ -285,7 +293,9 @@ export function NewSessionScreen(): React.JSX.Element {
                       key={m}
                       type="button"
                       className={`ns-toggle${mode === m ? ' is-on' : ''}`}
-                      onClick={() => setMode(m)}
+                      onClick={() => {
+                        setMode(m)
+                      }}
                       aria-pressed={mode === m}
                     >
                       {m.toUpperCase()}
@@ -326,18 +336,18 @@ export function NewSessionScreen(): React.JSX.Element {
             ) : null}
             <div className="ns-target__agent-list">
               {registry.map((a) => {
-                const active = agentId === (a.id as AgentType)
+                const active = agentId === a.id
                 return (
                   <button
                     key={a.id}
                     type="button"
                     className={`ns-agent-pill${active ? ' is-active' : ''}`}
-                    onClick={() =>
+                    onClick={() => {
                       setAgentSelection({
                         projectId: effectiveProjectId,
-                        agentId: a.id as AgentType,
+                        agentId: a.id,
                       })
-                    }
+                    }}
                     style={{
                       ['--sel-color' as 'color']: `var(${a.colorVar})`,
                     }}
@@ -365,7 +375,9 @@ export function NewSessionScreen(): React.JSX.Element {
               <>
                 <select
                   value={effectiveProjectId}
-                  onChange={(e) => setProjectId(e.target.value)}
+                  onChange={(e) => {
+                    setProjectId(e.target.value)
+                  }}
                   className="ns-select"
                   aria-label="Project"
                 >
@@ -384,7 +396,9 @@ export function NewSessionScreen(): React.JSX.Element {
             <div className="ns-target__label">BRANCH</div>
             <input
               value={branch}
-              onChange={(e) => setBranch(e.target.value)}
+              onChange={(e) => {
+                setBranch(e.target.value)
+              }}
               className="ns-input"
               aria-label="Branch"
             />
@@ -392,21 +406,27 @@ export function NewSessionScreen(): React.JSX.Element {
               <button
                 type="button"
                 className={`ns-chip${branchMode === 'existing' ? ' is-on' : ''}`}
-                onClick={() => setBranchMode('existing')}
+                onClick={() => {
+                  setBranchMode('existing')
+                }}
               >
                 EXISTING
               </button>
               <button
                 type="button"
                 className={`ns-chip${branchMode === 'new' ? ' is-on' : ''}`}
-                onClick={() => setBranchMode('new')}
+                onClick={() => {
+                  setBranchMode('new')
+                }}
               >
                 NEW FROM MAIN
               </button>
               <button
                 type="button"
                 className={`ns-chip${branchMode === 'worktree' ? ' is-on' : ''}`}
-                onClick={() => setBranchMode('worktree')}
+                onClick={() => {
+                  setBranchMode('worktree')
+                }}
               >
                 WORKTREE
               </button>

@@ -98,7 +98,7 @@ describe('FilesTab (tree)', () => {
     await waitFor(() => expect(screen.getByText('README.md')).toBeInTheDocument())
     const callsBefore = vi
       .mocked(window.agentDeck.files.listDir)
-      .mock.calls.filter((c) => c[0]?.path === '/home/u/proj').length
+      .mock.calls.filter((c) => c[0].path === '/home/u/proj').length
     expect(callsBefore).toBe(1)
 
     fireEvent.click(screen.getByLabelText(/refresh/i))
@@ -106,7 +106,7 @@ describe('FilesTab (tree)', () => {
     await waitFor(() => {
       const callsAfter = vi
         .mocked(window.agentDeck.files.listDir)
-        .mock.calls.filter((c) => c[0]?.path === '/home/u/proj').length
+        .mock.calls.filter((c) => c[0].path === '/home/u/proj').length
       // Must have re-fetched the ROOT path specifically, proving remount.
       expect(callsAfter).toBe(2)
     })

@@ -491,10 +491,18 @@ describe('edge-scheduler', () => {
     it('throws on unknown node ID', () => {
       const sched = createScheduler([], [])
       expect(() => sched.getNodeStatus('unknown')).toThrow('Unknown node: unknown')
-      expect(() => sched.completeNode('unknown')).toThrow('Unknown node: unknown')
-      expect(() => sched.failNode('unknown')).toThrow('Unknown node: unknown')
-      expect(() => sched.skipNode('unknown')).toThrow('Unknown node: unknown')
-      expect(() => sched.resolveCondition('unknown', 'true')).toThrow('Unknown node: unknown')
+      expect(() => {
+        sched.completeNode('unknown')
+      }).toThrow('Unknown node: unknown')
+      expect(() => {
+        sched.failNode('unknown')
+      }).toThrow('Unknown node: unknown')
+      expect(() => {
+        sched.skipNode('unknown')
+      }).toThrow('Unknown node: unknown')
+      expect(() => {
+        sched.resolveCondition('unknown', 'true')
+      }).toThrow('Unknown node: unknown')
     })
 
     it('loop edges do not count as incoming forward edges', () => {

@@ -113,9 +113,7 @@ describe('agent-env-resolver', () => {
   })
 
   it('rejects unknown agent ids', async () => {
-    await expect(getAgentSnapshot({ agentId: 'fake-agent' as unknown as 'codex' })).rejects.toThrow(
-      /unknown agent/i,
-    )
+    await expect(getAgentSnapshot({ agentId: 'fake-agent' })).rejects.toThrow(/unknown agent/i)
   })
 
   it('deduplicates concurrent requests for the same key (in-flight)', async () => {

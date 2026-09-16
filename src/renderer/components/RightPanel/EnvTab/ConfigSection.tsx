@@ -28,7 +28,9 @@ export function ConfigSection({ config }: Props): React.JSX.Element {
         await navigator.clipboard.writeText(value)
         setCopiedKey(key)
         if (timeoutRef.current) clearTimeout(timeoutRef.current)
-        timeoutRef.current = setTimeout(() => setCopiedKey(null), 1200)
+        timeoutRef.current = setTimeout(() => {
+          setCopiedKey(null)
+        }, 1200)
       } catch {
         // Clipboard API unavailable — silently no-op; UI shows no confirmation.
       }
@@ -60,7 +62,9 @@ export function ConfigSection({ config }: Props): React.JSX.Element {
                   type="button"
                   className="env-tab__config-copy"
                   aria-label={isCopied ? `Copied ${entry.key}` : `Copy ${entry.key}`}
-                  onClick={() => onCopy(id, entry.value)}
+                  onClick={() => {
+                    onCopy(id, entry.value)
+                  }}
                   title={isCopied ? 'Copied' : 'Copy value'}
                 >
                   {isCopied ? (

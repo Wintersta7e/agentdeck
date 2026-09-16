@@ -171,12 +171,8 @@ describe('pty:spawn IPC validation', () => {
   })
 
   it('rejects a non-string projectPath', () => {
-    expect(() => call('pty:spawn', 'sess-1', 80, 24, 42 as unknown as string)).toThrow(
-      /projectPath/,
-    )
-    expect(() => call('pty:spawn', 'sess-1', 80, 24, {} as unknown as string)).toThrow(
-      /projectPath/,
-    )
+    expect(() => call('pty:spawn', 'sess-1', 80, 24, 42)).toThrow(/projectPath/)
+    expect(() => call('pty:spawn', 'sess-1', 80, 24, {})).toThrow(/projectPath/)
   })
 
   it('throws when the pty manager is uninitialized', () => {
@@ -460,7 +456,9 @@ describe('pty:spawn custom-agent gate (registry.has)', () => {
     })
   })
 
-  afterEach(() => rmSync(regDir, { recursive: true, force: true }))
+  afterEach(() => {
+    rmSync(regDir, { recursive: true, force: true })
+  })
 
   it('accepts a custom registry agent id and delegates to the pty manager', () => {
     expect(() =>

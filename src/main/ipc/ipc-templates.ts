@@ -111,8 +111,10 @@ function validateRef(input: unknown, ctx: TemplateHandlerContext): TemplateRef {
   validateScopeAndProject(scope, projectId, ctx)
   return {
     id,
-    scope: scope as TemplateScope,
-    projectId: scope === 'project' ? (projectId as string) : null,
+    scope: scope,
+    // Re-validating is a regex test and gives real narrowing:
+    // validateScopeAndProject only asserts about `scope`.
+    projectId: scope === 'project' ? validateId(projectId, 'ref.projectId') : null,
   }
 }
 
@@ -133,7 +135,7 @@ function validateRef(input: unknown, ctx: TemplateHandlerContext): TemplateRef {
 export function registerTemplateIpc(ctx: TemplateHandlerContext): void {
   ipcMain.handle(
     CH.templatesListAll,
-    async (_event, input?: { projectId?: string } | undefined): Promise<Template[]> => {
+    async (_event, input?: { projectId?: string }): Promise<Template[]> => {
       // Validate input BEFORE the migration-complete branch so malformed
       // payloads are rejected uniformly regardless of current migration state.
       if (input !== undefined && !isPlainObject(input)) {
@@ -189,7 +191,7 @@ export function registerTemplateIpc(ctx: TemplateHandlerContext): void {
       const normalizedProjectId = scope === 'project' ? (projectId as string) : null
 
       if (!ctx.migrationComplete()) {
-        const d = draft as TemplateDraft
+        const d = draft
         const file: TemplateFile = {
           id: d.id ?? generateTemplateId(),
           name: d.name,
@@ -203,12 +205,7 @@ export function registerTemplateIpc(ctx: TemplateHandlerContext): void {
         return ctx.legacy.save(file)
       }
 
-      return ctx.store.save(
-        draft as TemplateDraft,
-        scope as TemplateScope,
-        normalizedProjectId,
-        baseMtime as number | undefined,
-      )
+      return ctx.store.save(draft, scope, normalizedProjectId, baseMtime)
     },
   )
 

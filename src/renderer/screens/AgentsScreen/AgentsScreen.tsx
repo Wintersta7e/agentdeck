@@ -102,7 +102,9 @@ function AgentTile({
           type="button"
           className="agent-tile__update-btn"
           disabled={!canAct}
-          onClick={() => onUpdate(agent.id)}
+          onClick={() => {
+            onUpdate(agent.id)
+          }}
           title={
             !installed
               ? `Install: ${agent.updateCmd}`
@@ -212,13 +214,21 @@ export function AgentsScreen(): React.JSX.Element {
       sub="All 7 AgentDeck agents. Install once, launch anywhere."
       filters={
         <>
-          <FilterChip active={filter === 'all'} onClick={() => setFilter('all')} count={counts.all}>
+          <FilterChip
+            active={filter === 'all'}
+            onClick={() => {
+              setFilter('all')
+            }}
+            count={counts.all}
+          >
             All
           </FilterChip>
           <FilterChip
             active={filter === 'installed'}
             dotColor="green"
-            onClick={() => setFilter('installed')}
+            onClick={() => {
+              setFilter('installed')
+            }}
             count={counts.installed}
           >
             Installed
@@ -226,7 +236,9 @@ export function AgentsScreen(): React.JSX.Element {
           <FilterChip
             active={filter === 'update'}
             dotColor="accent"
-            onClick={() => setFilter('update')}
+            onClick={() => {
+              setFilter('update')
+            }}
             count={counts.update}
           >
             Update available
@@ -234,7 +246,9 @@ export function AgentsScreen(): React.JSX.Element {
           <FilterChip
             active={filter === 'missing'}
             dotColor="text3"
-            onClick={() => setFilter('missing')}
+            onClick={() => {
+              setFilter('missing')
+            }}
             count={counts.missing}
           >
             Not installed

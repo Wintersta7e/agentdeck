@@ -13,14 +13,16 @@ export function AgentSelector({ value, onChange }: AgentSelectorProps): React.JS
   return (
     <div className="agent-select-grid">
       {registry.map((agent) => {
-        const id = agent.id as AgentType
+        const id = agent.id
         const selected = value === id
         return (
           <button
             key={agent.id}
             type="button"
             className={`agent-opt ${selected ? 'selected' : ''}`}
-            onClick={() => onChange(id)}
+            onClick={() => {
+              onChange(id)
+            }}
           >
             <div className="agent-opt-icon">{agent.icon}</div>
             <div className="agent-opt-name">{agent.name}</div>

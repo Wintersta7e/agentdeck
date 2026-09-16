@@ -2,24 +2,22 @@ import { describe, it, expect } from 'vitest'
 import { computeActivityWindow, computeAgentActivity, resolveWindow } from './usePlanLimits'
 import type { Project, Session, PlanWindow } from '../../shared/types'
 
-const session = (over: Partial<Session>): Session =>
-  ({
-    id: 's',
-    projectId: 'p',
-    status: 'running',
-    startedAt: 0,
-    approvalState: 'idle',
-    seedTemplateId: null,
-    ...over,
-  }) as Session
+const session = (over: Partial<Session>): Session => ({
+  id: 's',
+  projectId: 'p',
+  status: 'running',
+  startedAt: 0,
+  approvalState: 'idle',
+  seedTemplateId: null,
+  ...over,
+})
 
-const project = (id: string, agent: string): Project =>
-  ({
-    id,
-    name: id,
-    path: `/home/user/${id}`,
-    agents: [{ agent, isDefault: true }],
-  }) as Project
+const project = (id: string, agent: string): Project => ({
+  id,
+  name: id,
+  path: `/home/user/${id}`,
+  agents: [{ agent, isDefault: true }],
+})
 
 describe('resolveWindow', () => {
   const now = 2_000_000 // ms

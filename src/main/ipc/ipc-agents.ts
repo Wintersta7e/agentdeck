@@ -146,27 +146,24 @@ export function registerAgentHandlers(
   })
 
   /* ── Effective context for an explicit model (fallback-only) ────── */
-  ipcMain.handle(
-    CH.agentsGetEffectiveContextForModel,
-    async (_, agentId: unknown, modelId: unknown) => {
-      if (typeof agentId !== 'string' || !registry.has(agentId)) {
-        return { error: 'invalid agentId' }
-      }
-      if (typeof modelId !== 'string' || modelId.length === 0) {
-        return { error: 'invalid modelId' }
-      }
-      const prefs = store.get('appPrefs')
-      return getEffectiveContextWindow({
-        agentId,
-        activeModel: modelId,
-        overrides: {
-          agent: prefs.agentContextOverrides ?? {},
-          model: prefs.modelContextOverrides ?? {},
-        },
-        agentDefaults: agentDefaultsFor(agentId),
-      })
-    },
-  )
+  ipcMain.handle(CH.agentsGetEffectiveContextForModel, (_, agentId: unknown, modelId: unknown) => {
+    if (typeof agentId !== 'string' || !registry.has(agentId)) {
+      return { error: 'invalid agentId' }
+    }
+    if (typeof modelId !== 'string' || modelId.length === 0) {
+      return { error: 'invalid modelId' }
+    }
+    const prefs = store.get('appPrefs')
+    return getEffectiveContextWindow({
+      agentId,
+      activeModel: modelId,
+      overrides: {
+        agent: prefs.agentContextOverrides ?? {},
+        model: prefs.modelContextOverrides ?? {},
+      },
+      agentDefaults: agentDefaultsFor(agentId),
+    })
+  })
 
   /* ── Set / clear a context override ────────────────────────────── */
   ipcMain.handle(CH.agentsSetContextOverride, (_, args: unknown) => {
@@ -186,7 +183,7 @@ export function registerAgentHandlers(
       const map =
         value === undefined
           ? Object.fromEntries(Object.entries(prev).filter(([k]) => k !== agentId))
-          : { ...prev, [agentId]: value as number }
+          : { ...prev, [agentId]: value }
       store.set('appPrefs', { ...prefs, agentContextOverrides: map })
       return { ok: true }
     }
@@ -198,7 +195,7 @@ export function registerAgentHandlers(
     const map =
       value === undefined
         ? Object.fromEntries(Object.entries(prev).filter(([k]) => k !== modelId))
-        : { ...prev, [modelId]: value as number }
+        : { ...prev, [modelId]: value }
     store.set('appPrefs', { ...prefs, modelContextOverrides: map })
     return { ok: true }
   })

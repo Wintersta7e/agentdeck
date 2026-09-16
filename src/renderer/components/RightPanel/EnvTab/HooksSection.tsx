@@ -59,7 +59,9 @@ export function HooksSection({ hooks }: Props): React.JSX.Element {
                   tabIndex={0}
                   aria-expanded={isOpen}
                   className="env-tab__hooks-event-row"
-                  onClick={() => toggle(group.event)}
+                  onClick={() => {
+                    toggle(group.event)
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault()

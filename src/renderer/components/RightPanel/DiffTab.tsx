@@ -32,7 +32,7 @@ export function DiffTab(): React.JSX.Element {
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          void window.agentDeck.log.send('warn', 'diff-tab', 'worktree inspect failed', {
+          window.agentDeck.log.send('warn', 'diff-tab', 'worktree inspect failed', {
             sessionId: activeSessionId,
             error: err instanceof Error ? err.message : String(err),
           })
@@ -73,7 +73,13 @@ export function DiffTab(): React.JSX.Element {
         <span className="ri-diff__value">{summary?.hasUnmerged ? 'yes' : 'none'}</span>
       </div>
 
-      <button type="button" className="ri-diff__cta" onClick={() => setCurrentView('diff')}>
+      <button
+        type="button"
+        className="ri-diff__cta"
+        onClick={() => {
+          setCurrentView('diff')
+        }}
+      >
         ▸ Open full review
       </button>
     </div>

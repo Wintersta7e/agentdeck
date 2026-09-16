@@ -9,7 +9,7 @@ const TIMEOUT_MS = 10_000
 async function runWsl(args: string[]): Promise<string | null> {
   try {
     const { stdout } = await execFileAsync('wsl.exe', args, { timeout: TIMEOUT_MS })
-    return stdout ?? ''
+    return stdout
   } catch {
     return null
   }

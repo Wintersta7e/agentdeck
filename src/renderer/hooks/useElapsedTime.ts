@@ -41,7 +41,10 @@ export function useElapsedTime(startedAt: number | undefined): string {
   // useSyncExternalStore to tear down and restart the tick subscription.
   const subscribe = useCallback(
     (onStoreChange: () => void) => {
-      if (!startedAt) return (): void => {}
+      if (!startedAt)
+        return (): void => {
+          /* never subscribed to the tick */
+        }
       return subscribeToTick(onStoreChange)
     },
     [startedAt],

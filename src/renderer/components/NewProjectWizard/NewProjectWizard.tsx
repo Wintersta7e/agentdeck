@@ -244,7 +244,9 @@ export function NewProjectWizard({ onCreateProject }: NewProjectWizardProps): Re
               <div onBlur={() => void runDetection(wizardData.path ?? '')}>
                 <PathInput
                   value={wizardData.path ?? ''}
-                  onChange={(value) => updateField('path', value)}
+                  onChange={(value) => {
+                    updateField('path', value)
+                  }}
                   placeholder="~/projects/my-project"
                 />
               </div>
@@ -258,7 +260,9 @@ export function NewProjectWizard({ onCreateProject }: NewProjectWizardProps): Re
                 type="text"
                 className="wizard-input"
                 value={wizardData.name ?? ''}
-                onChange={(e) => updateField('name', e.target.value)}
+                onChange={(e) => {
+                  updateField('name', e.target.value)
+                }}
                 placeholder="My Project"
                 aria-label="Display name"
               />
@@ -318,7 +322,9 @@ export function NewProjectWizard({ onCreateProject }: NewProjectWizardProps): Re
               <div className="wizard-field-label">Stack badge</div>
               <StackBadgeSelector
                 value={wizardData.badge ?? detectedStack?.badge ?? 'Other'}
-                onChange={(badge) => updateField('badge', badge)}
+                onChange={(badge) => {
+                  updateField('badge', badge)
+                }}
               />
             </div>
 
@@ -330,7 +336,9 @@ export function NewProjectWizard({ onCreateProject }: NewProjectWizardProps): Re
                 type="text"
                 className="wizard-input"
                 value={wizardData.notes ?? ''}
-                onChange={(e) => updateField('notes', e.target.value)}
+                onChange={(e) => {
+                  updateField('notes', e.target.value)
+                }}
                 placeholder="Short description (optional)"
                 aria-label="Project notes"
               />
@@ -354,7 +362,9 @@ export function NewProjectWizard({ onCreateProject }: NewProjectWizardProps): Re
                   type="text"
                   className="cmd-input"
                   value={item.value}
-                  onChange={(e) => updateCommand(item.id, e.target.value)}
+                  onChange={(e) => {
+                    updateCommand(item.id, e.target.value)
+                  }}
                   placeholder="Enter command..."
                 />
               )}
@@ -393,7 +403,9 @@ export function NewProjectWizard({ onCreateProject }: NewProjectWizardProps): Re
               </div>
               <AgentSelector
                 value={wizardData.agents?.[0]?.agent ?? 'claude-code'}
-                onChange={(agent) => updateField('agents', [{ agent, isDefault: true }])}
+                onChange={(agent) => {
+                  updateField('agents', [{ agent, isDefault: true }])
+                }}
               />
             </div>
 
@@ -413,7 +425,9 @@ export function NewProjectWizard({ onCreateProject }: NewProjectWizardProps): Re
                           <div
                             key={tpl.id}
                             className={`template-opt ${isSelected ? 'selected' : ''}`}
-                            onClick={() => toggleTemplate(tpl.id)}
+                            onClick={() => {
+                              toggleTemplate(tpl.id)
+                            }}
                           >
                             <div className="template-checkbox">
                               {isSelected ? <Check size={12} /> : null}
@@ -512,7 +526,9 @@ export function NewProjectWizard({ onCreateProject }: NewProjectWizardProps): Re
                   >
                     <Toggle
                       value={wizardData.pinned ?? true}
-                      onChange={(val) => updateField('pinned', val)}
+                      onChange={(val) => {
+                        updateField('pinned', val)
+                      }}
                       label="Pin to sidebar"
                     />
                   </div>

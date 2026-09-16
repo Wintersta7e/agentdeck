@@ -43,7 +43,9 @@ export const SessionTabs = memo(function SessionTabs(): React.JSX.Element {
         className="session-tabs__overview"
         aria-label="Back to sessions overview"
         title="Sessions overview"
-        onClick={() => clearActiveSession()}
+        onClick={() => {
+          clearActiveSession()
+        }}
       >
         <LayoutGrid size={12} aria-hidden="true" />
       </button>
@@ -63,7 +65,9 @@ export const SessionTabs = memo(function SessionTabs(): React.JSX.Element {
             tabIndex={0}
             aria-selected={isActive}
             className={`session-tab session-tab--${tone}${isActive ? ' is-active' : ''}`}
-            onClick={() => setActiveSession(id)}
+            onClick={() => {
+              setActiveSession(id)
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault()
@@ -99,7 +103,9 @@ export const SessionTabs = memo(function SessionTabs(): React.JSX.Element {
         type="button"
         className="session-tabs__add"
         aria-label="New session"
-        onClick={() => openNewSessionComposer()}
+        onClick={() => {
+          openNewSessionComposer()
+        }}
       >
         <Plus size={12} />
       </button>

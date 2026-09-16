@@ -93,7 +93,9 @@ export function ShortcutsDialog({ onClose }: ShortcutsDialogProps): React.JSX.El
       }
     }
     window.addEventListener('keydown', handleKeyDown, true)
-    return () => window.removeEventListener('keydown', handleKeyDown, true)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, true)
+    }
   }, [onClose])
 
   const handleOverlayClick = useCallback(

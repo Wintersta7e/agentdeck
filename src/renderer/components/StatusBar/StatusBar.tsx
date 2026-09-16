@@ -118,7 +118,12 @@ export function StatusBar({ onAboutClick, onShortcutsClick }: StatusBarProps): R
           </span>
           <kbd className="status-cmd-kbd">Ctrl+/</kbd>
         </button>
-        <button className="status-cmd" onClick={() => openCommandPalette()}>
+        <button
+          className="status-cmd"
+          onClick={() => {
+            openCommandPalette()
+          }}
+        >
           <span className="status-cmd-icon">
             <Menu size={14} />
           </span>

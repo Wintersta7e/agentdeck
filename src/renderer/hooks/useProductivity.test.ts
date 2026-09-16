@@ -3,16 +3,15 @@ import { computeTodayProductivity } from './useProductivity'
 import type { DailyUsageEntry, Session } from '../../shared/types'
 import { todayIsoKey } from '../../shared/date-keys'
 
-const session = (over: Partial<Session>): Session =>
-  ({
-    id: 's1',
-    projectId: 'p1',
-    status: 'running',
-    startedAt: 0,
-    approvalState: 'idle',
-    seedTemplateId: null,
-    ...over,
-  }) as Session
+const session = (over: Partial<Session>): Session => ({
+  id: 's1',
+  projectId: 'p1',
+  status: 'running',
+  startedAt: 0,
+  approvalState: 'idle',
+  seedTemplateId: null,
+  ...over,
+})
 
 describe('computeTodayProductivity', () => {
   const midnight = new Date(`${todayIsoKey()}T00:00:00`).getTime()

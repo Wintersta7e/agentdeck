@@ -24,7 +24,6 @@ import {
   getLogicalSelection,
   OSC_RESPONSE_RE,
   type FitCallbacks,
-  type ScrollGuardTerminal,
 } from '../../utils/terminal-utils'
 import { TerminalGridMirror } from '../../utils/terminal-grid-mirror'
 import { TerminalSearchBar } from './TerminalSearchBar'
@@ -34,7 +33,9 @@ import './TerminalPane.css'
 // xterm 5.5 exposes no public viewport-sync method; reaching into _core is the
 // documented workaround. Tracked as a blocker for the xterm 6 upgrade — when
 // a public replacement lands upstream, drop this cast.
-type XtermCore = { viewport?: { syncScrollArea: () => void } }
+interface XtermCore {
+  viewport?: { syncScrollArea: () => void }
+}
 
 function syncViewport(term: Terminal): void {
   const core = (term as unknown as { _core: XtermCore })._core
@@ -231,7 +232,9 @@ export function TerminalPane({
             .then(() => {
               setCopyFlash(true)
               clearTimeout(copyFlashTimerRef.current)
-              copyFlashTimerRef.current = setTimeout(() => setCopyFlash(false), 1200)
+              copyFlashTimerRef.current = setTimeout(() => {
+                setCopyFlash(false)
+              }, 1200)
             })
             .catch((err: unknown) => {
               window.agentDeck.log.send('warn', 'terminal', 'Clipboard copy failed', {
@@ -344,7 +347,9 @@ export function TerminalPane({
 
     // Build fit callbacks that close over this effect's `term` and `sessionId`
     const fitCallbacks: FitCallbacks = {
-      syncViewport: () => syncViewport(term),
+      syncViewport: () => {
+        syncViewport(term)
+      },
       resizePty: (cols, rows) => {
         mirrorRef.current?.resize(rows, cols)
         window.agentDeck.pty.resize(sessionId, cols, rows)
@@ -382,6 +387,7 @@ export function TerminalPane({
         if (pid) {
           try {
             const result = await window.agentDeck.worktree.acquire(pid, sessionId)
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- flipped from a closure; TS narrows it to the literal `false` and cannot see that
             if (cancelled) {
               // Tab closed while acquire was in-flight — discard the orphaned worktree
               if (result.isolated) {
@@ -397,6 +403,7 @@ export function TerminalPane({
             setWorktreePath(sessionId, result)
             spawnPath = result.path
           } catch (err: unknown) {
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- flipped from a closure; TS narrows it to the literal `false` and cannot see that
             if (cancelled) return
             window.agentDeck.log.send(
               'error',
@@ -415,6 +422,7 @@ export function TerminalPane({
           }
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- flipped from a closure; TS narrows it to the literal `false` and cannot see that
         if (cancelled) return
         spawnTimestamp = Date.now()
         const { cols, rows } = term
@@ -453,6 +461,7 @@ export function TerminalPane({
             agentRef.current,
             agentFlagsRef.current,
           )
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- flipped from a closure; TS narrows it to the literal `false` and cannot see that
           if (cancelled) return
           if (!result.ok) {
             window.agentDeck.log.send('error', 'terminal-pane', 'pty.spawn failed', {
@@ -481,6 +490,7 @@ export function TerminalPane({
             }, 2000)
           }
         } catch (err: unknown) {
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- flipped from a closure; TS narrows it to the literal `false` and cannot see that
           if (cancelled) return
           window.agentDeck.log.send('error', 'terminal', `PTY spawn failed for ${sessionId}`, {
             err: String(err),
@@ -522,7 +532,7 @@ export function TerminalPane({
             const batched = writeBufferRef.current.join('')
             writeBufferRef.current.length = 0
             if (termRef.current) {
-              writeWithScrollGuard(termRef.current as ScrollGuardTerminal, batched)
+              writeWithScrollGuard(termRef.current, batched)
             }
           })
         }
@@ -759,10 +769,7 @@ export function TerminalPane({
       // captures viewportY once and restores after the full flush completes.
       if (termRef.current && hiddenBufferRef.current.length > 0) {
         try {
-          writeWithScrollGuard(
-            termRef.current as ScrollGuardTerminal,
-            hiddenBufferRef.current.join(''),
-          )
+          writeWithScrollGuard(termRef.current, hiddenBufferRef.current.join(''))
         } catch (err) {
           if (err instanceof Error && !err.message.includes('disposed')) {
             window.agentDeck.log.send('warn', 'terminal', 'Hidden buffer flush failed', {
@@ -775,7 +782,9 @@ export function TerminalPane({
       // NOW mark as visible so onData writes directly
       visibleRef.current = true
     })
-    return () => cancelAnimationFrame(rafId)
+    return () => {
+      cancelAnimationFrame(rafId)
+    }
   }, [visible, sessionId])
 
   // Sync xterm internal focus with pane focus state
@@ -836,9 +845,13 @@ export function TerminalPane({
               .then(() => {
                 setCopyFlash(true)
                 clearTimeout(copyFlashTimerRef.current)
-                copyFlashTimerRef.current = setTimeout(() => setCopyFlash(false), 1200)
+                copyFlashTimerRef.current = setTimeout(() => {
+                  setCopyFlash(false)
+                }, 1200)
               })
-              .catch(() => {})
+              .catch(() => {
+                /* clipboard permission denied — nothing to recover */
+              })
           }
           break
         case 'paste':
@@ -847,7 +860,9 @@ export function TerminalPane({
             .then((text) => {
               if (text) term.paste(text)
             })
-            .catch(() => {})
+            .catch(() => {
+              /* clipboard permission denied — nothing to recover */
+            })
           break
         case 'selectAll':
           term.selectAll()
@@ -884,7 +899,9 @@ export function TerminalPane({
         <TerminalSearchBar
           searchAddon={searchAddon}
           visible={searchOpen}
-          onClose={() => setSearchOpen(false)}
+          onClose={() => {
+            setSearchOpen(false)
+          }}
         />
       )}
       {ctxMenu &&
@@ -897,24 +914,46 @@ export function TerminalPane({
             <button
               className="term-ctx-item"
               disabled={!ctxHasSelection}
-              onClick={() => handleCtxAction('copy')}
+              onClick={() => {
+                handleCtxAction('copy')
+              }}
             >
               Copy
               <span className="term-ctx-hint">Ctrl+Shift+C</span>
             </button>
-            <button className="term-ctx-item" onClick={() => handleCtxAction('paste')}>
+            <button
+              className="term-ctx-item"
+              onClick={() => {
+                handleCtxAction('paste')
+              }}
+            >
               Paste
               <span className="term-ctx-hint">Ctrl+V</span>
             </button>
-            <button className="term-ctx-item" onClick={() => handleCtxAction('selectAll')}>
+            <button
+              className="term-ctx-item"
+              onClick={() => {
+                handleCtxAction('selectAll')
+              }}
+            >
               Select All
             </button>
             <div className="term-ctx-sep" />
-            <button className="term-ctx-item" onClick={() => handleCtxAction('clear')}>
+            <button
+              className="term-ctx-item"
+              onClick={() => {
+                handleCtxAction('clear')
+              }}
+            >
               Clear Scrollback
             </button>
             <div className="term-ctx-sep" />
-            <button className="term-ctx-item" onClick={() => handleCtxAction('search')}>
+            <button
+              className="term-ctx-item"
+              onClick={() => {
+                handleCtxAction('search')
+              }}
+            >
               Search
               <span className="term-ctx-hint">Ctrl+Shift+F</span>
             </button>

@@ -82,7 +82,13 @@ export function CustomAgentsSection(): React.JSX.Element {
         <h2 id="cas-heading" className="cas__title">
           Custom Agents
         </h2>
-        <button type="button" className="cas__add" onClick={() => setModal({ kind: 'add' })}>
+        <button
+          type="button"
+          className="cas__add"
+          onClick={() => {
+            setModal({ kind: 'add' })
+          }}
+        >
           <Plus size={14} aria-hidden="true" />
           Add agent
         </button>
@@ -114,7 +120,9 @@ export function CustomAgentsSection(): React.JSX.Element {
                   type="button"
                   className="cas__icon-btn"
                   aria-label={`Edit ${agent.name}`}
-                  onClick={() => setModal({ kind: 'edit', agent })}
+                  onClick={() => {
+                    setModal({ kind: 'edit', agent })
+                  }}
                 >
                   <Edit size={15} aria-hidden="true" />
                 </button>
@@ -122,7 +130,9 @@ export function CustomAgentsSection(): React.JSX.Element {
                   type="button"
                   className="cas__icon-btn"
                   aria-label={`Clone ${agent.name}`}
-                  onClick={() => setModal({ kind: 'clone', agent })}
+                  onClick={() => {
+                    setModal({ kind: 'clone', agent })
+                  }}
                 >
                   <Copy size={15} aria-hidden="true" />
                 </button>
@@ -130,7 +140,9 @@ export function CustomAgentsSection(): React.JSX.Element {
                   type="button"
                   className="cas__icon-btn cas__icon-btn--danger"
                   aria-label={`Delete ${agent.name}`}
-                  onClick={() => setPendingDelete(agent)}
+                  onClick={() => {
+                    setPendingDelete(agent)
+                  }}
                 >
                   <Trash2 size={15} aria-hidden="true" />
                 </button>
@@ -145,8 +157,16 @@ export function CustomAgentsSection(): React.JSX.Element {
           mode={modal.kind}
           initial={modal.kind === 'add' ? null : cloneInitial(modal.kind, modal.agent)}
           sourceId={modal.kind === 'add' ? undefined : modal.agent.id}
-          onClose={() => setModal({ kind: 'closed' })}
-          onRequestRemove={modal.kind === 'edit' ? () => setPendingDelete(modal.agent) : undefined}
+          onClose={() => {
+            setModal({ kind: 'closed' })
+          }}
+          onRequestRemove={
+            modal.kind === 'edit'
+              ? () => {
+                  setPendingDelete(modal.agent)
+                }
+              : undefined
+          }
         />
       )}
 
@@ -157,7 +177,9 @@ export function CustomAgentsSection(): React.JSX.Element {
           message={buildDeleteMessage(deleteRefCount)}
           confirmLabel="Remove"
           onConfirm={handleDeleteConfirm}
-          onCancel={() => setPendingDelete(null)}
+          onCancel={() => {
+            setPendingDelete(null)
+          }}
         />
       )}
     </section>

@@ -61,7 +61,9 @@ export function Mascot({ size = 140, onClick }: MascotProps): React.JSX.Element 
   const [tick, setTick] = useState(0)
 
   useEffect(() => {
-    const t1 = window.setTimeout(() => setGreeting(false), 2600)
+    const t1 = window.setTimeout(() => {
+      setGreeting(false)
+    }, 2600)
     const start = performance.now()
     let rafId = 0
     let lastTickMs = 0
@@ -106,8 +108,12 @@ export function Mascot({ size = 140, onClick }: MascotProps): React.JSX.Element 
     <div
       className={`mascot mascot--${state}`}
       style={{ width: size, height: size }}
-      onMouseEnter={() => setHovering(true)}
-      onMouseLeave={() => setHovering(false)}
+      onMouseEnter={() => {
+        setHovering(true)
+      }}
+      onMouseLeave={() => {
+        setHovering(false)
+      }}
       onClick={onClick}
       onKeyDown={handleKey}
       role={onClick ? 'button' : 'img'}

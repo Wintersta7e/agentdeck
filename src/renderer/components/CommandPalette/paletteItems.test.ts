@@ -19,7 +19,7 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     badge: 'TS',
     agents: [],
     ...overrides,
-  } as Project
+  }
 }
 
 function makeTemplate(overrides: Partial<Template> = {}): Template {

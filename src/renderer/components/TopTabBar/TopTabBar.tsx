@@ -93,7 +93,9 @@ export function TopTabBar(): React.JSX.Element {
                 aria-selected={active}
                 aria-current={active ? 'page' : undefined}
                 className={`top-tab-bar__tab${active ? ' is-active' : ''}`}
-                onClick={() => handleClick(tab)}
+                onClick={() => {
+                  handleClick(tab)
+                }}
                 title={tab.shortcut ? `${tab.label} (${tab.shortcut})` : tab.label}
               >
                 <span className="top-tab-bar__label">{tab.label}</span>

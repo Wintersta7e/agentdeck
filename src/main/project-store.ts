@@ -162,7 +162,7 @@ export type AppStore = Store<StoreSchema>
  */
 export function normalizeProjectPaths(store: AppStore): void {
   try {
-    const projects = store.get('projects') ?? []
+    const projects = store.get('projects')
     let changed = 0
     const next = projects.map((p) => {
       const normalized = toWslPath(p.path)
@@ -269,6 +269,7 @@ export function registerStoreHandlers(store: AppStore): void {
       if (m !== p) agentsMigrated = true
       return m
     })
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- flipped from a closure; TS narrows it to the literal `false` and cannot see that
     if (agentsMigrated) {
       // env vars are already encrypted on disk — write back as-is
       store.set('projects', updated)
@@ -402,11 +403,11 @@ export function registerStoreHandlers(store: AppStore): void {
 
 /** Read roles directly from the store (for use in main process only). */
 export function projectPathById(store: AppStore, projectId: string): string | null {
-  return store.get('projects')?.find((p) => p.id === projectId)?.path ?? null
+  return store.get('projects').find((p) => p.id === projectId)?.path ?? null
 }
 
 export function projectIdByPath(store: AppStore, projectPath: string): string | null {
-  return store.get('projects')?.find((p) => p.path === projectPath)?.id ?? null
+  return store.get('projects').find((p) => p.path === projectPath)?.id ?? null
 }
 
 export function getRolesFromStore(store: AppStore): Role[] {

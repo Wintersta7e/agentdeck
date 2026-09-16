@@ -72,12 +72,14 @@ export type TemplateCategory =
   'Orient' | 'Review' | 'Fix' | 'Test' | 'Refactor' | 'Debug' | 'Docs' | 'Git'
 
 /**
- * Legacy flat Template shape — persisted in electron-store under the `templates`
- * key. Consumers will be rewired to the new three-tier Template shape
- * (TemplateFile / Template / TemplateDraft) in a later phase of the v6.1.0
- * session-UI rework. Kept here so existing code compiles during the migration.
+ * Legacy flat Template shape, persisted in electron-store under the `templates`
+ * key. This is still the on-disk format, so the migration and compat layers —
+ * `project-store`, `store-seeds`, `template-legacy-store` — read it on purpose.
  *
- * @deprecated Use `TemplateFile` (persisted) / `Template` (loaded) / `TemplateDraft` (input).
+ * NOT for new code: use `TemplateFile` (persisted) / `Template` (loaded) /
+ * `TemplateDraft` (input). Deliberately carries no `@deprecated` tag: every
+ * remaining consumer is an intentional one, so the tag flagged only the code
+ * that is supposed to use it.
  */
 export interface LegacyTemplate {
   id: string

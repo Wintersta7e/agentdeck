@@ -46,6 +46,7 @@ export async function listWorkflows(): Promise<WorkflowMeta[]> {
         const meta: WorkflowMeta = {
           id: raw.id,
           name: raw.name,
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the JSON.parse cast above asserts a shape the file on disk may not have
           nodeCount: raw.nodes?.length ?? 0,
           updatedAt: raw.updatedAt,
         }

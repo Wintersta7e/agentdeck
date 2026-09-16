@@ -41,7 +41,7 @@ function walk(dir: string): string[] {
 
 describe('no direct contextWindow reads outside whitelist', () => {
   it('has no matches for agent.contextWindow or AGENTS[*].contextWindow', () => {
-    const offenders: Array<{ file: string; line: number; text: string }> = []
+    const offenders: { file: string; line: number; text: string }[] = []
     for (const d of SCAN_DIRS) {
       for (const f of walk(d)) {
         const rel = relative(ROOT, f).replace(/\\/g, '/')

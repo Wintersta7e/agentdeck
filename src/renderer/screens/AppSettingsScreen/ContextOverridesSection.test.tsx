@@ -27,7 +27,9 @@ afterEach(() => {
 describe('ContextOverridesSection', () => {
   it('renders a row per agent', async () => {
     render(<ContextOverridesSection />)
-    await waitFor(() => expect(screen.queryByText(AGENTS[0]!.name)).not.toBeNull())
+    await waitFor(() => {
+      expect(screen.queryByText(AGENTS[0].name)).not.toBeNull()
+    })
     for (const a of AGENTS) {
       expect(screen.queryByText(a.name)).not.toBeNull()
     }
@@ -35,25 +37,29 @@ describe('ContextOverridesSection', () => {
 
   it('submits a valid per-agent override', async () => {
     render(<ContextOverridesSection />)
-    const first = AGENTS[0]!
-    await waitFor(() => expect(screen.queryByLabelText(`${first.name} override`)).not.toBeNull())
-    const input = screen.getByLabelText(`${first.name} override`) as HTMLInputElement
+    const first = AGENTS[0]
+    await waitFor(() => {
+      expect(screen.queryByLabelText(`${first.name} override`)).not.toBeNull()
+    })
+    const input = screen.getByLabelText(`${first.name} override`)
     fireEvent.change(input, { target: { value: '500000' } })
     fireEvent.blur(input)
-    await waitFor(() =>
+    await waitFor(() => {
       expect(setOverride).toHaveBeenCalledWith({
         kind: 'agent',
         agentId: first.id,
         value: 500_000,
-      }),
-    )
+      })
+    })
   })
 
   it('rejects out-of-range client-side', async () => {
     render(<ContextOverridesSection />)
-    const first = AGENTS[0]!
-    await waitFor(() => expect(screen.queryByLabelText(`${first.name} override`)).not.toBeNull())
-    const input = screen.getByLabelText(`${first.name} override`) as HTMLInputElement
+    const first = AGENTS[0]
+    await waitFor(() => {
+      expect(screen.queryByLabelText(`${first.name} override`)).not.toBeNull()
+    })
+    const input = screen.getByLabelText(`${first.name} override`)
     fireEvent.change(input, { target: { value: '500' } })
     fireEvent.blur(input)
     await new Promise((r) => setTimeout(r, 50))
@@ -61,7 +67,7 @@ describe('ContextOverridesSection', () => {
   })
 
   it('Clear button wipes override with value: undefined', async () => {
-    const first = AGENTS[0]!
+    const first = AGENTS[0]
     // Seed an existing override so the Clear button is enabled.
     ;(globalThis as unknown as { window: Window }).window.agentDeck.agents.getOverrides = vi
       .fn()
@@ -69,38 +75,42 @@ describe('ContextOverridesSection', () => {
     render(<ContextOverridesSection />)
     // Wait for the override to load and the button to become enabled.
     await waitFor(() => {
-      const btn = screen.queryByLabelText(
-        `Clear ${first.name} override`,
-      ) as HTMLButtonElement | null
+      const btn = screen.queryByLabelText<HTMLButtonElement>(`Clear ${first.name} override`)
       expect(btn).not.toBeNull()
       expect(btn!.disabled).toBe(false)
     })
-    const clear = screen.getByLabelText(`Clear ${first.name} override`) as HTMLButtonElement
+    const clear = screen.getByLabelText(`Clear ${first.name} override`)
     fireEvent.click(clear)
-    await waitFor(() =>
+    await waitFor(() => {
       expect(setOverride).toHaveBeenCalledWith({
         kind: 'agent',
         agentId: first.id,
         value: undefined,
-      }),
-    )
+      })
+    })
   })
 
   it('shows error message for out-of-range input', async () => {
     render(<ContextOverridesSection />)
-    const first = AGENTS[0]!
-    await waitFor(() => expect(screen.queryByLabelText(`${first.name} override`)).not.toBeNull())
-    const input = screen.getByLabelText(`${first.name} override`) as HTMLInputElement
+    const first = AGENTS[0]
+    await waitFor(() => {
+      expect(screen.queryByLabelText(`${first.name} override`)).not.toBeNull()
+    })
+    const input = screen.getByLabelText(`${first.name} override`)
     fireEvent.change(input, { target: { value: '500' } })
     fireEvent.blur(input)
-    await waitFor(() => expect(screen.queryByText(/Must be an integer between/i)).not.toBeNull())
+    await waitFor(() => {
+      expect(screen.queryByText(/Must be an integer between/i)).not.toBeNull()
+    })
   })
 
   it('does not call setContextOverride for blank + no existing override (noop)', async () => {
     render(<ContextOverridesSection />)
-    const first = AGENTS[0]!
-    await waitFor(() => expect(screen.queryByLabelText(`${first.name} override`)).not.toBeNull())
-    const input = screen.getByLabelText(`${first.name} override`) as HTMLInputElement
+    const first = AGENTS[0]
+    await waitFor(() => {
+      expect(screen.queryByLabelText(`${first.name} override`)).not.toBeNull()
+    })
+    const input = screen.getByLabelText(`${first.name} override`)
     fireEvent.blur(input) // draft is '' and agentOverride is undefined
     await new Promise((r) => setTimeout(r, 50))
     expect(setOverride).not.toHaveBeenCalled()

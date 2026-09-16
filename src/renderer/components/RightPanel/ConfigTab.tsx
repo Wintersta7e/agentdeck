@@ -27,7 +27,7 @@ export function ConfigTab(): React.JSX.Element {
   const meta = selectAgentMeta(registry, agentId)
   const binary = registry.find((d) => d.id === agentId)?.binary
 
-  const rows: Array<{ label: string; value: string; kind?: 'mono' | 'accent' }> = [
+  const rows: { label: string; value: string; kind?: 'mono' | 'accent' }[] = [
     { label: 'Session ID', value: session.id.slice(-12), kind: 'mono' },
     { label: 'Agent', value: meta.name, kind: 'accent' },
     { label: 'Binary', value: binary ?? '—', kind: 'mono' },
@@ -80,7 +80,9 @@ export function ConfigTab(): React.JSX.Element {
         <button
           type="button"
           className="ri-config__cta"
-          onClick={() => openProjectSettings(project.id)}
+          onClick={() => {
+            openProjectSettings(project.id)
+          }}
         >
           Open project settings →
         </button>

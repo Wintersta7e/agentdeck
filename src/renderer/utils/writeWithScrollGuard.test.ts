@@ -5,9 +5,9 @@ import type { ScrollGuardTerminal } from './terminal-utils'
 /** Create a mock terminal with buffer-line scroll lock API */
 function makeTerm(): ScrollGuardTerminal & { lastCallback: (() => void) | undefined } {
   const mock: ScrollGuardTerminal & { lastCallback: (() => void) | undefined } = {
-    write: vi.fn(((_data: string, cb?: () => void) => {
+    write: vi.fn((_data: string, cb?: () => void) => {
       mock.lastCallback = cb
-    }) as ScrollGuardTerminal['write']),
+    }),
     scrollToLine: vi.fn(),
     buffer: {
       active: {

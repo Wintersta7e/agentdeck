@@ -98,7 +98,7 @@ export const MODELS: readonly ModelEntry[] = Object.freeze([
 const EXACT_INDEX = new Map<string, ModelEntry>(MODELS.map((m) => [m.id.toLowerCase(), m]))
 
 // Pattern rules — order matters (narrow before broad). First match wins.
-const PATTERN_RULES: Array<{ re: RegExp; contextWindow: number; label: string }> = [
+const PATTERN_RULES: { re: RegExp; contextWindow: number; label: string }[] = [
   { re: /^claude-opus-4-.*\[1m\]$/, contextWindow: 1_000_000, label: 'claude-opus-4-*[1m]' },
   { re: /^claude-sonnet-4-.*\[1m\]$/, contextWindow: 1_000_000, label: 'claude-sonnet-4-*[1m]' },
   { re: /^claude-haiku-4-.*\[1m\]$/, contextWindow: 1_000_000, label: 'claude-haiku-4-*[1m]' },

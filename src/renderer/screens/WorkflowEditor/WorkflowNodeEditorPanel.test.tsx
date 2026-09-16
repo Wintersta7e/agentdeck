@@ -55,7 +55,7 @@ beforeEach(() => {
   useAppStore.setState({
     ...useAppStore.getInitialState(),
     agentRegistry: [builtinAgent, customAgent],
-  } as never)
+  })
 })
 
 afterEach(() => {
@@ -74,9 +74,9 @@ describe('WorkflowNodeEditorPanel agent dropdown', () => {
     )
 
     // The custom agent's option is the registry-sourced label.
-    const customOption = screen.getByRole('option', { name: 'My Bot' }) as HTMLOptionElement
+    const customOption = screen.getByRole('option', { name: 'My Bot' })
     expect(customOption).toBeInTheDocument()
-    const select = customOption.closest('select') as HTMLSelectElement
+    const select = customOption.closest('select')!
     const options = within(select)
       .getAllByRole('option')
       .map((o) => o.textContent)

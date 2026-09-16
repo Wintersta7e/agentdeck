@@ -78,6 +78,9 @@ export function ProjectCardV2({
 
   const agents = useMemo(() => getProjectAgents(project), [project])
 
+  // badge comes from persisted project config and can hold a value no longer in
+  // StackBadge; without the fallback the card would render "undefined".
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   const abbr = project.badge ? (BADGE_ABBR[project.badge] ?? '??') : '??'
   const badgeClass = project.badge
     ? `badge-${project.badge.toLowerCase().replace(/[^a-z0-9]/g, '')}`

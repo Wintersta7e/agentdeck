@@ -29,28 +29,32 @@ export interface WorkflowsSlice {
 
 export const createWorkflowsSlice: StateCreator<AppState, [], [], WorkflowsSlice> = (set) => ({
   workflows: [],
-  setWorkflows: (w) => set({ workflows: w }),
-  updateWorkflowMeta: (id, patch) =>
+  setWorkflows: (w) => {
+    set({ workflows: w })
+  },
+  updateWorkflowMeta: (id, patch) => {
     set((state) => ({
       workflows: state.workflows.map((w) => (w.id === id ? { ...w, ...patch } : w)),
-    })),
+    }))
+  },
   openWorkflowIds: [],
   activeWorkflowId: null,
 
-  openWorkflow: (id) =>
+  openWorkflow: (id) => {
     set((state) => ({
       currentView: 'workflow' as const,
       activeWorkflowId: id,
       openWorkflowIds: state.openWorkflowIds.includes(id)
         ? state.openWorkflowIds
         : [...state.openWorkflowIds, id],
-    })),
+    }))
+  },
 
   // Cross-slice note: closeWorkflow reads state.sessions/activeSessionId
   // (owned by SessionsSlice) and may write activeSessionId/currentView back
   // when no workflows remain. Symmetric coupling lives in
   // sessions.ts/removeSession; both atomic-update by design.
-  closeWorkflow: (id?) =>
+  closeWorkflow: (id?) => {
     set((state) => {
       const targetId = id ?? state.activeWorkflowId
       if (!targetId) return state
@@ -104,14 +108,15 @@ export const createWorkflowsSlice: StateCreator<AppState, [], [], WorkflowsSlice
         currentView: 'home' as const,
         ...pruned,
       }
-    }),
+    })
+  },
 
   // Workflow execution state (keyed by workflowId)
   workflowLogs: {},
   workflowNodeStatuses: {},
   workflowStatuses: {},
 
-  addWorkflowLog: (workflowId, event) =>
+  addWorkflowLog: (workflowId, event) => {
     set((state) => {
       const existing = state.workflowLogs[workflowId] ?? []
       // M6: Skip duplicate events (same ID from rapid IPC)
@@ -124,17 +129,19 @@ export const createWorkflowsSlice: StateCreator<AppState, [], [], WorkflowsSlice
           [workflowId]: [...existing, event].slice(-5000),
         },
       }
-    }),
+    })
+  },
 
-  setWorkflowNodeStatus: (workflowId, nodeId, status) =>
+  setWorkflowNodeStatus: (workflowId, nodeId, status) => {
     set((state) => ({
       workflowNodeStatuses: {
         ...state.workflowNodeStatuses,
         [workflowId]: { ...(state.workflowNodeStatuses[workflowId] ?? {}), [nodeId]: status },
       },
-    })),
+    }))
+  },
 
-  setWorkflowStatus: (workflowId, status) =>
+  setWorkflowStatus: (workflowId, status) => {
     set((state) => {
       // When a workflow finishes from the home screen (no editor tab open),
       // drop its log buffer so repeated runs don't accumulate up to 5000
@@ -147,17 +154,20 @@ export const createWorkflowsSlice: StateCreator<AppState, [], [], WorkflowsSlice
         return { workflowStatuses, workflowLogs: remainingLogs }
       }
       return { workflowStatuses }
-    }),
+    })
+  },
 
-  clearWorkflowLogs: (workflowId) =>
+  clearWorkflowLogs: (workflowId) => {
     set((state) => ({
       workflowLogs: { ...state.workflowLogs, [workflowId]: [] },
-    })),
+    }))
+  },
 
-  resetWorkflowExecution: (workflowId) =>
+  resetWorkflowExecution: (workflowId) => {
     set((state) => ({
       workflowLogs: { ...state.workflowLogs, [workflowId]: [] },
       workflowNodeStatuses: { ...state.workflowNodeStatuses, [workflowId]: {} },
       workflowStatuses: { ...state.workflowStatuses, [workflowId]: 'idle' },
-    })),
+    }))
+  },
 })

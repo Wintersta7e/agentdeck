@@ -9,7 +9,7 @@ vi.mock('./wsl-utils', () => ({
   resolveToWindowsPath: vi.fn(async (p: string, _distro?: string) => {
     // Windows drive-letter paths pass through; WSL paths convert (mirrors the real helper)
     if (/^[A-Za-z]:/.test(p)) return p
-    const match = p.match(/^\/mnt\/([a-zA-Z])\/(.*)$/)
+    const match = /^\/mnt\/([a-zA-Z])\/(.*)$/.exec(p)
     if (match?.[1] && match[2] !== undefined) {
       return `${match[1].toUpperCase()}:\\${match[2].replace(/\//g, '\\')}`
     }
@@ -86,7 +86,7 @@ describe('detectStack', () => {
       try {
         return await operation(path)
       } catch {
-        const fallback = (path as string).replace('\\\\wsl.localhost\\', '\\\\wsl$\\')
+        const fallback = path.replace('\\\\wsl.localhost\\', '\\\\wsl$\\')
         return operation(fallback)
       }
     })

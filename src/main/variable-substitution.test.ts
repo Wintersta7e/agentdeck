@@ -110,7 +110,7 @@ describe('substituteVariables', () => {
     })
     substituteVariables(wf, { FILE: 'test.ts' })
     const original = wf.nodes[0]
-    if (!original || original.type !== 'agent') throw new Error('Expected agent node')
+    if (original?.type !== 'agent') throw new Error('Expected agent node')
     expect(original.prompt).toBe('Fix {{FILE}}')
   })
 
@@ -170,9 +170,9 @@ describe('substituteVariables', () => {
     })
     const result = substituteVariables(wf, { VAR: 'test' })
     const [n0, n1, n2] = result.nodes
-    if (!n0 || n0.type !== 'agent') throw new Error('Expected agent node at [0]')
-    if (!n1 || n1.type !== 'shell') throw new Error('Expected shell node at [1]')
-    if (!n2 || n2.type !== 'checkpoint') throw new Error('Expected checkpoint node at [2]')
+    if (n0?.type !== 'agent') throw new Error('Expected agent node at [0]')
+    if (n1?.type !== 'shell') throw new Error('Expected shell node at [1]')
+    if (n2?.type !== 'checkpoint') throw new Error('Expected checkpoint node at [2]')
     expect(n0.prompt).toBe('test first')
     expect(n1.command).toBe('echo test')
     expect(n2.message).toBe('test done')

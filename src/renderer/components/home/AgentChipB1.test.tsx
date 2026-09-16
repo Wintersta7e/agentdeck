@@ -17,12 +17,14 @@ const customAgent: AgentDescriptorWire = {
 }
 
 describe('AgentChipB1', () => {
-  afterEach(() => cleanup())
+  afterEach(() => {
+    cleanup()
+  })
   beforeEach(() => {
     useAppStore.setState({
       ...useAppStore.getInitialState(),
       agentRegistry: [...useAppStore.getInitialState().agentRegistry, customAgent],
-    } as never)
+    })
     // useEffectiveContext fires an IPC on mount; never resolve so the chip keeps
     // its registry context window (deterministic render).
     Object.defineProperty(window, 'agentDeck', {
@@ -33,7 +35,7 @@ describe('AgentChipB1', () => {
   })
 
   it('renders a custom agent (not an empty fragment) with name, short, icon, ctx', () => {
-    const { container } = render(<AgentChipB1 agentId={'my-bot' as never} />)
+    const { container } = render(<AgentChipB1 agentId={'my-bot'} />)
     // Used to early-return <></> when the builtin lookup missed — now must render.
     expect(container.querySelector('.agent-chip-b1')).toBeInTheDocument()
     expect(screen.getByText('My Custom Bot')).toBeInTheDocument()
@@ -42,12 +44,12 @@ describe('AgentChipB1', () => {
     // contextWindow comes from the registry descriptor (64k).
     expect(container.querySelector('.agent-chip-b1__ctx')?.textContent).toMatch(/64k/)
     // Custom-agent colour resolves to its picked var.
-    const article = container.querySelector('.agent-chip-b1') as HTMLElement
+    const article = container.querySelector<HTMLElement>('.agent-chip-b1')!
     expect(article.style.getPropertyValue('--chip-color')).toBe('var(--green)')
   })
 
   it('renders a built-in agent via the registry default', () => {
-    const { container } = render(<AgentChipB1 agentId={'claude-code' as never} />)
+    const { container } = render(<AgentChipB1 agentId={'claude-code'} />)
     expect(container.querySelector('.agent-chip-b1')).toBeInTheDocument()
     expect(screen.getByText('Claude Code')).toBeInTheDocument()
   })

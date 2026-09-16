@@ -38,7 +38,7 @@ const stubUsageHistory = (): Parameters<typeof registerPtyHandlers>[1]['usageHis
   flush: vi.fn(),
 })
 
-type MockMgr = {
+interface MockMgr {
   spawn: ReturnType<typeof vi.fn>
   write: ReturnType<typeof vi.fn>
   kill: ReturnType<typeof vi.fn>
@@ -97,7 +97,7 @@ describe('pty:write IPC handler', () => {
   })
 
   it('rejects non-string data and does NOT call mgr.write', () => {
-    const result = call('pty:write', 'sess-1', 123 as unknown as string) as {
+    const result = call('pty:write', 'sess-1', 123) as {
       ok: boolean
       error?: string
     }
@@ -148,7 +148,7 @@ describe('pty:kill IPC handler', () => {
   })
 
   it('throws on a non-string sessionId and does NOT call mgr.kill', () => {
-    expect(() => call('pty:kill', 42 as unknown as string)).toThrow(/sessionId/)
+    expect(() => call('pty:kill', 42)).toThrow(/sessionId/)
     expect(mgr.kill).not.toHaveBeenCalled()
   })
 
@@ -174,7 +174,7 @@ describe('pty:resize IPC handler', () => {
   })
 
   it('silently drops a non-string sessionId', () => {
-    expect(() => call('pty:resize', {} as unknown as string, 80, 24)).not.toThrow()
+    expect(() => call('pty:resize', {}, 80, 24)).not.toThrow()
     expect(mgr.resize).not.toHaveBeenCalled()
   })
 

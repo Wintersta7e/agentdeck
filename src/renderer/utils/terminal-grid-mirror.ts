@@ -81,7 +81,7 @@ export interface MirrorOptions {
 }
 
 export class TerminalGridMirror {
-  private rows: Map<number, MirrorRow> = new Map()
+  private rows = new Map<number, MirrorRow>()
   private firstAbsRow = 0
 
   private cursorRow = 0 // absolute row index

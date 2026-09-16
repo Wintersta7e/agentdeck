@@ -88,7 +88,7 @@ export function parseFrontmatter(content: string, dirName: string): ParsedFrontm
   const firstLine = lines[0]
 
   // Must start with ---
-  if (!firstLine || firstLine.trim() !== '---') {
+  if (firstLine?.trim() !== '---') {
     return null
   }
 
@@ -97,7 +97,7 @@ export function parseFrontmatter(content: string, dirName: string): ParsedFrontm
   const scanLimit = Math.min(lines.length, 101) // line 0 is opening, scan up to line 100
   for (let i = 1; i < scanLimit; i++) {
     const line = lines[i]
-    if (line !== undefined && line.trim() === '---') {
+    if (line?.trim() === '---') {
       closingIdx = i
       break
     }
@@ -112,7 +112,7 @@ export function parseFrontmatter(content: string, dirName: string): ParsedFrontm
   for (let i = 1; i < closingIdx; i++) {
     const line = lines[i]
     if (line === undefined) continue
-    const match = line.match(/^(\w[\w-]*):\s*(.*)$/)
+    const match = /^(\w[\w-]*):\s*(.*)$/.exec(line)
     if (match) {
       const key = match[1]
       const value = match[2]
@@ -136,7 +136,7 @@ export function parseFrontmatter(content: string, dirName: string): ParsedFrontm
   if (!description) {
     for (let i = closingIdx + 1; i < lines.length; i++) {
       const line = lines[i]
-      if (line !== undefined && line.trim()) {
+      if (line?.trim()) {
         description = line.trim()
         break
       }

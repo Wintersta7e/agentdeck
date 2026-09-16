@@ -74,7 +74,7 @@ export function AgentTab({ draft, onChange }: TabProps): React.JSX.Element {
         </div>
         <div className="section-body">
           {registry.map((agentDef) => {
-            const agentId = agentDef.id as AgentType
+            const agentId = agentDef.id
             const enabled = isEnabled(agentId)
             const isDefaultAgent = getDefault() === agentId
             const isExpanded = expandedAgent === agentDef.id && enabled
@@ -82,7 +82,9 @@ export function AgentTab({ draft, onChange }: TabProps): React.JSX.Element {
               <div key={agentDef.id} className="agent-multi-row">
                 <div
                   className={`agent-row${enabled ? ' selected' : ''}`}
-                  onClick={() => toggleAgent(agentId)}
+                  onClick={() => {
+                    toggleAgent(agentId)
+                  }}
                 >
                   <div className="agent-row-check">
                     {enabled ? <SquareCheck size={16} /> : <Square size={16} />}
@@ -139,7 +141,9 @@ export function AgentTab({ draft, onChange }: TabProps): React.JSX.Element {
                           type="text"
                           className={`settings-input${getAgentFlags(agentId) && !SAFE_FLAGS_RE.test(getAgentFlags(agentId)) ? ' settings-input-error' : ''}`}
                           value={getAgentFlags(agentId)}
-                          onChange={(e) => updateAgentFlags(agentId, e.target.value)}
+                          onChange={(e) => {
+                            updateAgentFlags(agentId, e.target.value)
+                          }}
                           maxLength={200}
                           placeholder="e.g. --model claude-opus-4-5"
                           aria-label={`Custom flags for ${agentDef.name}`}
@@ -173,7 +177,9 @@ export function AgentTab({ draft, onChange }: TabProps): React.JSX.Element {
                 type="text"
                 className="settings-input"
                 value={draft.contextFile ?? ''}
-                onChange={(e) => onChange({ contextFile: e.target.value })}
+                onChange={(e) => {
+                  onChange({ contextFile: e.target.value })
+                }}
                 placeholder="AGENTS.md"
                 aria-label="Context file"
               />

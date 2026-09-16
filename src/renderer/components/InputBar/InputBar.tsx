@@ -68,14 +68,22 @@ export const InputBar = memo(function InputBar({
           aria-label="Terminal input"
           placeholder="Type a message or paste file paths..."
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e) => {
+            setValue(e.target.value)
+          }}
           onKeyDown={handleKeyDown}
         />
       </div>
       {attachedTemplates.length > 0 && (
         <div className="input-chips">
           {attachedTemplates.map((t) => (
-            <span key={t.id} className="input-chip" onClick={() => handleChipClick(t.id)}>
+            <span
+              key={t.id}
+              className="input-chip"
+              onClick={() => {
+                handleChipClick(t.id)
+              }}
+            >
               {t.name}
             </span>
           ))}

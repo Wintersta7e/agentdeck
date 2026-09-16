@@ -117,13 +117,21 @@ export function ProjectsScreen({
       }
       filters={
         <>
-          <FilterChip active={filter === 'all'} onClick={() => setFilter('all')} count={counts.all}>
+          <FilterChip
+            active={filter === 'all'}
+            onClick={() => {
+              setFilter('all')
+            }}
+            count={counts.all}
+          >
             All
           </FilterChip>
           <FilterChip
             active={filter === 'pinned'}
             dotColor="accent"
-            onClick={() => setFilter('pinned')}
+            onClick={() => {
+              setFilter('pinned')
+            }}
             count={counts.pinned}
           >
             Pinned
@@ -131,7 +139,9 @@ export function ProjectsScreen({
           <FilterChip
             active={filter === 'dirty'}
             dotColor="red"
-            onClick={() => setFilter('dirty')}
+            onClick={() => {
+              setFilter('dirty')
+            }}
             count={counts.dirty}
           >
             Dirty
@@ -142,7 +152,9 @@ export function ProjectsScreen({
             className="projects-screen__search"
             placeholder="Search by name or path…"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value)
+            }}
             aria-label="Filter projects"
           />
         </>
@@ -171,7 +183,9 @@ export function ProjectsScreen({
             <ProjectCardV2
               key={project.id}
               project={project}
-              onOpen={() => onOpenProject(project)}
+              onOpen={() => {
+                onOpenProject(project)
+              }}
               onContextMenu={(e) => {
                 e.preventDefault()
                 setCardMenu({ x: e.clientX, y: e.clientY, projectId: project.id })
@@ -194,7 +208,9 @@ export function ProjectsScreen({
                 left: Math.min(cardMenu.x, window.innerWidth - 220),
               }}
               role="menu"
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation()
+              }}
             >
               <div className="projects-screen__menu-head">Launch with…</div>
               {projectAgents.map((ac) => {

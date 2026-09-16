@@ -4,10 +4,13 @@ vi.mock('./active-model-detectors', () => ({
   DETECTORS: { codex: vi.fn() } as Record<string, ReturnType<typeof vi.fn>>,
 }))
 
-import { DETECTORS } from './active-model-detectors'
+import { DETECTORS, type ActiveModelReader, type DetectorOutput } from './active-model-detectors'
 import { resolveActiveModel, invalidateAll, __resetCacheForTests } from './active-model-cache'
+import type { Mock } from 'vitest'
 
-const mockCodex = DETECTORS.codex as unknown as ReturnType<typeof vi.fn>
+// Typed as the real detector contract, not bare vi.fn(): a promise-returning
+// mockImplementation is correct here, and an untyped mock hides that.
+const mockCodex = DETECTORS.codex as unknown as Mock<ActiveModelReader>
 
 describe('active-model cache', () => {
   beforeEach(() => {
@@ -39,7 +42,9 @@ describe('active-model cache', () => {
   })
 
   it('dedupes concurrent via inFlight', async () => {
-    let resolveIt: (v: unknown) => void = () => {}
+    let resolveIt: (v: DetectorOutput) => void = () => {
+      /* replaced by the mock below */
+    }
     mockCodex.mockImplementationOnce(
       () =>
         new Promise((r) => {
@@ -54,7 +59,9 @@ describe('active-model cache', () => {
   })
 
   it('forceRefresh bypasses TTL + inFlight', async () => {
-    let resolveNormal: (v: unknown) => void = () => {}
+    let resolveNormal: (v: DetectorOutput) => void = () => {
+      /* replaced by the mock below */
+    }
     mockCodex.mockImplementationOnce(
       () =>
         new Promise((r) => {
@@ -75,14 +82,16 @@ describe('active-model cache', () => {
   })
 
   it('freshness-ordered: older read cannot overwrite fresher force', async () => {
-    let resolveNormal: (v: unknown) => void = () => {}
+    let resolveNormal: (v: DetectorOutput) => void = () => {
+      /* replaced by the mock below */
+    }
     mockCodex.mockImplementationOnce(
       () =>
         new Promise((r) => {
           resolveNormal = r
         }),
     )
-    resolveActiveModel('codex') // requestSeq=1, starts but doesn't resolve
+    void resolveActiveModel('codex') // requestSeq=1, starts but doesn't resolve
 
     mockCodex.mockResolvedValueOnce({ modelId: 'fresh' })
     await resolveActiveModel('codex', { forceRefresh: true }) // requestSeq=2, caches 'fresh'

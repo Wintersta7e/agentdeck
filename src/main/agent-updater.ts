@@ -53,9 +53,7 @@ export async function checkAgentVersion(agentId: string): Promise<VersionInfo> {
   let current: string | null = null
   try {
     const versionCmd =
-      'installedCmd' in agent && agent.installedCmd
-        ? agent.installedCmd
-        : `${binary} ${agent.versionArgs.join(' ')}`
+      'installedCmd' in agent ? agent.installedCmd : `${binary} ${agent.versionArgs.join(' ')}`
     const raw = await runWslCmd(versionCmd)
     const match = SEMVER_RE.exec(raw)
     current = match?.[1] ?? null
@@ -127,7 +125,7 @@ async function isBinaryAvailable(binary: string): Promise<boolean> {
  */
 async function logBinDiagnostics(binary: string): Promise<void> {
   const safeBin = shellQuote(binary)
-  const cmds: Array<[string, string]> = [
+  const cmds: [string, string][] = [
     ['npm prefix -g', 'npm prefix -g 2>&1'],
     [`ls -la bin/${binary}`, `ls -la "$(npm prefix -g 2>/dev/null)/bin/${safeBin}" 2>&1`],
     [
@@ -403,8 +401,10 @@ export function checkAllUpdates(
           win.webContents.send(CH.agentsVersionInfo, info)
         }
       })
-      .catch((err) => {
-        log.warn(`Version check failed for ${agentId}`, { err: String(err) })
+      .catch((err: unknown) => {
+        log.warn(`Version check failed for ${agentId}`, {
+          err: err instanceof Error ? err.message : String(err),
+        })
       })
   }
 }

@@ -41,7 +41,7 @@ export const SessionHeader = memo(function SessionHeader(): React.JSX.Element | 
   const handle = (id: 'keep' | 'discard' | 'rerun'): void => {
     if (id === 'keep') setApprovalState(session.id, 'kept')
     else if (id === 'discard') setApprovalState(session.id, 'discarded')
-    else if (id === 'rerun') rerunSession(session)
+    else rerunSession(session)
   }
 
   return (
@@ -89,7 +89,9 @@ export const SessionHeader = memo(function SessionHeader(): React.JSX.Element | 
             key={b.id}
             type="button"
             className={`session-header__btn session-header__btn--${b.tone}`}
-            onClick={() => handle(b.id)}
+            onClick={() => {
+              handle(b.id)
+            }}
           >
             {b.label}
           </button>

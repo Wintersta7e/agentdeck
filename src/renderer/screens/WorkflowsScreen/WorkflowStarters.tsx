@@ -96,7 +96,9 @@ export function WorkflowStarters(): React.JSX.Element {
           key={s.id}
           type="button"
           className="wf-starter-card"
-          onClick={() => handleCreate(s)}
+          onClick={() => {
+            handleCreate(s)
+          }}
           aria-label={`Create workflow from "${s.title}" template`}
         >
           <div className="wf-starter-icon" aria-hidden="true">

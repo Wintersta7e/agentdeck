@@ -26,7 +26,7 @@ export function ProductivityPanel({
   const todayIso = isoKeyFromTs(midnight)
 
   const series = useMemo(() => {
-    const days: Array<{ iso: string; files: number; dow: string }> = []
+    const days: { iso: string; files: number; dow: string }[] = []
     for (let i = 6; i >= 0; i -= 1) {
       const iso = isoKeyFromTs(midnight - i * 86_400_000)
       const entry = history.find((e) => e.date === iso)

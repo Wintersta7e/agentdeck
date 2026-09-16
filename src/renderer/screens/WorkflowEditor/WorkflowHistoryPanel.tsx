@@ -246,8 +246,12 @@ export default function WorkflowHistoryPanel({
           key={run.id}
           run={run}
           expanded={expandedId === run.id}
-          onToggle={() => handleToggle(run.id)}
-          onDelete={() => handleDelete(run.id)}
+          onToggle={() => {
+            handleToggle(run.id)
+          }}
+          onDelete={() => {
+            handleDelete(run.id)
+          }}
         />
       ))}
     </div>

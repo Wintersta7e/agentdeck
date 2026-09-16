@@ -82,7 +82,7 @@ export function useWorkflowActions(
           typeof data !== 'object' ||
           data === null ||
           !('formatVersion' in data) ||
-          (data as { formatVersion: unknown }).formatVersion !== 1 ||
+          data.formatVersion !== 1 ||
           !('workflow' in data) ||
           !('roles' in data) ||
           !Array.isArray((data as { roles: unknown }).roles)

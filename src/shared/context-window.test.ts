@@ -14,10 +14,7 @@ const AGENT_DEFAULTS = {
 const base = {
   agentId: 'codex' as const,
   activeModel: null as string | null,
-  overrides: { agent: {}, model: {} } as {
-    agent: Record<string, number>
-    model: Record<string, number>
-  },
+  overrides: { agent: {}, model: {} },
   agentDefaults: AGENT_DEFAULTS,
 }
 

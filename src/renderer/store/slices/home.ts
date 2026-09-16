@@ -27,12 +27,13 @@ export interface HomeSlice {
 export const createHomeSlice: StateCreator<AppState, [], [], HomeSlice> = (set) => ({
   gitStatuses: {},
 
-  setGitStatus: (projectId, status) =>
+  setGitStatus: (projectId, status) => {
     set((state) => ({
       gitStatuses: { ...state.gitStatuses, [projectId]: status },
-    })),
+    }))
+  },
 
-  pruneGitStatuses: (liveProjectIds) =>
+  pruneGitStatuses: (liveProjectIds) => {
     set((state) => {
       const next: Record<string, GitStatus | null> = {}
       let changed = false
@@ -41,30 +42,37 @@ export const createHomeSlice: StateCreator<AppState, [], [], HomeSlice> = (set) 
         else changed = true
       }
       return changed ? { gitStatuses: next } : state
-    }),
+    })
+  },
 
   reviewItems: [],
 
-  setReviewItems: (items) => set({ reviewItems: items }),
+  setReviewItems: (items) => {
+    set({ reviewItems: items })
+  },
 
-  dismissReview: (id) =>
+  dismissReview: (id) => {
     set((state) => ({
       reviewItems: state.reviewItems.filter((item) => item.id !== id),
-    })),
+    }))
+  },
 
   usageHistory: [],
 
-  setUsageHistory: (entries) => set({ usageHistory: entries }),
+  setUsageHistory: (entries) => {
+    set({ usageHistory: entries })
+  },
 
   // Persisted via localStorage so collapse choices survive restarts.
   tier3Collapsed: readTier3Collapsed(),
 
-  setTier3Collapsed: (key, collapsed) =>
+  setTier3Collapsed: (key, collapsed) => {
     set((state) => {
       const next = { ...state.tier3Collapsed, [key]: collapsed }
       writeTier3Collapsed(next)
       return { tier3Collapsed: next }
-    }),
+    })
+  },
 })
 
 const TIER3_COLLAPSED_KEY = 'home.tier3Collapsed'

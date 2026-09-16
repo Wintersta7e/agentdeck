@@ -7,7 +7,7 @@ import type { ActivityEvent } from '../../../shared/types'
 import './LiveSessionCard.css'
 
 function getPulseClass(event: ActivityEvent | undefined): string {
-  if (!event || event.status !== 'active') return 'idle'
+  if (event?.status !== 'active') return 'idle'
   switch (event.type) {
     case 'think':
       return 'thinking'

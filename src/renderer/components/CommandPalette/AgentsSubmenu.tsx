@@ -59,7 +59,9 @@ export function AgentsSubmenu({
     }
 
     window.addEventListener('keydown', handleKeyDown, true)
-    return () => window.removeEventListener('keydown', handleKeyDown, true)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, true)
+    }
   }, [agents, onBack, onSelectIndex, onToggle])
 
   return (
@@ -80,7 +82,9 @@ export function AgentsSubmenu({
             onClick={() => {
               onToggle(a.id)
             }}
-            onMouseEnter={() => onSelectIndex(i)}
+            onMouseEnter={() => {
+              onSelectIndex(i)
+            }}
           >
             <span className={`cp-agent-check${isVisible ? ' checked' : ''}`}>
               {isVisible ? <SquareCheck size={14} /> : <Square size={14} />}

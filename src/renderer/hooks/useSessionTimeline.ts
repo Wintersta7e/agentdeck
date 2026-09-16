@@ -32,7 +32,7 @@ export function computeTimeline(
 
   // Iterate activityFeeds (not sessions) so closed sessions still appear in the timeline
   for (const [sessionId, feed] of Object.entries(activityFeeds)) {
-    if (!feed || feed.length === 0) continue
+    if (feed.length === 0) continue
 
     const session = sessions[sessionId]
     // If session still exists, check it started today. If removed, check feed timestamps.
@@ -132,8 +132,12 @@ export function useSessionTimeline(): TimelineRow[] {
   // Tick every 30s to keep duration fresh for running sessions
   const [tick, setTick] = useState(0)
   useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 30_000)
-    return () => clearInterval(id)
+    const id = setInterval(() => {
+      setTick((t) => t + 1)
+    }, 30_000)
+    return () => {
+      clearInterval(id)
+    }
   }, [])
 
   return useMemo(

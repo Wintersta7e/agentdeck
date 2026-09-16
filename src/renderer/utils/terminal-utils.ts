@@ -98,6 +98,7 @@ export const XTERM_THEME_OVERRIDES: Readonly<Record<string, Partial<ITheme>>> = 
  * in some agents (Codex/crossterm). Hoisted to module scope to avoid per-mount
  * regex compilation and to match the ANSI_RE pattern in pty-manager.ts.
  */
+// eslint-disable-next-line no-control-regex -- matching ESC/BEL is the point
 export const OSC_RESPONSE_RE = /\x1b\]\d+;[^\x07\x1b]*(?:\x07|\x1b\\)/g
 
 // ─── Functions ───────────────────────────────────────────────────────
@@ -126,7 +127,7 @@ export function getXtermTheme(themeId: string): ITheme {
  * conversations, codex review runs) easily exceed 5000 rows, and "select all
  * + copy" silently truncates when scrollback overflows.  */
 export function validScrollback(value: number | undefined): number {
-  if (value === undefined || value === null) return 25000
+  if (value === undefined) return 25000
   if (!Number.isFinite(value) || value < 1000) return 25000
   return value
 }

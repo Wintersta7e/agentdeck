@@ -46,9 +46,9 @@ function installContentSecurityPolicy(mainWindow: BrowserWindow): void {
 function installZoomBootstrap(mainWindow: BrowserWindow, store: AppStore): void {
   mainWindow.webContents.once('did-finish-load', () => {
     const prefs = store.get('appPrefs')
-    let zoom = prefs?.zoomFactor ?? 1.0
+    let zoom = prefs.zoomFactor
     const DETECT_VERSION = 2
-    const detected = prefs?.zoomAutoDetected
+    const detected = prefs.zoomAutoDetected
     const needsDetect = !detected || (typeof detected === 'number' && detected < DETECT_VERSION)
     if (needsDetect) {
       const display = screen.getPrimaryDisplay()
@@ -83,10 +83,14 @@ function installFileDropBridge(mainWindow: BrowserWindow): void {
 }
 
 function loadRenderer(mainWindow: BrowserWindow): void {
+  // A rejected load leaves a blank window with no other trace, so log it.
+  const onLoadFailure = (err: unknown): void => {
+    log.error('Renderer failed to load', { err: err instanceof Error ? err.message : String(err) })
+  }
   if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL']).catch(onLoadFailure)
   } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+    mainWindow.loadFile(join(__dirname, '../renderer/index.html')).catch(onLoadFailure)
   }
 }
 
@@ -114,11 +118,8 @@ export function createAppWindow(
   installContentSecurityPolicy(mainWindow)
 
   const ptyManager = createPtyManager(mainWindow, agentRegistry)
-  const workflowEngine = createWorkflowEngine(
-    ptyManager,
-    mainWindow,
-    agentRegistry,
-    () => store.get('roles') ?? [],
+  const workflowEngine = createWorkflowEngine(ptyManager, mainWindow, agentRegistry, () =>
+    store.get('roles'),
   )
 
   mainWindow.once('ready-to-show', () => {

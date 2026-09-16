@@ -25,7 +25,10 @@ export function createWorkflowsTemplatesBridge(): WorkflowsTemplatesBridge {
       stop: (id) => ipcRenderer.invoke(CH.workflowStop, id),
       resume: (id, nodeId) => ipcRenderer.invoke(CH.workflowResume, id, nodeId),
       onEvent: (workflowId, cb) => {
-        if (typeof workflowId !== 'string' || !SAFE_ID_RE.test(workflowId)) return () => {}
+        if (typeof workflowId !== 'string' || !SAFE_ID_RE.test(workflowId))
+          return () => {
+            /* nothing was subscribed */
+          }
         return onIpc<WorkflowEvent>(workflowEventChannel(workflowId), cb)
       },
     },

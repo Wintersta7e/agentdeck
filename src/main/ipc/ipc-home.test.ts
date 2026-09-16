@@ -19,7 +19,7 @@ function makeTracker(): ReviewTracker {
     dismissReview: vi.fn(),
     getReviews: vi.fn(() => []),
     getAllReviews: vi.fn(() => []),
-  } as unknown as ReviewTracker
+  }
 }
 
 describe('ipc-home', () => {

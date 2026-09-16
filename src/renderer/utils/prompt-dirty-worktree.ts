@@ -20,5 +20,5 @@ export async function promptDirtyWorktree(input: {
   options.push({ id: 'cancel', label: 'Cancel', tone: 'neutral' })
 
   const result = await useAppStore.getState().addConfirmNotification({ title, options })
-  return (result as DirtyChoice) || 'cancel'
+  return result === '' ? 'cancel' : (result as DirtyChoice)
 }

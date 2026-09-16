@@ -46,7 +46,9 @@ const futureSnapshot = {
 }
 
 describe('EnvTab (snapshot)', () => {
-  afterEach(() => cleanup())
+  afterEach(() => {
+    cleanup()
+  })
 
   beforeEach(() => {
     vi.clearAllMocks()

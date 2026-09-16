@@ -26,9 +26,9 @@ vi.mock('./logger', () => ({
 const { checkAgentVersion, updateAgent, checkAllUpdates } = await import('./agent-updater')
 
 /** Queue of results to return from mockExecFile — consumed in order */
-let callQueue: Array<{ stdout: string; stderr?: string; err?: Error }>
+let callQueue: { stdout: string; stderr?: string; err?: Error }[]
 
-function enqueue(...results: Array<{ stdout: string; stderr?: string; err?: Error }>): void {
+function enqueue(...results: { stdout: string; stderr?: string; err?: Error }[]): void {
   callQueue.push(...results)
   mockExecFile.mockImplementation(
     (_bin: string, _args: string[], _opts: unknown, cb: ExecFileCb) => {
@@ -401,7 +401,7 @@ describe('checkAllUpdates', () => {
     // Use command-string matching since calls are concurrent
     mockExecFile.mockImplementation(
       (_bin: string, args: string[], _opts: unknown, cb: ExecFileCb) => {
-        const cmd = args[3] as string
+        const cmd = args[3]!
         if (cmd.includes('claude --version')) {
           cb(null, '2.1.0\n', '')
         } else if (cmd.includes('@anthropic-ai/claude-code version')) {

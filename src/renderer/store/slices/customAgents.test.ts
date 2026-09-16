@@ -107,7 +107,7 @@ describe('customAgents slice', () => {
 
     const notes = useAppStore.getState().notifications.filter((n) => n.kind === 'basic')
     expect(notes).toHaveLength(2)
-    expect(notes.every((n) => n.kind === 'basic' && n.type === 'warning')).toBe(true)
+    expect(notes.every((n) => n.type === 'warning')).toBe(true)
     expect(notes[0]?.kind === 'basic' && notes[0].message).toContain('Custom agent skipped')
     expect(notes[0]?.kind === 'basic' && notes[0].message).toContain('bad binary')
   })

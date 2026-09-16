@@ -103,7 +103,9 @@ export default function WorkflowToolbar({
           className="wf-name-input"
           aria-label="Workflow name"
           value={editName}
-          onChange={(e) => setEditName(e.target.value)}
+          onChange={(e) => {
+            setEditName(e.target.value)
+          }}
           onBlur={commitName}
           onKeyDown={handleNameKeyDown}
           maxLength={60}

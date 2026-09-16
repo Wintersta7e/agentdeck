@@ -43,7 +43,9 @@ export function TemplatesTab({ draft, onChange }: TabProps): React.JSX.Element {
                   <button
                     type="button"
                     className="chip-remove"
-                    onClick={() => removeTemplate(tpl.id)}
+                    onClick={() => {
+                      removeTemplate(tpl.id)
+                    }}
                     aria-label={`Remove ${tpl.name}`}
                   >
                     &times;
@@ -73,7 +75,9 @@ export function TemplatesTab({ draft, onChange }: TabProps): React.JSX.Element {
                   key={tpl.id}
                   className="template-list-item"
                   style={{ cursor: 'pointer' }}
-                  onClick={() => toggleTemplate(tpl.id)}
+                  onClick={() => {
+                    toggleTemplate(tpl.id)
+                  }}
                 >
                   <div style={{ flex: 1 }}>
                     <div className="template-list-name">

@@ -8,7 +8,9 @@ afterEach(() => vi.useRealTimers())
 describe('usePollEffect', () => {
   it('runs the loader on mount and then every interval', () => {
     const load = vi.fn()
-    renderHook(() => usePollEffect(load, 1000))
+    renderHook(() => {
+      usePollEffect(load, 1000)
+    })
     expect(load).toHaveBeenCalledTimes(1)
     vi.advanceTimersByTime(1000)
     expect(load).toHaveBeenCalledTimes(2)
@@ -21,7 +23,9 @@ describe('usePollEffect', () => {
     const load = vi.fn((isActive: () => boolean) => {
       captured = isActive
     })
-    const { unmount } = renderHook(() => usePollEffect(load, 1000))
+    const { unmount } = renderHook(() => {
+      usePollEffect(load, 1000)
+    })
     expect(captured?.()).toBe(true)
     unmount()
     expect(captured?.()).toBe(false)
@@ -29,7 +33,9 @@ describe('usePollEffect', () => {
 
   it('stops polling after unmount', () => {
     const load = vi.fn()
-    const { unmount } = renderHook(() => usePollEffect(load, 1000))
+    const { unmount } = renderHook(() => {
+      usePollEffect(load, 1000)
+    })
     expect(load).toHaveBeenCalledTimes(1)
     unmount()
     vi.advanceTimersByTime(5000)

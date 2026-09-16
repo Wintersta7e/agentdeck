@@ -1,4 +1,4 @@
-import type { AgentType, WorkflowNode } from '../shared/types'
+import type { WorkflowNode } from '../shared/types'
 import type { SeedNode } from './workflow-seed-blueprints'
 
 /**
@@ -31,7 +31,7 @@ export function materializeSeedNode(
   switch (n.type) {
     case 'agent': {
       const node: WorkflowNode = { ...base, type: 'agent' }
-      if (n.agent !== undefined) node.agent = n.agent as AgentType
+      if (n.agent !== undefined) node.agent = n.agent
       if (n.agentFlags !== undefined) node.agentFlags = n.agentFlags
       if (n.prompt !== undefined) node.prompt = n.prompt
       if (n.skillId !== undefined) node.skillId = n.skillId

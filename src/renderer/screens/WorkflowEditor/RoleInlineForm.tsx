@@ -74,7 +74,9 @@ export default function RoleInlineForm({
             value={draft.icon}
             disabled={isDisabled}
             maxLength={4}
-            onChange={(e) => patch('icon', e.target.value)}
+            onChange={(e) => {
+              patch('icon', e.target.value)
+            }}
           />
           <input
             className="wf-ne-role-name-input"
@@ -82,7 +84,9 @@ export default function RoleInlineForm({
             disabled={isDisabled}
             maxLength={100}
             placeholder="Role name..."
-            onChange={(e) => patch('name', e.target.value)}
+            onChange={(e) => {
+              patch('name', e.target.value)
+            }}
           />
         </div>
       </div>
@@ -95,7 +99,9 @@ export default function RoleInlineForm({
           disabled={isDisabled}
           rows={3}
           placeholder="Describe the role's expertise, focus areas, and style..."
-          onChange={(e) => patch('persona', e.target.value)}
+          onChange={(e) => {
+            patch('persona', e.target.value)
+          }}
         />
       </div>
 
@@ -107,7 +113,9 @@ export default function RoleInlineForm({
           disabled={isDisabled}
           rows={3}
           placeholder="Markdown template for structured output..."
-          onChange={(e) => patch('outputFormat', e.target.value)}
+          onChange={(e) => {
+            patch('outputFormat', e.target.value)
+          }}
         />
       </div>
 
@@ -116,7 +124,9 @@ export default function RoleInlineForm({
           <button
             className="wf-ne-btn wf-ne-btn-save"
             disabled={!canSave}
-            onClick={() => onSave(draft)}
+            onClick={() => {
+              onSave(draft)
+            }}
             type="button"
           >
             {mode === 'create' ? 'Create' : 'Save'}

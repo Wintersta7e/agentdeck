@@ -30,8 +30,11 @@ export function createSessionHistory(storePath?: string): SessionHistory {
     logName: 'session-history',
     onLoad: (records) => {
       for (const rec of records) {
-        // Back-compat: records written before lastActivityAt existed default to startedAt.
-        if (rec.lastActivityAt === undefined) rec.lastActivityAt = rec.startedAt
+        // Back-compat: records written before lastActivityAt existed default to
+        // startedAt. The record is parsed from session-history.json, so the field
+        // can be absent despite the type.
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+        rec.lastActivityAt ??= rec.startedAt
         // Recover dangling records from an unclean shutdown — a null endedAt means the
         // app exited before the session's exit was recorded. Finalize at the last known
         // activity so the record never renders as a perpetual "running" row.

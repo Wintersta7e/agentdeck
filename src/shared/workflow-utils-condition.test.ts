@@ -23,7 +23,7 @@ describe('validateWorkflow — outputMatch condition', () => {
       ],
     })
     const result = validateWorkflow(wf)
-    expect(result.errors.some((e) => /non-empty conditionPattern/.test(e))).toBe(true)
+    expect(result.errors.some((e) => e.includes('non-empty conditionPattern'))).toBe(true)
   })
 
   it('rejects patterns exceeding 500 chars', () => {
@@ -40,7 +40,7 @@ describe('validateWorkflow — outputMatch condition', () => {
       ],
     })
     const result = validateWorkflow(wf)
-    expect(result.errors.some((e) => /too long/.test(e))).toBe(true)
+    expect(result.errors.some((e) => e.includes('too long'))).toBe(true)
   })
 
   it('rejects patterns with nested quantifiers (ReDoS heuristic)', () => {
@@ -57,7 +57,7 @@ describe('validateWorkflow — outputMatch condition', () => {
       ],
     })
     const result = validateWorkflow(wf)
-    expect(result.errors.some((e) => /ReDoS/.test(e))).toBe(true)
+    expect(result.errors.some((e) => e.includes('ReDoS'))).toBe(true)
   })
 
   it('rejects alternation with outer quantifier', () => {
@@ -74,7 +74,7 @@ describe('validateWorkflow — outputMatch condition', () => {
       ],
     })
     const result = validateWorkflow(wf)
-    expect(result.errors.some((e) => /ReDoS/.test(e))).toBe(true)
+    expect(result.errors.some((e) => e.includes('ReDoS'))).toBe(true)
   })
 
   it('rejects nested-group ReDoS shapes like ((a+))+', () => {
@@ -91,7 +91,7 @@ describe('validateWorkflow — outputMatch condition', () => {
       ],
     })
     const result = validateWorkflow(wf)
-    expect(result.errors.some((e) => /ReDoS/.test(e))).toBe(true)
+    expect(result.errors.some((e) => e.includes('ReDoS'))).toBe(true)
   })
 
   it('accepts simple, well-formed patterns', () => {
@@ -125,7 +125,7 @@ describe('validateWorkflow — outputMatch condition', () => {
       ],
     })
     const result = validateWorkflow(wf)
-    expect(result.errors.filter((e) => /ReDoS/.test(e))).toHaveLength(0)
+    expect(result.errors.filter((e) => e.includes('ReDoS'))).toHaveLength(0)
   })
 })
 

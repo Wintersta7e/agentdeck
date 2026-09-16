@@ -64,7 +64,9 @@ export const PromptsInspector = memo(function PromptsInspector(): React.JSX.Elem
       searchRef.current?.select()
     }
     el.addEventListener('keydown', handler)
-    return () => el.removeEventListener('keydown', handler)
+    return () => {
+      el.removeEventListener('keydown', handler)
+    }
   }, [])
 
   const filtered = useMemo(() => {
@@ -116,7 +118,9 @@ export const PromptsInspector = memo(function PromptsInspector(): React.JSX.Elem
         })
         setSeedTemplateId(sessionId, tpl.id)
         setInjectFlash(true)
-        window.setTimeout(() => setInjectFlash(false), 600)
+        window.setTimeout(() => {
+          setInjectFlash(false)
+        }, 600)
       })
       .catch((err: unknown) => {
         addNotification(
@@ -142,7 +146,9 @@ export const PromptsInspector = memo(function PromptsInspector(): React.JSX.Elem
             placeholder="Search…"
             aria-label="Search templates"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value)
+            }}
           />
         </div>
         <button
@@ -177,7 +183,9 @@ export const PromptsInspector = memo(function PromptsInspector(): React.JSX.Elem
               <button
                 type="button"
                 className={`prompts-inspector__pin${tpl.pinned ? ' is-pinned' : ''}`}
-                onClick={(e) => handlePinToggle(tpl, e)}
+                onClick={(e) => {
+                  handlePinToggle(tpl, e)
+                }}
                 aria-label={tpl.pinned ? `Unpin ${tpl.name}` : `Pin ${tpl.name}`}
                 aria-pressed={tpl.pinned}
               >
@@ -186,7 +194,9 @@ export const PromptsInspector = memo(function PromptsInspector(): React.JSX.Elem
               <button
                 type="button"
                 className="prompts-inspector__main"
-                onClick={() => setSelectedId(tpl.id)}
+                onClick={() => {
+                  setSelectedId(tpl.id)
+                }}
                 aria-pressed={isSelected}
               >
                 <div className="prompts-inspector__row-line1">

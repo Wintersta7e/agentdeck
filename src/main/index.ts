@@ -161,7 +161,7 @@ app
     // Surface non-fatal agents.toml parse warnings (captured at load above,
     // before the window existed) to the renderer as a banner once it loads —
     // mirrors the safeStorage notice and the templates parse-error path.
-    if (registryLoad.warnings.length > 0 && mainWindow) {
+    if (registryLoad.warnings.length > 0) {
       const warnings = registryLoad.warnings
       mainWindow.webContents.once('did-finish-load', () => {
         mainWindow?.webContents.send(CH.agentsParseError, { warnings })
@@ -169,7 +169,7 @@ app
     }
 
     // Warn renderer if encryption is unavailable (secrets stored as plaintext)
-    if (!safeStorage.isEncryptionAvailable() && mainWindow) {
+    if (!safeStorage.isEncryptionAvailable()) {
       log.warn('safeStorage encryption unavailable — secrets stored as plaintext')
       mainWindow.webContents.once('did-finish-load', () => {
         mainWindow?.webContents.send(CH.securityEncryptionUnavailable)
@@ -181,9 +181,7 @@ app
     // retries on the first session start instead of latching off for good.
     void worktreeProvider.get()
 
-    if (mainWindow) {
-      publishWslAvailability(mainWindow)
-    }
+    publishWslAvailability(mainWindow)
   })
   .catch((err: unknown) => {
     log.error('Startup failed', { err: String(err) })

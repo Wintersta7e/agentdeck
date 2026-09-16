@@ -47,8 +47,8 @@ interface NodeState {
 // ── Factory ──────────────────────────────────────────────────
 
 export function createScheduler(
-  nodes: ReadonlyArray<WorkflowNode>,
-  edges: ReadonlyArray<WorkflowEdge>,
+  nodes: readonly WorkflowNode[],
+  edges: readonly WorkflowEdge[],
 ): EdgeScheduler {
   // Only forward edges drive the ready-queue / pending model. Loop edges
   // (edgeType === 'loop') are handled by the engine via resetLoopSubgraph, so
@@ -206,7 +206,7 @@ export function createScheduler(
         // count after it was already enqueued (a stale entry), so an 'idle'
         // status alone is not enough — only run nodes whose dependencies are
         // genuinely satisfied. The node is re-enqueued when its pending hits 0.
-        if (state && state.status === 'idle' && state.pending === 0) {
+        if (state?.status === 'idle' && state.pending === 0) {
           state.status = 'running'
           result.push(state.node)
         }

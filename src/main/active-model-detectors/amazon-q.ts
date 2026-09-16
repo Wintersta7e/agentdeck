@@ -10,7 +10,7 @@ const TIMEOUT_MS = 10_000
 async function trySubprocess(args: string[]): Promise<string | null> {
   try {
     const { stdout } = await execFileAsync('wsl.exe', args, { timeout: TIMEOUT_MS })
-    const out = (stdout ?? '').trim()
+    const out = stdout.trim()
     return out.length > 0 ? out : null
   } catch {
     return null

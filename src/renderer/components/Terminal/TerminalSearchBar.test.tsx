@@ -24,7 +24,9 @@ describe('TerminalSearchBar', () => {
   let addon: ReturnType<typeof makeMockSearchAddon>
   const onClose = vi.fn()
 
-  afterEach(() => cleanup())
+  afterEach(() => {
+    cleanup()
+  })
 
   beforeEach(() => {
     addon = makeMockSearchAddon()
@@ -83,7 +85,9 @@ describe('TerminalSearchBar', () => {
     render(<TerminalSearchBar searchAddon={addon as never} visible={true} onClose={onClose} />)
     const input = screen.getByPlaceholderText('Find...')
     fireEvent.change(input, { target: { value: 'error' } })
-    act(() => addon._fireResults(2, 5))
+    act(() => {
+      addon._fireResults(2, 5)
+    })
     expect(screen.getByText('3 of 5')).toBeInTheDocument()
   })
 
@@ -91,7 +95,9 @@ describe('TerminalSearchBar', () => {
     render(<TerminalSearchBar searchAddon={addon as never} visible={true} onClose={onClose} />)
     const input = screen.getByPlaceholderText('Find...')
     fireEvent.change(input, { target: { value: 'nonexistent' } })
-    act(() => addon._fireResults(-1, 0))
+    act(() => {
+      addon._fireResults(-1, 0)
+    })
     expect(screen.getByText('No results')).toBeInTheDocument()
   })
 
@@ -119,7 +125,9 @@ describe('TerminalSearchBar', () => {
     const input = screen.getByPlaceholderText('Find...')
     // Type something, get results
     fireEvent.change(input, { target: { value: 'error' } })
-    act(() => addon._fireResults(0, 3))
+    act(() => {
+      addon._fireResults(0, 3)
+    })
     expect(screen.getByText('1 of 3')).toBeInTheDocument()
     // Clear the input
     fireEvent.change(input, { target: { value: '' } })
@@ -181,7 +189,9 @@ describe('TerminalSearchBar', () => {
     render(<TerminalSearchBar searchAddon={addon as never} visible={true} onClose={onClose} />)
     const input = screen.getByPlaceholderText('Find...')
     fireEvent.change(input, { target: { value: 'test' } })
-    act(() => addon._fireResults(0, 3))
+    act(() => {
+      addon._fireResults(0, 3)
+    })
     const prevBtn = screen.getByTitle('Previous Match (Shift+Enter)')
     const nextBtn = screen.getByTitle('Next Match (Enter)')
     expect(prevBtn).not.toBeDisabled()

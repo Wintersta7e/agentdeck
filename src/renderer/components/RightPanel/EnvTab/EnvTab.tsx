@@ -112,7 +112,9 @@ export const EnvTab = memo(function EnvTab(): React.JSX.Element {
             type="button"
             aria-label="Refresh environment"
             className="env-tab__refresh"
-            onClick={() => load(true)}
+            onClick={() => {
+              load(true)
+            }}
             disabled={loading}
             title="Refresh"
           >

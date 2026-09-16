@@ -101,7 +101,9 @@ export function SplitView(): React.JSX.Element {
     }
     resetPaneWidths()
     window.addEventListener('resize', resetPaneWidths)
-    return () => window.removeEventListener('resize', resetPaneWidths)
+    return () => {
+      window.removeEventListener('resize', resetPaneWidths)
+    }
   }, [paneLayout])
 
   const handleDividerMouseDown = useCallback((dividerIndex: number, e: React.MouseEvent) => {
@@ -236,7 +238,9 @@ export function SplitView(): React.JSX.Element {
             {paneIndex > 0 && (
               <div
                 className={`split-divider${isVisible ? '' : ' split-pane--hidden'}${draggingDivider === paneIndex - 1 ? ' split-divider--active' : ''}`}
-                onMouseDown={(e) => handleDividerMouseDown(paneIndex - 1, e)}
+                onMouseDown={(e) => {
+                  handleDividerMouseDown(paneIndex - 1, e)
+                }}
               />
             )}
             {/* Pane */}
@@ -245,7 +249,9 @@ export function SplitView(): React.JSX.Element {
                 paneRefs.current[paneIndex] = el
               }}
               className={`split-pane ${isVisible ? 'split-pane--visible' : 'split-pane--hidden'}${isFocused ? ' focused' : ''}`}
-              onClick={() => setFocusedPane(paneIndex)}
+              onClick={() => {
+                setFocusedPane(paneIndex)
+              }}
             >
               <div className="split-pane-inner">
                 {session ? (
@@ -301,7 +307,9 @@ export function SplitView(): React.JSX.Element {
           <button
             key={n}
             className={`lc-btn${paneLayout === n ? ' active' : ''}`}
-            onClick={() => setPaneLayout(n)}
+            onClick={() => {
+              setPaneLayout(n)
+            }}
           >
             {n}
           </button>

@@ -22,7 +22,9 @@ export function installAgentVersionInfoListener(meta: ImportMeta): void {
     }
   })
 
-  const cleanup = (): void => unsubVersionInfo()
+  const cleanup = (): void => {
+    unsubVersionInfo()
+  }
   window.addEventListener('unload', cleanup, { once: true })
 
   const hot = (meta as HotImportMeta).hot

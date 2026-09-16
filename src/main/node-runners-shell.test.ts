@@ -71,7 +71,9 @@ beforeEach(() => {
   mockExecFile.mockImplementation(
     (cmd: string, _args: string[], _opts: unknown, cb?: (...a: unknown[]) => void) => {
       if (cmd === 'wsl.exe' && typeof cb === 'function') {
-        process.nextTick(() => cb(null, 'output', ''))
+        process.nextTick(() => {
+          cb(null, 'output', '')
+        })
       } else if (typeof cb === 'function') {
         cb(null, '', '')
       }
@@ -99,7 +101,9 @@ describe('runShellNode — output buffering', () => {
         if (cmd === 'wsl.exe' && typeof cb === 'function') {
           const err = new Error('stdout maxBuffer length exceeded') as NodeJS.ErrnoException
           err.code = 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER'
-          process.nextTick(() => cb(err, 'x'.repeat(100), ''))
+          process.nextTick(() => {
+            cb(err, 'x'.repeat(100), '')
+          })
         }
         return { pid: 999, kill: vi.fn() }
       },

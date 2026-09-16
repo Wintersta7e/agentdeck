@@ -8,16 +8,18 @@ import { registerLegacyTemplateIpc, registerTemplateIpc } from './ipc'
 
 const log = createLogger('template-runtime')
 
-type MigrationStore = {
+// Both shapes return unknown: electron-store holds untyped JSON, so a generic
+// return type here would only be an `as T` the caller never has to justify.
+interface MigrationStore {
   has: (key: string) => boolean
-  get: <T>(key: string) => T
+  get: (key: string) => unknown
   set: (key: string, value: unknown) => void
   delete: (key: string) => void
 }
 
-type LegacyStore = {
-  get: <T>(key: string) => T
-  set: <T>(key: string, value: T) => void
+interface LegacyStore {
+  get: (key: string) => unknown
+  set: (key: string, value: unknown) => void
   has: (key: string) => boolean
 }
 
@@ -75,7 +77,7 @@ export async function initializeTemplateRuntime(
       legacy,
       migrationComplete: (): boolean => migrationComplete,
       getProjectExists: (projectId: string): boolean => {
-        const projects = appStore.get('projects') ?? []
+        const projects = appStore.get('projects')
         return projects.some((project) => project.id === projectId)
       },
     }

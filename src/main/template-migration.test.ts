@@ -8,7 +8,7 @@ const makeStore = (
   init: Record<string, unknown>,
 ): {
   has: (k: string) => boolean
-  get: <T>(k: string) => T
+  get: (k: string) => unknown
   set: (k: string, v: unknown) => void
   delete: (k: string) => void
   _state: Record<string, unknown>
@@ -16,7 +16,7 @@ const makeStore = (
   const state: Record<string, unknown> = { ...init }
   return {
     has: (k) => k in state,
-    get: <T>(k: string): T => state[k] as T,
+    get: (k: string): unknown => state[k],
     set: (k, v) => {
       state[k] = v
     },
@@ -42,9 +42,7 @@ describe('template-migration', () => {
     expect(result.status).toBe('migrated')
     expect(result.count).toBe(2)
     expect(store.has('templates')).toBe(false)
-    expect(store.get<{ templatesMigrated: boolean }>('appPrefs')).toEqual(
-      expect.objectContaining({ templatesMigrated: true }),
-    )
+    expect(store.get('appPrefs')).toEqual(expect.objectContaining({ templatesMigrated: true }))
 
     const files = (await readdir(userRoot)).filter((f) => f.endsWith('.json'))
     expect(files.sort()).toEqual(['a.json', 'b.json'])
@@ -76,7 +74,7 @@ describe('template-migration', () => {
     expect(result.count).toBe(1)
     const files = (await readdir(userRoot)).filter((f) => f.endsWith('.json'))
     expect(files).toEqual(['s.json'])
-    expect(store.get<{ templatesMigrated: boolean }>('appPrefs').templatesMigrated).toBe(true)
+    expect((store.get('appPrefs') as { templatesMigrated: boolean }).templatesMigrated).toBe(true)
 
     await rm(userRoot, { recursive: true, force: true })
   })

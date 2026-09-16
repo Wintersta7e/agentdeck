@@ -5,8 +5,6 @@ import { getDefaultAgent } from '../../shared/agent-helpers'
 export function resolveSessionAgent(session: Session, projects: Project[]): string {
   const project = projects.find((p) => p.id === session.projectId)
   return (
-    session.agentOverride ??
-    (project ? getDefaultAgent(project)?.agent : undefined) ??
-    'claude-code'
+    session.agentOverride ?? (project ? getDefaultAgent(project).agent : undefined) ?? 'claude-code'
   )
 }

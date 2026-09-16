@@ -75,7 +75,7 @@ describe('agent-env-other.readOtherAgentSnapshot', () => {
 
   it('throws on unknown agent id', async () => {
     await expect(
-      readOtherAgentSnapshot({ agentId: 'fake' as never, projectPath: undefined }),
+      readOtherAgentSnapshot({ agentId: 'fake', projectPath: undefined }),
     ).rejects.toThrow(/unsupported/i)
   })
 })

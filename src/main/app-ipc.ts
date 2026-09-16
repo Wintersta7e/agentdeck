@@ -59,9 +59,9 @@ export function registerAppIpcHandlers({
   registerWorkflowHandlers(
     getWorkflowEngine,
     agentRegistry,
-    () => store.get('roles') ?? [],
+    () => store.get('roles'),
     (role) => {
-      const roles = store.get('roles') ?? []
+      const roles = store.get('roles')
       const idx = roles.findIndex((existing) => existing.id === role.id)
       if (idx >= 0) {
         roles[idx] = role

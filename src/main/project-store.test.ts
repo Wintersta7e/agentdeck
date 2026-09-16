@@ -203,9 +203,9 @@ describe('createProjectStore', () => {
       { id: 'p2', name: 'Already-WSL', path: '/home/u/proj', agents: [] },
     ] as Project[])
 
-    normalizeProjectPaths(store as unknown as AppStore)
+    normalizeProjectPaths(store)
 
-    const projects = store.get('projects') as Project[]
+    const projects = store.get('projects')
     expect(projects[0]?.path).toBe('/mnt/c/code/alpha')
     expect(projects[1]?.path).toBe('/home/u/proj')
   })

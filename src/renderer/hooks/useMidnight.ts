@@ -24,8 +24,12 @@ export function useMidnight(): number {
   useEffect(() => {
     const nextMidnight = getNextMidnight(midnight)
     const ms = Math.max(0, nextMidnight - Date.now())
-    const id = setTimeout(() => setMidnight(getMidnight()), ms)
-    return () => clearTimeout(id)
+    const id = setTimeout(() => {
+      setMidnight(getMidnight())
+    }, ms)
+    return () => {
+      clearTimeout(id)
+    }
   }, [midnight])
   return midnight
 }

@@ -83,7 +83,7 @@ function mergeSecretEnv(
   const out: Record<string, string> = {}
   for (const [k, v] of Object.entries(incoming)) {
     if (v === '') {
-      if (prior && prior[k] !== undefined) out[k] = prior[k]
+      if (prior?.[k] !== undefined) out[k] = prior[k]
     } else {
       out[k] = v
     }
@@ -96,7 +96,7 @@ export class AgentRegistry {
   private readonly crypto: SecretCrypto | null
   private custom = new Map<string, CustomAgentSpec>()
   private descriptors: AgentDescriptorWire[] = builtinDescriptors()
-  private ids: Set<string> = new Set(BUILTIN_IDS)
+  private ids = new Set<string>(BUILTIN_IDS)
   /** Serializes write mutations so overlapping save/delete calls each start
    *  from committed in-memory state (no snapshot-before-await race). */
   private writeChain: Promise<unknown> = Promise.resolve()

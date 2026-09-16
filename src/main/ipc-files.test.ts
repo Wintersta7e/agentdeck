@@ -55,7 +55,7 @@ describe('ipc-files', () => {
     const result = (await listDirHandler(null, {
       path: '/home/u/proj',
       projectPath: '/home/u/proj',
-    })) as { entries: Array<{ name: string }>; gitignored: string[] }
+    })) as { entries: { name: string }[]; gitignored: string[] }
     const names = result.entries.map((e) => e.name)
     expect(names).toContain('src')
     expect(names).toContain('README.md')
@@ -64,10 +64,10 @@ describe('ipc-files', () => {
   })
 
   it('accepts non-traversal `..` substring in name (foo..bar)', async () => {
-    const result = (await listDirHandler(null, {
+    const result = await listDirHandler(null, {
       path: '/home/u/foo..bar',
       projectPath: '/home/u/foo..bar',
-    })) as unknown
+    })
     expect(result).toBeDefined()
   })
 

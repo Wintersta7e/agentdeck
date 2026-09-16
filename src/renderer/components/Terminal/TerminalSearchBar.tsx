@@ -78,7 +78,9 @@ export function TerminalSearchBar({ searchAddon, visible, onClose }: TerminalSea
         setResultCount(e.resultCount)
       },
     )
-    return () => disposable.dispose()
+    return () => {
+      disposable.dispose()
+    }
   }, [searchAddon])
 
   // Auto-focus input when becoming visible
@@ -201,7 +203,9 @@ export function TerminalSearchBar({ searchAddon, visible, onClose }: TerminalSea
         placeholder="Find..."
         aria-label="Search terminal output"
         value={query}
-        onChange={(e) => handleChange(e.target.value)}
+        onChange={(e) => {
+          handleChange(e.target.value)
+        }}
         onKeyDown={handleKeyDown}
       />
       <span

@@ -61,6 +61,7 @@ describe('applySessionStatus — reason taxonomy', () => {
     // that marker and pass reason='spawn-failure' rather than 'pty-exit', so
     // the session lands as status='error' + approvalState='idle' instead of
     // the default 'pty-exit' transition (exited + review).
+    // The annotation widens the literal so the branch models a runtime code.
     const exitCode: number = -1
     const reason: 'spawn-failure' | 'pty-exit' = exitCode === -1 ? 'spawn-failure' : 'pty-exit'
     useAppStore.getState().applySessionStatus('s1', 'exited', reason)
@@ -69,6 +70,7 @@ describe('applySessionStatus — reason taxonomy', () => {
   })
 
   it('pty:exit non-negative marker routes via pty-exit (running -> review)', () => {
+    // The annotation widens the literal so the branch models a runtime code.
     const exitCode: number = 0
     const reason: 'spawn-failure' | 'pty-exit' = exitCode === -1 ? 'spawn-failure' : 'pty-exit'
     useAppStore.getState().applySessionStatus('s1', 'exited', reason)

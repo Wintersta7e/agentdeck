@@ -20,15 +20,17 @@ export function FilesTab(): React.JSX.Element {
   )
 
   const [generation, setGeneration] = useState(0)
-  const refresh = useCallback(() => setGeneration((g) => g + 1), [])
+  const refresh = useCallback(() => {
+    setGeneration((g) => g + 1)
+  }, [])
 
   if (!activeSessionId || !session || !project) {
     return <div className="ri-tab__empty">No project — open a session to see its files.</div>
   }
 
   const isolated = worktree?.isolated === true
-  const root = isolated && worktree ? worktree.path : project.path
-  const label = isolated && worktree ? 'WORKTREE' : 'PROJECT'
+  const root = isolated ? worktree.path : project.path
+  const label = isolated ? 'WORKTREE' : 'PROJECT'
 
   return (
     <div className="files-tab">

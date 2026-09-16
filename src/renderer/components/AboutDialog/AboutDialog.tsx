@@ -50,7 +50,9 @@ export function AboutDialog({ onClose }: AboutDialogProps): React.JSX.Element {
       }
     }
     window.addEventListener('keydown', handleKeyDown, true)
-    return () => window.removeEventListener('keydown', handleKeyDown, true)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, true)
+    }
   }, [onClose])
 
   const handleOverlayClick = useCallback(

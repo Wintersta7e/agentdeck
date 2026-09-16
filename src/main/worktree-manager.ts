@@ -130,7 +130,7 @@ export async function createWorktreeManager(
   git: GitPort,
   lookupProjectPath: (projectId: string) => string | undefined,
   registryDir: string,
-  wslWorktreeDir?: string | undefined,
+  wslWorktreeDir?: string,
 ): Promise<WorktreeManager> {
   const rawWorktreeBaseDir = wslWorktreeDir ?? registryDir
   const worktreeBaseDir = path.posix.normalize(rawWorktreeBaseDir).replace(/\/+$/, '') || '/'

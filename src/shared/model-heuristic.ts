@@ -19,7 +19,7 @@ export function inferContextFromModelId(id: string): number | undefined {
   if (!id) return undefined
   for (const re of [BRACKET_RE, DASH_RE, COLON_RE]) {
     const m = re.exec(id)
-    if (m && m[1] && m[2]) {
+    if (m?.[1] && m[2]) {
       const count = parseInt(m[1], 10)
       if (!Number.isFinite(count) || count <= 0) continue
       return count * unitToMultiplier(m[2])

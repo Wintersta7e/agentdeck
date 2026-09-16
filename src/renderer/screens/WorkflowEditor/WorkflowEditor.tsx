@@ -46,7 +46,9 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
   const [workflow, setWorkflow] = useState<Workflow | null>(null)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [addMenuOpen, setAddMenuOpen] = useState(false)
-  const closeAddMenu = useCallback(() => setAddMenuOpen(false), [])
+  const closeAddMenu = useCallback(() => {
+    setAddMenuOpen(false)
+  }, [])
   const [detailNode, setDetailNode] = useState<WorkflowNode | null>(null)
   const [rightTab, setRightTab] = useState<'editor' | 'log' | 'history'>('editor')
   const [showRunDialog, setShowRunDialog] = useState(false)
@@ -311,7 +313,9 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
       handleDuplicateNode(id)
     }
     window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+    }
   }, [handleDuplicateNode])
 
   const handleDeleteEdge = useCallback(
@@ -378,11 +382,15 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
   }, [workflow, proceedWithRun])
 
   const handleStop = useCallback(() => {
-    window.agentDeck.workflows.stop(workflowId)
+    window.agentDeck.workflows.stop(workflowId).catch((err: unknown) => {
+      handleIpcError(err, 'Failed to stop workflow')
+    })
   }, [workflowId])
 
   const handleResume = useCallback((wfId: string, nodeId: string) => {
-    window.agentDeck.workflows.resume(wfId, nodeId)
+    window.agentDeck.workflows.resume(wfId, nodeId).catch((err: unknown) => {
+      handleIpcError(err, 'Failed to resume workflow')
+    })
   }, [])
 
   const handleClearLogs = useCallback(() => {
@@ -422,7 +430,9 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
     [projects, workflow?.projectId],
   )
 
-  const toggleAddMenu = useCallback(() => setAddMenuOpen((prev) => !prev), [])
+  const toggleAddMenu = useCallback(() => {
+    setAddMenuOpen((prev) => !prev)
+  }, [])
 
   const runProgress = useMemo(() => {
     if (workflowStatus !== 'running' || !workflow || workflow.nodes.length === 0) return null
@@ -444,9 +454,13 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
         addMenuOpen={addMenuOpen}
         onToggleAddMenu={toggleAddMenu}
         onCloseAddMenu={closeAddMenu}
-        onExport={handleExport}
+        onExport={() => {
+          void handleExport()
+        }}
         onImport={handleImport}
-        onDuplicate={handleDuplicate}
+        onDuplicate={() => {
+          void handleDuplicate()
+        }}
         onRun={handleRun}
         onStop={handleStop}
         workflowStatus={workflowStatus}
@@ -505,7 +519,9 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
               role="tab"
               aria-selected={rightTab === 'editor'}
               className={`wf-right-tab${rightTab === 'editor' ? ' active' : ''}`}
-              onClick={() => setRightTab('editor')}
+              onClick={() => {
+                setRightTab('editor')
+              }}
               type="button"
             >
               Node Editor
@@ -514,7 +530,9 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
               role="tab"
               aria-selected={rightTab === 'log'}
               className={`wf-right-tab${rightTab === 'log' ? ' active' : ''}`}
-              onClick={() => setRightTab('log')}
+              onClick={() => {
+                setRightTab('log')
+              }}
               type="button"
             >
               Execution Log
@@ -523,7 +541,9 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
               role="tab"
               aria-selected={rightTab === 'history'}
               className={`wf-right-tab${rightTab === 'history' ? ' active' : ''}`}
-              onClick={() => setRightTab('history')}
+              onClick={() => {
+                setRightTab('history')
+              }}
               type="button"
             >
               History
@@ -582,7 +602,9 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
             setShowRunDialog(false)
             runWorkflow(vals)
           }}
-          onCancel={() => setShowRunDialog(false)}
+          onCancel={() => {
+            setShowRunDialog(false)
+          }}
         />
       )}
 
@@ -595,7 +617,9 @@ export default function WorkflowEditor({ workflowId }: WorkflowEditorProps): Rea
           setShowNoProjectConfirm(false)
           proceedWithRun()
         }}
-        onCancel={() => setShowNoProjectConfirm(false)}
+        onCancel={() => {
+          setShowNoProjectConfirm(false)
+        }}
       />
     </div>
   )

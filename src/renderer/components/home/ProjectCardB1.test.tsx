@@ -23,21 +23,23 @@ function project(over: Partial<Project> = {}): Project {
     name: 'Proj One',
     path: '/repo/one',
     ...over,
-  } as Project
+  }
 }
 
 describe('ProjectCardB1', () => {
-  afterEach(() => cleanup())
+  afterEach(() => {
+    cleanup()
+  })
   beforeEach(() => {
     useAppStore.setState({
       ...useAppStore.getInitialState(),
       agentRegistry: [...useAppStore.getInitialState().agentRegistry, customAgent],
-    } as never)
+    })
   })
 
   it('renders a custom default agent glyph (no longer filtered out)', () => {
     const p = project({
-      agents: [{ agent: 'my-bot' as never, isDefault: true }],
+      agents: [{ agent: 'my-bot', isDefault: true }],
     })
     const { container } = render(<ProjectCardB1 project={p} onOpen={vi.fn()} />)
     const glyphs = container.querySelectorAll('.pc-b1__agent-glyph')

@@ -35,7 +35,9 @@ export function TitlebarBrand(): React.JSX.Element {
       setClock(formatClock(d))
       setDay(formatWeekday(d))
     }, 30_000)
-    return () => window.clearInterval(id)
+    return () => {
+      window.clearInterval(id)
+    }
   }, [])
 
   useEffect(() => {
@@ -77,7 +79,9 @@ export function TitlebarBrand(): React.JSX.Element {
       <button
         type="button"
         className="titlebar-brand__search"
-        onClick={() => openCommandPalette()}
+        onClick={() => {
+          openCommandPalette()
+        }}
         aria-label="Open command palette"
         title="Search sessions, projects, agents… (Ctrl+K)"
       >

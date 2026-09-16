@@ -49,7 +49,7 @@ export function parseCodexLimits(line: string): CodexLimits | null {
   return {
     primary,
     weekly,
-    planType: typeof rlObj['plan_type'] === 'string' ? (rlObj['plan_type'] as string) : null,
+    planType: typeof rlObj['plan_type'] === 'string' ? rlObj['plan_type'] : null,
     asOf: Number.isNaN(asOfParsed) ? null : asOfParsed,
   }
 }

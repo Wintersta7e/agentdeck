@@ -43,7 +43,9 @@ function AgentRow({
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // Nested async so react-hooks/set-state-in-effect doesn't flag the sync branch.
+    // Nested async so react-hooks/set-state-in-effect doesn't flag the sync
+    // branch. There is nothing to await — deferring the setState is the point.
+    // eslint-disable-next-line @typescript-eslint/require-await
     const sync = async (): Promise<void> => {
       setDraft(agentOverride !== undefined ? String(agentOverride) : '')
     }
@@ -77,7 +79,9 @@ function AgentRow({
         aria-label={`${agentName} override`}
         placeholder={ctx.value !== null ? formatTokens(ctx.value) : formatTokens(registryDefault)}
         value={draft}
-        onChange={(e) => setDraft(e.target.value)}
+        onChange={(e) => {
+          setDraft(e.target.value)
+        }}
         onBlur={handleBlur}
       />
       <span className="ctx-overrides-row__auto">auto: {autoDisplay}</span>
@@ -133,7 +137,9 @@ function AddModelOverrideRow({ onSave }: AddModelOverrideRowProps): React.JSX.El
         aria-label="New model ID"
         placeholder="model-id (e.g. claude-opus-4-5)"
         value={modelId}
-        onChange={(e) => setModelId(e.target.value)}
+        onChange={(e) => {
+          setModelId(e.target.value)
+        }}
       />
       <input
         type="number"
@@ -141,7 +147,9 @@ function AddModelOverrideRow({ onSave }: AddModelOverrideRowProps): React.JSX.El
         aria-label="New model context size"
         placeholder={formatTokens(200_000)}
         value={valueStr}
-        onChange={(e) => setValueStr(e.target.value)}
+        onChange={(e) => {
+          setValueStr(e.target.value)
+        }}
       />
       <button type="button" className="ctx-overrides-add-row__save" onClick={handleSave}>
         Save

@@ -69,7 +69,9 @@ export function SkillsSection({ skills }: Props): React.JSX.Element {
                   <button
                     type="button"
                     className="env-tab__skills-toggle"
-                    onClick={() => toggle(scope)}
+                    onClick={() => {
+                      toggle(scope)
+                    }}
                     aria-expanded={open}
                   >
                     {open ? 'Show less' : `Show all (${list.length})`}

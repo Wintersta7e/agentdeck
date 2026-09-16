@@ -5,7 +5,7 @@
  * runWorkflow(). They now take an explicit NodeRunnerDeps interface
  * instead of closing over parent-scope variables.
  */
-import { spawn, execFile, type ChildProcess, type ExecException } from 'child_process'
+import { spawn, execFile, type ChildProcess } from 'child_process'
 import { createLogger } from './logger'
 import type { AgentNode, ShellNode, WorkflowEventInput, Role } from '../shared/types'
 import {
@@ -46,7 +46,7 @@ const SHELL_MAX_BUFFER = 16 * 1024 * 1024
  */
 export function forceKillTree(child: ChildProcess): void {
   const pid = child.pid
-  if (pid === undefined || pid === null) {
+  if (pid === undefined) {
     child.kill('SIGKILL')
     return
   }
@@ -131,7 +131,7 @@ function resolveAgentPathPrefix(bin: string): Promise<string> {
       { timeout: 15_000 },
       (_err, stdout) => {
         const dirs: string[] = []
-        for (const line of (stdout ?? '').split('\n')) {
+        for (const line of stdout.split('\n')) {
           const p = line.trim()
           if (!p.startsWith('/')) continue
           const slash = p.lastIndexOf('/')
@@ -243,7 +243,7 @@ export async function runAgentNode(
   const cdFlagStr = deps.projectPath && cdFlag ? `${cdFlag} ${shellQuote(deps.projectPath)} ` : ''
   const engineFlags = AGENT_ENGINE_FLAGS_MAP[agentName]
   const engineFlagStr = engineFlags ? engineFlags.join(' ') + ' ' : ''
-  const permission = node.type === 'agent' ? (node.permission ?? 'read') : 'read'
+  const permission = node.permission ?? 'read'
   const permFlags = getPermissionFlags(agentName, permission)
   const permFlagStr = permFlags.length > 0 ? permFlags.join(' ') + ' ' : ''
   const runParts: string[] = []
@@ -302,8 +302,8 @@ export async function runAgentNode(
       stdio: ['pipe', 'pipe', 'pipe'],
       env: mergedEnv,
     })
-    child.stdin?.write(prompt)
-    child.stdin?.end()
+    child.stdin.write(prompt)
+    child.stdin.end()
     deps.activeChildProcesses.add(child)
 
     let output = ''
@@ -351,8 +351,8 @@ export async function runAgentNode(
       flushLines(text)
     }
 
-    child.stdout?.on('data', handleData)
-    child.stderr?.on('data', handleData)
+    child.stdout.on('data', handleData)
+    child.stderr.on('data', handleData)
 
     // Idle timeout: kill agent if it produces no output for AGENT_IDLE_TIMEOUT ms
     const idleCheckTimer = setInterval(() => {
@@ -456,7 +456,7 @@ export function runShellNode(node: ShellNode, deps: NodeRunnerDeps): Promise<voi
         // (e.g. 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER' when maxBuffer overflows)
         // means Node killed the child — treat it as a generic failure rather
         // than letting a string leak into the numeric exit-code map.
-        const raw = (err as ExecException | null)?.code
+        const raw = err?.code
         const exitCode = typeof raw === 'number' ? raw : err ? 1 : 0
         deps.nodeExitCodes.set(node.id, exitCode)
         const out = stripAnsi(stdout + stderr)
@@ -468,6 +468,10 @@ export function runShellNode(node: ShellNode, deps: NodeRunnerDeps): Promise<voi
           nodeId: node.id,
           message: out,
         })
+        // `err` is a real Error at runtime; @types/node declares ExecException
+        // as Omit<NodeJS.ErrnoException, 'code'>, and Omit<> drops the Error
+        // relationship, so the rule cannot see it.
+        // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
         if (err) reject(err)
         else resolve()
       },

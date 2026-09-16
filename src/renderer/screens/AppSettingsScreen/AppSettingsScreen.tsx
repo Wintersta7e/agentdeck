@@ -12,7 +12,9 @@ export function AppSettingsScreen(): React.JSX.Element {
 
   const handlePickTheme = useCallback(
     (id: string) => {
-      applyThemeWithTransition(id, () => setTheme(id))
+      applyThemeWithTransition(id, () => {
+        setTheme(id)
+      })
     },
     [setTheme],
   )
@@ -20,10 +22,12 @@ export function AppSettingsScreen(): React.JSX.Element {
   const handleResetZoom = useCallback(() => {
     window.agentDeck.zoom
       .reset()
-      .then((z) => useAppStore.getState().setZoomFactor(z))
+      .then((z) => {
+        useAppStore.getState().setZoomFactor(z)
+      })
       .catch((err: unknown) => {
         const message = err instanceof Error ? err.message : String(err)
-        void window.agentDeck.log.send('error', 'app-settings', 'Zoom reset failed', {
+        window.agentDeck.log.send('error', 'app-settings', 'Zoom reset failed', {
           error: message,
         })
         useAppStore.getState().addNotification('error', `Zoom reset failed: ${message}`)
@@ -57,7 +61,9 @@ export function AppSettingsScreen(): React.JSX.Element {
                     key={option.id || '__default'}
                     type="button"
                     className={`app-settings-theme-card${active ? ' is-active' : ''}`}
-                    onClick={() => handlePickTheme(option.id)}
+                    onClick={() => {
+                      handlePickTheme(option.id)
+                    }}
                     aria-pressed={active}
                   >
                     <span
@@ -148,7 +154,13 @@ function MascotToggle(): React.JSX.Element {
         <div className="app-settings-row__label">Current state</div>
         <div className="app-settings-row__value">{enabled ? 'ENABLED' : 'DISABLED'}</div>
       </div>
-      <button type="button" className="app-settings-btn" onClick={() => setMascotEnabled(!enabled)}>
+      <button
+        type="button"
+        className="app-settings-btn"
+        onClick={() => {
+          setMascotEnabled(!enabled)
+        }}
+      >
         {enabled ? 'Turn off' : 'Turn on'}
       </button>
     </div>

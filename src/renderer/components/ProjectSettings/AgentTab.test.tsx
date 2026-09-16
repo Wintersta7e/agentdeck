@@ -43,7 +43,7 @@ beforeEach(() => {
   useAppStore.setState({
     ...useAppStore.getInitialState(),
     agentRegistry: [builtinAgent, customAgent],
-  } as never)
+  })
 })
 
 afterEach(() => {

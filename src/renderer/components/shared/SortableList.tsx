@@ -41,7 +41,9 @@ function SortableItem({ id, onRemove, children }: SortableItemProps): React.JSX.
       <button
         type="button"
         className="remove-btn"
-        onClick={() => onRemove(id)}
+        onClick={() => {
+          onRemove(id)
+        }}
         aria-label="Remove item"
       >
         &times;

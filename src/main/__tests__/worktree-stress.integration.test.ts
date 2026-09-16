@@ -273,7 +273,7 @@ describeIf('Worktree Stress Tests (real git)', () => {
     await mgr.acquire(projectId, 'cap-primary')
 
     // Create 20 worktrees (hitting the cap at 20 entries)
-    const results: Array<{ isolated: boolean }> = []
+    const results: { isolated: boolean }[] = []
     for (let i = 0; i < 20; i++) {
       try {
         const r = await mgr.acquire(projectId, `cap-session-${i}`)

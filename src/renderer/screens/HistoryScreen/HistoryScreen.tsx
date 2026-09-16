@@ -94,10 +94,20 @@ export function HistoryScreen(): React.JSX.Element {
       sub="14-day heatmap of when agents run, plus a scrollable log of every session."
       filters={
         <>
-          <FilterChip active={metric === 'count'} onClick={() => setMetric('count')}>
+          <FilterChip
+            active={metric === 'count'}
+            onClick={() => {
+              setMetric('count')
+            }}
+          >
             By count
           </FilterChip>
-          <FilterChip active={metric === 'filesChanged'} onClick={() => setMetric('filesChanged')}>
+          <FilterChip
+            active={metric === 'filesChanged'}
+            onClick={() => {
+              setMetric('filesChanged')
+            }}
+          >
             By files
           </FilterChip>
           <div className="history-screen__spacer" />
@@ -164,7 +174,9 @@ export function HistoryScreen(): React.JSX.Element {
                   <button
                     type="button"
                     className="history-log__btn"
-                    onClick={() => handleOpenSession(row.sessionId)}
+                    onClick={() => {
+                      handleOpenSession(row.sessionId)
+                    }}
                   >
                     <span className="history-log__time">{formatTs(row.startedAt)}</span>
                     <span className="history-log__agent">

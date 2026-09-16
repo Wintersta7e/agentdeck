@@ -37,7 +37,9 @@ export function ConfirmDialog({
       }
     }
     document.addEventListener('keydown', handleKeyDown, true)
-    return () => document.removeEventListener('keydown', handleKeyDown, true)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown, true)
+    }
   }, [open, onCancel])
 
   // Click on backdrop closes dialog

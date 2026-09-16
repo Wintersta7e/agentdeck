@@ -41,7 +41,7 @@ describe('getTemplatesForActiveProject', () => {
       activeSessionId: null,
       sessions: {},
     }
-    const result = getTemplatesForActiveProject(state as never)
+    const result = getTemplatesForActiveProject(state)
     expect(result.map((t) => t.id)).toEqual(['u1', 'u2']) // lastUsedAt desc
   })
 
@@ -56,7 +56,7 @@ describe('getTemplatesForActiveProject', () => {
       activeSessionId: null,
       sessions: {},
     }
-    const result = getTemplatesForActiveProject(state as never)
+    const result = getTemplatesForActiveProject(state)
     expect(result.map((t) => t.id)).toEqual(['u1'])
   })
 
@@ -126,7 +126,7 @@ describe('getTemplatesForActiveProject', () => {
       activeSessionId: null,
       sessions: {},
     }
-    const result = getTemplatesForActiveProject(state as never)
+    const result = getTemplatesForActiveProject(state)
     expect(result.map((t) => t.id)).toEqual(['pinned-old', 'recent'])
   })
 
@@ -142,7 +142,7 @@ describe('getTemplatesForActiveProject', () => {
       activeSessionId: null,
       sessions: {},
     }
-    const result = getTemplatesForActiveProject(state as never)
+    const result = getTemplatesForActiveProject(state)
     expect(result.map((t) => t.id)).toEqual(['b', 'c', 'a'])
   })
 
@@ -158,7 +158,7 @@ describe('getTemplatesForActiveProject', () => {
       activeSessionId: null,
       sessions: {},
     }
-    const result = getTemplatesForActiveProject(state as never)
+    const result = getTemplatesForActiveProject(state)
     expect(result.map((t) => t.name)).toEqual(['Alpha', 'Bravo', 'Charlie'])
   })
 })

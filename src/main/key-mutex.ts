@@ -18,9 +18,9 @@ export function createKeyMutex(): <T>(key: string, fn: () => T | PromiseLike<T>)
       () => fn(),
       () => fn(),
     )
-    chains.set(key, next as Promise<unknown>)
+    chains.set(key, next)
     return next.finally(() => {
       if (chains.get(key) === next) chains.delete(key)
-    }) as Promise<T>
+    })
   }
 }

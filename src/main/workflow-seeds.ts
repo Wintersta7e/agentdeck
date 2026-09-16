@@ -46,9 +46,9 @@ export async function seedWorkflows(store: AppStore): Promise<void> {
   let count = 0
   for (const blueprint of SEED_WORKFLOWS) {
     const nodes: WorkflowNode[] = blueprint.nodes.map((n) =>
-      materializeSeedNode(n, roleMap, (role) =>
-        log.warn('Seed workflow references unknown role', { role, workflow: blueprint.id }),
-      ),
+      materializeSeedNode(n, roleMap, (role) => {
+        log.warn('Seed workflow references unknown role', { role, workflow: blueprint.id })
+      }),
     )
 
     const workflow: Workflow = {

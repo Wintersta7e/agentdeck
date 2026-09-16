@@ -37,7 +37,9 @@ export function GeneralTab({ draft, onChange }: TabProps): React.JSX.Element {
                 type="text"
                 className="settings-input"
                 value={draft.name}
-                onChange={(e) => onChange({ name: e.target.value })}
+                onChange={(e) => {
+                  onChange({ name: e.target.value })
+                }}
                 placeholder="My Project"
                 aria-label="Display name"
               />
@@ -52,7 +54,9 @@ export function GeneralTab({ draft, onChange }: TabProps): React.JSX.Element {
             <div className="form-control-col">
               <PathInput
                 value={draft.path}
-                onChange={(value) => onChange({ path: value })}
+                onChange={(value) => {
+                  onChange({ path: value })
+                }}
                 placeholder="~/projects/my-project"
               />
             </div>
@@ -68,7 +72,9 @@ export function GeneralTab({ draft, onChange }: TabProps): React.JSX.Element {
                 type="text"
                 className="settings-input"
                 value={draft.wslDistro ?? ''}
-                onChange={(e) => onChange({ wslDistro: e.target.value })}
+                onChange={(e) => {
+                  onChange({ wslDistro: e.target.value })
+                }}
                 placeholder="Ubuntu-24.04"
                 aria-label="WSL distro"
               />
@@ -84,7 +90,9 @@ export function GeneralTab({ draft, onChange }: TabProps): React.JSX.Element {
                 type="text"
                 className="settings-input"
                 value={draft.notes ?? ''}
-                onChange={(e) => onChange({ notes: e.target.value })}
+                onChange={(e) => {
+                  onChange({ notes: e.target.value })
+                }}
                 placeholder="Short description"
                 aria-label="Notes"
               />
@@ -105,7 +113,12 @@ export function GeneralTab({ draft, onChange }: TabProps): React.JSX.Element {
               <div className="form-sublabel">Always visible in the sidebar</div>
             </div>
             <div className="form-control-col">
-              <Toggle value={draft.pinned ?? false} onChange={(val) => onChange({ pinned: val })} />
+              <Toggle
+                value={draft.pinned ?? false}
+                onChange={(val) => {
+                  onChange({ pinned: val })
+                }}
+              />
             </div>
           </div>
 
@@ -117,7 +130,9 @@ export function GeneralTab({ draft, onChange }: TabProps): React.JSX.Element {
             <div className="form-control-col">
               <Toggle
                 value={draft.autoOpen ?? false}
-                onChange={(val) => onChange({ autoOpen: val })}
+                onChange={(val) => {
+                  onChange({ autoOpen: val })
+                }}
               />
             </div>
           </div>
@@ -131,7 +146,9 @@ export function GeneralTab({ draft, onChange }: TabProps): React.JSX.Element {
               <select
                 className="select-input"
                 value={draft.badge ?? 'Other'}
-                onChange={(e) => onChange({ badge: e.target.value as StackBadge })}
+                onChange={(e) => {
+                  onChange({ badge: e.target.value as StackBadge })
+                }}
                 aria-label="Stack badge"
               >
                 {STACK_BADGES.map((badge) => (

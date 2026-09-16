@@ -60,7 +60,9 @@ export function IdentityTab({ draft, onChange }: TabProps): React.JSX.Element {
                     key={color}
                     className={`swatch${currentColor === color ? ' selected' : ''}`}
                     style={{ background: color }}
-                    onClick={() => setColor(color)}
+                    onClick={() => {
+                      setColor(color)
+                    }}
                     role="radio"
                     tabIndex={currentColor === color ? 0 : -1}
                     aria-label={color}
@@ -84,7 +86,9 @@ export function IdentityTab({ draft, onChange }: TabProps): React.JSX.Element {
                   <div
                     key={icon}
                     className={`icon-opt${currentIcon === icon ? ' selected' : ''}`}
-                    onClick={() => setIcon(icon)}
+                    onClick={() => {
+                      setIcon(icon)
+                    }}
                     role="radio"
                     tabIndex={currentIcon === icon ? 0 : -1}
                     aria-label={`Icon: ${icon}`}

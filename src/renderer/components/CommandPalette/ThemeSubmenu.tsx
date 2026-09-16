@@ -74,7 +74,9 @@ export function ThemeSubmenu({
     }
 
     window.addEventListener('keydown', handleKeyDown, true)
-    return () => window.removeEventListener('keydown', handleKeyDown, true)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, true)
+    }
   }, [allThemes, onBack, onSelect, onSelectIndex, previewOriginalRef])
 
   return (

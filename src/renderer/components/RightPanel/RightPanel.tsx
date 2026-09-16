@@ -39,7 +39,9 @@ export const RightPanel = memo(function RightPanel(): React.JSX.Element {
             role="tab"
             aria-selected={rightPanelTab === tab.key}
             className={`panel-tab${rightPanelTab === tab.key ? ' active' : ''}`}
-            onClick={() => setRightPanelTab(tab.key)}
+            onClick={() => {
+              setRightPanelTab(tab.key)
+            }}
             title={tab.label}
           >
             {TAB_ICONS[tab.key]}

@@ -87,13 +87,21 @@ export function AlertsScreen(): React.JSX.Element {
       }
       filters={
         <>
-          <FilterChip active={filter === 'all'} onClick={() => setFilter('all')} count={counts.all}>
+          <FilterChip
+            active={filter === 'all'}
+            onClick={() => {
+              setFilter('all')
+            }}
+            count={counts.all}
+          >
             All
           </FilterChip>
           <FilterChip
             active={filter === 'error'}
             dotColor="red"
-            onClick={() => setFilter('error')}
+            onClick={() => {
+              setFilter('error')
+            }}
             count={counts.error}
           >
             Errors
@@ -101,14 +109,18 @@ export function AlertsScreen(): React.JSX.Element {
           <FilterChip
             active={filter === 'warning'}
             dotColor="accent"
-            onClick={() => setFilter('warning')}
+            onClick={() => {
+              setFilter('warning')
+            }}
             count={counts.warning}
           >
             Warnings
           </FilterChip>
           <FilterChip
             active={filter === 'info'}
-            onClick={() => setFilter('info')}
+            onClick={() => {
+              setFilter('info')
+            }}
             count={counts.info}
           >
             Notices
@@ -128,7 +140,7 @@ export function AlertsScreen(): React.JSX.Element {
           </div>
         </div>
       ) : (
-        (Object.entries(grouped) as Array<[AlertType, Notification[]]>).map(([type, items]) => {
+        (Object.entries(grouped) as [AlertType, Notification[]][]).map(([type, items]) => {
           if (items.length === 0) return null
           return (
             <section key={type} className={`alerts-group alerts-group--${type}`}>
@@ -145,7 +157,9 @@ export function AlertsScreen(): React.JSX.Element {
                     <button
                       type="button"
                       className="alert-row__dismiss"
-                      onClick={() => dismissNotification(n.id)}
+                      onClick={() => {
+                        dismissNotification(n.id)
+                      }}
                       aria-label="Dismiss alert"
                       title="Dismiss"
                     >

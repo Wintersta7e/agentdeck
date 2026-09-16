@@ -20,7 +20,9 @@ beforeEach(() => {
 describe('useEffectiveContextForModel (fallback-only)', () => {
   it('runs no detector and returns resolver result', async () => {
     const { result } = renderHook(() => useEffectiveContextForModel('aider', 'weirdnet-xyz'))
-    await waitFor(() => expect(result.current.loading).toBe(false))
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false)
+    })
     expect(result.current.value).toBe(500_000)
     expect(result.current.source).toBe('override-model')
   })
@@ -29,7 +31,9 @@ describe('useEffectiveContextForModel (fallback-only)', () => {
     const { result } = renderHook(() =>
       useEffectiveContextForModel('aider', 'weirdnet-xyz', { enabled: false }),
     )
-    await waitFor(() => expect(result.current.loading).toBe(false))
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false)
+    })
     expect(result.current.value).toBeNull()
     expect(result.current.source).toBeNull()
     expect(result.current.modelId).toBeNull()

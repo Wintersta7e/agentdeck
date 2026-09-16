@@ -21,7 +21,7 @@ function makeStore(initial: MiniPrefs = {}): {
   _prefs: MiniPrefs
 } {
   const s = {
-    _prefs: initial as MiniPrefs,
+    _prefs: initial,
     get: vi.fn((key: string) => (key === 'appPrefs' ? s._prefs : undefined)),
     set: vi.fn((key: string, val: MiniPrefs) => {
       if (key === 'appPrefs') s._prefs = val

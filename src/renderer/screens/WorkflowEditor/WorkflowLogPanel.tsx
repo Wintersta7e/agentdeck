@@ -20,9 +20,18 @@ interface WorkflowLogPanelProps {
 
 // ── Flat row model for virtualization ───────────────────────────────────────
 
-type HeaderRow = { kind: 'header'; ev: WorkflowEvent }
-type EntryRow = { kind: 'entry'; ev: WorkflowEvent }
-type ResumeRow = { kind: 'resume'; ev: WorkflowEvent }
+interface HeaderRow {
+  kind: 'header'
+  ev: WorkflowEvent
+}
+interface EntryRow {
+  kind: 'entry'
+  ev: WorkflowEvent
+}
+interface ResumeRow {
+  kind: 'resume'
+  ev: WorkflowEvent
+}
 type LogRow = HeaderRow | EntryRow | ResumeRow
 
 // Row pixel heights
@@ -171,7 +180,9 @@ function LogRowComponent({
             <button
               className="wf-log-resume-btn"
               type="button"
-              onClick={() => onResumeCheckpoint(ev.workflowId, pausedNodeId)}
+              onClick={() => {
+                onResumeCheckpoint(ev.workflowId, pausedNodeId)
+              }}
             >
               Resume
             </button>
@@ -315,7 +326,9 @@ export default function WorkflowLogPanel({
       <div className="wf-log-tabs">
         <div
           className={`wf-log-tab${activeTab === 'all' ? ' active' : ''}`}
-          onClick={() => setActiveTab('all')}
+          onClick={() => {
+            setActiveTab('all')
+          }}
         >
           All
         </div>
@@ -323,7 +336,9 @@ export default function WorkflowLogPanel({
           <div
             key={n.id}
             className={`wf-log-tab${activeTab === n.id ? ' active' : ''}`}
-            onClick={() => setActiveTab(n.id)}
+            onClick={() => {
+              setActiveTab(n.id)
+            }}
           >
             {n.name}
           </div>

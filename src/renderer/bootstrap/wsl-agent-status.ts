@@ -18,7 +18,7 @@ async function fetchWslAgentStatus(): Promise<WslAgentStatus> {
     }),
     window.agentDeck.agents.check().catch((err: unknown) => {
       window.agentDeck.log.send('warn', 'init', 'Agent check failed', { err: String(err) })
-      return {} as Record<string, boolean>
+      return {}
     }),
     window.agentDeck.projects.getDefaultDistro().catch((err: unknown) => {
       window.agentDeck.log.send('warn', 'init', 'WSL distro fetch failed', { err: String(err) })

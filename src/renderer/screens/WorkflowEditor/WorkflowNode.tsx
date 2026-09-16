@@ -95,7 +95,9 @@ function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Ele
       }
     }
     document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+    }
   }, [menuOpen])
 
   useEffect(() => {
@@ -260,7 +262,12 @@ function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Ele
       </div>
 
       {editing && (
-        <div className="wf-node-edit-form nodrag" onMouseDown={(e) => e.stopPropagation()}>
+        <div
+          className="wf-node-edit-form nodrag"
+          onMouseDown={(e) => {
+            e.stopPropagation()
+          }}
+        >
           <input
             ref={nameInputRef}
             className="wf-node-edit-input nodrag"
@@ -268,21 +275,27 @@ function WorkflowNodeInner({ data, selected }: NodeProps<WfNode>): React.JSX.Ele
             aria-label="Node name"
             value={editName}
             placeholder="Node name"
-            onChange={(e) => setEditName(e.target.value)}
+            onChange={(e) => {
+              setEditName(e.target.value)
+            }}
             onKeyDown={handleEditKeyDown}
           />
           <textarea
             className="wf-node-edit-textarea nodrag"
             value={editRole}
             placeholder={getTextLabel(node.type)}
-            onChange={(e) => setEditRole(e.target.value)}
+            onChange={(e) => {
+              setEditRole(e.target.value)
+            }}
             onKeyDown={handleEditKeyDown}
           />
           {node.type === 'agent' && (
             <select
               className="wf-node-edit-select nodrag"
               value={editAgent}
-              onChange={(e) => setEditAgent(e.target.value as AgentType)}
+              onChange={(e) => {
+                setEditAgent(e.target.value)
+              }}
             >
               {registry.map((a) => (
                 <option key={a.id} value={a.id}>

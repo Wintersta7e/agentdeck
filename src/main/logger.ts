@@ -90,10 +90,18 @@ export interface Logger {
 
 export function createLogger(mod: string): Logger {
   return {
-    info: (message, data?) => write('INFO', mod, message, data),
-    warn: (message, data?) => write('WARN', mod, message, data),
-    error: (message, data?) => write('ERROR', mod, message, data),
-    debug: (message, data?) => write('DEBUG', mod, message, data),
+    info: (message, data?) => {
+      write('INFO', mod, message, data)
+    },
+    warn: (message, data?) => {
+      write('WARN', mod, message, data)
+    },
+    error: (message, data?) => {
+      write('ERROR', mod, message, data)
+    },
+    debug: (message, data?) => {
+      write('DEBUG', mod, message, data)
+    },
   }
 }
 

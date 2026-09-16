@@ -19,13 +19,23 @@ export function App(): React.JSX.Element {
   const { openTerminal, openProject, openProjectWithAgent } = useProjectSessionLauncher()
 
   const [aboutOpen, setAboutOpen] = useState(false)
-  const openAbout = useCallback(() => setAboutOpen(true), [])
-  const closeAbout = useCallback(() => setAboutOpen(false), [])
+  const openAbout = useCallback(() => {
+    setAboutOpen(true)
+  }, [])
+  const closeAbout = useCallback(() => {
+    setAboutOpen(false)
+  }, [])
 
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
-  const openShortcuts = useCallback(() => setShortcutsOpen(true), [])
-  const closeShortcuts = useCallback(() => setShortcutsOpen(false), [])
-  const toggleShortcuts = useCallback(() => setShortcutsOpen((prev) => !prev), [])
+  const openShortcuts = useCallback(() => {
+    setShortcutsOpen(true)
+  }, [])
+  const closeShortcuts = useCallback(() => {
+    setShortcutsOpen(false)
+  }, [])
+  const toggleShortcuts = useCallback(() => {
+    setShortcutsOpen((prev) => !prev)
+  }, [])
 
   useAppIpcBridge()
   useGlobalShortcuts({ onNewTerminal: openTerminal, onToggleShortcuts: toggleShortcuts })

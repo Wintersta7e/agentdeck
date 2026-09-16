@@ -109,7 +109,7 @@ export function validateWorkflow(
     if (n['agentFlags'] !== undefined) {
       if (typeof n['agentFlags'] !== 'string') errors.push('Node agentFlags must be a string')
       else if (!SAFE_FLAGS_RE.test(n['agentFlags']))
-        errors.push(`Node "${String(n['id'])}": agentFlags contains unsafe characters`)
+        errors.push(`Node "${n['id']}": agentFlags contains unsafe characters`)
     }
     if (n['roleId'] !== undefined && n['roleId'] !== null && typeof n['roleId'] !== 'string')
       errors.push('Node roleId must be a string')
@@ -128,14 +128,14 @@ export function validateWorkflow(
     // ── Retry validation (allowlist over node types) ─────────
     if (n['retryCount'] !== undefined) {
       if (!RETRY_ALLOWED_TYPES.has(n['type'] as WorkflowNodeType)) {
-        errors.push(`retryCount not allowed on ${String(n['type'])} node "${String(n['id'])}"`)
+        errors.push(`retryCount not allowed on ${String(n['type'])} node "${n['id']}"`)
       } else if (
         typeof n['retryCount'] !== 'number' ||
         !Number.isInteger(n['retryCount']) ||
         n['retryCount'] < 1 ||
         n['retryCount'] > 5
       ) {
-        errors.push(`retryCount must be 1-5 on node "${String(n['id'])}"`)
+        errors.push(`retryCount must be 1-5 on node "${n['id']}"`)
       }
     }
     if (n['retryDelayMs'] !== undefined) {
@@ -145,26 +145,26 @@ export function validateWorkflow(
         n['retryDelayMs'] < 100 ||
         n['retryDelayMs'] > 60000
       ) {
-        errors.push(`retryDelayMs must be 100-60000 on node "${String(n['id'])}"`)
+        errors.push(`retryDelayMs must be 100-60000 on node "${n['id']}"`)
       }
     }
 
     // ── Permission validation (agent-only field) ────────────
     if (n['permission'] !== undefined) {
       if (n['type'] !== 'agent') {
-        errors.push(`Node "${String(n['id'])}": permission is only valid on agent nodes`)
+        errors.push(`Node "${n['id']}": permission is only valid on agent nodes`)
       } else if (!['read', 'edit', 'full'].includes(n['permission'] as string)) {
-        errors.push(`Node "${String(n['id'])}": permission must be 'read', 'edit', or 'full'`)
+        errors.push(`Node "${n['id']}": permission must be 'read', 'edit', or 'full'`)
       }
     }
 
     // ── Skill validation (registry-driven supportsSkills check) ─
     if (n['skillId'] !== undefined && typeof n['skillId'] === 'string' && n['skillId'].length > 0) {
       if (n['type'] !== 'agent') {
-        warnings.push(`Node "${String(n['id'])}": skillId is set but node is not an agent node`)
+        warnings.push(`Node "${n['id']}": skillId is set but node is not an agent node`)
       } else if (typeof n['agent'] === 'string' && !AGENT_SUPPORTS_SKILLS_MAP[n['agent']]) {
         warnings.push(
-          `Node "${String(n['id'])}": skillId is set but agent ${String(n['agent'])} does not declare supportsSkills`,
+          `Node "${n['id']}": skillId is set but agent ${n['agent']} does not declare supportsSkills`,
         )
       }
     }
@@ -174,17 +174,17 @@ export function validateWorkflow(
       const validModes = ['exitCode', 'outputMatch']
       if (!validModes.includes(n['conditionMode'] as string)) {
         errors.push(
-          `Condition node "${String(n['id'])}" must have conditionMode 'exitCode' or 'outputMatch'`,
+          `Condition node "${n['id']}" must have conditionMode 'exitCode' or 'outputMatch'`,
         )
       }
 
       // Exactly 1 incoming non-loop edge
       const incomingEdges = edges.filter((e) => e.toNodeId === n['id'] && e.edgeType !== 'loop')
       if (incomingEdges.length === 0) {
-        errors.push(`Condition node "${String(n['id'])}" must have exactly 1 incoming edge (has 0)`)
+        errors.push(`Condition node "${n['id']}" must have exactly 1 incoming edge (has 0)`)
       } else if (incomingEdges.length > 1) {
         errors.push(
-          `Condition node "${String(n['id'])}" must have exactly 1 incoming edge (has ${String(incomingEdges.length)})`,
+          `Condition node "${n['id']}" must have exactly 1 incoming edge (has ${String(incomingEdges.length)})`,
         )
       }
 
@@ -194,7 +194,7 @@ export function validateWorkflow(
         const upstream = inEdge ? nodeMap.get(inEdge.fromNodeId) : undefined
         if (upstream && upstream['type'] !== 'agent' && upstream['type'] !== 'shell') {
           errors.push(
-            `exitCode condition "${String(n['id'])}" requires agent/shell upstream, got "${String(upstream['type'])}"`,
+            `exitCode condition "${n['id']}" requires agent/shell upstream, got "${String(upstream['type'])}"`,
           )
         }
       }
@@ -202,9 +202,7 @@ export function validateWorkflow(
       // outputMatch: pattern must be non-empty valid regex
       if (n['conditionMode'] === 'outputMatch') {
         if (typeof n['conditionPattern'] !== 'string' || n['conditionPattern'].length === 0) {
-          errors.push(
-            `outputMatch condition "${String(n['id'])}" requires non-empty conditionPattern`,
-          )
+          errors.push(`outputMatch condition "${n['id']}" requires non-empty conditionPattern`)
         } else {
           // Limit regex pattern length to mitigate DoS risk
           if (n['conditionPattern'].length > 500) {
@@ -225,15 +223,13 @@ export function validateWorkflow(
             /\(\([^)]*[+*][^)]*\)[^)]*\)[+*{]/.test(p) || // ((a+))+ doubled outer
             /\([^)]*\([^)]*\|[^)]*\)[^)]*\)[+*{]/.test(p) // (a|(b)c)+ inner-group alternation
           ) {
-            errors.push(
-              `conditionPattern for "${String(n['id'])}" matches a known ReDoS pattern shape`,
-            )
+            errors.push(`conditionPattern for "${n['id']}" matches a known ReDoS pattern shape`)
           }
           try {
             new RegExp(n['conditionPattern'])
           } catch {
             errors.push(
-              `Invalid regex in conditionPattern for node "${String(n['id'])}": ${String(n['conditionPattern'])}`,
+              `Invalid regex in conditionPattern for node "${n['id']}": ${n['conditionPattern']}`,
             )
           }
         }
@@ -242,7 +238,7 @@ export function validateWorkflow(
       // Must have at least 1 outgoing edge
       const outgoingEdges = edges.filter((e) => e.fromNodeId === n['id'])
       if (outgoingEdges.length === 0) {
-        errors.push(`Condition node "${String(n['id'])}" must have at least 1 outgoing edge`)
+        errors.push(`Condition node "${n['id']}" must have at least 1 outgoing edge`)
       }
     }
   }
@@ -274,7 +270,7 @@ export function validateWorkflow(
       }
       // Track for fan-out warning — loop edges are intentionally co-located
       // with a normal escape edge on the same branch, so exclude them here.
-      if (fromNode && fromNode['type'] === 'condition' && e.edgeType !== 'loop') {
+      if (fromNode?.['type'] === 'condition' && e.edgeType !== 'loop') {
         if (!branchesPerCondition.has(e.fromNodeId)) {
           branchesPerCondition.set(e.fromNodeId, new Map())
         }
