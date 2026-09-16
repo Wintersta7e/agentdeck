@@ -9,10 +9,20 @@ updates:
     # Revisit manually when the blocker clears (peer dep widens, electron-vite
     # picks up Vite 8, xterm exposes a public viewport API).
     ignore:
+      # eslint-plugin-react still peers at eslint ^9.7 (7.37.5 is its latest).
       - dependency-name: 'eslint'
         update-types: ['version-update:semver-major']
+      - dependency-name: '@eslint/js'
+        update-types: ['version-update:semver-major']
+      # typescript-eslint peers at typescript <6.1.0, so TS 7 cannot come in
+      # without dropping type-aware linting.
+      - dependency-name: 'typescript'
+        update-types: ['version-update:semver-major']
+      # Needs Vite 8; electron-vite 5 peers at vite ^7 or lower.
       - dependency-name: '@vitejs/plugin-react'
         update-types: ['version-update:semver-major']
+      # Uses the private _core.viewport.syncScrollArea(), removed in 6.x with no
+      # public replacement.
       - dependency-name: '@xterm/xterm'
         update-types: ['version-update:semver-major']
     # Group related ecosystem bumps so a single weekly run produces one PR
