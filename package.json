@@ -59,7 +59,7 @@
     ]
   },
   "overrides": {
-    "node-abi": "^4.30.0",
+    "node-abi": "^4.35.0",
     "esbuild": "^0.28.1",
     "@babel/core": "^7.29.6",
     "@humanfs/node": "^0.16.8",
@@ -115,7 +115,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^5.1.4",
     "@vitest/coverage-v8": "^5.0.1",
-    "electron": "^43.7.1",
+    "electron": "^44.4.1",
     "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
     "eslint": "^9.39.5",
