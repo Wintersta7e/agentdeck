@@ -46,8 +46,9 @@ export function createSystemBridge(): SystemBridge {
     },
     pickFolder: () => ipcRenderer.invoke(CH.dialogPickFolder),
     log: {
-      send: (level, mod, message, data) =>
-        ipcRenderer.invoke(CH.logRenderer, level, mod, message, data),
+      send: (level, mod, message, data) => {
+        ipcRenderer.send(CH.logRenderer, level, mod, message, data)
+      },
     },
     clipboard: {
       readFilePaths: () => ipcRenderer.invoke(CH.clipboardReadFilePaths),

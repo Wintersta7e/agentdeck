@@ -29,7 +29,7 @@ export function registerUtilHandlers(): void {
         ],
         { timeout: 5000 },
         (err, stdout) => {
-          if (err || !stdout?.trim()) {
+          if (err || !stdout.trim()) {
             log.debug('clipboard:readFilePaths — no file paths found')
             resolve([])
             return
@@ -47,31 +47,29 @@ export function registerUtilHandlers(): void {
 
   /* ── Renderer log relay ────────────────────────────────────────── */
   const rendererLoggers = new Map<string, ReturnType<typeof createLogger>>()
-  ipcMain.handle(
-    CH.logRenderer,
-    (_, level: string, mod: string, message: string, data?: unknown) => {
-      if (typeof level !== 'string' || !ALLOWED_LOG_LEVELS.has(level)) return
-      if (typeof mod !== 'string' || mod.length > MAX_MOD_LENGTH) return
-      if (typeof message !== 'string') return
-      const safeMod = mod.replace(/[^a-zA-Z0-9:_-]/g, '_').slice(0, MAX_MOD_LENGTH)
-      const safeMsg = message.slice(0, MAX_MSG_LENGTH)
-      let rendererLog = rendererLoggers.get(safeMod)
-      if (!rendererLog) {
-        if (rendererLoggers.size >= MAX_LOGGERS) return // prevent unbounded growth
-        rendererLog = createLogger(`renderer:${safeMod}`)
-        rendererLoggers.set(safeMod, rendererLog)
+  // One-way: nothing is sent back, so the renderer has no promise to settle.
+  ipcMain.on(CH.logRenderer, (_, level: string, mod: string, message: string, data?: unknown) => {
+    if (typeof level !== 'string' || !ALLOWED_LOG_LEVELS.has(level)) return
+    if (typeof mod !== 'string' || mod.length > MAX_MOD_LENGTH) return
+    if (typeof message !== 'string') return
+    const safeMod = mod.replace(/[^a-zA-Z0-9:_-]/g, '_').slice(0, MAX_MOD_LENGTH)
+    const safeMsg = message.slice(0, MAX_MSG_LENGTH)
+    let rendererLog = rendererLoggers.get(safeMod)
+    if (!rendererLog) {
+      if (rendererLoggers.size >= MAX_LOGGERS) return // prevent unbounded growth
+      rendererLog = createLogger(`renderer:${safeMod}`)
+      rendererLoggers.set(safeMod, rendererLog)
+    }
+    // Bound renderer-supplied data to prevent log exhaustion / stack overflow
+    let safeData: unknown
+    if (data !== undefined) {
+      try {
+        const serialized = JSON.stringify(data)
+        safeData = serialized.length <= MAX_MSG_LENGTH ? data : undefined
+      } catch {
+        // Circular or un-serializable — drop
       }
-      // Bound renderer-supplied data to prevent log exhaustion / stack overflow
-      let safeData: unknown
-      if (data !== undefined) {
-        try {
-          const serialized = JSON.stringify(data)
-          safeData = serialized.length <= MAX_MSG_LENGTH ? data : undefined
-        } catch {
-          // Circular or un-serializable — drop
-        }
-      }
-      rendererLog[level as 'info' | 'warn' | 'error' | 'debug'](safeMsg, safeData)
-    },
-  )
+    }
+    rendererLog[level as 'info' | 'warn' | 'error' | 'debug'](safeMsg, safeData)
+  })
 }

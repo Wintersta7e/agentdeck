@@ -11,6 +11,10 @@ import './ErrorBoundary.css'
  * (`app.getPath('logs')/agentdeck.log`) that the user controls; this
  * payload is safe to share when filing a bug report.
  */
+/* eslint-disable @typescript-eslint/no-unnecessary-condition -- this file runs
+   AFTER something already broke: the store may be half-initialised and, if
+   preload failed, window.agentDeck is genuinely absent. The declared types
+   describe a healthy app, so the guards below are not redundant here. */
 function captureCrashContext(): string {
   try {
     const s = useAppStore.getState()
@@ -55,7 +59,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   override componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     const message = `${error.name}: ${error.message}\n${errorInfo.componentStack ?? ''}${captureCrashContext()}`
-    window.agentDeck?.log?.send('error', 'ErrorBoundary', message).catch(() => {})
+    window.agentDeck?.log?.send('error', 'ErrorBoundary', message)
   }
 
   handleReload = (): void => {

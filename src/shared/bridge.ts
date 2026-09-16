@@ -175,7 +175,12 @@ export interface AgentDeckBridge {
   }
   pickFolder: () => Promise<string | null>
   log: {
-    send: (level: string, mod: string, message: string, data?: unknown) => Promise<void>
+    /**
+     * One-way relay to the main-process logger. Deliberately not a promise:
+     * a log line must never be something a caller has to await or handle the
+     * rejection of, and every call site ignores the result.
+     */
+    send: (level: string, mod: string, message: string, data?: unknown) => void
   }
   clipboard: {
     readFilePaths: () => Promise<string[]>
@@ -241,7 +246,7 @@ export interface AgentDeckBridge {
   }
   files: {
     listDir: (opts: { path: string; projectPath: string }) => Promise<{
-      entries: Array<{ name: string; isDir: boolean }>
+      entries: { name: string; isDir: boolean }[]
       gitignored: string[]
     }>
     openExternal: (opts: { path: string; projectPath: string }) => Promise<void>
