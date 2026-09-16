@@ -13,7 +13,11 @@ export default defineConfig([
   {
     languageOptions: {
       parserOptions: {
-        projectService: true,
+        projectService: {
+          // The .mjs config files sit in no tsconfig; lint them with the default
+          // project so `eslint .` covers them. (.mts is in tsconfig.tools.json.)
+          allowDefaultProject: ['*.mjs'],
+        },
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -57,6 +61,16 @@ export default defineConfig([
     },
   },
   {
+    // Root .mjs config files: no tsconfig covers them, so the type-aware rules
+    // would only see `any`. electron-vite bundles its config to CJS, which is
+    // why __dirname is legitimately available there.
+    files: ['*.mjs'],
+    extends: [tseslint.configs.disableTypeChecked],
+    languageOptions: {
+      globals: { __dirname: 'readonly', process: 'readonly' },
+    },
+  },
+  {
     files: ['src/renderer/**/*.{ts,tsx}'],
     plugins: {
       react,
@@ -75,12 +89,7 @@ export default defineConfig([
     },
   },
   {
-    files: [
-      'src/**/*.test.ts',
-      'src/**/*.test.tsx',
-      'src/__test__/**',
-      'src/**/__tests__/**',
-    ],
+    files: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'src/__test__/**', 'src/**/__tests__/**'],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
       'no-console': 'off',

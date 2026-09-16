@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "target": "ESNext",
+    "types": ["node"],
+    "noEmit": true
+  },
+  // Build config and one-off scripts. They import from src/ and break the build
+  // when they rot, so they get the same strict pass as the app itself.
+  "include": ["scripts/**/*.ts", "vitest.config.mts"]
+}
