@@ -124,7 +124,7 @@ function PaletteInner({
   useEffect(() => {
     return () => {
       if (subMenuRef.current === 'theme') {
-        document.documentElement.dataset.theme = previewOriginalRef.current
+        document.documentElement.dataset['theme'] = previewOriginalRef.current
       }
     }
   }, [])

@@ -29,7 +29,7 @@ export function ThemeSubmenu({
   }, [selectedIndex])
 
   const handleBack = useCallback(() => {
-    document.documentElement.dataset.theme = previewOriginalRef.current
+    document.documentElement.dataset['theme'] = previewOriginalRef.current
     onBack()
   }, [previewOriginalRef, onBack])
 
@@ -39,7 +39,7 @@ export function ThemeSubmenu({
       if (e.key === 'Escape') {
         e.preventDefault()
         e.stopPropagation()
-        document.documentElement.dataset.theme = previewOriginalRef.current
+        document.documentElement.dataset['theme'] = previewOriginalRef.current
         onBack()
         return
       }
@@ -48,7 +48,7 @@ export function ThemeSubmenu({
         onSelectIndex((prev) => {
           const nextIdx = Math.min(prev + 1, allThemes.length - 1)
           const nextTheme = allThemes[nextIdx]
-          if (nextTheme) document.documentElement.dataset.theme = nextTheme.id
+          if (nextTheme) document.documentElement.dataset['theme'] = nextTheme.id
           return nextIdx
         })
         return
@@ -58,7 +58,7 @@ export function ThemeSubmenu({
         onSelectIndex((prev) => {
           const nextIdx = Math.max(prev - 1, 0)
           const nextTheme = allThemes[nextIdx]
-          if (nextTheme) document.documentElement.dataset.theme = nextTheme.id
+          if (nextTheme) document.documentElement.dataset['theme'] = nextTheme.id
           return nextIdx
         })
         return
@@ -101,7 +101,7 @@ export function ThemeSubmenu({
                   }}
                   onMouseEnter={() => {
                     onSelectIndex(flatIdx)
-                    document.documentElement.dataset.theme = t.id
+                    document.documentElement.dataset['theme'] = t.id
                   }}
                 >
                   <span className="cp-theme-swatch" style={{ background: t.accent }} />

@@ -214,9 +214,9 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set) => (
   // Theme
   // Read from DOM at store init — main.tsx sets data-theme before createRoot,
   // so this is correct in production. In tests, jsdom yields '' which is fine.
-  theme: (typeof document !== 'undefined' ? document.documentElement.dataset.theme : '') ?? '',
+  theme: (typeof document !== 'undefined' ? document.documentElement.dataset['theme'] : '') ?? '',
   setTheme: (name) => {
-    document.documentElement.dataset.theme = name
+    document.documentElement.dataset['theme'] = name
     window.agentDeck.theme.set(name).catch((err: unknown) => {
       window.agentDeck.log.send('warn', 'ui', 'Theme persist failed', { err: String(err) })
     })

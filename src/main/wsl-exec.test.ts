@@ -94,12 +94,12 @@ describe('wslRun', () => {
   it('uses the configured timeout, defaulting to 15000ms', async () => {
     respond('')
     await wslRun('a')
-    expect(captureExecFileCall().opts.timeout).toBe(15_000)
+    expect(captureExecFileCall().opts['timeout']).toBe(15_000)
 
     mockedExecFile.mockClear()
     respond('')
     await wslRun('b', { timeout: 500 })
-    expect(captureExecFileCall().opts.timeout).toBe(500)
+    expect(captureExecFileCall().opts['timeout']).toBe(500)
   })
 
   it('rejects with stderr text when the command fails', async () => {
@@ -144,6 +144,6 @@ describe('wslTry', () => {
   it('uses utf-8 encoding by default', async () => {
     respond('')
     await wslTry('echo')
-    expect(captureExecFileCall().opts.encoding).toBe('utf-8')
+    expect(captureExecFileCall().opts['encoding']).toBe('utf-8')
   })
 })

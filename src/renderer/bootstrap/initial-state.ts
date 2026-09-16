@@ -8,7 +8,7 @@ export async function bootstrapInitialRendererState(): Promise<void> {
 
   const theme = await window.agentDeck.theme.get()
   if (theme) {
-    document.documentElement.dataset.theme = theme
+    document.documentElement.dataset['theme'] = theme
   }
 
   const [visibleAgents, layout] = await Promise.all([visibleAgentsPromise, layoutPromise])

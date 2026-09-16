@@ -135,7 +135,7 @@ describe('createProjectStore', () => {
       bogusField: 'should not persist',
     })) as Project
     expect(saved.agent).toBe('codex')
-    expect((saved as unknown as Record<string, unknown>).bogusField).toBeUndefined()
+    expect((saved as unknown as Record<string, unknown>)['bogusField']).toBeUndefined()
   })
 
   it('preserves known fields omitted from a partial update', async () => {

@@ -89,8 +89,8 @@ describe('runShellNode — output buffering', () => {
     await runShellNode(makeShellNode(), makeDeps())
     const opts = wslExecOpts()
     expect(opts).toBeDefined()
-    expect(typeof opts?.maxBuffer).toBe('number')
-    expect(opts?.maxBuffer as number).toBeGreaterThan(1024 * 1024)
+    expect(typeof opts?.['maxBuffer']).toBe('number')
+    expect(opts?.['maxBuffer'] as number).toBeGreaterThan(1024 * 1024)
   })
 
   it('coerces a non-numeric error code (maxBuffer overflow) to a numeric exit code', async () => {

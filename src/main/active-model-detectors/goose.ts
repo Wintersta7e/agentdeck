@@ -22,7 +22,7 @@ export async function readGooseActiveModel(): Promise<DetectorOutput> {
   try {
     const parsed = parseYaml(raw) as Record<string, unknown> | null
     if (!parsed || typeof parsed !== 'object') return { modelId: null }
-    const flat = parsed.GOOSE_MODEL
+    const flat = parsed['GOOSE_MODEL']
     if (typeof flat === 'string' && flat.length > 0) return { modelId: flat }
     return { modelId: null }
   } catch (err) {

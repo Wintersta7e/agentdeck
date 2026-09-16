@@ -40,29 +40,30 @@ export function validateWorkflow(
   }
   const wf = w as Record<string, unknown>
 
-  if (typeof wf.id !== 'string' || !SAFE_ID_RE.test(wf.id))
-    errors.push(`Invalid workflow id: ${String(wf.id)}`)
-  if (typeof wf.name !== 'string') errors.push('Workflow name must be a string')
-  else if (wf.name.length > MAX_NAME) errors.push(`Workflow name exceeds ${MAX_NAME} chars`)
-  if (wf.description !== undefined && typeof wf.description !== 'string')
+  if (typeof wf['id'] !== 'string' || !SAFE_ID_RE.test(wf['id']))
+    errors.push(`Invalid workflow id: ${String(wf['id'])}`)
+  if (typeof wf['name'] !== 'string') errors.push('Workflow name must be a string')
+  else if (wf['name'].length > MAX_NAME) errors.push(`Workflow name exceeds ${MAX_NAME} chars`)
+  if (wf['description'] !== undefined && typeof wf['description'] !== 'string')
     errors.push('Workflow description must be a string')
-  if (typeof wf.description === 'string' && wf.description.length > MAX_DESCRIPTION)
+  if (typeof wf['description'] === 'string' && wf['description'].length > MAX_DESCRIPTION)
     errors.push(`Workflow description exceeds ${MAX_DESCRIPTION} chars`)
 
-  if (!Array.isArray(wf.nodes)) {
+  if (!Array.isArray(wf['nodes'])) {
     errors.push('Workflow nodes must be an array')
     return { errors, warnings }
   }
-  if (wf.nodes.length > MAX_NODES) errors.push(`Workflow exceeds ${MAX_NODES} nodes`)
+  if (wf['nodes'].length > MAX_NODES) errors.push(`Workflow exceeds ${MAX_NODES} nodes`)
 
-  if (!Array.isArray(wf.edges)) {
+  if (!Array.isArray(wf['edges'])) {
     errors.push('Workflow edges must be an array')
     return { errors, warnings }
   }
-  if ((wf.edges as unknown[]).length > MAX_EDGES) errors.push(`Workflow exceeds ${MAX_EDGES} edges`)
+  if ((wf['edges'] as unknown[]).length > MAX_EDGES)
+    errors.push(`Workflow exceeds ${MAX_EDGES} edges`)
 
-  const nodes = wf.nodes as Record<string, unknown>[]
-  const edges = wf.edges as {
+  const nodes = wf['nodes'] as Record<string, unknown>[]
+  const edges = wf['edges'] as {
     id: string
     fromNodeId: string
     toNodeId: string
@@ -74,134 +75,148 @@ export function validateWorkflow(
   // Build node lookup maps for cross-referencing
   const nodeMap = new Map<string, Record<string, unknown>>()
   for (const n of nodes) {
-    if (typeof n.id === 'string') nodeMap.set(n.id, n)
+    if (typeof n['id'] === 'string') nodeMap.set(n['id'], n)
   }
 
   // ── Node validation ──────────────────────────────────────────
   for (const n of nodes) {
-    if (typeof n.id !== 'string') {
+    if (typeof n['id'] !== 'string') {
       errors.push('Node id must be a string')
       continue
     }
-    if (!VALID_NODE_TYPES.has(n.type as WorkflowNodeType))
-      errors.push(`Invalid node type: ${String(n.type)}`)
-    if (typeof n.name !== 'string') errors.push('Node name must be a string')
-    else if (n.name.length > MAX_NAME) errors.push(`Node name exceeds ${MAX_NAME} chars`)
-    if (n.command !== undefined && typeof n.command === 'string' && n.command.length > MAX_COMMAND)
+    if (!VALID_NODE_TYPES.has(n['type'] as WorkflowNodeType))
+      errors.push(`Invalid node type: ${String(n['type'])}`)
+    if (typeof n['name'] !== 'string') errors.push('Node name must be a string')
+    else if (n['name'].length > MAX_NAME) errors.push(`Node name exceeds ${MAX_NAME} chars`)
+    if (
+      n['command'] !== undefined &&
+      typeof n['command'] === 'string' &&
+      n['command'].length > MAX_COMMAND
+    )
       errors.push(`Node command exceeds ${MAX_COMMAND} chars`)
-    if (n.prompt !== undefined && typeof n.prompt === 'string' && n.prompt.length > MAX_PROMPT)
+    if (
+      n['prompt'] !== undefined &&
+      typeof n['prompt'] === 'string' &&
+      n['prompt'].length > MAX_PROMPT
+    )
       errors.push(`Node prompt exceeds ${MAX_PROMPT} chars`)
-    if (n.agent !== undefined && typeof n.agent === 'string' && !knownAgentIds.has(n.agent))
-      errors.push(`Unknown agent: ${n.agent}`)
-    if (n.agentFlags !== undefined) {
-      if (typeof n.agentFlags !== 'string') errors.push('Node agentFlags must be a string')
-      else if (!SAFE_FLAGS_RE.test(n.agentFlags))
-        errors.push(`Node "${String(n.id)}": agentFlags contains unsafe characters`)
+    if (
+      n['agent'] !== undefined &&
+      typeof n['agent'] === 'string' &&
+      !knownAgentIds.has(n['agent'])
+    )
+      errors.push(`Unknown agent: ${n['agent']}`)
+    if (n['agentFlags'] !== undefined) {
+      if (typeof n['agentFlags'] !== 'string') errors.push('Node agentFlags must be a string')
+      else if (!SAFE_FLAGS_RE.test(n['agentFlags']))
+        errors.push(`Node "${String(n['id'])}": agentFlags contains unsafe characters`)
     }
-    if (n.roleId !== undefined && n.roleId !== null && typeof n.roleId !== 'string')
+    if (n['roleId'] !== undefined && n['roleId'] !== null && typeof n['roleId'] !== 'string')
       errors.push('Node roleId must be a string')
-    if (typeof n.roleId === 'string' && n.roleId.length > MAX_NAME)
+    if (typeof n['roleId'] === 'string' && n['roleId'].length > MAX_NAME)
       errors.push(`Node roleId exceeds ${MAX_NAME} chars`)
     if (
-      n.timeout !== undefined &&
-      (typeof n.timeout !== 'number' ||
-        !isFinite(n.timeout) ||
-        n.timeout < 1000 ||
-        n.timeout > 86400000)
+      n['timeout'] !== undefined &&
+      (typeof n['timeout'] !== 'number' ||
+        !isFinite(n['timeout']) ||
+        n['timeout'] < 1000 ||
+        n['timeout'] > 86400000)
     ) {
       errors.push('Node timeout must be between 1000ms and 86400000ms (24h)')
     }
 
     // ── Retry validation (allowlist over node types) ─────────
-    if (n.retryCount !== undefined) {
-      if (!RETRY_ALLOWED_TYPES.has(n.type as WorkflowNodeType)) {
-        errors.push(`retryCount not allowed on ${String(n.type)} node "${String(n.id)}"`)
+    if (n['retryCount'] !== undefined) {
+      if (!RETRY_ALLOWED_TYPES.has(n['type'] as WorkflowNodeType)) {
+        errors.push(`retryCount not allowed on ${String(n['type'])} node "${String(n['id'])}"`)
       } else if (
-        typeof n.retryCount !== 'number' ||
-        !Number.isInteger(n.retryCount) ||
-        n.retryCount < 1 ||
-        n.retryCount > 5
+        typeof n['retryCount'] !== 'number' ||
+        !Number.isInteger(n['retryCount']) ||
+        n['retryCount'] < 1 ||
+        n['retryCount'] > 5
       ) {
-        errors.push(`retryCount must be 1-5 on node "${String(n.id)}"`)
+        errors.push(`retryCount must be 1-5 on node "${String(n['id'])}"`)
       }
     }
-    if (n.retryDelayMs !== undefined) {
+    if (n['retryDelayMs'] !== undefined) {
       if (
-        typeof n.retryDelayMs !== 'number' ||
-        !Number.isFinite(n.retryDelayMs) ||
-        n.retryDelayMs < 100 ||
-        n.retryDelayMs > 60000
+        typeof n['retryDelayMs'] !== 'number' ||
+        !Number.isFinite(n['retryDelayMs']) ||
+        n['retryDelayMs'] < 100 ||
+        n['retryDelayMs'] > 60000
       ) {
-        errors.push(`retryDelayMs must be 100-60000 on node "${String(n.id)}"`)
+        errors.push(`retryDelayMs must be 100-60000 on node "${String(n['id'])}"`)
       }
     }
 
     // ── Permission validation (agent-only field) ────────────
-    if (n.permission !== undefined) {
-      if (n.type !== 'agent') {
-        errors.push(`Node "${String(n.id)}": permission is only valid on agent nodes`)
-      } else if (!['read', 'edit', 'full'].includes(n.permission as string)) {
-        errors.push(`Node "${String(n.id)}": permission must be 'read', 'edit', or 'full'`)
+    if (n['permission'] !== undefined) {
+      if (n['type'] !== 'agent') {
+        errors.push(`Node "${String(n['id'])}": permission is only valid on agent nodes`)
+      } else if (!['read', 'edit', 'full'].includes(n['permission'] as string)) {
+        errors.push(`Node "${String(n['id'])}": permission must be 'read', 'edit', or 'full'`)
       }
     }
 
     // ── Skill validation (registry-driven supportsSkills check) ─
-    if (n.skillId !== undefined && typeof n.skillId === 'string' && n.skillId.length > 0) {
-      if (n.type !== 'agent') {
-        warnings.push(`Node "${String(n.id)}": skillId is set but node is not an agent node`)
-      } else if (typeof n.agent === 'string' && !AGENT_SUPPORTS_SKILLS_MAP[n.agent]) {
+    if (n['skillId'] !== undefined && typeof n['skillId'] === 'string' && n['skillId'].length > 0) {
+      if (n['type'] !== 'agent') {
+        warnings.push(`Node "${String(n['id'])}": skillId is set but node is not an agent node`)
+      } else if (typeof n['agent'] === 'string' && !AGENT_SUPPORTS_SKILLS_MAP[n['agent']]) {
         warnings.push(
-          `Node "${String(n.id)}": skillId is set but agent ${String(n.agent)} does not declare supportsSkills`,
+          `Node "${String(n['id'])}": skillId is set but agent ${String(n['agent'])} does not declare supportsSkills`,
         )
       }
     }
 
     // ── Condition node validation ────────────────────────────
-    if (n.type === 'condition') {
+    if (n['type'] === 'condition') {
       const validModes = ['exitCode', 'outputMatch']
-      if (!validModes.includes(n.conditionMode as string)) {
+      if (!validModes.includes(n['conditionMode'] as string)) {
         errors.push(
-          `Condition node "${String(n.id)}" must have conditionMode 'exitCode' or 'outputMatch'`,
+          `Condition node "${String(n['id'])}" must have conditionMode 'exitCode' or 'outputMatch'`,
         )
       }
 
       // Exactly 1 incoming non-loop edge
-      const incomingEdges = edges.filter((e) => e.toNodeId === n.id && e.edgeType !== 'loop')
+      const incomingEdges = edges.filter((e) => e.toNodeId === n['id'] && e.edgeType !== 'loop')
       if (incomingEdges.length === 0) {
-        errors.push(`Condition node "${String(n.id)}" must have exactly 1 incoming edge (has 0)`)
+        errors.push(`Condition node "${String(n['id'])}" must have exactly 1 incoming edge (has 0)`)
       } else if (incomingEdges.length > 1) {
         errors.push(
-          `Condition node "${String(n.id)}" must have exactly 1 incoming edge (has ${String(incomingEdges.length)})`,
+          `Condition node "${String(n['id'])}" must have exactly 1 incoming edge (has ${String(incomingEdges.length)})`,
         )
       }
 
       // exitCode: upstream must be agent or shell
-      if (n.conditionMode === 'exitCode' && incomingEdges.length === 1) {
+      if (n['conditionMode'] === 'exitCode' && incomingEdges.length === 1) {
         const inEdge = incomingEdges[0]
         const upstream = inEdge ? nodeMap.get(inEdge.fromNodeId) : undefined
-        if (upstream && upstream.type !== 'agent' && upstream.type !== 'shell') {
+        if (upstream && upstream['type'] !== 'agent' && upstream['type'] !== 'shell') {
           errors.push(
-            `exitCode condition "${String(n.id)}" requires agent/shell upstream, got "${String(upstream.type)}"`,
+            `exitCode condition "${String(n['id'])}" requires agent/shell upstream, got "${String(upstream['type'])}"`,
           )
         }
       }
 
       // outputMatch: pattern must be non-empty valid regex
-      if (n.conditionMode === 'outputMatch') {
-        if (typeof n.conditionPattern !== 'string' || n.conditionPattern.length === 0) {
-          errors.push(`outputMatch condition "${String(n.id)}" requires non-empty conditionPattern`)
+      if (n['conditionMode'] === 'outputMatch') {
+        if (typeof n['conditionPattern'] !== 'string' || n['conditionPattern'].length === 0) {
+          errors.push(
+            `outputMatch condition "${String(n['id'])}" requires non-empty conditionPattern`,
+          )
         } else {
           // Limit regex pattern length to mitigate DoS risk
-          if (n.conditionPattern.length > 500) {
+          if (n['conditionPattern'].length > 500) {
             errors.push(
-              `Condition regex pattern too long (${String(n.conditionPattern.length)} chars, max 500)`,
+              `Condition regex pattern too long (${String(n['conditionPattern'].length)} chars, max 500)`,
             )
           }
           // Heuristic ReDoS guard — reject patterns known to cause catastrophic
           // backtracking. JavaScript regex cannot be timed out; the engine runs
           // on the workflow-engine event loop. The 500-char cap and 64KB input
           // bound the worst case but these patterns still take seconds.
-          const p = n.conditionPattern
+          const p = n['conditionPattern']
           // `?` is a safe quantifier (zero-or-one); only `+`, `*`, and `{n,}`
           // cause catastrophic backtracking when stacked.
           if (
@@ -211,23 +226,23 @@ export function validateWorkflow(
             /\([^)]*\([^)]*\|[^)]*\)[^)]*\)[+*{]/.test(p) // (a|(b)c)+ inner-group alternation
           ) {
             errors.push(
-              `conditionPattern for "${String(n.id)}" matches a known ReDoS pattern shape`,
+              `conditionPattern for "${String(n['id'])}" matches a known ReDoS pattern shape`,
             )
           }
           try {
-            new RegExp(n.conditionPattern)
+            new RegExp(n['conditionPattern'])
           } catch {
             errors.push(
-              `Invalid regex in conditionPattern for node "${String(n.id)}": ${String(n.conditionPattern)}`,
+              `Invalid regex in conditionPattern for node "${String(n['id'])}": ${String(n['conditionPattern'])}`,
             )
           }
         }
       }
 
       // Must have at least 1 outgoing edge
-      const outgoingEdges = edges.filter((e) => e.fromNodeId === n.id)
+      const outgoingEdges = edges.filter((e) => e.fromNodeId === n['id'])
       if (outgoingEdges.length === 0) {
-        errors.push(`Condition node "${String(n.id)}" must have at least 1 outgoing edge`)
+        errors.push(`Condition node "${String(n['id'])}" must have at least 1 outgoing edge`)
       }
     }
   }
@@ -254,12 +269,12 @@ export function validateWorkflow(
       if (e.branch !== 'true' && e.branch !== 'false') {
         errors.push(`Edge ${e.id} branch must be 'true' or 'false'`)
       }
-      if (fromNode && fromNode.type !== 'condition') {
+      if (fromNode && fromNode['type'] !== 'condition') {
         errors.push(`Edge ${e.id} has branch but fromNodeId is not a condition node`)
       }
       // Track for fan-out warning — loop edges are intentionally co-located
       // with a normal escape edge on the same branch, so exclude them here.
-      if (fromNode && fromNode.type === 'condition' && e.edgeType !== 'loop') {
+      if (fromNode && fromNode['type'] === 'condition' && e.edgeType !== 'loop') {
         if (!branchesPerCondition.has(e.fromNodeId)) {
           branchesPerCondition.set(e.fromNodeId, new Map())
         }
@@ -283,7 +298,7 @@ export function validateWorkflow(
       ) {
         errors.push(`Loop edge ${e.id} requires maxIterations (1-20)`)
       }
-      if (fromNode && fromNode.type !== 'condition') {
+      if (fromNode && fromNode['type'] !== 'condition') {
         errors.push(`Loop edge ${e.id} fromNodeId must be a condition node`)
       }
       // Duplicate loop edge per (condition, branch) — engine picks only the
@@ -311,10 +326,10 @@ export function validateWorkflow(
   }
 
   // ── Variable validation ────────────────────────────────────
-  if (wf.variables !== undefined && Array.isArray(wf.variables)) {
+  if (wf['variables'] !== undefined && Array.isArray(wf['variables'])) {
     const seenNames = new Set<string>()
-    for (const v of wf.variables as Record<string, unknown>[]) {
-      const name = v.name as string | undefined
+    for (const v of wf['variables'] as Record<string, unknown>[]) {
+      const name = v['name'] as string | undefined
       if (typeof name !== 'string' || !VARIABLE_NAME_RE.test(name)) {
         errors.push(`Variable name "${String(name)}" must match /^[A-Z_][A-Z0-9_]*$/`)
       } else {
@@ -323,8 +338,8 @@ export function validateWorkflow(
         }
         seenNames.add(name)
       }
-      if (v.type === 'choice') {
-        if (!Array.isArray(v.choices) || v.choices.length === 0) {
+      if (v['type'] === 'choice') {
+        if (!Array.isArray(v['choices']) || v['choices'].length === 0) {
           errors.push(`Choice variable "${String(name)}" must have a non-empty choices array`)
         }
       }
@@ -341,12 +356,12 @@ export function validateWorkflow(
 export function validateRole(role: unknown): string | null {
   if (!role || typeof role !== 'object') return 'Role must be an object'
   const r = role as Record<string, unknown>
-  if (typeof r.id !== 'string' || !SAFE_ID_RE.test(r.id)) return 'Role missing or invalid id'
-  if (typeof r.name !== 'string' || !r.name || r.name.length > MAX_NAME)
+  if (typeof r['id'] !== 'string' || !SAFE_ID_RE.test(r['id'])) return 'Role missing or invalid id'
+  if (typeof r['name'] !== 'string' || !r['name'] || r['name'].length > MAX_NAME)
     return 'Role missing or invalid name'
-  if (typeof r.persona !== 'string') return 'Role missing persona'
-  if (typeof r.builtin !== 'boolean') return 'Role missing builtin flag'
-  if (typeof r.icon !== 'string') return 'Role missing icon'
+  if (typeof r['persona'] !== 'string') return 'Role missing persona'
+  if (typeof r['builtin'] !== 'boolean') return 'Role missing builtin flag'
+  if (typeof r['icon'] !== 'string') return 'Role missing icon'
   return null // valid
 }
 

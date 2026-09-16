@@ -19,7 +19,7 @@ export async function readOpenCodeActiveModel(): Promise<DetectorOutput> {
     const errors: unknown[] = []
     const parsed = parseJsonc(raw, errors as never) as Record<string, unknown> | undefined
     if (!parsed || typeof parsed !== 'object') return { modelId: null }
-    const model = parsed.model
+    const model = parsed['model']
     // Raw provider-prefixed id is returned as-is (e.g. 'anthropic/claude-sonnet-4-5').
     // normalizeModelId strips the prefix inside findModelById for registry lookup.
     if (typeof model === 'string' && model.length > 0) return { modelId: model }

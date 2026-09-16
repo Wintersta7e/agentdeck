@@ -12,7 +12,7 @@ export function getCachedAccentRgb(): string {
 function ensureObserver(): void {
   if (observer) return
   observer = new MutationObserver(() => {
-    const t = document.documentElement.dataset.theme ?? ''
+    const t = document.documentElement.dataset['theme'] ?? ''
     // Update accent cache after theme change settles
     requestAnimationFrame(() => {
       cachedAccentRgb = getComputedStyle(document.documentElement)

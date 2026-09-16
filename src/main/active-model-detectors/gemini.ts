@@ -14,9 +14,9 @@ export async function readGeminiActiveModel(): Promise<DetectorOutput> {
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>
     // Primary: nested model.name (current releases)
-    const modelObj = parsed.model
+    const modelObj = parsed['model']
     if (modelObj && typeof modelObj === 'object' && !Array.isArray(modelObj)) {
-      const name = (modelObj as Record<string, unknown>).name
+      const name = (modelObj as Record<string, unknown>)['name']
       if (typeof name === 'string' && name.length > 0) return { modelId: name }
     }
     // Fallback: top-level string model (older/degenerate shape)

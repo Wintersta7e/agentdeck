@@ -49,7 +49,7 @@ export function applyThemeWithTransition(
   y?: number,
 ): void {
   const apply = (): void => {
-    document.documentElement.dataset.theme = themeId
+    document.documentElement.dataset['theme'] = themeId
     onApply?.()
   }
 

@@ -20,7 +20,7 @@ export async function readClaudeCodeActiveModel(): Promise<DetectorOutput> {
 
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>
-    const model = parsed.model
+    const model = parsed['model']
     if (typeof model === 'string' && model.length > 0) return { modelId: model }
     return { modelId: null }
   } catch (err) {

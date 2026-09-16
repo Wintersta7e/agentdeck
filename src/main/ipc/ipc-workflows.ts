@@ -85,12 +85,12 @@ export function registerWorkflowHandlers(
       // Validate input structure
       if (!data || typeof data !== 'object') throw new Error('Invalid import data')
       const d = data as Record<string, unknown>
-      if (d.formatVersion !== 1) throw new Error('Unsupported format version')
-      if (!d.workflow || typeof d.workflow !== 'object') throw new Error('Missing workflow')
-      if (!Array.isArray(d.roles)) throw new Error('Missing roles array')
+      if (d['formatVersion'] !== 1) throw new Error('Unsupported format version')
+      if (!d['workflow'] || typeof d['workflow'] !== 'object') throw new Error('Missing workflow')
+      if (!Array.isArray(d['roles'])) throw new Error('Missing roles array')
 
-      const importedWorkflow = d.workflow as Workflow
-      const importedRoles = d.roles as unknown[]
+      const importedWorkflow = d['workflow'] as Workflow
+      const importedRoles = d['roles'] as unknown[]
 
       // Validate each imported role's fields before trusting them
       for (const rawRole of importedRoles) {

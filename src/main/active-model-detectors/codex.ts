@@ -17,8 +17,8 @@ export async function readCodexActiveModel(): Promise<DetectorOutput> {
 
   try {
     const parsed = parseToml(raw) as Record<string, unknown>
-    const model = parsed.model
-    const ctx = parsed.model_context_window
+    const model = parsed['model']
+    const ctx = parsed['model_context_window']
     const out: DetectorOutput = {
       modelId: typeof model === 'string' && model.length > 0 ? model : null,
     }

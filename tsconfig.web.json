@@ -5,9 +5,11 @@
     "moduleResolution": "bundler",
     "target": "ESNext",
     "jsx": "react-jsx",
-    "noUncheckedSideEffectImports": false,
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "types": ["vitest/globals", "@testing-library/jest-dom/vitest"],
+    // vite/client declares the `*.css` (and other asset) modules, so
+    // noUncheckedSideEffectImports can stay on instead of being disabled
+    // wholesale for stylesheet imports.
+    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom/vitest"],
     "outDir": "out"
   },
   "include": ["src/renderer/**/*", "src/shared/**/*"]

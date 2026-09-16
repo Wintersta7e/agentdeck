@@ -63,7 +63,7 @@ const ROWS: Array<{
   {
     agentId: 'goose',
     detector: { modelId: null },
-    expected: { value: AGENTS_BY_ID.goose!.contextWindow, source: 'default' },
+    expected: { value: AGENTS_BY_ID['goose']!.contextWindow, source: 'default' },
   },
   {
     agentId: 'gemini-cli',

@@ -283,18 +283,18 @@ export function registerStoreHandlers(store: AppStore): void {
     }
     // Validate required fields from renderer input before trusting the shape
     const raw = project as Record<string, unknown>
-    if (raw.id !== undefined) validateId(raw.id, 'store:saveProject id')
-    if (raw.name !== undefined && typeof raw.name !== 'string')
+    if (raw['id'] !== undefined) validateId(raw['id'], 'store:saveProject id')
+    if (raw['name'] !== undefined && typeof raw['name'] !== 'string')
       throw new Error('store:saveProject — name must be a string')
-    if (raw.path !== undefined && typeof raw.path !== 'string')
+    if (raw['path'] !== undefined && typeof raw['path'] !== 'string')
       throw new Error('store:saveProject — path must be a string')
-    if (typeof raw.name === 'string' && raw.name.length > 200)
+    if (typeof raw['name'] === 'string' && raw['name'].length > 200)
       throw new Error('store:saveProject — name too long')
-    if (typeof raw.path === 'string' && raw.path.length > 1024)
+    if (typeof raw['path'] === 'string' && raw['path'].length > 1024)
       throw new Error('store:saveProject — path too long')
-    if (Array.isArray(raw.envVars)) {
-      if (raw.envVars.length > 100) throw new Error('Too many environment variables (max 100)')
-      for (const ev of raw.envVars as { key?: unknown; value?: unknown }[]) {
+    if (Array.isArray(raw['envVars'])) {
+      if (raw['envVars'].length > 100) throw new Error('Too many environment variables (max 100)')
+      for (const ev of raw['envVars'] as { key?: unknown; value?: unknown }[]) {
         if (typeof ev.key !== 'string') throw new Error('Env var key must be a string')
         if (typeof ev.value !== 'string') throw new Error('Env var value must be a string')
         if (ev.key.length > 256) throw new Error('Env var key too long (max 256)')
@@ -365,14 +365,14 @@ export function registerStoreHandlers(store: AppStore): void {
       throw new Error('store:saveRole requires a non-null object')
     }
     const rawR = role as Record<string, unknown>
-    if (rawR.id !== undefined) validateId(rawR.id, 'store:saveRole id')
-    if (rawR.name !== undefined && typeof rawR.name !== 'string')
+    if (rawR['id'] !== undefined) validateId(rawR['id'], 'store:saveRole id')
+    if (rawR['name'] !== undefined && typeof rawR['name'] !== 'string')
       throw new Error('store:saveRole — name must be a string')
-    if (typeof rawR.name === 'string' && rawR.name.length > 200)
+    if (typeof rawR['name'] === 'string' && rawR['name'].length > 200)
       throw new Error('store:saveRole — name too long')
-    if (typeof rawR.persona === 'string' && rawR.persona.length > 65536)
+    if (typeof rawR['persona'] === 'string' && rawR['persona'].length > 65536)
       throw new Error('store:saveRole — persona too long (max 64KB)')
-    if (typeof rawR.outputFormat === 'string' && rawR.outputFormat.length > 65536)
+    if (typeof rawR['outputFormat'] === 'string' && rawR['outputFormat'].length > 65536)
       throw new Error('store:saveRole — outputFormat too long (max 64KB)')
     return serialized(() => {
       const r = role as Partial<Role>

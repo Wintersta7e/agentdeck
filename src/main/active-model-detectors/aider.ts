@@ -20,7 +20,7 @@ export async function readAiderActiveModel(): Promise<DetectorOutput> {
   try {
     const parsed = parseYaml(raw) as Record<string, unknown> | null
     if (!parsed || typeof parsed !== 'object') return { modelId: null }
-    const model = parsed.model
+    const model = parsed['model']
     if (typeof model === 'string' && model.length > 0) return { modelId: model }
     return { modelId: null }
   } catch (err) {

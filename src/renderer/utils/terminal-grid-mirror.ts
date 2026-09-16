@@ -47,16 +47,17 @@ const DEFAULT_TAB_SIZE = 8
 
 /* ---------- Parser state machine ---------- */
 
-const enum S {
-  Ground = 0,
-  Escape = 1,
-  CsiEntry = 2,
-  CsiParam = 3,
-  CsiIntermediate = 4,
-  CsiIgnore = 5,
-  OscString = 6,
-  StringSeq = 7, // DCS, APC, PM, SOS — all terminate with ST (ESC \)
-}
+const S = {
+  Ground: 0,
+  Escape: 1,
+  CsiEntry: 2,
+  CsiParam: 3,
+  CsiIntermediate: 4,
+  CsiIgnore: 5,
+  OscString: 6,
+  StringSeq: 7, // DCS, APC, PM, SOS — all terminate with ST (ESC \)
+} as const
+type S = (typeof S)[keyof typeof S]
 
 /** Cap on collected CSI numeric parameters before further params are dropped. */
 const MAX_CSI_PARAMS = 16

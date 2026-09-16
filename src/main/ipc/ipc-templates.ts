@@ -55,30 +55,30 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
 function validateDraft(input: unknown): asserts input is TemplateDraft {
   if (!isPlainObject(input)) throw new Error('draft must be an object')
   const raw = input
-  if (raw.id !== undefined) validateId(raw.id, 'draft.id')
-  if (typeof raw.name !== 'string' || raw.name.length === 0) {
+  if (raw['id'] !== undefined) validateId(raw['id'], 'draft.id')
+  if (typeof raw['name'] !== 'string' || raw['name'].length === 0) {
     throw new Error('draft.name is required')
   }
-  if (raw.name.length > MAX_NAME_LEN) {
+  if (raw['name'].length > MAX_NAME_LEN) {
     throw new Error(`draft.name too long (max ${String(MAX_NAME_LEN)})`)
   }
-  if (typeof raw.description !== 'string') {
+  if (typeof raw['description'] !== 'string') {
     throw new Error('draft.description must be a string')
   }
-  if (raw.description.length > MAX_DESC_LEN) {
+  if (raw['description'].length > MAX_DESC_LEN) {
     throw new Error(`draft.description too long (max ${String(MAX_DESC_LEN)})`)
   }
-  if (typeof raw.content !== 'string') {
+  if (typeof raw['content'] !== 'string') {
     throw new Error('draft.content must be a string')
   }
-  if (raw.content.length > MAX_CONTENT_LEN) {
+  if (raw['content'].length > MAX_CONTENT_LEN) {
     throw new Error(`draft.content too long (max ${String(MAX_CONTENT_LEN)})`)
   }
-  if (raw.category !== undefined) {
-    if (typeof raw.category !== 'string') {
+  if (raw['category'] !== undefined) {
+    if (typeof raw['category'] !== 'string') {
       throw new Error('draft.category must be a string')
     }
-    if (!CATEGORIES.has(raw.category as TemplateCategory)) {
+    if (!CATEGORIES.has(raw['category'] as TemplateCategory)) {
       throw new Error('draft.category is not a valid TemplateCategory')
     }
   }
@@ -105,9 +105,9 @@ function validateScopeAndProject(
 function validateRef(input: unknown, ctx: TemplateHandlerContext): TemplateRef {
   if (!isPlainObject(input)) throw new Error('ref must be an object')
   const raw = input
-  const id = validateId(raw.id, 'ref.id')
-  const scope = raw.scope
-  const projectId = (raw.projectId ?? null) as string | null
+  const id = validateId(raw['id'], 'ref.id')
+  const scope = raw['scope']
+  const projectId = (raw['projectId'] ?? null) as string | null
   validateScopeAndProject(scope, projectId, ctx)
   return {
     id,

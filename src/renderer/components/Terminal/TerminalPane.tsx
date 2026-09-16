@@ -202,7 +202,7 @@ export function TerminalPane({
         cursorBlink: true,
         cursorInactiveStyle: 'none',
         allowProposedApi: true,
-        theme: getXtermTheme(document.documentElement.dataset.theme ?? ''),
+        theme: getXtermTheme(document.documentElement.dataset['theme'] ?? ''),
         scrollback: validatedScrollback,
       })
       mirrorRef.current = new TerminalGridMirror({

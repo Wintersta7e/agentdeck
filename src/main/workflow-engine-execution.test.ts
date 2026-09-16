@@ -87,7 +87,7 @@ function getEvents(
     .filter(
       (call) =>
         call[0] === `workflow:event:${workflowId}` &&
-        (!type || (call[1] as Record<string, unknown>).type === type),
+        (!type || (call[1] as Record<string, unknown>)['type'] === type),
     )
     .map((call) => call[1] as Record<string, unknown>)
 }
@@ -710,7 +710,7 @@ describe('error scenarios', () => {
 
     const errors = getEvents(sendSpy, 'wf-err1', 'node:error')
     expect(errors).toHaveLength(1)
-    expect(String(errors[0]?.message)).toContain('exited with code 1')
+    expect(String(errors[0]?.['message'])).toContain('exited with code 1')
   })
 
   it('emits node:error when agent spawn fails', async () => {
@@ -730,7 +730,7 @@ describe('error scenarios', () => {
 
     const errors = getEvents(sendSpy, 'wf-err2', 'node:error')
     expect(errors).toHaveLength(1)
-    expect(String(errors[0]?.message)).toContain('spawn ENOENT')
+    expect(String(errors[0]?.['message'])).toContain('spawn ENOENT')
   })
 
   it('kills agent after idle timeout (no output)', async () => {
@@ -759,7 +759,7 @@ describe('error scenarios', () => {
 
     const errors = getEvents(sendSpy, 'wf-idle', 'node:error')
     expect(errors).toHaveLength(1)
-    expect(String(errors[0]?.message)).toContain('idle')
+    expect(String(errors[0]?.['message'])).toContain('idle')
 
     // Verify workflow-level terminal event was emitted (stopped due to node failure)
     const workflowStopped = getEvents(sendSpy, 'wf-idle', 'workflow:stopped')
@@ -786,7 +786,7 @@ describe('error scenarios', () => {
 
     const errors = getEvents(sendSpy, 'wf-abs', 'node:error')
     expect(errors).toHaveLength(1)
-    expect(String(errors[0]?.message)).toContain('timed out')
+    expect(String(errors[0]?.['message'])).toContain('timed out')
   })
 
   it('emits node:error when shell command fails', async () => {
@@ -924,7 +924,7 @@ describe('error scenarios', () => {
 
     const errors = getEvents(sendSpy, 'wf-dup', 'workflow:error')
     expect(errors).toHaveLength(1)
-    expect(String(errors[0]?.message)).toContain('already running')
+    expect(String(errors[0]?.['message'])).toContain('already running')
 
     child.emit('close', 0)
     await tick()
@@ -1095,7 +1095,7 @@ describe('condition node with exitCode branching', () => {
 
     // Condition should resolve to 'true' (exit code 0)
     const condDone = getEvents(sendSpy, 'wf-cond1', 'node:done')
-    const condWithBranch = condDone.find((e) => e.branch === 'true')
+    const condWithBranch = condDone.find((e) => e['branch'] === 'true')
     expect(condWithBranch).toBeDefined()
 
     // True branch agent should have been spawned
@@ -1162,7 +1162,7 @@ describe('condition node with exitCode branching', () => {
 
     // Condition should resolve to 'false' (exit code != 0)
     const condDone = getEvents(sendSpy, 'wf-cond2', 'node:done')
-    const condWithBranch = condDone.find((e) => e.branch === 'false')
+    const condWithBranch = condDone.find((e) => e['branch'] === 'false')
     expect(condWithBranch).toBeDefined()
 
     // False branch agent should have been spawned
@@ -1214,7 +1214,7 @@ describe('retry on failure then success', () => {
     expect(hasEvent(sendSpy, 'wf-retry1', 'node:retry')).toBe(true)
     const retryEvents = getEvents(sendSpy, 'wf-retry1', 'node:retry')
     expect(retryEvents).toHaveLength(1)
-    expect(retryEvents[0]?.attempt).toBe(2)
+    expect(retryEvents[0]?.['attempt']).toBe(2)
 
     // Second attempt should have spawned
     expect(children).toHaveLength(2)
@@ -1340,9 +1340,9 @@ describe('loop escape on maxIterations exhaustion', () => {
     )
 
     // 2. The escape checkpoint E must have been reached (emits node:paused).
-    expect(getEvents(sendSpy, 'wf-loop-escape', 'node:paused').some((e) => e.nodeId === 'E')).toBe(
-      true,
-    )
+    expect(
+      getEvents(sendSpy, 'wf-loop-escape', 'node:paused').some((e) => e['nodeId'] === 'E'),
+    ).toBe(true)
 
     // Clean up: resume the checkpoint so the workflow can finish.
     engine.resume('wf-loop-escape', 'E')
@@ -1425,9 +1425,11 @@ describe('shared escape target (in-degree > 1)', () => {
     // iterations with no warning at all.
     const events = getEvents(sendSpy, 'wf-shared-escape')
     const firstWarn = events.findIndex(
-      (e) => e.type === 'node:output' && /did not converge/.test(String(e.message)),
+      (e) => e['type'] === 'node:output' && /did not converge/.test(String(e['message'])),
     )
-    const firstEscape = events.findIndex((e) => e.type === 'node:paused' && e.nodeId === 'escape')
+    const firstEscape = events.findIndex(
+      (e) => e['type'] === 'node:paused' && e['nodeId'] === 'escape',
+    )
     expect(firstEscape, 'escape checkpoint should be reached on exhaustion').toBeGreaterThanOrEqual(
       0,
     )
