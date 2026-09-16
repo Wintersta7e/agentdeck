@@ -2,6 +2,7 @@ import { execFile, type ExecFileOptions } from 'child_process'
 import { createHash } from 'crypto'
 import { createLogger } from './logger'
 import { toWslPath } from './wsl-utils'
+import { errText } from '../shared/errors'
 
 const log = createLogger('git-port')
 
@@ -29,8 +30,8 @@ export interface GitPort {
  * Throws if the output doesn't contain a recognisable version.
  */
 export function parseGitVersion(output: string): { major: number; minor: number } {
-  const match = output.match(/git version (\d+)\.(\d+)/)
-  if (!match || !match[1] || !match[2]) {
+  const match = /git version (\d+)\.(\d+)/.exec(output)
+  if (!match?.[1] || !match[2]) {
     throw new Error(`Cannot parse git version from output: ${JSON.stringify(output)}`)
   }
   return { major: parseInt(match[1], 10), minor: parseInt(match[2], 10) }
@@ -86,7 +87,7 @@ function wslExec(args: string[], cwd?: string, timeoutMs?: number): Promise<stri
     }
     execFile('wsl.exe', ['git', ...args], opts, (err, stdout, stderr) => {
       if (err) {
-        const detail = stderr.trim() || String(err)
+        const detail = stderr.trim() || errText(err)
         log.debug('wsl git failed', { args, detail })
         reject(new Error(`wsl git ${args[0] ?? ''}: ${detail}`))
         return

@@ -11,6 +11,7 @@
 import { execFile } from 'child_process'
 import { createLogger } from './logger'
 import { NODE_INIT } from './wsl-utils'
+import { errText } from '../shared/errors'
 
 const log = createLogger('wsl-exec')
 
@@ -68,13 +69,13 @@ export function wslRun(cmd: string, opts: WslExecThrowOptions = {}): Promise<str
   return new Promise<string>((resolve, reject) => {
     execFile('wsl.exe', buildArgs(cmd, opts), { timeout }, (err, stdout, stderr) => {
       if (err) {
-        const out = stdout?.trim() ?? ''
+        const out = stdout.trim()
         if (opts.fallbackStderrAsOutput && out) {
-          log.debug('Command had stderr but produced output', { cmd, stderr: stderr?.trim() })
+          log.debug('Command had stderr but produced output', { cmd, stderr: stderr.trim() })
           resolve(out)
           return
         }
-        reject(new Error(stderr?.trim() || err.message))
+        reject(new Error(stderr.trim() || err.message))
         return
       }
       resolve(stdout)
@@ -98,7 +99,10 @@ export function wslTry(cmd: string, opts: WslExecNullableOptions = {}): Promise<
       (err, stdout, stderr) => {
         if (err) {
           if (logLevel !== 'silent') {
-            log[logLevel]('wslTry failed', { cmd: cmd.slice(0, 120), err: String(err) })
+            log[logLevel]('wslTry failed', {
+              cmd: cmd.slice(0, 120),
+              err: errText(err),
+            })
           }
           resolve(null)
           return

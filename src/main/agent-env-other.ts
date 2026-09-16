@@ -73,7 +73,15 @@ function extractAiderConfig(
   for (const key of ['model', 'edit-format', 'auto-commits', 'dirty-commits'] as const) {
     const v = yaml[key]
     if (v !== undefined) {
-      out.push({ key, value: truncate(String(v)), scope })
+      // These keys hold scalars, but a YAML value can be a nested map, and
+      // String() would render that "[object Object]".
+      // Declared `string`, but stringify returns undefined for a value it drops.
+      const json = JSON.stringify(v) as string | undefined
+      const rendered =
+        typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean'
+          ? String(v)
+          : (json ?? '')
+      out.push({ key, value: truncate(rendered), scope })
     }
   }
   return out

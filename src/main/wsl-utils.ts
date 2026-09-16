@@ -1,5 +1,6 @@
 import { execFile } from 'child_process'
 import { createLogger } from './logger'
+import { errText } from '../shared/errors'
 
 const log = createLogger('wsl-utils')
 
@@ -11,15 +12,15 @@ const FALLBACK_DISTRO = 'Ubuntu'
 /** Convert a Windows path to WSL: C:\foo → /mnt/c/foo, \\wsl$\D\x → /x */
 export function toWslPath(p: string): string {
   const normalized = p.replace(/\\/g, '/')
-  const driveMatch = normalized.match(/^([A-Za-z]):\/?(.*)$/)
-  if (driveMatch && driveMatch[1]) {
+  const driveMatch = /^([A-Za-z]):\/?(.*)$/.exec(normalized)
+  if (driveMatch?.[1]) {
     const rest = driveMatch[2] ?? ''
     return rest
       ? `/mnt/${driveMatch[1].toLowerCase()}/${rest}`
       : `/mnt/${driveMatch[1].toLowerCase()}`
   }
   // UNC WSL path: //wsl$/Distro/home/user/... or //wsl.localhost/Distro/...
-  const uncMatch = normalized.match(/^\/\/(?:wsl\$|wsl\.localhost)\/[^/]+\/?(.*)$/)
+  const uncMatch = /^\/\/(?:wsl\$|wsl\.localhost)\/[^/]+\/?(.*)$/.exec(normalized)
   if (uncMatch) {
     return `/${uncMatch[1] ?? ''}`
   }
@@ -35,7 +36,7 @@ export async function resolveWslUsername(): Promise<string> {
   const tryCmd = (args: string[]): Promise<string> =>
     new Promise((resolve) => {
       execFile('wsl.exe', args, { timeout: 10000 }, (err, stdout) => {
-        const out = stdout?.trim() ?? ''
+        const out = stdout.trim()
         resolve(err || !out ? '' : out)
       })
     })
@@ -86,8 +87,8 @@ export const NODE_INIT =
 
 export function wslPathToWindows(wslPath: string, distro = FALLBACK_DISTRO): string {
   // /mnt/X/... paths map directly to Windows drives — no UNC needed
-  const mntMatch = wslPath.match(/^\/mnt\/([a-zA-Z])\/(.*)$/)
-  if (mntMatch && mntMatch[1] && mntMatch[2] !== undefined) {
+  const mntMatch = /^\/mnt\/([a-zA-Z])\/(.*)$/.exec(wslPath)
+  if (mntMatch?.[1] && mntMatch[2] !== undefined) {
     const drive = mntMatch[1].toUpperCase()
     const rest = mntMatch[2].replace(/\//g, '\\')
     return `${drive}:\\${rest}`
@@ -146,7 +147,7 @@ export function getDefaultDistroAsync(): Promise<string> {
       (err, stdout) => {
         if (err) {
           log.error('Async distro detection failed, falling back to ' + FALLBACK_DISTRO, {
-            err: String(err),
+            err: errText(err),
           })
           cachedDistro = FALLBACK_DISTRO
           resolve(cachedDistro)
@@ -156,7 +157,7 @@ export function getDefaultDistroAsync(): Promise<string> {
         const first = cleaned
           .split('\n')
           .map((l) => l.trim())
-          .filter(Boolean)[0]
+          .find((l) => l !== '')
         if (!first) {
           log.warn('Could not detect WSL distro, falling back to ' + FALLBACK_DISTRO)
         }
@@ -174,8 +175,8 @@ export function getDefaultDistroAsync(): Promise<string> {
  */
 export function parseDefaultGateway(routeOutput: string): string | null {
   for (const line of routeOutput.split('\n')) {
-    const m = line.match(/^\s*default\s+via\s+(\d{1,3}(?:\.\d{1,3}){3})\b/)
-    if (m && m[1]) return m[1]
+    const m = /^\s*default\s+via\s+(\d{1,3}(?:\.\d{1,3}){3})\b/.exec(line)
+    if (m?.[1]) return m[1]
   }
   return null
 }
@@ -206,7 +207,9 @@ export function getWindowsHostIp(): Promise<string | null> {
       { timeout: 10000 },
       (err, stdout) => {
         if (err) {
-          log.warn('Failed to resolve Windows host IP (WSL default gateway)', { err: String(err) })
+          log.warn('Failed to resolve Windows host IP (WSL default gateway)', {
+            err: errText(err),
+          })
           resolve(null)
           return
         }

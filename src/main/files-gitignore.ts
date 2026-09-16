@@ -2,6 +2,7 @@ import { execFile } from 'node:child_process'
 import { getDefaultDistroAsync, NODE_INIT } from './wsl-utils'
 import { createLogger } from './logger'
 import { shellQuote } from './node-runners'
+import { errText } from '../shared/errors'
 
 const log = createLogger('files-gitignore')
 
@@ -36,7 +37,7 @@ export async function gitignoreCheck(
       (err, stdout) => {
         if (err) {
           log.debug('gitignoreCheck failed (treating as no-ignores)', {
-            err: String(err),
+            err: errText(err),
             projectPath,
           })
           resolve(new Set())
