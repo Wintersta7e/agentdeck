@@ -40,21 +40,28 @@ function walk(dir: string): string[] {
 }
 
 describe('no direct contextWindow reads outside whitelist', () => {
-  it('has no matches for agent.contextWindow or AGENTS[*].contextWindow', () => {
-    const offenders: { file: string; line: number; text: string }[] = []
-    for (const d of SCAN_DIRS) {
-      for (const f of walk(d)) {
-        const rel = relative(ROOT, f).replace(/\\/g, '/')
-        if (WHITELIST.has(rel)) continue
-        const src = readFileSync(f, 'utf8')
-        const lines = src.split(/\r?\n/)
-        for (let i = 0; i < lines.length; i++) {
-          if (/\b(?:agent|AGENTS\[[^\]]+\])\.contextWindow\b/.test(lines[i]!)) {
-            offenders.push({ file: rel, line: i + 1, text: lines[i]!.trim() })
+  // Walks every source file synchronously. On a Windows-mounted working copy
+  // (/mnt/c, drvfs) that is slow enough to blow the default 5s budget when the
+  // filesystem is busy — e.g. straight after a packaging build.
+  it(
+    'has no matches for agent.contextWindow or AGENTS[*].contextWindow',
+    { timeout: 60_000 },
+    () => {
+      const offenders: { file: string; line: number; text: string }[] = []
+      for (const d of SCAN_DIRS) {
+        for (const f of walk(d)) {
+          const rel = relative(ROOT, f).replace(/\\/g, '/')
+          if (WHITELIST.has(rel)) continue
+          const src = readFileSync(f, 'utf8')
+          const lines = src.split(/\r?\n/)
+          for (let i = 0; i < lines.length; i++) {
+            if (/\b(?:agent|AGENTS\[[^\]]+\])\.contextWindow\b/.test(lines[i]!)) {
+              offenders.push({ file: rel, line: i + 1, text: lines[i]!.trim() })
+            }
           }
         }
       }
-    }
-    expect(offenders).toEqual([])
-  })
+      expect(offenders).toEqual([])
+    },
+  )
 })
