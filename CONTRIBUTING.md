@@ -24,16 +24,21 @@ Thanks for your interest in contributing to AgentDeck!
 ## Code Standards
 
 - **TypeScript strict mode** — all source files are `.ts`/`.tsx`
-- **ESLint** — zero-warning policy (`npm run lint`)
+- **ESLint** — type-aware strict rules over the whole repo, zero-warning policy
+  (`npm run lint`). A new `eslint-disable` needs an inline `-- reason`.
 - **Prettier** — consistent formatting (`npm run format`)
 - **Vitest** — tests run with `npm test`
 
 ## Before Submitting a PR
 
 1. Run the full lint check: `npm run lint`
-2. Run all tests: `npm test`
-3. Run the type checker: `npm run typecheck`
-4. Ensure zero warnings and all tests pass
+2. Run the type checker: `npm run typecheck`
+3. Check formatting: `npm run format:check`
+4. Run all tests: `npm test`
+5. Ensure zero warnings and all tests pass
+
+CI runs all four and fails on any of them, as does the pre-commit hook for the
+first three.
 
 ## Commit Messages
 

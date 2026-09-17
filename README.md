@@ -9,7 +9,7 @@ agents — and your own custom CLIs — from a single window: split terminals,
 visual workflows, and productivity + plan-limit tracking, all running through
 your own WSL environment.
 
-[![Electron](https://img.shields.io/badge/Electron-43-47848F?logo=electron&logoColor=white)](https://www.electronjs.org)
+[![Electron](https://img.shields.io/badge/Electron-44-47848F?logo=electron&logoColor=white)](https://www.electronjs.org)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/license-Elastic--2.0-blue)](LICENSE)
@@ -154,8 +154,8 @@ npm install --no-bin-links
 npm run dev
 
 # Checks
-npm run lint        # ESLint, zero warnings
-npm run typecheck   # tsc on the node + web configs
+npm run lint        # ESLint over the whole repo, zero warnings
+npm run typecheck   # tsc on the node + web + tools configs
 npm test            # Vitest
 
 # Build a portable .exe (gated: lint + typecheck + tests, then build + verify)
@@ -168,14 +168,14 @@ Output: `dist/AgentDeck-{version}-portable.exe` (~94 MB).
 
 | Layer | Choice | Notes |
 |---|---|---|
-| Shell | [Electron 42][electron] | ConPTY; node-pty in the **main process only** |
+| Shell | [Electron 44][electron] | ConPTY; node-pty in the **main process only** |
 | UI | [React 19][react] + [TypeScript 6][ts] | Strict mode, all `.ts` / `.tsx` |
 | Build | [electron-vite 5][evite] | Vite for the renderer, esbuild for main/preload |
 | Terminal | [xterm.js 5][xterm] + [node-pty][nodepty] | WebGL renderer over WSL PTYs |
 | State | [Zustand][zustand] | One flat store composed from 8 slices |
 | Workflows | [React Flow][reactflow] | Visual DAG editor |
 | Storage | [electron-store][estore] | JSON on disk; `safeStorage` for secrets |
-| Test / lint | [Vitest 4][vitest] + [ESLint 9][eslint] | Dual workspace, zero-warning |
+| Test / lint | [Vitest 5][vitest] + [ESLint 9][eslint] | Dual workspace, type-aware, zero-warning |
 
 ## Layout
 

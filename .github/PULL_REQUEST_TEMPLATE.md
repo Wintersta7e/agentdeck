@@ -10,7 +10,7 @@ section (the checklist below covers it). No AI attribution.
 ## Checklist
 
 - [ ] `npm test` passes locally
-- [ ] `npm run lint` and `npm run typecheck` clean
+- [ ] `npm run lint`, `npm run typecheck` and `npm run format:check` clean
 - [ ] No new ESLint disables without an inline `-- reason`
 - [ ] No production code paths touched by a test-only refactor
 - [ ] If this changes a user-visible flow: tested in `npm run dev` (Electron)
