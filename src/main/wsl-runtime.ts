@@ -3,6 +3,7 @@ import { execFile } from 'child_process'
 import type { BrowserWindow } from 'electron'
 import { createLogger } from './logger'
 import { wslTry } from './wsl-exec'
+import { hostPlatform } from './host'
 import { errText } from '../shared/errors'
 
 const log = createLogger('wsl-runtime')
@@ -25,6 +26,13 @@ export async function resolveWslHome(): Promise<string | null> {
 }
 
 export function publishWslAvailability(mainWindow: BrowserWindow): void {
+  // Natively the agents run on this machine, so there is no VM to probe and
+  // `wsl --status` does not exist. Report available and stop.
+  if (hostPlatform() === 'native') {
+    log.info('Agents run locally — no WSL layer to check')
+    mainWindow.webContents.send(CH.wslStatus, { available: true })
+    return
+  }
   execFile('wsl.exe', ['--status'], { timeout: 10_000 }, (err) => {
     if (err) {
       log.warn('WSL2 not detected', { err: errText(err) })

@@ -3,6 +3,7 @@ import { createHash } from 'crypto'
 import { createLogger } from './logger'
 import { toWslPath } from './wsl-utils'
 import { errText } from '../shared/errors'
+import { directCommand, gitEnv } from './host'
 
 const log = createLogger('git-port')
 
@@ -75,7 +76,7 @@ export function makeBranchName(projectId: string, sessionId: string, suffix?: nu
 // ─── WSL implementation ───────────────────────────────────────────────────────
 
 /**
- * Runs `wsl.exe git <args>` in the given working directory.
+ * Runs git where the repo lives — through wsl.exe on Windows, directly on Linux.
  * Resolves with trimmed stdout; rejects with a descriptive Error on non-zero exit.
  */
 function wslExec(args: string[], cwd?: string, timeoutMs?: number): Promise<string> {
@@ -83,9 +84,11 @@ function wslExec(args: string[], cwd?: string, timeoutMs?: number): Promise<stri
     const opts: ExecFileOptions & { encoding: 'utf8' } = {
       encoding: 'utf8',
       timeout: timeoutMs ?? DEFAULT_EXEC_TIMEOUT_MS,
+      env: gitEnv(),
       ...(cwd !== undefined ? { cwd } : {}),
     }
-    execFile('wsl.exe', ['git', ...args], opts, (err, stdout, stderr) => {
+    const { file, args: argv } = directCommand('git', args)
+    execFile(file, argv, opts, (err, stdout, stderr) => {
       if (err) {
         const detail = stderr.trim() || errText(err)
         log.debug('wsl git failed', { args, detail })
@@ -105,7 +108,7 @@ function ensureWslPath(p: string): string {
 }
 
 /**
- * Creates a GitPort that shells out to `wsl.exe git ...` for all operations.
+ * Creates a GitPort that shells out to git for all operations.
  */
 export function createWslGitPort(options?: { timeoutMs?: number }): GitPort {
   const t = options?.timeoutMs

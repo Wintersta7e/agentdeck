@@ -44,6 +44,7 @@ export interface PtyManager {
 
 /* Fix 1 (PANEL-4): ANSI stripping + regex-based activity parsing */
 import { stripAnsi } from './node-runners'
+import { loginShell } from './host'
 
 function parseActivityLine(line: string): { type: string; title: string; detail: string } | null {
   const clean = stripAnsi(line).trim()
@@ -162,7 +163,8 @@ export function createPtyManager(mainWindow: BrowserWindow, registry: AgentRegis
     /* Fix 8 (ERR-6): Wrap pty.spawn in try-catch */
     let proc: IPty
     try {
-      proc = pty.spawn('wsl.exe', [], {
+      const shell = loginShell()
+      proc = pty.spawn(shell.file, shell.args, {
         name: 'xterm-256color',
         cols: cols > 0 ? cols : 80,
         rows: rows > 0 ? rows : 24,

@@ -3,6 +3,7 @@ import { getDefaultDistroAsync, NODE_INIT } from './wsl-utils'
 import { createLogger } from './logger'
 import { shellQuote } from './node-runners'
 import { errText } from '../shared/errors'
+import { bashCommand, gitEnv } from './host'
 
 const log = createLogger('files-gitignore')
 
@@ -30,10 +31,11 @@ export async function gitignoreCheck(
   const inner = `${NODE_INIT}cd ${shellQuote(projectPath)} && git check-ignore --stdin || true`
 
   return new Promise<Set<string>>((resolve) => {
+    const { file, args } = bashCommand(inner, { distro })
     const child = execFile(
-      'wsl.exe',
-      ['-d', distro, '--', 'bash', '-lc', inner],
-      { encoding: 'utf8', timeout: GIT_TIMEOUT_MS, maxBuffer: 1024 * 1024 },
+      file,
+      args,
+      { encoding: 'utf8', timeout: GIT_TIMEOUT_MS, maxBuffer: 1024 * 1024, env: gitEnv() },
       (err, stdout) => {
         if (err) {
           log.debug('gitignoreCheck failed (treating as no-ignores)', {

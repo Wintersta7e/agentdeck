@@ -1,6 +1,7 @@
 import { execFile } from 'child_process'
 import { createLogger } from './logger'
 import { errText } from '../shared/errors'
+import { bashCommand, directCommand, hostPlatform, type HostCommand } from './host'
 
 const log = createLogger('wsl-utils')
 
@@ -9,8 +10,13 @@ const log = createLogger('wsl-utils')
 // Users on Debian, Arch, Fedora etc. will see a warning in the log.
 const FALLBACK_DISTRO = 'Ubuntu'
 
-/** Convert a Windows path to WSL: C:\foo → /mnt/c/foo, \\wsl$\D\x → /x */
+/**
+ * Convert a Windows path to the path agents see: C:\foo → /mnt/c/foo,
+ * \\wsl$\D\x → /x. Identity when agents run natively, where the path is
+ * already correct and a backslash is a legal filename character.
+ */
 export function toWslPath(p: string): string {
+  if (hostPlatform() === 'native') return p
   const normalized = p.replace(/\\/g, '/')
   const driveMatch = /^([A-Za-z]):\/?(.*)$/.exec(normalized)
   if (driveMatch?.[1]) {
@@ -33,9 +39,9 @@ export function toWslPath(p: string): string {
  * Returns '' when none succeed.
  */
 export async function resolveWslUsername(): Promise<string> {
-  const tryCmd = (args: string[]): Promise<string> =>
+  const tryCmd = ({ file, args }: HostCommand): Promise<string> =>
     new Promise((resolve) => {
-      execFile('wsl.exe', args, { timeout: 10000 }, (err, stdout) => {
+      execFile(file, args, { timeout: 10000 }, (err, stdout) => {
         const out = stdout.trim()
         resolve(err || !out ? '' : out)
       })
@@ -43,9 +49,9 @@ export async function resolveWslUsername(): Promise<string> {
 
   // Race all approaches — first non-empty result wins.
   const results = await Promise.all([
-    tryCmd(['--', 'bash', '-lc', 'whoami']),
-    tryCmd(['--', 'whoami']),
-    tryCmd(['--', 'bash', '-lc', 'echo $USER']),
+    tryCmd(bashCommand('whoami')),
+    tryCmd(directCommand('whoami', [])),
+    tryCmd(bashCommand('echo $USER')),
   ])
   const result = results.find((r) => r !== '') ?? ''
   if (!result) log.warn('Failed to detect WSL username')

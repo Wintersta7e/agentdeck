@@ -63,6 +63,7 @@ import { stripAnsi } from '../shared/ansi'
 export { stripAnsi }
 export { shellQuote } from './wsl-exec'
 import { shellQuote } from './wsl-exec'
+import { bashCommand } from './host'
 
 // ── Skill prefix extraction ──────────────────────────────────────────
 
@@ -120,29 +121,23 @@ function resolveAgentPathPrefix(bin: string): Promise<string> {
   const cached = agentPathCache.get(bin)
   if (cached !== undefined) return Promise.resolve(cached)
   return new Promise<string>((resolve) => {
-    execFile(
-      'wsl.exe',
-      [
-        '--',
-        'bash',
-        '-lic',
-        `command -v ${shellQuote(bin)} 2>/dev/null; command -v node 2>/dev/null`,
-      ],
-      { timeout: 15_000 },
-      (_err, stdout) => {
-        const dirs: string[] = []
-        for (const line of stdout.split('\n')) {
-          const p = line.trim()
-          if (!p.startsWith('/')) continue
-          const slash = p.lastIndexOf('/')
-          const dir = slash > 0 ? p.slice(0, slash) : ''
-          if (dir && !dirs.includes(dir)) dirs.push(dir)
-        }
-        const prefix = dirs.join(':')
-        agentPathCache.set(bin, prefix)
-        resolve(prefix)
-      },
+    const probe = bashCommand(
+      `command -v ${shellQuote(bin)} 2>/dev/null; command -v node 2>/dev/null`,
+      { flags: '-lic' },
     )
+    execFile(probe.file, probe.args, { timeout: 15_000 }, (_err, stdout) => {
+      const dirs: string[] = []
+      for (const line of stdout.split('\n')) {
+        const p = line.trim()
+        if (!p.startsWith('/')) continue
+        const slash = p.lastIndexOf('/')
+        const dir = slash > 0 ? p.slice(0, slash) : ''
+        if (dir && !dirs.includes(dir)) dirs.push(dir)
+      }
+      const prefix = dirs.join(':')
+      agentPathCache.set(bin, prefix)
+      resolve(prefix)
+    })
   })
 }
 
@@ -298,7 +293,8 @@ export async function runAgentNode(
         mergedEnv[k] = subHost(v)
       }
     }
-    const child = spawn('wsl.exe', ['--', 'bash', '-lc', NODE_INIT + fullCmd], {
+    const agentCmd = bashCommand(NODE_INIT + fullCmd)
+    const child = spawn(agentCmd.file, agentCmd.args, {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: mergedEnv,
     })
@@ -439,9 +435,10 @@ export function runShellNode(node: ShellNode, deps: NodeRunnerDeps): Promise<voi
     const timeoutMs = node.timeout ?? 60000
     let settled = false
 
+    const shellCmd = bashCommand(NODE_INIT + fullCmd)
     const child = execFile(
-      'wsl.exe',
-      ['--', 'bash', '-lc', NODE_INIT + fullCmd],
+      shellCmd.file,
+      shellCmd.args,
       // No execFile `timeout`: it only SIGTERMs wsl.exe and orphans the Linux
       // process inside WSL — we enforce it ourselves via forceKillTree below.
       // A generous maxBuffer keeps a chatty-but-successful command (verbose

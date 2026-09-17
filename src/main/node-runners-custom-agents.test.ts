@@ -14,7 +14,10 @@ import type { ChildProcess } from 'child_process'
 import type { AgentNode, Role } from '../shared/types'
 import type { AgentRegistry } from './agent-registry'
 import * as wslUtils from './wsl-utils'
+import { usePlatform } from '../__test__/platform'
 
+// These assertions describe the Windows routing (everything via wsl.exe).
+usePlatform('win32')
 const { mockSpawn, mockExecFile } = vi.hoisted(() => ({
   mockSpawn: vi.fn(),
   mockExecFile: vi.fn(),

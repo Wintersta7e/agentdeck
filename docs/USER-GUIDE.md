@@ -35,7 +35,9 @@ AgentDeck is a desktop command center for managing AI coding agents through WSL2
 
 ### Prerequisites
 
-- Windows 11 with WSL2 installed (Ubuntu recommended)
+- Windows 11 with WSL2 installed (Ubuntu recommended). Linux also works: the
+  app runs agents, git and terminals as local processes instead of routing them
+  through `wsl.exe`
 - Node.js 22.22.1 or later (only if building from source; the portable .exe ships its own runtime)
 - At least one AI coding agent installed in WSL (e.g., Claude Code, Aider, Codex)
 

@@ -14,7 +14,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { ChildProcess } from 'child_process'
 import type { ShellNode } from '../shared/types'
 import type { AgentRegistry } from './agent-registry'
+import { usePlatform } from '../__test__/platform'
 
+// These assertions describe the Windows routing (everything via wsl.exe).
+usePlatform('win32')
 const { mockSpawn, mockExecFile } = vi.hoisted(() => ({
   mockSpawn: vi.fn(),
   mockExecFile: vi.fn(),

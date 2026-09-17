@@ -64,7 +64,10 @@ function setupStore(): ReturnType<typeof createProjectStore> {
 }
 import { seedTemplates, seedRoles } from './store-seeds'
 import { ipcMain, safeStorage } from 'electron'
+import { usePlatform } from '../__test__/platform'
 
+// These assertions describe the Windows routing (everything via wsl.exe).
+usePlatform('win32')
 const handlers = (
   ipcMain as unknown as { __handlers: Map<string, (...args: unknown[]) => unknown> }
 ).__handlers

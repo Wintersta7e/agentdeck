@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { usePlatform } from '../__test__/platform'
 
+// These assertions describe the Windows routing (everything via wsl.exe).
+usePlatform('win32')
 /**
  * The module under test calls execFile(cmd, args, opts, callback) directly.
  * We mock execFile to invoke the callback with controlled stdout/stderr/err.

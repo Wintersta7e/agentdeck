@@ -1,5 +1,6 @@
 /**
- * Single source of truth for `wsl.exe -- bash -lc <cmd>` invocations.
+ * Single source of truth for "run this shell command where the agents live".
+ * Routing (wsl.exe vs. bash) is decided by ./host.
  *
  * Replaces the four near-identical `wslExec` / `runWslCmd` helpers that
  * previously lived in skill-scanner, wsl-paths, and
@@ -11,6 +12,7 @@
 import { execFile } from 'child_process'
 import { createLogger } from './logger'
 import { NODE_INIT } from './wsl-utils'
+import { bashCommand, type HostCommand } from './host'
 import { errText } from '../shared/errors'
 
 const log = createLogger('wsl-exec')
@@ -48,11 +50,9 @@ export function shellQuote(s: string): string {
   return "'" + s.replace(/'/g, "'\\''") + "'"
 }
 
-function buildArgs(cmd: string, opts: WslExecCommonOptions): string[] {
+function buildCommand(cmd: string, opts: WslExecCommonOptions): HostCommand {
   const fullCmd = opts.prefixNodeInit ? NODE_INIT + cmd : cmd
-  return opts.distro
-    ? ['-d', opts.distro, '--', 'bash', '-lc', fullCmd]
-    : ['--', 'bash', '-lc', fullCmd]
+  return bashCommand(fullCmd, opts.distro !== undefined ? { distro: opts.distro } : {})
 }
 
 /**
@@ -67,7 +67,8 @@ function buildArgs(cmd: string, opts: WslExecCommonOptions): string[] {
 export function wslRun(cmd: string, opts: WslExecThrowOptions = {}): Promise<string> {
   const timeout = opts.timeout ?? DEFAULT_TIMEOUT
   return new Promise<string>((resolve, reject) => {
-    execFile('wsl.exe', buildArgs(cmd, opts), { timeout }, (err, stdout, stderr) => {
+    const { file, args } = buildCommand(cmd, opts)
+    execFile(file, args, { timeout }, (err, stdout, stderr) => {
       if (err) {
         const out = stdout.trim()
         if (opts.fallbackStderrAsOutput && out) {
@@ -92,26 +93,22 @@ export function wslTry(cmd: string, opts: WslExecNullableOptions = {}): Promise<
   const timeout = opts.timeout ?? DEFAULT_TIMEOUT
   const logLevel = opts.logLevelOnError ?? 'silent'
   return new Promise<string | null>((resolve) => {
-    execFile(
-      'wsl.exe',
-      buildArgs(cmd, opts),
-      { timeout, encoding: 'utf-8' },
-      (err, stdout, stderr) => {
-        if (err) {
-          if (logLevel !== 'silent') {
-            log[logLevel]('wslTry failed', {
-              cmd: cmd.slice(0, 120),
-              err: errText(err),
-            })
-          }
-          resolve(null)
-          return
+    const { file, args } = buildCommand(cmd, opts)
+    execFile(file, args, { timeout, encoding: 'utf-8' }, (err, stdout, stderr) => {
+      if (err) {
+        if (logLevel !== 'silent') {
+          log[logLevel]('wslTry failed', {
+            cmd: cmd.slice(0, 120),
+            err: errText(err),
+          })
         }
-        if (stderr.trim() && logLevel === 'warn') {
-          log.debug('wslTry stderr', { cmd: cmd.slice(0, 120), stderr: stderr.slice(0, 500) })
-        }
-        resolve(stdout)
-      },
-    )
+        resolve(null)
+        return
+      }
+      if (stderr.trim() && logLevel === 'warn') {
+        log.debug('wslTry stderr', { cmd: cmd.slice(0, 120), stderr: stderr.slice(0, 500) })
+      }
+      resolve(stdout)
+    })
   })
 }

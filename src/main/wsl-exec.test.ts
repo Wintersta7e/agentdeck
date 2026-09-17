@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 vi.mock('child_process', () => ({
   execFile: vi.fn(),
@@ -39,8 +39,20 @@ function captureExecFileCall(): {
   return { cmd, args, opts }
 }
 
+const realPlatform = process.platform
+const setPlatform = (value: NodeJS.Platform): void => {
+  Object.defineProperty(process, 'platform', { value, configurable: true })
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
+  // Routing depends on the platform, so state it rather than inheriting the
+  // machine the suite happens to run on.
+  setPlatform('win32')
+})
+
+afterEach(() => {
+  setPlatform(realPlatform)
 })
 
 describe('shellQuote', () => {
@@ -82,6 +94,24 @@ describe('wslRun', () => {
     await wslRun('ls', { distro: 'Debian' })
 
     expect(captureExecFileCall().args).toEqual(['-d', 'Debian', '--', 'bash', '-lc', 'ls'])
+  })
+
+  it('runs bash directly when the agents are local, with no wsl.exe hop', async () => {
+    setPlatform('linux')
+    respond('ok\n')
+    await wslRun('echo ok')
+
+    const call = captureExecFileCall()
+    expect(call.cmd).toBe('bash')
+    expect(call.args).toEqual(['-lc', 'echo ok'])
+  })
+
+  it('drops the distro when running locally — it would point at the wrong machine', async () => {
+    setPlatform('linux')
+    respond('x')
+    await wslRun('ls', { distro: 'Debian' })
+
+    expect(captureExecFileCall().args).toEqual(['-lc', 'ls'])
   })
 
   it('prepends NODE_INIT when prefixNodeInit is true', async () => {

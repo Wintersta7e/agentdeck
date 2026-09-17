@@ -20,7 +20,10 @@ import {
 } from '../__test__/helpers'
 import { invalidateAgentPathCache } from './node-runners'
 import { AgentRegistry } from './agent-registry'
+import { usePlatform } from '../__test__/platform'
 
+// These assertions describe the Windows routing (everything via wsl.exe).
+usePlatform('win32')
 // ── Mocks ────────────────────────────────────────────────────────────
 
 const { mockSpawn, mockExecFile } = vi.hoisted(() => ({

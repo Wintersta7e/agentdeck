@@ -38,7 +38,10 @@ import { createPtyManager } from './pty-manager'
 import { AgentRegistry } from './agent-registry'
 import * as pty from 'node-pty'
 import * as wslUtils from './wsl-utils'
+import { usePlatform } from '../__test__/platform'
 
+// These assertions describe the Windows routing (everything via wsl.exe).
+usePlatform('win32')
 // A real builtins-only registry (no agents.toml on disk → `binaryFor` falls back
 // to AGENT_BINARY_MAP, `isCustom` is false for every id). Used by every existing
 // test so the spawn path resolves builtin binaries exactly as before.
@@ -78,6 +81,21 @@ describe('createPtyManager', () => {
           cols: 120,
           rows: 40,
         }),
+      )
+    })
+
+    // The suite is pinned to win32 above; this one case describes the other
+    // platform, where there is no VM to enter and bash is the session shell.
+    it('attaches to a local login shell when agents run natively', () => {
+      Object.defineProperty(process, 'platform', { value: 'linux', configurable: true })
+      const win = makeMockWindow()
+      const mgr = createPtyManager(win, makeRegistry())
+
+      mgr.spawn('s-native', 100, 30)
+      expect(pty.spawn).toHaveBeenCalledWith(
+        'bash',
+        ['-il'],
+        expect.objectContaining({ name: 'xterm-256color', cols: 100, rows: 30 }),
       )
     })
 

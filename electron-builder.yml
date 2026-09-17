@@ -20,6 +20,16 @@ win:
 portable:
   artifactName: "${productName}-${version}-portable.exe"
 
+# Linux runs the agents directly instead of through wsl.exe (see src/main/host.ts).
+# AppImage keeps the same "one file, no installer" shape as the Windows portable.
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+  category: Development
+  artifactName: "${productName}-${version}-x86_64.AppImage"
+
 extraMetadata:
   main: ./out/main/index.js
 

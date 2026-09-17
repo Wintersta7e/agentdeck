@@ -6,6 +6,7 @@ import type { GitStatus } from '../shared/types'
 import { toWslPath } from './wsl-utils'
 import { createLogger } from './logger'
 import { evictOldestFromMap } from './map-utils'
+import { directCommand, gitEnv } from './host'
 
 const execFileAsync = promisify(execFile)
 const log = createLogger('git-status')
@@ -170,14 +171,29 @@ async function refreshGitStatus(key: string, projectPath: string): Promise<GitSt
     try {
       const wslPath = toWslPath(projectPath)
       const [statusResult, diffResult] = await Promise.all([
-        execFileAsync(
-          'wsl.exe',
-          ['--', 'env', 'LANG=C', 'git', '-C', wslPath, 'status', '--porcelain=v2', '--branch'],
-          { timeout: 10000 },
-        ),
-        execFileAsync('wsl.exe', ['--', 'env', 'LANG=C', 'git', '-C', wslPath, 'diff', '--stat'], {
-          timeout: 10000,
-        }),
+        (() => {
+          const { file, args } = directCommand('env', [
+            'LANG=C',
+            'git',
+            '-C',
+            wslPath,
+            'status',
+            '--porcelain=v2',
+            '--branch',
+          ])
+          return execFileAsync(file, args, { timeout: 10000, env: gitEnv() })
+        })(),
+        (() => {
+          const { file, args } = directCommand('env', [
+            'LANG=C',
+            'git',
+            '-C',
+            wslPath,
+            'diff',
+            '--stat',
+          ])
+          return execFileAsync(file, args, { timeout: 10000, env: gitEnv() })
+        })(),
       ])
 
       const porcelain = parseGitStatusPorcelainV2(statusResult.stdout)

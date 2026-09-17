@@ -67,8 +67,9 @@ mileage outside that will vary.
 - Prompt templates, command palette, three themes
 
 **Rough edges / not done:**
-- Windows + WSL2 only — it spawns `wsl.exe`, so there's no native Linux/macOS
-  build
+- Built for Windows + WSL2; Linux runs natively (agents, git and terminals are
+  local processes rather than `wsl.exe` calls) but gets far less use. macOS
+  takes the same native path and is untested
 - Real subscription plan-limit data is Codex-only (the only agent that exposes
   it on disk); every other agent shows a rolling-5h activity tile instead
 - Ships as a portable `.exe` — no installer, no auto-update
@@ -164,7 +165,8 @@ npm test            # Vitest
 npm run release-portable
 ```
 
-Output: `dist/AgentDeck-{version}-portable.exe` (~101 MB).
+Output: `dist/AgentDeck-{version}-portable.exe` (~101 MB). Building on Linux
+produces `dist/AgentDeck-{version}-x86_64.AppImage` instead.
 
 ## Stack
 

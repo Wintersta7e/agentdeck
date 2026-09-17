@@ -12,7 +12,10 @@ import {
   substituteWindowsHost,
 } from './wsl-utils'
 import { execFile } from 'child_process'
+import { usePlatform } from '../__test__/platform'
 
+// These assertions describe the Windows routing (everything via wsl.exe).
+usePlatform('win32')
 const mockedExecFile = vi.mocked(execFile)
 
 beforeEach(() => {
