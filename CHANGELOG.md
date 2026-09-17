@@ -5,7 +5,7 @@ All notable changes to AgentDeck will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [7.1.0] - 2026-09-17
 
 ### Added
 
@@ -20,6 +20,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   instead of plaintext, so an API key is allowed (decrypted only in the main
   process at spawn, never on the command line). Saving a secret is refused when
   secure storage is unavailable.
+
+### Fixed
+
+- **A failed WSL or git operation logs what actually went wrong** — a rejection
+  that wasn't an `Error` object was written to the log as `[object Object]`,
+  losing the one detail the line existed to record.
+- **Renderer log lines no longer ride on a promise nobody settles** — the relay
+  to the main-process logger was request/response, so every call site left an
+  unhandled rejection waiting for the logger to fail. It is one-way now.
+- **A renderer that fails to load says so** — the window came up blank with
+  nothing in the log.
+
+### Changed
+
+- **Electron 43 → 44** (Chromium and Node updates), and 21 known
+  vulnerabilities cleared from the build-time dependency tree.
+- **Stricter build gates** — type-aware lint across the whole repo at zero
+  warnings, the remaining strict TypeScript flags, and CI that pins its actions
+  to commit SHAs and fails on any scanner finding. No runtime effect; it is what
+  caught the three fixes above.
 
 ## [7.0.0] - 2026-06-25
 

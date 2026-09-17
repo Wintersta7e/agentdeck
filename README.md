@@ -45,7 +45,7 @@ build it, but there's no adoption goal and no support guarantees.
 
 ## Status
 
-Actively developed personal tool, currently at **v7.0.0**. The app is mature
+Actively developed personal tool, currently at **v7.1.0**. The app is mature
 and in daily use — a large Vitest suite under a zero-warning lint + typecheck
 gate — but it's shaped around exactly one setup (Windows 11 + WSL2), so your
 mileage outside that will vary.
