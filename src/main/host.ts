@@ -89,3 +89,17 @@ const REPO_SCOPED_GIT_VARS = new Set([
 export function gitEnv(base: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
   return Object.fromEntries(Object.entries(base).filter(([key]) => !REPO_SCOPED_GIT_VARS.has(key)))
 }
+
+/**
+ * A runtime shell variable reference, escaped for the transport in use.
+ *
+ * `wsl.exe` strips an unescaped `$` out of its argv, so a variable the *remote*
+ * shell must expand has to arrive as `\$`. A locally spawned bash gets the
+ * string verbatim, where that same `\$` is a literal "$name" — non-empty — so
+ * `[ -n "\$found" ]` is always true and every probe built on it silently
+ * succeeds. Environment variables the *building* process should expand (like
+ * `$HOME`) are not this; write those literally.
+ */
+export function shellVar(name: string): string {
+  return hostPlatform() === 'wsl' ? `\\$${name}` : `$${name}`
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { hostPlatform, bashCommand, directCommand, loginShell, gitEnv } from './host'
+import { hostPlatform, bashCommand, directCommand, loginShell, gitEnv, shellVar } from './host'
 
 const realPlatform = process.platform
 const setPlatform = (value: NodeJS.Platform): void => {
@@ -106,5 +106,21 @@ describe('gitEnv', () => {
   it('keeps everything else, including git settings that are not repo-scoped', () => {
     const env = gitEnv({ HOME: '/home/u', GIT_AUTHOR_NAME: 'Someone', GIT_SSH_COMMAND: 'ssh -v' })
     expect(env).toEqual({ HOME: '/home/u', GIT_AUTHOR_NAME: 'Someone', GIT_SSH_COMMAND: 'ssh -v' })
+  })
+})
+
+describe('shellVar', () => {
+  // wsl.exe strips an unescaped `$` out of its argv, so a runtime shell
+  // variable has to arrive as `\$`. Sent to a local bash the same string is a
+  // literal "$name" — non-empty — which quietly makes `[ -n "\$found" ]`
+  // always true and every probe that uses it succeed.
+  it('escapes the dollar for the wsl.exe argv transport', () => {
+    setPlatform('win32')
+    expect(shellVar('found')).toBe('\\$found')
+  })
+
+  it('leaves it bare for a local bash, which gets the string verbatim', () => {
+    setPlatform('linux')
+    expect(shellVar('found')).toBe('$found')
   })
 })
