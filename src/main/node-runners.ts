@@ -294,6 +294,11 @@ export async function runAgentNode(
       }
     }
     const agentCmd = bashCommand(NODE_INIT + fullCmd)
+    // agentCmd.file is 'wsl.exe' or 'bash', both literals in host.ts; it reads as
+    // a variable only because the routing moved there. The command string is
+    // user-authored by design (that is what a workflow node is) and is
+    // shell-quoted upstream.
+    // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process
     const child = spawn(agentCmd.file, agentCmd.args, {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: mergedEnv,
