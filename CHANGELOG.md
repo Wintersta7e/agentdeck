@@ -5,6 +5,30 @@ All notable changes to AgentDeck will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.2.0] - 2026-09-17
+
+### Added
+
+- **Runs natively on Linux.** Agents, git calls and terminals are local
+  processes instead of `wsl.exe` invocations, so the app does real work on a
+  Linux desktop rather than just opening a window there. Where a command runs is
+  decided in one place (`src/main/host.ts`); Windows behaviour is unchanged.
+- **AppImage package** — `AgentDeck-{version}-x86_64.AppImage`, the same
+  "one file, no installer" shape as the Windows portable.
+
+### Fixed
+
+- **Every agent reported as installed on Linux.** The detector's fallback search
+  escapes shell variables as `\$found` so they survive `wsl.exe`'s argument
+  handling; handed to a local shell that escape is literal text, which made the
+  "did we find it?" test true no matter what. The skill scanner's file loop had
+  the same flaw.
+- **git operations could target the wrong repository.** git exports `GIT_DIR`
+  and `GIT_INDEX_FILE` to the processes it spawns, and a directly-spawned git
+  child inherits them — so a call made from inside a git hook worked on the
+  hook's repository instead of the requested one. Routing through `wsl.exe` had
+  masked this.
+
 ## [7.1.0] - 2026-09-17
 
 ### Added
