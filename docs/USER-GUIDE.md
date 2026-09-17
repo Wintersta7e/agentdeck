@@ -41,7 +41,9 @@ AgentDeck is a desktop command center for managing AI coding agents through WSL2
 
 ### Launching
 
-Run the portable executable (`AgentDeck-{version}-portable.exe`) or start from source:
+Download the portable executable (`AgentDeck-{version}-portable.exe`) from the
+[latest release](https://github.com/Wintersta7e/agentdeck/releases/latest) and run
+it — there is nothing to install. Or start from source:
 
 ```bash
 npm install --no-bin-links

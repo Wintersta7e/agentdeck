@@ -143,8 +143,10 @@ tokens keep each agent's colour consistent across every theme.
 
 ## Quick start
 
-Requires Windows 10/11 with WSL2 (Ubuntu recommended), Node.js 22.22.1+ (see
-`.nvmrc`), and at least one agent CLI installed inside WSL.
+Grab the portable `.exe` from the [latest release][releases] — no installer, no
+runtime to set up. To build or develop instead, you need Windows 10/11 with WSL2
+(Ubuntu recommended), Node.js 22.22.1+ (see `.nvmrc`), and at least one agent CLI
+installed inside WSL.
 
 ```bash
 # Install (--no-bin-links is required on Windows-mounted drives)
@@ -162,7 +164,7 @@ npm test            # Vitest
 npm run release-portable
 ```
 
-Output: `dist/AgentDeck-{version}-portable.exe` (~94 MB).
+Output: `dist/AgentDeck-{version}-portable.exe` (~101 MB).
 
 ## Stack
 
@@ -232,5 +234,6 @@ if it looks useful you're welcome to try it.</sub>
 [zustand]:    https://zustand-demo.pmnd.rs
 [reactflow]:  https://reactflow.dev
 [estore]:     https://github.com/sindresorhus/electron-store
+[releases]:   https://github.com/Wintersta7e/agentdeck/releases/latest
 [vitest]:     https://vitest.dev
 [eslint]:     https://eslint.org
