@@ -9,9 +9,11 @@ function tmpStore(): string {
   return join(mkdtempSync(join(tmpdir(), 'usage-hist-')), 'usage-history.json')
 }
 
-// Use today timestamps so isoKeyFromTs(startedAt) == todayIsoKey()
-const BASE_START = Date.now() - 60_000
-const BASE_END = Date.now()
+// Use today timestamps so isoKeyFromTs(startedAt) == todayIsoKey().
+// One clock read: two reads can straddle a millisecond and skew durations.
+const NOW = Date.now()
+const BASE_START = NOW - 60_000
+const BASE_END = NOW
 
 const rec = (
   over: Partial<Parameters<ReturnType<typeof createUsageHistory>['recordSession']>[0]> = {},
