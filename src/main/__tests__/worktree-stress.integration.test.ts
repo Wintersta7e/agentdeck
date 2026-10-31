@@ -230,9 +230,10 @@ describeIf('Worktree Stress Tests (real git)', () => {
     const r2 = await mgr.acquire(projectId, 'commit-secondary')
     expect(r2.isolated).toBe(true)
 
-    // Commit a file in the worktree
+    // Commit a file in the worktree. Hooks are disabled so a machine-wide
+    // commit-msg hook cannot reject the test's commit subject.
     wslExec(
-      `cd ${r2.path} && echo "stress" > stress-commit.txt && git add . && git commit -m "stress test commit"`,
+      `cd ${r2.path} && echo "stress" > stress-commit.txt && git add . && git -c core.hooksPath=/dev/null commit -m "stress test commit"`,
     )
 
     const inspection = await mgr.inspect('commit-secondary')
@@ -251,7 +252,9 @@ describeIf('Worktree Stress Tests (real git)', () => {
     expect(r2.isolated).toBe(true)
 
     // Commit something so the branch has content
-    wslExec(`cd ${r2.path} && echo "keep me" > kept.txt && git add . && git commit -m "keep test"`)
+    wslExec(
+      `cd ${r2.path} && echo "keep me" > kept.txt && git add . && git -c core.hooksPath=/dev/null commit -m "keep test"`,
+    )
 
     await mgr.keep('keep-secondary')
 
