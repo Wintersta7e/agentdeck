@@ -5,6 +5,20 @@ All notable changes to AgentDeck will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Archived.** AgentDeck is no longer developed; 7.2.0 is the last release and
+  gets no further fixes, including security fixes. Known issues in 7.2.0: the
+  bundled Electron 44.4.1 has known security advisories; on Linux without an OS
+  keyring, project environment variables marked secret are stored as plain text
+  and custom-agent secrets are dropped at load; on Linux, the file tree, Env tab,
+  stack detection and "open externally" fail; and launching any build with a
+  fresh settings folder replaces `~/.agentdeck/templates`. Linux and macOS are no
+  longer claimed as supported, and the 7.2.0 AppImage is withdrawn from the
+  release page.
+
 ## [7.2.0] - 2026-09-17
 
 ### Added

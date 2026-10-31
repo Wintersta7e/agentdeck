@@ -1,6 +1,25 @@
 # AgentDeck User Guide
 
-> **Version**: 7.2.0
+> **Version**: 7.2.0 (final)
+
+> [!WARNING]
+> **Archived (October 2026).** AgentDeck is no longer developed. v7.2.0 is the last
+> release, provided as is, with no further fixes, including security fixes.
+> Known issues in it:
+>
+> - Its bundled Electron 44.4.1 has known security advisories. Building from `main`
+>   picks up a newer Electron pin, but needs a clean install (`npm ci --no-bin-links`)
+>   and leaves the issues below in place.
+> - On Linux without an OS keyring, project environment variables marked secret are
+>   stored as plain text in the settings file, and custom-agent secrets are dropped
+>   when the app loads.
+> - On Linux, the file tree, the Env tab, stack detection and "open externally" fail,
+>   because paths are converted to Windows form. Linux and macOS are not supported.
+> - Launching any build with a fresh settings folder against an existing
+>   `~/.agentdeck` replaces the templates folder, deleting templates saved there.
+>
+> Your data (projects, templates, workflows, history) stays where it is, as plain
+> JSON; archiving touches no local file.
 
 AgentDeck is a desktop command center for managing AI coding agents through WSL2 terminals. This guide covers every feature from first launch to advanced workflow automation.
 
@@ -35,9 +54,8 @@ AgentDeck is a desktop command center for managing AI coding agents through WSL2
 
 ### Prerequisites
 
-- Windows 11 with WSL2 installed (Ubuntu recommended). Linux also works: the
-  app runs agents, git and terminals as local processes instead of routing them
-  through `wsl.exe`
+- Windows 11 with WSL2 installed (Ubuntu recommended). Linux and macOS are not
+  supported
 - Node.js 22.22.1 or later (only if building from source; the portable .exe ships its own runtime)
 - At least one AI coding agent installed in WSL (e.g., Claude Code, Aider, Codex)
 
@@ -704,7 +722,7 @@ and they launch in both terminal sessions and workflow runs, exactly like a buil
 
 ### Secrets
 
-Each environment row has a **lock** toggle. Enable it and the value is stored **encrypted** in `agents.toml` via your OS keychain (`safeStorage`) instead of as plaintext — so an API key is allowed (a credential-shaped key left in a plaintext row is still rejected). On edit, a stored secret shows blank: leave it blank to keep it, or type a new value to replace it. If your OS can't provide secure storage, saving a secret is refused rather than written in the clear.
+Each environment row has a **lock** toggle. Enable it and the value is stored **encrypted** in `agents.toml` via your OS keychain (`safeStorage`) instead of as plaintext — so an API key is allowed (a credential-shaped key left in a plaintext row is still rejected). On edit, a stored secret shows blank: leave it blank to keep it, or type a new value to replace it. If your OS can't provide secure storage, saving a custom-agent secret is refused rather than written in the clear. Project environment variables do not get this protection: without secure storage (Linux without a keyring) they are stored as plain text.
 
 ### Reaching a Windows-side endpoint
 

@@ -13,7 +13,7 @@ your own WSL environment.
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/license-Elastic--2.0-blue)](LICENSE)
-[![Status](https://img.shields.io/badge/status-personal%20%C2%B7%20actively%20developed-brightgreen)](#status)
+[![Status](https://img.shields.io/badge/status-personal%20%C2%B7%20archived-lightgrey)](#status)
 [![CI](https://github.com/Wintersta7e/agentdeck/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Wintersta7e/agentdeck/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/Wintersta7e/agentdeck/graph/badge.svg)](https://codecov.io/gh/Wintersta7e/agentdeck)
 
@@ -22,6 +22,25 @@ your own WSL environment.
 <img src="screenshots/home-dashboard.png" alt="AgentDeck home dashboard — scope viz, daily digest, live activity, agent grid, productivity and plan limits" width="900">
 
 </div>
+
+> [!WARNING]
+> **Archived (October 2026).** AgentDeck is no longer developed. The last release,
+> v7.2.0, is provided as is, with no further fixes, including security fixes.
+> Known issues in it:
+>
+> - Its bundled Electron 44.4.1 has known security advisories. Building from `main`
+>   picks up a newer Electron pin, but needs a clean install (`npm ci --no-bin-links`)
+>   and leaves the issues below in place.
+> - On Linux without an OS keyring, project environment variables marked secret are
+>   stored as plain text in the settings file, and custom-agent secrets are dropped
+>   when the app loads.
+> - On Linux, the file tree, the Env tab, stack detection and "open externally" fail,
+>   because paths are converted to Windows form. Linux and macOS are not supported.
+> - Launching any build with a fresh settings folder against an existing
+>   `~/.agentdeck` replaces the templates folder, deleting templates saved there.
+>
+> Your data (projects, templates, workflows, history) stays where it is, as plain
+> JSON; archiving touches no local file.
 
 ---
 
@@ -38,17 +57,16 @@ visual workflows with conditions, loops, and variables. Keep prompt templates,
 project configs, and session history in one place instead of scattered across
 shells.
 
-It's a desktop app, not a web service — your code stays local, API keys are
-encrypted at rest, and everything runs through your own WSL environment with no
-telemetry. It's a personal tool under Elastic-2.0: you're welcome to clone and
+It's a desktop app, not a web service — your code stays local, secrets are
+encrypted by the OS keychain on Windows, agents run in your own WSL environment,
+and there is no telemetry. It's a personal tool under Elastic-2.0: you're welcome to clone and
 build it, but there's no adoption goal and no support guarantees.
 
 ## Status
 
-Actively developed personal tool, currently at **v7.2.0**. The app is mature
-and in daily use — a large Vitest suite under a zero-warning lint + typecheck
-gate — but it's shaped around exactly one setup (Windows 11 + WSL2), so your
-mileage outside that will vary.
+Archived personal tool; the last release is **v7.2.0** (see the notice above).
+It has a large Vitest suite under a zero-warning lint + typecheck gate, and it is
+shaped around exactly one setup (Windows 11 + WSL2).
 
 **Implemented:**
 - 7 built-in agents: Claude Code, Codex, Aider, Goose, Gemini CLI, Amazon Q,
@@ -67,9 +85,8 @@ mileage outside that will vary.
 - Prompt templates, command palette, three themes
 
 **Rough edges / not done:**
-- Built for Windows + WSL2; Linux runs natively (agents, git and terminals are
-  local processes rather than `wsl.exe` calls) but gets far less use. macOS
-  takes the same native path and is untested
+- Built for Windows + WSL2 only. Linux and macOS are not supported; the native
+  Linux path in 7.2.0 is incomplete (see the notice above)
 - Real subscription plan-limit data is Codex-only (the only agent that exposes
   it on disk); every other agent shows a rolling-5h activity tile instead
 - Ships as a portable `.exe` — no installer, no auto-update
@@ -186,7 +203,7 @@ produces `dist/AgentDeck-{version}-x86_64.AppImage` instead.
 ```
 src/
 ├── main/       # Electron main: PTY, IPC, workflow engine, WSL + git, persistence
-├── preload/    # contextBridge → window.agentDeck (~65 channels)
+├── preload/    # contextBridge → window.agentDeck (the preload API)
 ├── renderer/   # React app: terminals, workflow editor, dashboard, command palette
 └── shared/     # Agent registry, domain types, workflow + id validation (no Node/DOM)
 ```
@@ -200,14 +217,16 @@ single registry; the type system flags any consumer that missed the update.
 ## Design principles
 
 1. **Local-first.** No web service, no account, no telemetry. Code stays on your
-   machine, API keys are encrypted at rest, and fonts are bundled, not fetched.
+   machine, secrets are encrypted by the OS keychain on Windows, and fonts are
+   bundled, not fetched.
 2. **One process model, done right.** node-pty lives in the main process only;
    the renderer runs with `contextIsolation` on and `nodeIntegration` off.
 3. **Single source of truth.** Agents, themes, and node types each come from one
    registry; the type system surfaces anything a new entry forgot to update.
 4. **No magic numbers.** Every colour, space, font size, and duration is a
    design token in `tokens.css` — a theme is just a set of tokens.
-5. **WSL-native.** Paths, git, and agent CLIs all route through your WSL distro.
+5. **WSL-native on Windows.** Paths, git, and agent CLIs run inside your WSL
+   distro.
 
 ## Documentation
 
@@ -223,8 +242,8 @@ offer it as a hosted or managed service.
 
 ---
 
-<sub>AgentDeck is a personal tool — built for my own daily use across Windows +
-WSL2, with no telemetry, analytics, or growth metrics. Not chasing adoption, but
+<sub>AgentDeck is an archived personal tool — it was built for my own use across
+Windows + WSL2, with no telemetry, analytics, or growth metrics. Not chasing adoption, but
 if it looks useful you're welcome to try it.</sub>
 
 [electron]:   https://www.electronjs.org
