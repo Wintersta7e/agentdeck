@@ -56,6 +56,16 @@ jobs:
       # compromise reaches the shipped .exe just as a runtime one does.
       - name: Scan dependencies for known CVEs (blocking)
         run: osv-scanner scan source -r .
+      # osv-scanner.toml accepts the minimatch advisory because every copy is
+      # dev tooling. Reads the lockfile only, so no install is needed.
+      - name: Keep minimatch out of the production tree (blocking)
+        run: |
+          out=$(npm ls minimatch --omit=dev --package-lock-only --parseable)
+          if [ -n "$out" ]; then
+            echo "$out"
+            echo '::error::minimatch entered the production tree; GHSA-g3hv-75wg-m249 is ignored in osv-scanner.toml only for dev tooling'
+            exit 1
+          fi
 
   vulnerabilities:
     name: Vulns + secrets + misconfig (trivy)

@@ -6,4 +6,11 @@
 #   ignoreUntil = 2026-12-31  # re-evaluate after this date
 #   reason = "not reachable from our code path"
 #
-# No vulnerabilities to suppress — the dependency tree is clean.
+
+# minimatch: the only fix is 11.0.1. The 3.x/5.x/9.x/10.x lines have no patch,
+# and forcing 11 breaks the CommonJS callers of minimatch 3 (eslint 9, glob 7).
+# The security workflow fails if minimatch ever enters the production tree.
+[[IgnoredVulns]]
+id = "GHSA-g3hv-75wg-m249"
+ignoreUntil = 2027-01-31
+reason = "dev-only: minimatch reaches the tree only through eslint, electron-builder and glob tooling, which match patterns from this repo's own config, never untrusted input; no fix exists on the 3.x/5.x/9.x/10.x lines"
